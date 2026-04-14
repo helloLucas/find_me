@@ -1,0 +1,228 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+:root {
+  --win-bg: #c0c0c0;
+  --win-title: #000080;
+  --win-title-text: #ffffff;
+  --win-border-light: #ffffff;
+  --win-border-dark: #808080;
+  --win-border-darker: #000000;
+  --win-border-lighter: #dfdfdf;
+  --terminal-bg: #000000;
+  --terminal-green: #c0c0c0; /* MS DOS typically had grey text, but retro style */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'W95FA', 'VT323', sans-serif; /* fallback to VT323 */
+}
+
+body {
+  overflow: hidden; 
+  background-color: #008080; /* Win95 Teal */
+  color: #000;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 16px;
+}
+::-webkit-scrollbar-track {
+  background: #dfdfdf;
+  border-left: 1px solid var(--win-border-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--win-bg);
+  border-top: 1px solid var(--win-border-light);
+  border-left: 1px solid var(--win-border-light);
+  border-right: 1px solid var(--win-border-dark);
+  border-bottom: 1px solid var(--win-border-dark);
+}
+
+::selection {
+  background: #000080;
+  color: #fff;
+}
+
+/* Win95 Window styling */
+.retro-window-wrapper {
+  background: var(--win-bg);
+  display: flex !important;
+  flex-direction: column;
+  border-top: 2px solid var(--win-border-light);
+  border-left: 2px solid var(--win-border-light);
+  border-right: 2px solid var(--win-border-darker);
+  border-bottom: 2px solid var(--win-border-darker);
+  box-shadow: inset -1px -1px #808080, inset 1px 1px #dfdfdf;
+}
+
+.retro-window-header {
+  background: var(--win-title);
+  color: var(--win-title-text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  font-size: 1.1rem;
+  cursor: default;
+  margin: 2px;
+}
+
+.retro-window-header:active {
+  cursor: default;
+}
+
+.retro-window-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.retro-btn {
+  background: var(--win-bg);
+  border-top: 1px solid var(--win-border-light);
+  border-left: 1px solid var(--win-border-light);
+  border-right: 1px solid var(--win-border-darker);
+  border-bottom: 1px solid var(--win-border-darker);
+  box-shadow: inset -1px -1px var(--win-border-dark), inset 1px 1px var(--win-border-lighter);
+  color: #000;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: default;
+  font-size: 0.8rem;
+  padding-bottom: 2px;
+}
+
+.retro-btn:active {
+  border-top: 1px solid var(--win-border-darker);
+  border-left: 1px solid var(--win-border-darker);
+  border-right: 1px solid var(--win-border-light);
+  border-bottom: 1px solid var(--win-border-light);
+  box-shadow: inset 1px 1px var(--win-border-dark);
+  padding-top: 2px;
+  padding-left: 2px;
+}
+
+.retro-window-content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  user-select: text;
+  background: #fff;
+  border: inset 2px #808080;
+  margin: 0 4px 4px 4px;
+}
+
+/* Desktop Icon Styling */
+.desktop-icon {
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  padding: 5px;
+  margin-bottom: 10px;
+}
+
+.desktop-icon:active span, .desktop-icon:focus span {
+  background: #000080;
+  color: white;
+  border: 1px dotted #808080;
+}
+
+.desktop-icon img {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  margin-bottom: 4px;
+}
+
+.desktop-icon span {
+  color: white;
+  background: transparent;
+  padding: 2px;
+  font-size: 1.1rem;
+  text-shadow: 1px 1px 0 #000;
+  text-align: center;
+}
+
+/* Taskbar Styling */
+.retro-taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 35px;
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-border-light);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  z-index: 9999;
+}
+
+.retro-taskbar-start {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  padding: 0 8px;
+  height: 100%;
+}
+
+.retro-taskbar-windows {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+  height: 100%;
+}
+
+.retro-taskbar-window-btn {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 1.1rem;
+  width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retro-taskbar-window-btn.active {
+  border-top: 1px solid var(--win-border-darker);
+  border-left: 1px solid var(--win-border-darker);
+  border-right: 1px solid var(--win-border-light);
+  border-bottom: 1px solid var(--win-border-light);
+  box-shadow: inset 1px 1px var(--win-border-dark);
+  background: #d4d4d4;
+  padding-top: 2px;
+  padding-left: 10px;
+}
+
+.retro-taskbar-tray {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-top: 1px solid var(--win-border-dark);
+  border-left: 1px solid var(--win-border-dark);
+  border-right: 1px solid var(--win-border-light);
+  border-bottom: 1px solid var(--win-border-light);
+  box-shadow: inset 1px 1px var(--win-border-darker);
+  margin-left: 4px;
+}
+
+.retro-taskbar-time {
+  font-size: 1.1rem;
+  margin-left: 8px;
+}
