@@ -1,32 +1,40 @@
 import { createBrowserRouter } from "react-router-dom";
+import type { ReactNode } from "react";
+import HomePage from "../../pages/home";
+import LoginPage from "../../pages/auth/login-page";
+import SignupPage from "../../pages/auth/signup-page";
+import LobbyPage from "../../pages/lobby";
+import PlayPage from "../../pages/play";
+import EndingPage from "../../pages/ending";
+import AppShell from "../../widgets/layout/app-shell";
 
-const DummyPage = ({ text }: { text: string }) => {
-  return <div>{text}</div>;
-};
+function withShell(element: ReactNode) {
+  return <AppShell>{element}</AppShell>;
+}
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <DummyPage text="Home" />,
+    element: withShell(<HomePage />),
   },
   {
     path: "/login",
-    element: <DummyPage text="Login" />,
+    element: withShell(<LoginPage />),
   },
   {
     path: "/signup",
-    element: <DummyPage text="Signup" />,
+    element: withShell(<SignupPage />),
   },
   {
     path: "/lobby",
-    element: <DummyPage text="Lobby" />,
+    element: withShell(<LobbyPage />),
   },
   {
     path: "/play/:chapterCode",
-    element: <DummyPage text="Play" />,
+    element: withShell(<PlayPage />),
   },
   {
     path: "/ending",
-    element: <DummyPage text="Ending" />,
+    element: withShell(<EndingPage />),
   },
 ]);
