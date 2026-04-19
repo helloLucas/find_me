@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
         )
     }
 )
-public class Users extends BaseEntity {
+public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -46,7 +46,7 @@ public class Users extends BaseEntity {
     private UserRole role;
 
     @Builder
-    public Users(String email, String oauthName, String nickname, AuthProvider provider, String providerUserId, UserRole role) {
+    public User(String email, String oauthName, String nickname, AuthProvider provider, String providerUserId, UserRole role) {
         this.email = email;
         this.oauthName = oauthName;
         this.nickname = nickname;

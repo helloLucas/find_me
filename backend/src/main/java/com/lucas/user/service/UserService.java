@@ -3,7 +3,7 @@ package com.lucas.user.service;
 import com.lucas.auth.entity.UserRole;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
-import com.lucas.user.entity.Users;
+import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class UserService {
             throw new CustomException(ErrorCode.H1000); // 닉네임 길이 초과
         }
 
-        Users user = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.E3000)); // 사용자 조회 실패
 
         if (user.getRole() != UserRole.GUEST) {

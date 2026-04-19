@@ -2,7 +2,7 @@ package com.lucas.auth.oauth;
 
 import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.entity.UserRole;
-import com.lucas.user.entity.Users;
+import com.lucas.user.entity.User;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -50,8 +50,8 @@ public class OAuthAttributes {
      * OAuth2UserInfo에서 providerUserId(식별값), email, name 가져와서 build
      * 최초 로그인 사용자는 추가 정보 입력 전 상태로 간주하여 GUEST로 설정
      */
-    public Users toEntity(AuthProvider provider, OAuth2UserInfo oauth2UserInfo) {
-        return Users.builder()
+    public User toEntity(AuthProvider provider, OAuth2UserInfo oauth2UserInfo) {
+        return User.builder()
             .provider(provider)
             .providerUserId(oauth2UserInfo.getId())
             .email(oauth2UserInfo.getEmail())
