@@ -1,6 +1,7 @@
 package com.lucas.user.controller;
 
-import com.lucas.auth.principal.CustomOAuth2User;
+import com.lucas.auth.dto.response.TokenResponse;
+import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
@@ -23,14 +24,15 @@ public class UserController {
      * 최초 OAuth 로그인 사용자(GUEST)를 위한 닉네임 등록 API
      */
     @PostMapping("/nickname")
-    public ResponseEntity<BaseResponse<Void>> registerNickname(@AuthenticationPrincipal CustomOAuth2User customOAuth2User,
+    public ResponseEntity<BaseResponse<TokenResponse>> registerNickname(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                               @Valid @RequestBody NicknameRequest request) {
-        if (customOAuth2User == null) {
+        if (principal == null) {
             throw new CustomException(ErrorCode.E1000); // 인증 정보 없음
         }
 
-        userService.registerNickname(customOAuth2User.getUserId(), request.getNickname());
+        TokenResponse response =
+            userService.registerNickname(principal.getUserId(), request.getNickname());
 
-        return ResponseEntity.ok(BaseResponse.success("닉네임이 성공적으로 등록되었으며, 가입이 완료되었습니다."));
+        return ResponseEntity.ok(BaseResponse.success("닉네임이 성공적으로 등록되었으며, 가입이 완료되었습니다.", response));
     }
 }
