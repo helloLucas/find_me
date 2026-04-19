@@ -3,7 +3,7 @@ package com.lucas.auth.service;
 import com.lucas.auth.oauth.OAuthAttributes;
 import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.entity.AuthProvider;
-import com.lucas.user.entity.Users;
+import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +52,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         // provider에 따라 유저 정보를 통해 OAuthAttributes 객체 생성
         OAuthAttributes extractAttributes = OAuthAttributes.of(provider, userNameAttributeName, attributes);
 
-        Users createdUser = getUser(extractAttributes, provider); // getUser() 메소드로 User 객체 생성 후 반환
+        User createdUser = getUser(extractAttributes, provider); // getUser() 메소드로 User 객체 생성 후 반환
 
         // DefaultOAuth2User를 구현한 CustomOAuth2User 객체를 생성해서 반환
         return new CustomOAuth2User(
@@ -61,6 +61,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             extractAttributes.getNameAttributeKey(),
             createdUser.getId(),
             createdUser.getEmail(),
+            createdUser.getNickname(),
             createdUser.getProvider(),
             createdUser.getProviderUserId(),
             createdUser.getRole()
@@ -78,7 +79,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
      * AuthProvider와 attributes에 들어있는 소셜 로그인의 식별값 id를 통해 회원을 찾아 반환하는 메소드
      * 만약 찾은 회원이 있다면, 그대로 반환하고 없다면 saveUser()를 호출하여 회원을 저장한다.
      */
-    private Users getUser(OAuthAttributes attributes, AuthProvider provider) {
+    private User getUser(OAuthAttributes attributes, AuthProvider provider) {
         String providerUserId = attributes.getOauth2UserInfo().getId();
 
         return userRepository.findByProviderAndProviderUserId(provider, providerUserId)
@@ -94,9 +95,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
      * OAuthAttributes의 toEntity() 메소드를 통해 빌더로 User 객체 생성 후 반환
      * 생성된 User 객체를 DB에 저장 : provider, providerUserId, email, role 값만 있는 상태
      */
-    private Users saveUser(OAuthAttributes attributes, AuthProvider provider) {
-        Users createdUser = attributes.toEntity(provider, attributes.getOauth2UserInfo());
-        Users savedUser = userRepository.save(createdUser);
+    private User saveUser(OAuthAttributes attributes, AuthProvider provider) {
+        User createdUser = attributes.toEntity(provider, attributes.getOauth2UserInfo());
+        User savedUser = userRepository.save(createdUser);
 
         log.info("신규 회원 저장 완료 - userId={}, provider={}, providerUserId={}, email={}, role={}",
             savedUser.getId(), savedUser.getProvider(), savedUser.getProviderUserId(),
