@@ -220,3 +220,55 @@ redisTemplate.delete("refresh_token:{userId}");
 | ----- | --------------- |
 | GUEST | 최초 로그인 (닉네임 없음) |
 | USER  | 닉네임 등록 완료       |
+
+---
+
+## 10. API 명세서
+
+### 10.1 인증 관련 API (Auth)
+
+#### 1) 토큰 재발급 (Refresh)
+* **URL**: `/api/auth/refresh`
+* **Method**: `POST`
+* **Request Body**:
+```json
+{
+  "refreshToken": "string"
+}
+```
+* **Response Data**:
+```json
+{
+  "accessToken": "string",
+  "refreshToken": "string"
+}
+```
+
+#### 2) 로그아웃 (Logout)
+* **URL**: `/api/auth/logout`
+* **Method**: `POST`
+* **Authentication**: `Bearer AccessToken` 필요
+* **Response Data**: `null`
+
+### 10.2 사용자 관련 API (User)
+
+#### 1) 닉네임 등록 및 가입 완료 (Register Nickname)
+* **URL**: `/api/users/nickname`
+* **Method**: `POST`
+* **Authentication**: `Bearer AccessToken` 필요 (GUEST 권한 포함)
+* **Request Body**:
+```json
+{
+  "nickname": "string" // 최대 50자
+}
+```
+* **Response Data**: 승급된 정보가 반영된 새로운 토큰 세트를 반환합니다.
+```json
+{
+  "accessToken": "string",
+  "refreshToken": "string",
+  "userId": 1,
+  "role": "USER",
+  "nickname": "입력한닉네임"
+}
+```
