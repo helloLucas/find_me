@@ -199,7 +199,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           onClose={() => setContextMenu(null)}
           items={[
             { label: 'New Tab', onClick: handleNewTab },
-            { label: 'Close', onClick: () => handleCloseTab(activeTabId) },
+            { label: showDevTools ? 'Close DevTools' : 'Open DevTools', onClick: () => setShowDevTools(prev => !prev) },
+            { label: 'Close Tab', onClick: () => handleCloseTab(activeTabId) },
           ]}
         />
       )}
