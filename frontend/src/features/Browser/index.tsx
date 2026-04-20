@@ -61,12 +61,17 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     }
 
     const handleCaptureKeyDown = (e: KeyboardEvent) => {
-      // Global override for Ctrl+W if this browser is active
       const activeWindowId = useWindowStore.getState().activeWindowId;
-      if (activeWindowId === windowId && e.ctrlKey && e.key === 'w') {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCloseTab(activeTabId);
+      if (activeWindowId === windowId && e.ctrlKey) {
+        if (e.key.toLowerCase() === 'w') {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCloseTab(activeTabId);
+        } else if (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 't') {
+          e.preventDefault();
+          e.stopPropagation();
+          handleNewTab();
+        }
       }
     };
     window.addEventListener('keydown', handleCaptureKeyDown, { capture: true });
@@ -75,10 +80,6 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       if (e.key === 'F12') {
         e.preventDefault();
         setShowDevTools(prev => !prev);
-      }
-      if (e.ctrlKey && e.key === 't') {
-        e.preventDefault();
-        handleNewTab();
       }
     };
 
