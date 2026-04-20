@@ -73,9 +73,11 @@ public class StoryServiceImpl implements StoryService {
         throw new CustomException(ErrorCode.A1001);
     }
 
+    // TODO: [Mock 데이터] 아래 메서드들은 하드코딩된 Mock 데이터를 반환합니다. 추후 실제 DB 조회 및 동적 데이터 구성 로직으로 교체해야 합니다.
     // ── Mock 응답 빌더 ────────────────────────────────────────────────────────────
 
     private TransitionResponseDto buildLsResponse(Long currentNodeId, String input) {
+        // TODO: [Mock] ls 명령어 실행 결과. 실제 디렉토리 구조 및 파일 메타데이터로 대체 필요.
         boolean isLongFormat =
                 input.contains("-l") || input.contains("-al") || input.contains("-la");
 
@@ -113,6 +115,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     private TransitionResponseDto buildPwdResponse(Long currentNodeId, Map<String, Object> meta) {
+        // TODO: [Mock] pwd 명령어 실행 결과. 실제 세션/진행도의 디렉토리 상태로 대체 필요.
         String directory =
                 (meta != null && meta.containsKey("directory"))
                         ? String.valueOf(meta.get("directory"))
@@ -142,6 +145,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     private TransitionResponseDto buildWhoamiResponse(Long currentNodeId) {
+        // TODO: [Mock] whoami 명령어 실행 결과. 실제 접속 계정 정보로 대체 필요.
         String output = "guest";
 
         return TransitionResponseDto.builder()
@@ -165,6 +169,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     private TransitionResponseDto buildCatResponse(Long currentNodeId, String input) {
+        // TODO: [Mock] cat 명령어 실행 결과. 실제 파일 시스템과 내용 및 접근 권한 조회 로직으로 대체 필요.
         String filename = input.replace("cat", "").trim();
 
         String output;
