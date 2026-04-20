@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  * JWT, Mattermost 등 복잡한 로직 없이 오직 Google OAuth 로그인 흐름만 테스트합니다.
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
