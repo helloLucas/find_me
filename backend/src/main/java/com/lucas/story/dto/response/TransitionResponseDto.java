@@ -1,7 +1,7 @@
 package com.lucas.story.dto.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.lucas.story.entity.StoryNode;
+import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -9,23 +9,27 @@ import lombok.Getter;
 @Builder
 public class TransitionResponseDto {
 
-    private final String nodeCode;
-    private final String nodeType;
-    private final String promptType;
-    private final JsonNode outputBundle;
-    private final JsonNode promptMeta;
-    private final boolean checkpoint;
-    private final boolean terminal;
+    private NextNodeDto nextNode;
+    private Map<String, Object> snapshot;
+    private List<EffectDto> effects;
+    private String result;
 
-    public static TransitionResponseDto from(StoryNode node) {
-        return TransitionResponseDto.builder()
-                .nodeCode(node.getCode())
-                .nodeType(node.getNodeType())
-                .promptType(node.getPromptType())
-                .outputBundle(node.getOutputBundle())
-                .promptMeta(node.getPromptMeta())
-                .checkpoint(node.isCheckpoint())
-                .terminal(node.isTerminal())
-                .build();
+    @Getter
+    @Builder
+    public static class NextNodeDto {
+        private Long id;
+        private String code;
+        private String nodeType;
+        private Map<String, Object> outputBundle;
+        private String promptType;
+        private boolean isCheckpoint;
+        private boolean isTerminal;
+    }
+
+    @Getter
+    @Builder
+    public static class EffectDto {
+        private String type;
+        private Object payload;
     }
 }

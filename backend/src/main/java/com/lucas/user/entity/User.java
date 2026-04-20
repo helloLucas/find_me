@@ -1,50 +1,75 @@
 package com.lucas.user.entity;
 
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
-import lombok.AccessLevel;
+import com.lucas.auth.entity.AuthProvider;
+import com.lucas.auth.entity.UserRole;
+import com.lucas.global.util.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
-@Table(name = "users")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-public class User {
+@NoArgsConstructor
+@Table(
+        name = "users",
+        uniqueConstraints = {
+            @UniqueConstraint(
+                    name = "uk_users_provider_provider_user_id",
+                    columnNames = {"provider", "provider_user_id"})
+        })
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(name = "email", length = 255)
     private String email;
 
-    @Column(length = 50)
-    private String name;
+    @Column(name = "oauth_name", length = 50, nullable = false)
+    private String oauthName;
 
-    @Column(name = "ssafy_id", unique = true)
-    private Long ssafyId;
+    @Column(name = "nickname", length = 50)
+    private String nickname;
 
-    @Column(length = 50)
-    private String region;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", length = 30, nullable = false)
+    private AuthProvider provider;
 
-    @Column(nullable = false, length = 50)
-    private String role;
+    @Column(name = "provider_user_id", length = 100, nullable = false)
+    private String providerUserId;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", length = 20, nullable = false)
+    private UserRole role;
 
     @Builder
-    public User(String email, String name, Long ssafyId, String region, String role) {
+    public User(
+            String email,
+            String oauthName,
+            String nickname,
+            AuthProvider provider,
+            String providerUserId,
+            UserRole role) {
         this.email = email;
-        this.name = name;
-        this.ssafyId = ssafyId;
-        this.region = region;
+        this.oauthName = oauthName;
+        this.nickname = nickname;
+        this.provider = provider;
+        this.providerUserId = providerUserId;
+        this.role = role != null ? role : UserRole.GUEST;
+    }
+
+    public void updateNicknameAndRole(String nickname, UserRole role) {
+        this.nickname = nickname;
         this.role = role;
     }
 }

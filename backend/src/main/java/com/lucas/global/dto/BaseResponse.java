@@ -24,4 +24,8 @@ public class BaseResponse<T> {
     public static BaseResponse<Void> success(String message) {
         return new BaseResponse<>(null, message, null);
     }
+
+    public static BaseResponse<Void> fail(String code, String message) {
+        return new BaseResponse<>(code, message, null);
+    }
 }
