@@ -27,18 +27,20 @@ export const Window: React.FC<WindowProps> = ({
   const { closeWindow, minimizeWindow, maximizeWindow, restoreWindow, focusWindow } = useWindowStore();
   const rndRef = useRef<any>(null);
 
-  // Store last size and position before maximize
-  const [prevPosition, setPrevPosition] = useState({ x: 50, y: 50 });
-  const [prevSize, setPrevSize] = useState({ width: defaultWidth, height: defaultHeight });
+  // Fully controlled state for Rnd to ensure maximize reliably toggles
+  const [size, setSize] = useState<{ width: string | number; height: string | number }>({ width: defaultWidth, height: defaultHeight });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isReady, setIsReady] = useState(false);
   
   // To handle initial centering vaguely
   useEffect(() => {
     const rx = Math.max(0, (window.innerWidth - defaultWidth) / 2) + (Math.random() * 40 - 20);
     const ry = Math.max(0, (window.innerHeight - defaultHeight) / 2) + (Math.random() * 40 - 20);
-    setPrevPosition({ x: rx, y: ry });
-  }, []);
+    setPosition({ x: rx, y: ry });
+    setIsReady(true);
+  }, [defaultWidth, defaultHeight]);
 
-  if (!windowState) {
+  if (!windowState || !isReady) {
     return null;
   }
 
@@ -49,11 +51,6 @@ export const Window: React.FC<WindowProps> = ({
     if (isMaximized) {
       restoreWindow(id);
     } else {
-      // Current size/pos from Rnd
-      if (rndRef.current) {
-        setPrevPosition(rndRef.current.getResizable().state.position || prevPosition);
-        setPrevSize(rndRef.current.getResizable().state.size || prevSize);
-      }
       maximizeWindow(id);
     }
   };
@@ -61,14 +58,17 @@ export const Window: React.FC<WindowProps> = ({
   return (
     <Rnd
       ref={rndRef}
-      default={{
-        x: prevPosition.x,
-        y: prevPosition.y,
-        width: defaultWidth,
-        height: defaultHeight,
+      size={isMaximized ? { width: '100vw', height: '100vh' } : size}
+      position={isMaximized ? { x: 0, y: 0 } : position}
+      onDragStop={(e, d) => {
+        if (!isMaximized) setPosition({ x: d.x, y: d.y });
       }}
-      size={isMaximized ? { width: '100vw', height: '100vh' } : undefined}
-      position={isMaximized ? { x: 0, y: 0 } : undefined}
+      onResizeStop={(e, direction, ref, delta, pos) => {
+        if (!isMaximized) {
+          setSize({ width: ref.style.width, height: ref.style.height });
+          setPosition(pos); 
+        }
+      }}
       minWidth={minWidth}
       minHeight={minHeight}
       onMouseDownCapture={() => focusWindow(id)}

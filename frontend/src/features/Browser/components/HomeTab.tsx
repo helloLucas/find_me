@@ -1,12 +1,13 @@
 import React from 'react';
 
-export const HomeTab: React.FC = () => {
+interface HomeTabProps {
+  onNavigate: (url: string, component: 'news' | 'home' | 'pacman', title: string) => void;
+}
+
+export const HomeTab: React.FC<HomeTabProps> = ({ onNavigate }) => {
   // Frequently visited dummy data
   const favorites = [
-    { name: 'Terminal', icon: '/pixel_terminal_icon.svg', url: 'system://cmd' },
-    { name: 'Browser', icon: '/pixel_chrome_icon.svg', url: 'system://browser' },
-    { name: 'Notepad', icon: '/pixel_notepad_icon.svg', url: 'system://notes' },
-    { name: 'Recycle', icon: '/pixel_trash_icon.svg', url: 'system://trash' },
+    { name: 'Minigame', icon: '/pixel_chrome_icon.svg', url: 'system://pacman', component: 'pacman', title: 'Pac-Man' },
   ];
 
   return (
@@ -21,6 +22,7 @@ export const HomeTab: React.FC = () => {
             key={i} 
             className="flex flex-col items-center gap-3 w-20 p-2 rounded hover:bg-white/10 transition-colors"
             title={fav.url}
+            onClick={() => onNavigate(fav.url, fav.component as 'news' | 'home' | 'pacman', fav.title)}
           >
             <div className="w-12 h-12 rounded bg-[#1a1130] border border-[#543ab7] flex items-center justify-center hover:shadow-[0_0_10px_#543ab7]">
               <img 

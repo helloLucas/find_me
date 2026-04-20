@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useWindowStore } from '../../app/store/windowStore';
 import { NewsTab } from './components/NewsTab';
 import { HomeTab } from './components/HomeTab';
+import { PacmanTab } from './components/PacmanTab';
 import { NetworkDevTools } from './components/NetworkDevTools';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
 
@@ -9,7 +10,7 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: 'news' | 'home';
+  component: 'news' | 'home' | 'pacman';
 }
 
 interface BrowserProps {
@@ -35,6 +36,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     setActiveTabId(newId);
   };
 
+  const navigateTab = (id: string, url: string, component: Tab['component'], title: string) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, url, component, title } : t));
+  };
+
   const handleCloseTab = (id: string) => {
     setTabs(prev => {
       const filtered = prev.filter(t => t.id !== id);
@@ -54,16 +59,6 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if ('keyboard' in navigator && (navigator as any).keyboard?.lock) {
       (navigator as any).keyboard.lock(['ControlLeft', 'KeyW', 'ControlRight', 'KeyW']).catch(() => {});
     }
-
-    // Fallback: Prevent tab closure via beforeunload
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const activeWindowId = useWindowStore.getState().activeWindowId;
-      if (activeWindowId === windowId) {
-        e.preventDefault();
-        e.returnValue = ''; // Shows the browser's "Leave site?" prompt
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
 
     const handleCaptureKeyDown = (e: KeyboardEvent) => {
       // Global override for Ctrl+W if this browser is active
@@ -93,7 +88,6 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     }
     return () => {
       window.removeEventListener('keydown', handleCaptureKeyDown, { capture: true });
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (el) {
         el.removeEventListener('keydown', handleKeyDown);
       }
@@ -157,7 +151,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       <div className="flex-1 relative overflow-hidden flex flex-row">
         <div className="flex-1 relative z-0 h-full overflow-hidden">
           {activeTab?.component === 'news' && <NewsTab />}
-          {activeTab?.component === 'home' && <HomeTab />}
+          {activeTab?.component === 'home' && (
+            <HomeTab onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} />
+          )}
+          {activeTab?.component === 'pacman' && <PacmanTab />}
         </div>
         
         {/* DevTools Pane */}
