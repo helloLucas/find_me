@@ -60,10 +60,10 @@ export const Window: React.FC<WindowProps> = ({
       ref={rndRef}
       size={isMaximized ? { width: '100vw', height: '100vh' } : size}
       position={isMaximized ? { x: 0, y: 0 } : position}
-      onDragStop={(e, d) => {
+      onDragStop={(_e, d) => {
         if (!isMaximized) setPosition({ x: d.x, y: d.y });
       }}
-      onResizeStop={(e, direction, ref, delta, pos) => {
+      onResizeStop={(_e, _direction, ref, _delta, pos) => {
         if (!isMaximized) {
           setSize({ width: ref.style.width, height: ref.style.height });
           setPosition(pos); 
