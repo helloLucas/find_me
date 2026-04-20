@@ -8,19 +8,15 @@ import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.JwtUtil;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-/**
- * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
- * Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다.
- */
+/** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -88,27 +84,33 @@ public class AuthService {
             }
 
             // 5. 유저 정보 조회
-            User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+            User user =
+                    userRepository
+                            .findById(userId)
+                            .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
             // 6. 새 토큰 세트 발급
             // Access: 30분, Refresh: 14일
-            String newAccessToken = jwtUtil.createAccessToken(
-                user.getId(), user.getEmail(), user.getNickname(),
-                user.getProvider(), user.getRole().name(), 30 * 60 * 1000L
-            );
+            String newAccessToken =
+                    jwtUtil.createAccessToken(
+                            user.getId(),
+                            user.getEmail(),
+                            user.getNickname(),
+                            user.getProvider(),
+                            user.getRole().name(),
+                            30 * 60 * 1000L);
 
-            String newRefreshToken = jwtUtil.createRefreshToken(
-                user.getId(), user.getEmail(), 14 * 24 * 60 * 60 * 1000L
-            );
+            String newRefreshToken =
+                    jwtUtil.createRefreshToken(
+                            user.getId(), user.getEmail(), 14 * 24 * 60 * 60 * 1000L);
 
             // 7. Redis 갱신 및 TTL 재설정 (14일)
             replaceRefreshToken(userId, newRefreshToken);
 
             return RefreshTokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .build();
+                    .accessToken(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .build();
 
         } catch (CustomException e) {
             throw e;
@@ -119,8 +121,7 @@ public class AuthService {
     }
 
     /**
-     * 사용자의 로그아웃을 처리합니다.
-     * Redis에서 해당 유저의 Refresh Token을 삭제합니다.
+     * 사용자의 로그아웃을 처리합니다. Redis에서 해당 유저의 Refresh Token을 삭제합니다.
      *
      * @param userId 로그아웃할 유저의 식별값
      */
@@ -143,24 +144,33 @@ public class AuthService {
     @Transactional
     public TokenResponse initGuest() {
         String tempNickname = "방랑자_" + UUID.randomUUID().toString().substring(0, 4);
-        User guest = User.builder()
-            .nickname(tempNickname)
-            .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
-            .role(UserRole.GUEST)
-            .build();
+        User guest =
+                User.builder()
+                        .nickname(tempNickname)
+                        .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
+                        .role(UserRole.GUEST)
+                        .build();
         userRepository.save(guest);
 
-        String accessToken = jwtUtil.createAccessToken(guest.getId(), null, guest.getNickname(), null, guest.getRole().name(), 30 * 60 * 1000L);
-        String refreshToken = jwtUtil.createRefreshToken(guest.getId(), null, 14 * 24 * 60 * 60 * 1000L);
+        String accessToken =
+                jwtUtil.createAccessToken(
+                        guest.getId(),
+                        null,
+                        guest.getNickname(),
+                        null,
+                        guest.getRole().name(),
+                        30 * 60 * 1000L);
+        String refreshToken =
+                jwtUtil.createRefreshToken(guest.getId(), null, 14 * 24 * 60 * 60 * 1000L);
 
         replaceRefreshToken(guest.getId(), refreshToken); // Redis 저장
 
         return TokenResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .userId(guest.getId())
-            .role(guest.getRole().name())
-            .nickname(guest.getNickname())
-            .build();
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .userId(guest.getId())
+                .role(guest.getRole().name())
+                .nickname(guest.getNickname())
+                .build();
     }
 }

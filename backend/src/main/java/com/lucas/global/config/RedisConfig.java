@@ -26,11 +26,11 @@ public class RedisConfig {
     public RedisTemplate<String, String> redisTemplate() {
         RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
-        
-        // Key와 Value를 모두 String으로 저장하기 위해 직렬화 설정
+
+        // Key와 Value를 모두 String으로 저장하기 위해 직렬화 설정 (로그 저장용)
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new StringRedisSerializer());
-        
+
         return redisTemplate;
     }
 }

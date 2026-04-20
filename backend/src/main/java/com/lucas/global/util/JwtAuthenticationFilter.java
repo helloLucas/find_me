@@ -21,9 +21,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         String authorization = request.getHeader("Authorization");
 
@@ -52,17 +52,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String role = jwtUtil.getRole(token);
             String nickname = jwtUtil.getNickname(token);
 
-            CustomUserPrincipal principal = CustomUserPrincipal.builder()
-                    .userId(userId)
-                    .email(email)
-                    .nickname(nickname)
-                    .role(UserRole.valueOf(role))
-                    .build();
+            CustomUserPrincipal principal =
+                    CustomUserPrincipal.builder()
+                            .userId(userId)
+                            .email(email)
+                            .nickname(nickname)
+                            .role(UserRole.valueOf(role))
+                            .build();
 
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    principal,
-                    null,
-                    principal.getAuthorities());
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            principal, null, principal.getAuthorities());
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
@@ -75,9 +75,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void sendErrorResponse(HttpServletResponse response,
-            HttpStatus status,
-            String message) throws IOException {
+    private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message)
+            throws IOException {
         response.setStatus(status.value());
         response.setContentType("application/json;charset=UTF-8");
 

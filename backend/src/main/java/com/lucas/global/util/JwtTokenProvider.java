@@ -35,30 +35,32 @@ public class JwtTokenProvider {
         Date accessTokenExpiresAt = new Date(now + jwtProperties.getAccessTokenExpiration());
         Date refreshTokenExpiresAt = new Date(now + jwtProperties.getRefreshTokenExpiration());
 
-        String accessToken = Jwts.builder()
-            .subject(String.valueOf(customOAuth2User.getUserId()))
-            .claim("role", customOAuth2User.getRole().name())
-            .claim("provider", customOAuth2User.getProvider().name())
-            .claim("email", customOAuth2User.getEmail())
-            .issuedAt(new Date(now))
-            .expiration(accessTokenExpiresAt)
-            .signWith((javax.crypto.SecretKey) key)
-            .compact();
+        String accessToken =
+                Jwts.builder()
+                        .subject(String.valueOf(customOAuth2User.getUserId()))
+                        .claim("role", customOAuth2User.getRole().name())
+                        .claim("provider", customOAuth2User.getProvider().name())
+                        .claim("email", customOAuth2User.getEmail())
+                        .issuedAt(new Date(now))
+                        .expiration(accessTokenExpiresAt)
+                        .signWith((javax.crypto.SecretKey) key)
+                        .compact();
 
-        String refreshToken = Jwts.builder()
-            .subject(String.valueOf(customOAuth2User.getUserId()))
-            .claim("type", "refresh")
-            .issuedAt(new Date(now))
-            .expiration(refreshTokenExpiresAt)
-            .signWith((javax.crypto.SecretKey) key)
-            .compact();
+        String refreshToken =
+                Jwts.builder()
+                        .subject(String.valueOf(customOAuth2User.getUserId()))
+                        .claim("type", "refresh")
+                        .issuedAt(new Date(now))
+                        .expiration(refreshTokenExpiresAt)
+                        .signWith((javax.crypto.SecretKey) key)
+                        .compact();
 
         return TokenResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .userId(customOAuth2User.getUserId())
-            .role(customOAuth2User.getRole().name())
-            .build();
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .userId(customOAuth2User.getUserId())
+                .role(customOAuth2User.getRole().name())
+                .build();
     }
 
     public boolean validateToken(String token) {
@@ -72,10 +74,10 @@ public class JwtTokenProvider {
 
     public Claims parseClaims(String token) {
         return Jwts.parser()
-            .verifyWith((javax.crypto.SecretKey) key)
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+                .verifyWith((javax.crypto.SecretKey) key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     public Long getUserId(String token) {
@@ -98,20 +100,21 @@ public class JwtTokenProvider {
         return parseClaims(token).get("provider", String.class);
     }
 
-    public String generateAccessToken(Long userId, String email, String nickname, UserRole role, AuthProvider provider) {
+    public String generateAccessToken(
+            Long userId, String email, String nickname, UserRole role, AuthProvider provider) {
         long now = System.currentTimeMillis();
         Date accessTokenExpiresAt = new Date(now + jwtProperties.getAccessTokenExpiration());
 
         return Jwts.builder()
-            .subject(String.valueOf(userId))
-            .claim("role", role.name())
-            .claim("provider", provider.name())
-            .claim("email", email)
-            .claim("nickname", nickname)
-            .issuedAt(new Date(now))
-            .expiration(accessTokenExpiresAt)
-            .signWith((javax.crypto.SecretKey) key)
-            .compact();
+                .subject(String.valueOf(userId))
+                .claim("role", role.name())
+                .claim("provider", provider.name())
+                .claim("email", email)
+                .claim("nickname", nickname)
+                .issuedAt(new Date(now))
+                .expiration(accessTokenExpiresAt)
+                .signWith((javax.crypto.SecretKey) key)
+                .compact();
     }
 
     public String generateRefreshToken(Long userId) {
@@ -119,11 +122,11 @@ public class JwtTokenProvider {
         Date refreshTokenExpiresAt = new Date(now + jwtProperties.getRefreshTokenExpiration());
 
         return Jwts.builder()
-            .subject(String.valueOf(userId))
-            .claim("type", "refresh")
-            .issuedAt(new Date(now))
-            .expiration(refreshTokenExpiresAt)
-            .signWith((javax.crypto.SecretKey) key)
-            .compact();
+                .subject(String.valueOf(userId))
+                .claim("type", "refresh")
+                .issuedAt(new Date(now))
+                .expiration(refreshTokenExpiresAt)
+                .signWith((javax.crypto.SecretKey) key)
+                .compact();
     }
 }

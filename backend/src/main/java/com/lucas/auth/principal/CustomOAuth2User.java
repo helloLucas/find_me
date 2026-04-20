@@ -2,30 +2,34 @@ package com.lucas.auth.principal;
 
 import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.entity.UserRole;
+import java.util.Collection;
+import java.util.Map;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 
-import java.util.Collection;
-import java.util.Map;
-
 /**
- * OAuth2 로그인 성공 직후 Spring Security에서 관리하는 사용자 정보 객체입니다.
- * JWT 발급 시 사용되며, SecurityContext 내에서 인증 주체(Principal)로 활용됩니다.
+ * OAuth2 로그인 성공 직후 Spring Security에서 관리하는 사용자 정보 객체입니다. JWT 발급 시 사용되며, SecurityContext 내에서 인증
+ * 주체(Principal)로 활용됩니다.
  */
 @Getter
 public class CustomOAuth2User extends DefaultOAuth2User {
 
     /** 애플리케이션 내부 유저 식별값 */
     private final Long userId;
+
     /** 유저 이메일 */
     private final String email;
+
     /** 유저 닉네임 */
     private String nickname;
+
     /** 소셜 로그인 제공자 */
     private final AuthProvider provider;
+
     /** 소셜 제공자에서 부여한 유저 고유 ID */
     private final String providerUserId;
+
     /** 유저 권한 */
     private final UserRole role;
 
@@ -40,15 +44,16 @@ public class CustomOAuth2User extends DefaultOAuth2User {
      * @param providerUserId 제공자 측 식별값
      * @param role 사용자 권한
      */
-    public CustomOAuth2User(Collection<? extends GrantedAuthority> authorities,
-                            Map<String, Object> attributes,
-                            String nameAttributeKey,
-                            Long userId,
-                            String email,
-                            String nickname,
-                            AuthProvider provider,
-                            String providerUserId,
-                            UserRole role) {
+    public CustomOAuth2User(
+            Collection<? extends GrantedAuthority> authorities,
+            Map<String, Object> attributes,
+            String nameAttributeKey,
+            Long userId,
+            String email,
+            String nickname,
+            AuthProvider provider,
+            String providerUserId,
+            UserRole role) {
         super(authorities, attributes, nameAttributeKey);
         this.userId = userId;
         this.email = email;

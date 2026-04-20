@@ -5,9 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 인증 성공 시 클라이언트에 반환되는 토큰 및 사용자 정보를 담는 DTO 클래스입니다.
- */
+/** 인증 성공 시 클라이언트에 반환되는 토큰 및 사용자 정보를 담는 DTO 클래스입니다. */
 @Getter
 @Builder
 @NoArgsConstructor

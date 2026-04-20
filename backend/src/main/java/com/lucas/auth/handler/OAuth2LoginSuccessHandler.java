@@ -16,10 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-/**
- * OAuth2 소셜 로그인 성공 시 처리를 담당하는 핸들러 클래스입니다.
- * JWT 토큰 발급 및 Redis 토큰 저장, 로그인 성공 응답 구성을 수행합니다.
- */
+/** OAuth2 소셜 로그인 성공 시 처리를 담당하는 핸들러 클래스입니다. JWT 토큰 발급 및 Redis 토큰 저장, 로그인 성공 응답 구성을 수행합니다. */
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
@@ -38,9 +35,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
      * @throws ServletException 서블릿 예외
      */
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(
+            HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+            throws IOException, ServletException {
 
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
@@ -52,35 +49,32 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // 닉네임이 없거나 임시 닉네임인 경우 새로운 사용자로 판단
         boolean isNewUser = (nickname == null || nickname.startsWith("방랑자_"));
 
-        String accessToken = jwtUtil.createAccessToken(
-            userId,
-            email,
-            nickname,
-            customOAuth2User.getProvider(),
-            role,
-            30 * 60 * 1000L
-        );
+        String accessToken =
+                jwtUtil.createAccessToken(
+                        userId,
+                        email,
+                        nickname,
+                        customOAuth2User.getProvider(),
+                        role,
+                        30 * 60 * 1000L);
 
-        String refreshToken = jwtUtil.createRefreshToken(
-            userId,
-            email,
-            14 * 24 * 60 * 60 * 1000L
-        );
+        String refreshToken = jwtUtil.createRefreshToken(userId, email, 14 * 24 * 60 * 60 * 1000L);
 
         // refresh token 을 Redis에 저장
         authService.replaceRefreshToken(userId, refreshToken);
 
-        TokenResponse tokenResponse = TokenResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .userId(userId)
-            .role(role)
-            .nickname(nickname)
-            .isNewUser(isNewUser)
-            .build();
+        TokenResponse tokenResponse =
+                TokenResponse.builder()
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
+                        .userId(userId)
+                        .role(role)
+                        .nickname(nickname)
+                        .isNewUser(isNewUser)
+                        .build();
 
         BaseResponse<TokenResponse> successResponse =
-            BaseResponse.success("로그인에 성공했습니다.", tokenResponse);
+                BaseResponse.success("로그인에 성공했습니다.", tokenResponse);
 
         response.setStatus(HttpStatus.OK.value());
         response.setContentType("application/json;charset=UTF-8");

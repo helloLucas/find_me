@@ -21,6 +21,24 @@ public enum ErrorCode {
             "User not found",
             "사용자를 찾을 수 없습니다.",
             "/problems/user-not-found"),
+    E3001(
+            "E3001",
+            HttpStatus.NOT_FOUND,
+            "Chapter not found",
+            "챕터를 찾을 수 없습니다.",
+            "/problems/chapter-not-found"),
+    E3002(
+            "E3002",
+            HttpStatus.NOT_FOUND,
+            "Story node not found",
+            "스토리 노드를 찾을 수 없습니다.",
+            "/problems/story-node-not-found"),
+    E3003(
+            "E3003",
+            HttpStatus.NOT_FOUND,
+            "Progress not found",
+            "진행 상태를 찾을 수 없습니다.",
+            "/problems/progress-not-found"),
     A1000(
             "A1000",
             HttpStatus.BAD_REQUEST,
@@ -33,6 +51,12 @@ public enum ErrorCode {
             "Transition not allowed",
             "현재 상태에서는 해당 동작을 수행할 수 없습니다.",
             "/problems/transition-not-allowed"),
+    A1002(
+            "A1002",
+            HttpStatus.FORBIDDEN,
+            "Previous chapter not completed",
+            "이전 챕터를 완료해야 진행할 수 있습니다.",
+            "/problems/prev-chapter-incomplete"),
     A2000(
             "A2000",
             HttpStatus.FORBIDDEN,

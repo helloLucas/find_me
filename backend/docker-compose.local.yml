@@ -1,18 +1,25 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:16
-    container_name: lucas-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: lucas
-      POSTGRES_USER: lucas
-      POSTGRES_PASSWORD: lucas
+  backend:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lucas-backend
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - "8080:8080"
+    restart: unless-stopped
+    # RDS 연결 전, 외부(로컬)에 띄운 DB와 통신하기 위한 임시 설정입니다.
+    # 추후 RDS가 나오면 local-postgres 자리에 RDS 주소를 넣으시면 됩니다.
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://lucas-postgres-local:5432/lucas
+      - SPRING_DATASOURCE_USERNAME=lucas
+      - SPRING_DATASOURCE_PASSWORD=lucas
 
-volumes:
-  postgres-data:
+# 로컬 외부 DB 컨테이너와 통신하기 위한 전용망
+networks:
+  default:
+    name: lucas-network
+    external: true

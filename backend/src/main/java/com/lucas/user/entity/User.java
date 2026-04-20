@@ -8,16 +8,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 시스템의 사용자 정보를 담는 엔티티 클래스입니다.
- * 이메일, 닉네임, 인증 제공자 정보 및 권한 정보를 관리합니다.
- */
+/** 시스템의 사용자 정보를 담는 엔티티 클래스입니다. 이메일, 닉네임, 인증 제공자 정보 및 권한 정보를 관리합니다. */
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_users_provider_provider_user_id", columnNames = { "provider", "provider_user_id" })
-})
+@Table(
+        name = "users",
+        uniqueConstraints = {
+            @UniqueConstraint(
+                    name = "uk_users_provider_provider_user_id",
+                    columnNames = {"provider", "provider_user_id"})
+        })
 public class User extends BaseEntity {
 
     /** 애플리케이션 유저 식별값 (PK) */
@@ -62,7 +63,12 @@ public class User extends BaseEntity {
      * @param role 유저 권한 (제공되지 않을 경우 기본 GUEST)
      */
     @Builder
-    public User(String email, String oauthName, String nickname, AuthProvider provider, String providerUserId,
+    public User(
+            String email,
+            String oauthName,
+            String nickname,
+            AuthProvider provider,
+            String providerUserId,
             UserRole role) {
         this.email = email;
         this.oauthName = oauthName;
@@ -82,15 +88,15 @@ public class User extends BaseEntity {
     }
 
     /**
-     * 게스트 사용자를 정식 회원으로 승격시킵니다.
-     * 소셜 로그인 연동 정보를 기록하고 상태를 MEMBER로 변경합니다.
+     * 게스트 사용자를 정식 회원으로 승격시킵니다. 소셜 로그인 연동 정보를 기록하고 상태를 MEMBER로 변경합니다.
      *
      * @param email 사용자 이메일
      * @param oauthName 소셜 실명
      * @param provider 인증 제공자
      * @param providerUserId 제공자 측 식별값
      */
-    public void upgradeToMember(String email, String oauthName, AuthProvider provider, String providerUserId) {
+    public void upgradeToMember(
+            String email, String oauthName, AuthProvider provider, String providerUserId) {
         this.email = email;
         this.oauthName = oauthName;
         this.provider = provider;

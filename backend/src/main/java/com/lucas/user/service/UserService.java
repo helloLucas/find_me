@@ -9,9 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 사용자 정보와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
- */
+/** 사용자 정보와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,8 +35,10 @@ public class UserService {
             throw new CustomException(ErrorCode.H1000);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+        User user =
+                userRepository
+                        .findById(userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
         user.updateNickname(trimmedNickname);
         log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);

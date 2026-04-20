@@ -4,9 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 토큰 재발급 요청 시 사용되는 DTO 클래스입니다.
- */
+/** 토큰 재발급 요청 시 사용되는 DTO 클래스입니다. */
 @Getter
 @NoArgsConstructor
 public class RefreshTokenRequest {

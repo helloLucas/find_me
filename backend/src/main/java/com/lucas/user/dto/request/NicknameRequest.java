@@ -5,9 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 닉네임 수정 요청 정보를 담는 DTO 클래스입니다.
- */
+/** 닉네임 수정 요청 정보를 담는 DTO 클래스입니다. */
 @Getter
 @NoArgsConstructor
 public class NicknameRequest {

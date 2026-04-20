@@ -2,12 +2,11 @@ package com.lucas.auth.oauth;
 
 import java.util.Map;
 
-/**
- * 구글 OAuth2 인증을 통해 제공받은 사용자 정보를 매핑하는 클래스입니다.
- */
+/** 구글 OAuth2 인증을 통해 제공받은 사용자 정보를 매핑하는 클래스입니다. */
 public class GoogleOAuth2UserInfo extends OAuth2UserInfo {
     /**
      * 구글 사용자 속성 맵을 사용하여 객체를 생성합니다.
+     *
      * @param attributes 사용자 속성 맵
      */
     public GoogleOAuth2UserInfo(Map<String, Object> attributes) {
