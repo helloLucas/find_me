@@ -38,10 +38,6 @@ spring:
         access-token-expiration: 1800000      # 30분 (ms)
         refresh-token-expiration: 1209600000  # 14일 (ms)
 
-  data:
-    redis:
-      host: lucas-redis-local
-      port: 6379
 
 server:
   port: 8080
