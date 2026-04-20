@@ -52,10 +52,36 @@ img {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Custom Scrollbar for retro theme */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+  background-color: #0b0216;
+  border-left: 2px solid #543ab7;
+  border-top: 2px solid #543ab7;
+}
+::-webkit-scrollbar-track {
+  background-color: #110a26;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #a48cff;
+  border: 2px solid #110a26;
+  border-radius: 0px; /* Force sharp edges */
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #c7b3ff;
+}
+::-webkit-scrollbar-corner {
+  background-color: #0b0216;
+}
+
 /* Custom Terminal Scrollbar */
 .terminal-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
+  background-color: transparent;
+  border-left: none;
+  border-top: none;
 }
 
 .terminal-scrollbar::-webkit-scrollbar-track {
@@ -65,10 +91,10 @@ img {
 
 .terminal-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(156, 163, 175, 0.4);
+  border: none;
   border-radius: 0;
 }
 
 .terminal-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.7);
 }
-

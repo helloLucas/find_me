@@ -7,11 +7,11 @@ export default function PlayPage() {
   return (
     <main className="h-screen w-screen overflow-hidden">
       <Desktop />
-      
+
       {/* Hidden info for development/debugging */}
-      <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
+      {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
         CODE: {chapterCode}
-      </div>
+      </div> */}
     </main>
   );
 }
