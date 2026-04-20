@@ -228,7 +228,7 @@ redisTemplate.delete("refresh_token:{userId}");
 ### 10.1 인증 관련 API (Auth)
 
 #### 1) 토큰 재발급 (Refresh)
-* **URL**: `/api/auth/refresh`
+* **URL**: `/api/v1/auth/refresh`
 * **Method**: `POST`
 * **Request Body**:
 ```json
@@ -245,7 +245,7 @@ redisTemplate.delete("refresh_token:{userId}");
 ```
 
 #### 2) 로그아웃 (Logout)
-* **URL**: `/api/auth/logout`
+* **URL**: `/api/v1/auth/logout`
 * **Method**: `POST`
 * **Authentication**: `Bearer AccessToken` 필요
 * **Response Data**: `null`
@@ -253,7 +253,7 @@ redisTemplate.delete("refresh_token:{userId}");
 ### 10.2 사용자 관련 API (User)
 
 #### 1) 닉네임 등록 및 가입 완료 (Register Nickname)
-* **URL**: `/api/users/nickname`
+* **URL**: `/api/v1/users/nickname`
 * **Method**: `POST`
 * **Authentication**: `Bearer AccessToken` 필요 (GUEST 권한 포함)
 * **Request Body**:

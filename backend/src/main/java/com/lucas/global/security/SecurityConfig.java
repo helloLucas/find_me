@@ -35,8 +35,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/",
-                    "/api/auth/login",
-                    "/api/auth/refresh",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/refresh",
                     "/oauth2/**",
                     "/error" // 로그인 실패 후 기본 /error 로 리다이렉트되는 경우 403 방지를 위함
                 ).permitAll()
