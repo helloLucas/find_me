@@ -160,12 +160,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   // Render logic
   // Classic windows style + Retro hacker: Thick gray/green borders, blocky header
-  const baseClasses = "absolute flex flex-col overflow-hidden bg-black border-2 border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)] ring-1 ring-black transition-all duration-300 ease-in-out origin-bottom";
+  const baseClasses = "absolute flex flex-col overflow-hidden bg-black border-2 border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)] ring-1 ring-black origin-bottom";
   
   const stateClasses = isMinimized 
-    ? "opacity-0 scale-50 pointer-events-none" 
+    ? "opacity-0 scale-50 pointer-events-none transition-all duration-300 ease-in-out" 
     : isMaximized 
-      ? "!inset-0 !w-full !h-full !transform-none !transition-none z-50 rounded-none border-0" 
+      ? "!inset-0 !w-full !h-full !transform-none z-50 rounded-none border-0" 
       : "opacity-100 scale-100 z-40 rounded-sm";
 
   return (
@@ -186,15 +186,15 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         </div>
 
         {/* Buttons (Classic Windows-95/Hacker style) */}
-        <div className="flex bg-gray-900 items-center h-full pb-1">
+        <div className="flex items-center h-full gap-1 mr-1">
           <button 
-            className="w-8 h-6 flex items-center justify-center text-green-600 hover:text-green-300 hover:bg-green-900/50 bg-gray-800 border border-t-gray-700 border-l-gray-700 border-b-gray-950 border-r-gray-950 mx-[1px]"
+            className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50 transition-colors"
             onClick={(e) => { e.stopPropagation(); onMinimize?.(); }}
           >
-            <span className="mb-2 w-3 h-[2px] bg-current" />
+            <span className="w-[10px] h-[2px] bg-current translate-y-[2px]" />
           </button>
           <button 
-            className="w-8 h-6 flex items-center justify-center text-green-600 hover:text-green-300 hover:bg-green-900/50 bg-gray-800 border border-t-gray-700 border-l-gray-700 border-b-gray-950 border-r-gray-950 mx-[1px]"
+            className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50 transition-colors"
             onClick={(e) => { e.stopPropagation(); toggleMaximize(); }}
           >
             <div className={`border-[2px] border-current w-3 h-3 ${isMaximized ? 'relative top-[1px] right-[1px]' : ''}`}>
@@ -202,7 +202,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             </div>
           </button>
           <button 
-            className="w-8 h-6 flex items-center justify-center text-green-600 hover:text-white hover:bg-red-800 bg-gray-800 border border-t-gray-700 border-l-gray-700 border-b-gray-950 border-r-gray-950 mx-[1px]"
+            className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-red-800/70 hover:text-white hover:border-red-500/50 transition-colors"
             onClick={(e) => { e.stopPropagation(); onClose?.(); }}
           >
             <span className="font-bold text-sm">X</span>
