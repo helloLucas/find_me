@@ -33,13 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 스토리 진행 서비스 구현체.
  *
- * 플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리,
- * 그리고 입력 명령어 이력 조회 기능을 제공한다.
+ * <p>플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리, 그리고 입력 명령어 이력 조회 기능을 제공한다.
  *
- * 핵심 흐름:
- *  1) 명령어 입력 시 Redis에 로깅 (RAG 역량 강화 및 유저 맥락 파악 용도)
- *  2) Mock 명령어(ls, pwd 등)는 DB 조회 없이 즉시 응답 반환
- *  3) 일반 전이는 DB의 story_transitions 테이블을 기반으로 처리
+ * <p>핵심 흐름: 1) 명령어 입력 시 Redis에 로깅 (RAG 역량 강화 및 유저 맥락 파악 용도) 2) Mock 명령어(ls, pwd 등)는 DB 조회 없이 즉시 응답
+ * 반환 3) 일반 전이는 DB의 story_transitions 테이블을 기반으로 처리
  *
  * @see StoryService
  * @see CommandLogService
@@ -150,10 +147,8 @@ public class StoryServiceImpl implements StoryService {
     /**
      * 유저의 액션(명령어 입력, 클릭 등)을 받아 스토리 상태를 전이시킨다.
      *
-     * 처리 우선순위:
-     *  1) 명령어 로깅 — Redis에 기록하여 RAG 및 유저 맥락 파악에 활용
-     *  2) Mock 명령어 — ls, pwd 등 시뮬레이션 대상이면 DB 조회 없이 즉시 응답
-     *  3) DB 기반 전이 — story_transitions 테이블에서 매칭되는 전이를 찾아 상태 이동
+     * <p>처리 우선순위: 1) 명령어 로깅 — Redis에 기록하여 RAG 및 유저 맥락 파악에 활용 2) Mock 명령어 — ls, pwd 등 시뮬레이션 대상이면 DB
+     * 조회 없이 즉시 응답 3) DB 기반 전이 — story_transitions 테이블에서 매칭되는 전이를 찾아 상태 이동
      *
      * @param request 유저 액션 정보 (nodeId, actionType, inputValue)
      * @return 전이 결과 응답 DTO (다음 노드 + 효과)
@@ -239,9 +234,8 @@ public class StoryServiceImpl implements StoryService {
     /**
      * 게스트 유저를 조회하거나, 없으면 새로 생성한다.
      *
-     * TODO: OAuth2 인증이 완성되면 이 메서드를 제거하고,
-     *       SecurityContext에서 인증된 유저를 가져오는 방식으로 전환해야 한다.
-     *       현재는 개발/테스트 편의를 위해 고정 게스트 계정을 사용한다.
+     * <p>TODO: OAuth2 인증이 완성되면 이 메서드를 제거하고, SecurityContext에서 인증된 유저를 가져오는 방식으로 전환해야 한다. 현재는 개발/테스트
+     * 편의를 위해 고정 게스트 계정을 사용한다.
      *
      * @return 게스트 유저 엔티티
      */
@@ -256,9 +250,15 @@ public class StoryServiceImpl implements StoryService {
                                                 .email(GUEST_EMAIL)
                                                 .oauthName("Guest")
                                                 .nickname("GuestUser")
-                                                .provider(AuthProvider.GOOGLE) // TODO: 게스트 전용 provider 분리 검토
+                                                .provider(
+                                                        AuthProvider
+                                                                .GOOGLE) // TODO: 게스트 전용 provider 분리
+                                                // 검토
                                                 .providerUserId(
-                                                        "GUEST_" + System.currentTimeMillis()) // 고유성 보장용 타임스탬프
+                                                        "GUEST_"
+                                                                + System.currentTimeMillis()) // 고유성
+                                                // 보장용
+                                                // 타임스탬프
                                                 .role(UserRole.GUEST)
                                                 .build()));
     }
@@ -266,8 +266,7 @@ public class StoryServiceImpl implements StoryService {
     /**
      * 주어진 명령어가 Mock(시뮬레이션) 대상인지 판별한다.
      *
-     * TODO: Mock 대상 명령어 목록을 설정 파일 또는 DB로 외부화할 것.
-     *       현재는 하드코딩된 리스트(ls, pwd, whoami, cat)로 판별한다.
+     * <p>TODO: Mock 대상 명령어 목록을 설정 파일 또는 DB로 외부화할 것. 현재는 하드코딩된 리스트(ls, pwd, whoami, cat)로 판별한다.
      *
      * @param input 유저가 입력한 명령어 문자열
      * @return Mock 대상이면 true
@@ -282,10 +281,8 @@ public class StoryServiceImpl implements StoryService {
     /**
      * Mock 명령어에 대한 가상 터미널 응답을 생성한다.
      *
-     * TODO: 실제 터미널 시뮬레이션 엔진으로 교체 필요.
-     *       현재는 단순 문자열 조합으로 가짜 출력을 반환하는 목업(Mock) 상태이다.
-     *       향후 각 명령어별 파일시스템 상태, 현재 디렉토리 등을 반영한
-     *       Context-aware 시뮬레이터를 구현해야 한다.
+     * <p>TODO: 실제 터미널 시뮬레이션 엔진으로 교체 필요. 현재는 단순 문자열 조합으로 가짜 출력을 반환하는 목업(Mock) 상태이다. 향후 각 명령어별 파일시스템
+     * 상태, 현재 디렉토리 등을 반영한 Context-aware 시뮬레이터를 구현해야 한다.
      *
      * @param request 유저 액션 정보
      * @return 가상 터미널 출력을 담은 응답 DTO
@@ -306,18 +303,22 @@ public class StoryServiceImpl implements StoryService {
                                 .outputBundle(Map.of("stdout", output)) // 가상 stdout 출력
                                 .build())
                 .result("success")
-                .effects(List.of(EffectDto.builder().type("append_output").payload(output).build())) // 프론트에 출력 추가 지시
+                .effects(
+                        List.of(
+                                EffectDto.builder()
+                                        .type("append_output")
+                                        .payload(output)
+                                        .build())) // 프론트에 출력 추가 지시
                 .build();
     }
 
     /**
-     * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다.
-     * - actionType 일치 여부 확인
-     * - validatorType에 따라 exact(완전 일치) 또는 regex(정규식) 비교
+     * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라 exact(완전 일치) 또는
+     * regex(정규식) 비교
      *
-     * TODO: 'server_rule' validatorType 지원 추가 (서버 사이드 룰 엔진)
+     * <p>TODO: 'server_rule' validatorType 지원 추가 (서버 사이드 룰 엔진)
      *
-     * @param t       DB에서 조회한 전이 후보
+     * @param t DB에서 조회한 전이 후보
      * @param request 유저의 액션 요청
      * @return 매칭되면 true
      */
@@ -340,8 +341,7 @@ public class StoryServiceImpl implements StoryService {
     /**
      * DB에서 조회한 StoryNode를 TransitionResponseDto로 변환한다.
      *
-     * TODO: outputBundle, effectBundle 등 노드의 전체 데이터를
-     *       응답에 포함하도록 확장 필요. 현재는 메타데이터만 반환한다.
+     * <p>TODO: outputBundle, effectBundle 등 노드의 전체 데이터를 응답에 포함하도록 확장 필요. 현재는 메타데이터만 반환한다.
      *
      * @param node 전이 완료 후 도착한 스토리 노드
      * @return 전이 결과 응답 DTO
@@ -351,12 +351,12 @@ public class StoryServiceImpl implements StoryService {
         return TransitionResponseDto.builder()
                 .nextNode(
                         NextNodeDto.builder()
-                                .id(node.getId())       // 노드 PK
-                                .code(node.getCode())    // 노드 고유 코드 (e.g. CH1_FRIEND_CHAT_PUSH)
-                                .nodeType(node.getNodeType())    // narrative, console, network 등
+                                .id(node.getId()) // 노드 PK
+                                .code(node.getCode()) // 노드 고유 코드 (e.g. CH1_FRIEND_CHAT_PUSH)
+                                .nodeType(node.getNodeType()) // narrative, console, network 등
                                 .promptType(node.getPromptType()) // command, click, inspect 등
                                 .isCheckpoint(node.isCheckpoint()) // 체크포인트 여부
-                                .isTerminal(node.isTerminal())     // 엔딩 노드 여부
+                                .isTerminal(node.isTerminal()) // 엔딩 노드 여부
                                 .build())
                 .result("success")
                 .build();
@@ -365,9 +365,8 @@ public class StoryServiceImpl implements StoryService {
     /**
      * 챕터 순서 검증: 이전 챕터를 완료하지 않으면 다음 챕터를 시작할 수 없다.
      *
-     * TODO: 챕터 완료 조건 상세 로직 구현 필요.
-     *       현재는 sortOrder == 1 (첫 챕터)만 무조건 허용하고,
-     *       그 외 챕터의 진행 조건(이전 챕터 ending 도달 여부 등)은 미구현 상태이다.
+     * <p>TODO: 챕터 완료 조건 상세 로직 구현 필요. 현재는 sortOrder == 1 (첫 챕터)만 무조건 허용하고, 그 외 챕터의 진행 조건(이전 챕터
+     * ending 도달 여부 등)은 미구현 상태이다.
      */
     private void validateChapterProgression(
             UserStoryProgress currentProgress, Chapter requestedChapter) {
@@ -385,17 +384,16 @@ public class StoryServiceImpl implements StoryService {
     /**
      * 챕터 시작 또는 전이 시 사용할 빈 스냅샷(JSON)을 생성한다.
      *
-     * TODO: observerClass(관측자 등급), privilegeLevel(권한),
-     *       scanPercent(GC 스캔율), flags(진행 플래그), inventory(파편 보유 현황) 등
-     *       게임 상태를 스냅샷에 포함하도록 확장 필요. 현재는 위치 식별 정보만 저장한다.
+     * <p>TODO: observerClass(관측자 등급), privilegeLevel(권한), scanPercent(GC 스캔율), flags(진행 플래그),
+     * inventory(파편 보유 현황) 등 게임 상태를 스냅샷에 포함하도록 확장 필요. 현재는 위치 식별 정보만 저장한다.
      */
     private JsonNode createEmptySnapshot(Chapter chapter, StoryNode node) {
         // 빈 JSON 객체 생성
         ObjectNode snapshot = objectMapper.createObjectNode();
         // 현재 위치 식별 정보만 기록
-        snapshot.put("chapterId", chapter.getId());   // 챕터 PK
-        snapshot.put("nodeId", node.getId());          // 노드 PK
-        snapshot.put("nodeCode", node.getCode());      // 노드 코드
+        snapshot.put("chapterId", chapter.getId()); // 챕터 PK
+        snapshot.put("nodeId", node.getId()); // 노드 PK
+        snapshot.put("nodeCode", node.getCode()); // 노드 코드
         // TODO: observerClass, privilegeLevel, scanPercent, flags, inventory 추가 시 여기서 확장
         return snapshot;
     }

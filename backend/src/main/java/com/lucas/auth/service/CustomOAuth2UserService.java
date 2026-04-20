@@ -3,8 +3,11 @@ package com.lucas.auth.service;
 import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.oauth.OAuthAttributes;
 import com.lucas.auth.principal.CustomOAuth2User;
+import com.lucas.global.util.JwtUtil;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -16,14 +19,25 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-/** OAuth2 로그인의 로직을 담당 */
+/** OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스 클래스입니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
 
+    /**
+     * OAuth2 로그인 요청을 처리하여 인증된 사용자의 정보를 로드합니다.
+     *
+     * @param userRequest OAuth2 사용자 요청 정보
+     * @return 인증된 사용자 정보를 담은 OAuth2User 객체
+     * @throws OAuth2AuthenticationException OAuth2 인증 과정에서 오류 발생 시
+     */
+    @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         log.info("CustomOAuth2UserService.loadUser() 실행 - OAuth2 로그인 요청 진입");
 
@@ -69,6 +83,13 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 createdUser.getRole());
     }
 
+    /**
+     * registrationId를 기반으로 AuthProvider를 반환합니다.
+     *
+     * @param registrationId 소셜 로그인 제공자 ID
+     * @return 매칭되는 AuthProvider
+     * @throws OAuth2AuthenticationException 지원하지 않는 제공자일 경우 발생
+     */
     private AuthProvider getAuthProvider(String registrationId) {
         if ("google".equalsIgnoreCase(registrationId)) {
             return AuthProvider.GOOGLE;
@@ -77,12 +98,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     }
 
     /**
-     * AuthProvider와 attributes에 들어있는 소셜 로그인의 식별값 id를 통해 회원을 찾아 반환하는 메소드 만약 찾은 회원이 있다면, 그대로 반환하고 없다면
-     * saveUser()를 호출하여 회원을 저장한다.
+     * AuthProvider와 attributes에 들어있는 소셜 로그인의 식별값 id를 통해 회원을 찾아 반환하는 메소드 만약 찾은 회원이 있다면 그대로 반환하고, 없다면
+     * 게스트 계정에서의 전환 또는 신규 저장을 수행한다.
+     *
+     * @param attributes 추출된 OAuth 사용자 속성
+     * @param provider 소셜 로그인 제공자
+     * @return 조회되거나 생성/전환된 User 객체
      */
     private User getUser(OAuthAttributes attributes, AuthProvider provider) {
         String providerUserId = attributes.getOauth2UserInfo().getId();
 
+        // 이미 가입된 사용자인지 확인
         return userRepository
                 .findByProviderAndProviderUserId(provider, providerUserId)
                 .map(
@@ -94,12 +120,88 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                                     user.getId());
                             return user;
                         })
-                .orElseGet(() -> saveUser(attributes, provider));
+                .orElseGet(
+                        () -> {
+                            // [회원 전환 로직] 가입되지 않았다면, 현재 게스트 상태인지 확인
+                            Long guestId = getCurrentGuestId();
+                            if (guestId != null) {
+                                return upgradeGuestToMember(guestId, attributes, provider);
+                            }
+                            // [신규 가입 로직] 게스트도 아니면 새로 저장
+                            return saveUser(attributes, provider);
+                        });
     }
 
     /**
-     * OAuthAttributes의 toEntity() 메소드를 통해 빌더로 User 객체 생성 후 반환 생성된 User 객체를 DB에 저장 : provider,
-     * providerUserId, email, role 값만 있는 상태
+     * 현재 HTTP 요청에서 게스트 토큰 정보를 파싱하여 게스트 ID를 반환합니다.
+     *
+     * @return 게스트 유저의 식별값 또는 null
+     */
+    private Long getCurrentGuestId() {
+        // 클라이언트가 보낸 헤더에서 '게스트 토큰'을 찾아 그 안의 userId를 반환
+        try {
+            HttpServletRequest request =
+                    ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                            .getRequest();
+
+            // 헤더에서 확인
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                // 액세스 토큰에서 userId 추출
+                return jwtUtil.getUserId(token);
+            }
+
+            // 쿠키에서 확인
+            if (request.getCookies() != null) {
+                for (Cookie cookie : request.getCookies()) {
+                    if ("guest_token".equals(cookie.getName())) {
+                        return jwtUtil.getUserId(cookie.getValue());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("현재 요청에서 게스트 정보를 찾을 수 없습니다.");
+        }
+        return null;
+    }
+
+    /**
+     * 기존 게스트 레코드를 소셜 정보를 포함한 회원(MEMBER) 레코드로 승격시킵니다.
+     *
+     * @param guestId 게스트 유저 식별값
+     * @param attributes 소셜 로그인 사용자 속성
+     * @param provider 소셜 로그인 제공자
+     * @return 승격된 User 객체
+     */
+    private User upgradeGuestToMember(
+            Long guestId, OAuthAttributes attributes, AuthProvider provider) {
+        log.info("게스트 -> 멤버 전환 시도 - guestId={}, email={}", guestId, attributes.getEmail());
+
+        // 게스트의 정보를 회원 정보로 덮어쓰고 role을 MEMBER로 전환
+        User guest =
+                userRepository
+                        .findById(guestId)
+                        .orElseThrow(
+                                () ->
+                                        new com.lucas.global.exception.CustomException(
+                                                com.lucas.global.exception.ErrorCode.E3000));
+
+        guest.upgradeToMember(
+                attributes.getEmail(),
+                attributes.getOauth2UserInfo().getName(),
+                provider,
+                attributes.getOauth2UserInfo().getId());
+
+        return userRepository.save(guest);
+    }
+
+    /**
+     * OAuthAttributes의 정보를 기반으로 새로운 회원을 생성하고 저장합니다.
+     *
+     * @param attributes 추출된 OAuth 사용자 속성
+     * @param provider 소셜 로그인 제공자
+     * @return 저장된 User 객체
      */
     private User saveUser(OAuthAttributes attributes, AuthProvider provider) {
         User createdUser = attributes.toEntity(provider, attributes.getOauth2UserInfo());

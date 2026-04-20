@@ -8,10 +8,14 @@ import lombok.Builder;
 import lombok.Getter;
 
 /** 각 소셜에서 받아오는 데이터가 다르므로 소셜별로 데이터를 받는 데이터를 분기 처리하는 DTO 클래스 */
+/** 각 소셜 제공자로부터 받아오는 데이터를 공통 형식으로 변환하고 분기 처리하는 DTO 클래스입니다. */
 @Getter
 public class OAuthAttributes {
-    private String nameAttributeKey; // OAuth2 로그인 진행 시 키가 되는 필드 값, PK와 같은 의미
-    private OAuth2UserInfo oauth2UserInfo; // 소셜 타입별 로그인 유저 정보(닉네임, 이메일 등등)
+    /** OAuth2 로그인 진행 시 키가 되는 필드 값 (PK와 같은 의미) */
+    private String nameAttributeKey;
+
+    /** 소셜 타입별로 매핑된 로그인 유저 정보 */
+    private OAuth2UserInfo oauth2UserInfo;
 
     @Builder
     private OAuthAttributes(String nameAttributeKey, OAuth2UserInfo oauth2UserInfo) {
@@ -20,9 +24,12 @@ public class OAuthAttributes {
     }
 
     /**
-     * AuthProvider에 맞는 메소드 호출하여 OAuthAttributes 객체 반환 파라미터 : userNameAttributeName -> OAuth2 로그인 시
-     * 키(PK)가 되는 값 / attributes : OAuth 서비스의 유저 정보들 소셜별 of 메소드(ofGoogle)들은 각각 소셜 로그인 API에서 제공하는 회원의
-     * 식별값(id), attributes, nameAttributeKey를 저장 후 build
+     * AuthProvider에 맞는 속성 변환 객체를 생성하여 반환합니다.
+     *
+     * @param provider 소셜 로그인 제공자
+     * @param userNameAttributeName OAuth2 로그인 시 키(PK)가 되는 속성명
+     * @param attributes OAuth 서비스가 제공하는 유저 정보 속성 맵
+     * @return 소셜 제공자에 맞게 구성된 OAuthAttributes 객체
      */
     public static OAuthAttributes of(
             AuthProvider provider, String userNameAttributeName, Map<String, Object> attributes) {
@@ -33,6 +40,13 @@ public class OAuthAttributes {
         return ofGoogle(userNameAttributeName, attributes);
     }
 
+    /**
+     * 구글 사용자 정보를 바탕으로 OAuthAttributes 객체를 생성합니다.
+     *
+     * @param userNameAttributeName 구글의 식별값 키 이름
+     * @param attributes 사용자 속성 맵
+     * @return 구글 데이터가 매핑된 OAuthAttributes 객체
+     */
     public static OAuthAttributes ofGoogle(
             String userNameAttributeName, Map<String, Object> attributes) {
         return OAuthAttributes.builder()
@@ -42,8 +56,11 @@ public class OAuthAttributes {
     }
 
     /**
-     * of메소드로 OAuthAttributes 객체가 생성되어, 유저 정보들이 담긴 OAuth2UserInfo가 소셜 타입별로 주입된 상태 OAuth2UserInfo에서
-     * providerUserId(식별값), email, name 가져와서 build 최초 로그인 사용자는 추가 정보 입력 전 상태로 간주하여 GUEST로 설정
+     * 추출된 사용자 정보를 바탕으로 User 엔티티 객체를 생성합니다. 신규 가입 사용자의 초기 상태는 GUEST로 설정됩니다.
+     *
+     * @param provider 소셜 로그인 제공자
+     * @param oauth2UserInfo 소셜 타입별 유저 정보
+     * @return 생성된 User 엔티티 객체
      */
     public User toEntity(AuthProvider provider, OAuth2UserInfo oauth2UserInfo) {
         return User.builder()
@@ -53,5 +70,12 @@ public class OAuthAttributes {
                 .oauthName(oauth2UserInfo.getName())
                 .role(UserRole.GUEST)
                 .build();
+    }
+
+    /**
+     * @return 사용자 이메일 정보
+     */
+    public String getEmail() {
+        return this.oauth2UserInfo.getEmail();
     }
 }

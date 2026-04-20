@@ -31,6 +31,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http.csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
@@ -40,14 +41,15 @@ public class SecurityConfig {
                                                 "/",
                                                 "/api/v1/auth/login",
                                                 "/api/v1/auth/refresh",
-                                                // TODO: 개발 단계 편의를 위해 임시 개방함. 배포 전 인증 필요 경로로 이동 검토
-                                                // 필요
+                                                "/api/v1/auth/guest-init",
+                                                // TODO: 개발 단계 편의를 위해 임시 개방. 배포 전 인증 필요 경로로 이동 필요
                                                 "/api/v1/story/**",
                                                 "/oauth2/**",
                                                 "/error")
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())
+                // == 소셜 로그인 설정 ==//
                 .oauth2Login(
                         oauth2 ->
                                 oauth2.loginPage("/login")
@@ -55,12 +57,13 @@ public class SecurityConfig {
                                                 userInfo ->
                                                         userInfo.userService(
                                                                 customOAuth2UserService))
-                                        .successHandler(oAuth2LoginSuccessHandler))
-                .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtUtil),
-                        UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                                        .successHandler(oAuth2LoginSuccessHandler));
+
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+
+        http.sessionManagement(
+                session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
