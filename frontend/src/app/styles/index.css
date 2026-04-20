@@ -51,3 +51,24 @@ img {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Custom Terminal Scrollbar */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 0;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+

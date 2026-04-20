@@ -110,7 +110,7 @@ export const TerminalScene: React.FC = () => {
     >
       {/* Terminal Body */}
       <div 
-        className="w-full h-full overflow-y-auto p-4 text-green-400 font-mono text-sm" 
+        className="w-full h-full overflow-y-auto p-4 text-green-400 font-mono text-sm terminal-scrollbar" 
         onClick={() => {
           // Only focus the input if the user hasn't highlighted/selected text
           if (window.getSelection()?.toString() === "") {
