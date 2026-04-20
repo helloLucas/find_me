@@ -102,18 +102,6 @@ CREATE TABLE lucas_knowledge (
     embedding VECTOR(1536)
 );
 
-CREATE TABLE story_action_logs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    session_id VARCHAR(100) NOT NULL,
-    node_id BIGINT NOT NULL REFERENCES story_nodes(id),
-    action_type VARCHAR(50) NOT NULL CHECK (
-        action_type IN ('command', 'click', 'inspect', 'choice', 'system')
-    ),
-    input_value TEXT,
-    result VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
 
 CREATE INDEX idx_chapters_sort_order
     ON chapters(sort_order);
@@ -160,17 +148,7 @@ CREATE INDEX idx_lucas_knowledge_puzzle_id
 CREATE INDEX idx_lucas_knowledge_metadata
     ON lucas_knowledge USING GIN(metadata);
 
-CREATE INDEX idx_story_action_logs_user_id
-    ON story_action_logs(user_id);
 
-CREATE INDEX idx_story_action_logs_session_id
-    ON story_action_logs(session_id);
-
-CREATE INDEX idx_story_action_logs_node_id
-    ON story_action_logs(node_id);
-
-CREATE INDEX idx_story_action_logs_created_at
-    ON story_action_logs(created_at);
 
 CREATE INDEX idx_lucas_knowledge_embedding_cosine
     ON lucas_knowledge

@@ -17,5 +17,10 @@ spring:
         format_sql: true
     show-sql: true
 
+  data:
+    redis:
+      host: lucas-redis-local
+      port: 6379
+
 server:
   port: 8080
