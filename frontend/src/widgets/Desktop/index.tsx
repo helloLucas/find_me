@@ -1,8 +1,12 @@
 import React, { useMemo } from 'react';
 import { DesktopIcon } from '../../shared/ui/DesktopIcon';
 import { Taskbar } from '../Taskbar';
+import { TerminalScene } from '../../features/command-input/TerminalScene';
+import { useClientStore } from '../../app/store/clientStore';
 
 export const Desktop: React.FC = () => {
+  const { openTerminal } = useClientStore();
+
   // Generate rain drops
   const rainDrops = useMemo(() => {
     return Array.from({ length: 50 }).map((_, i) => ({
@@ -20,6 +24,14 @@ export const Desktop: React.FC = () => {
     { id: 'chrome', label: 'Browser', icon: '/pixel_chrome_icon.svg' },
     { id: 'notepad', label: 'Notebook', icon: '/pixel_notepad_icon.svg' },
   ];
+
+  const handleIconDoubleClick = (id: string) => {
+    if (id === 'terminal') {
+      openTerminal();
+    } else {
+      console.log(`Opening ${id}`);
+    }
+  };
 
   return (
     <div 
@@ -52,10 +64,13 @@ export const Desktop: React.FC = () => {
             key={icon.id}
             label={icon.label}
             iconPath={icon.icon}
-            onDoubleClick={() => console.log(`Opening ${icon.id}`)}
+            onDoubleClick={() => handleIconDoubleClick(icon.id)}
           />
         ))}
       </div>
+
+      {/* Terminal Modals/Scenes on top of Desktop */}
+      <TerminalScene />
 
       {/* Taskbar */}
       <Taskbar />

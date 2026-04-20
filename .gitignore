@@ -1,3 +1,8 @@
+
+#agents
+.agents
+**/.env*
+
 ### IntelliJ IDEA (Root & Global) ###
 .idea/
 *.iws
@@ -26,3 +31,4 @@ yarn-error.log*
 ### Others ###
 temp/
 tmp/
+

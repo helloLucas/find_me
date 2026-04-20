@@ -1,7 +1,18 @@
 import React from 'react';
 import { Clock } from '../../shared/ui/Clock';
+import { useClientStore } from '../../app/store/clientStore';
 
 export const Taskbar: React.FC = () => {
+  const { isTerminalOpen, isTerminalMinimized, restoreTerminal, minimizeTerminal, terminalUser, terminalHost, terminalPath } = useClientStore();
+
+  const handleTerminalTaskbarClick = () => {
+    if (isTerminalMinimized) {
+      restoreTerminal();
+    } else {
+      minimizeTerminal();
+    }
+  };
+
   return (
     <footer className="fixed bottom-0 left-0 right-0 h-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-md px-1 flex items-center justify-between z-[2000] pixel-font">
       <div className="flex h-full items-center gap-1">
@@ -17,7 +28,20 @@ export const Taskbar: React.FC = () => {
 
         <div className="h-6 w-px bg-white/10 mx-1" />
 
-        {/* Taskbar Windows list will go here */}
+        {/* Taskbar Windows list */}
+        {isTerminalOpen && (
+          <button
+            onClick={handleTerminalTaskbarClick}
+            className={`flex h-8 px-3 items-center justify-start min-w-[150px] max-w-[200px] rounded truncate text-green-400 text-xs transition-all pixel-font ${
+              isTerminalMinimized
+                ? 'bg-white/10 hover:bg-white/20 active:bg-white/30'
+                : 'bg-white/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]'
+            }`}
+          >
+            <div className="w-2 h-2 rounded-full bg-green-400 mr-2 opacity-80 shrink-0" />
+            <span className="truncate">{terminalUser}@{terminalHost}:{terminalPath}$</span>
+          </button>
+        )}
       </div>
 
       <div className="mr-2 flex items-center gap-3">
@@ -26,7 +50,7 @@ export const Taskbar: React.FC = () => {
           <img src="/pixel_wifi.svg" alt="WiFi" className="h-4 w-4 object-contain brightness-90" style={{ imageRendering: 'pixelated' }} />
           <img src="/pixel_signal.svg" alt="Signal" className="h-4 w-4 object-contain brightness-90" style={{ imageRendering: 'pixelated' }} />
         </div>
-        
+
         <Clock />
       </div>
     </footer>
