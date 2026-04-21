@@ -8,8 +8,11 @@ import com.lucas.auth.service.AuthService;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -45,22 +48,35 @@ public class AuthController {
     return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", response));
   }
 
-  /**
-   * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제합니다.
-   *
-   * @param principal 인증된 사용자의 정보를 담고 있는 객체
-   * @return 로그아웃 성공 메시지
-   */
-  @PostMapping("/logout")
-  public ResponseEntity<BaseResponse<Void>> logout(
-      @AuthenticationPrincipal CustomUserPrincipal principal) {
-    if (principal == null) {
-      throw new CustomException(ErrorCode.E1000);
-    }
+    /**
+     * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제합니다.
+     *
+     * @param principal 인증된 사용자의 정보를 담고 있는 객체
+     * @return 로그아웃 성공 메시지
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<BaseResponse<Void>> logout(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            HttpServletResponse response) {
 
-    authService.logout(principal.getUserId());
-    return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
-  }
+        if (principal == null) {
+            throw new CustomException(ErrorCode.E1000);
+        }
+
+        authService.logout(principal.getUserId());
+
+        // 브라우저 쿠키 즉시 삭제 (생성 시와 동일한 속성 부여 필수)
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("None")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
+    }
 
   /**
    * 게스트 사용자의 세션을 초기화하고 임시 토큰을 발급합니다.

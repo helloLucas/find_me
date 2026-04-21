@@ -70,17 +70,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // refresh token 을 Redis에 저장
         authService.replaceRefreshToken(userId, refreshToken);
 
-      // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어)
-      Cookie refreshTokenCookie = new Cookie("refresh_token", refreshToken);
-      refreshTokenCookie.setHttpOnly(true); // 자바스크립트에서 접근 불가
-
-      // HTTPS 접속일 때만 브라우저가 쿠키를 저장하도록 강제하는 옵션
-      // 로컬 환경(http://localhost)에서 쿠키가 안 구워진다면 임시로 setSecure 옵션을 false로 변경하거나 주석 처리
-      refreshTokenCookie.setSecure(true);
-
-      refreshTokenCookie.setPath("/");      // 사이트 전역에서 이 쿠키를 사용
-      refreshTokenCookie.setMaxAge((int) (refreshTokenExpiration / 1000)); // 14일 유지 (ms -> s 변환)
-      response.addCookie(refreshTokenCookie);
+      // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어 및 Cross-Origin 통신 허용)
+      org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refresh_token", refreshToken)
+          .httpOnly(true)
+          .secure(true) // SameSite=None 옵션을 위해 필요 (localhost에서는 보통 예외적으로 허용됨)
+          .path("/")
+          .maxAge(refreshTokenExpiration / 1000)
+          .sameSite("None") // 프론트와 백엔드의 포트/도메인이 다를 때 필수
+          .build();
+      
+      response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
 
       // 2. Access Token과 신규 유저 여부만 프론트엔드 콜백 URL 파라미터로 전달
       String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
