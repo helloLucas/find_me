@@ -133,6 +133,7 @@ PostgreSQL story_nodes.output_bundle
 | `frontend/src/shared/api/storyApi.ts` | 스토리 API wrapper | `startStory`, `getCurrentNode`, `submitTransition`처럼 의미 있는 함수로 호출하게 한다. |
 | `frontend/src/features/story-runtime/storyNode.adapters.ts` | 노드 응답 정규화 | `nodeCode -> code`, `checkpoint -> isCheckpoint` 같은 이름 차이를 흡수한다. |
 | `frontend/src/features/story-runtime/storyRuntime.store.ts` | 런타임 중심 | 현재 노드 저장, 시작/전이 API 호출, outputBundle 분배를 담당한다. |
+| `frontend/src/features/story-runtime/outputBundle.adapters.ts` | outputBundle 공통 해석 | scene, messages, notifications, actions, placeholder를 안전하게 정규화한다. |
 | `frontend/src/features/messenger/messenger.adapters.ts` | 메신저 변환 | raw outputBundle을 `MessengerConversation`으로 바꾼다. |
 | `frontend/src/app/store/messengerStore.ts` | 메신저 상태 | 대화, 알림, 창 열림, 읽음 상태를 관리한다. |
 | `frontend/src/features/messenger/MessengerNotificationCard.tsx` | 우측 하단 알림 | 새 메시지 알림을 보여주고 최초 `open_friend_chat` 전이를 실행한다. |
@@ -214,6 +215,14 @@ StoryNodeResponseDto -> normalizeStoryNodeResponse() -> StoryNode
 | `messages[channel="chat"]` | 메신저 대화로 변환 |
 | `notifications[type="chat"]` | 메신저 제목/부제목 후보 |
 | `content.friendMessage.linkLabel` | 메신저 링크 action label 후보 |
+
+공통 해석은 `outputBundle.adapters.ts`에서 먼저 처리한다.
+
+| helper | 역할 |
+| --- | --- |
+| `normalizeStoryOutputBundle()` | raw outputBundle에서 `scene`, `content`, `messages`, `notifications`, `actions`를 안전한 형태로 정리 |
+| `resolveStoryText()` | `{플레이어 이름}`, `{다른 친구 이름}` 같은 placeholder를 프론트 기본값으로 치환 |
+| `shouldOpenBrowserForStoryNode()` | scene mode와 node code를 보고 브라우저 창을 열지 판단 |
 
 ---
 
