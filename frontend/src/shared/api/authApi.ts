@@ -1,6 +1,5 @@
 import { apiClient } from "./client";
-import { env } from "../config/env";
-import { getAccessToken, setTokens } from "./tokenStorage";
+import { tokenManager } from "../utils/tokenManager";
 
 export interface TokenResponse {
   accessToken: string;
@@ -14,13 +13,15 @@ export interface TokenResponse {
 export const authApi = {
   initGuest: async (): Promise<TokenResponse> => {
     const response = await apiClient.get<TokenResponse>("/api/v1/auth/guest-init");
-    setTokens(response);
+    tokenManager.setAccessToken(response.accessToken);
+    if (response.refreshToken) {
+      tokenManager.setRefreshToken(response.refreshToken);
+    }
     return response;
   },
 
   ensureGuestSession: async (): Promise<void> => {
-    if (env.devAuthToken) return;
-    if (getAccessToken()) return;
+    if (tokenManager.getAccessToken()) return;
     await authApi.initGuest();
   },
 };

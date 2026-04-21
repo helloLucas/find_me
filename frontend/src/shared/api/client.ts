@@ -1,7 +1,7 @@
 import { env } from "../config/env";
 import type { BaseResponse, ProblemDetail } from "../types/api";
+import { tokenManager } from "../utils/tokenManager";
 import { CustomClientException } from "./CustomClientException";
-import { getAccessToken } from "./tokenStorage";
 
 type RequestOptions = RequestInit & {
   headers?: HeadersInit;
@@ -48,9 +48,7 @@ function toProblemDetail(path: string, status: number, body: unknown): ProblemDe
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  // TODO: 로그인 페이지 흐름이 완성되면 env.devAuthToken 제거.
-  // 지금은 실제 로그인이 없어서 로컬 스토리 개발용 고정 우회 토큰을 사용한다.
-  const accessToken = env.devAuthToken ?? getAccessToken();
+  const accessToken = tokenManager.getAccessToken();
 
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     ...options,
