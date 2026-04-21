@@ -18,6 +18,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+  private static final String LOCAL_DEV_BYPASS_TOKEN = "local-dev-bypass-token";
+  private static final Long LOCAL_DEV_USER_ID = 1L;
+
   private final JwtUtil jwtUtil;
 
   @Override
@@ -36,6 +39,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     String token = authorization.substring(7);
 
     try {
+      if (isDevAuthBypassToken(token)) {
+        authenticateDevUser();
+        filterChain.doFilter(request, response);
+        return;
+      }
+
       if (jwtUtil.isExpired(token)) {
         sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "만료된 JWT 토큰입니다.");
         return;
@@ -72,6 +81,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  private boolean isDevAuthBypassToken(String token) {
+    // TODO: Remove this temporary local-dev auth bypass when the login page flow is completed.
+    return LOCAL_DEV_BYPASS_TOKEN.equals(token);
+  }
+
+  private void authenticateDevUser() {
+    CustomUserPrincipal principal =
+        CustomUserPrincipal.builder()
+            .userId(LOCAL_DEV_USER_ID)
+            .email("local-dev@lucas.test")
+            .nickname("local-dev")
+            .role(UserRole.GUEST)
+            .build();
+
+    UsernamePasswordAuthenticationToken authToken =
+        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+    SecurityContextHolder.getContext().setAuthentication(authToken);
   }
 
   private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message)
