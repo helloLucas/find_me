@@ -11,23 +11,22 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
-      // 보안을 위해 같은 origin인지 확인
+      // 보안을 위해 부모 창과 자식 창의 origin이 정확히 일치하는지 확인합니다.
       if (event.origin !== window.location.origin) return;
 
       if (event.data?.type === 'AUTH_SUCCESS') {
         setIsAccessing(true);
-        const { isNewUser, accessToken, refreshToken } = event.data;
+        const { isNewUser, accessToken } = event.data;
         
-        // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
-        if (accessToken && refreshToken) {
+        // 1. 전달받은 Access Token을 로컬에 저장 (Refresh Token은 쿠키로 이미 저장됨)
+        if (accessToken) {
             tokenManager.setAccessToken(accessToken);
-            tokenManager.setRefreshToken(refreshToken);
         }
 
         // 2. Zustand 스토어 인증 상태 동기화
         checkAuth();
         
-        // 2. 약간의 지연 후 라우팅 (UX 몰입도)
+        // 3. 약간의 지연 후 라우팅 (UX 몰입도)
         setTimeout(() => {
           setIsAccessing(false);
           if (isNewUser) {

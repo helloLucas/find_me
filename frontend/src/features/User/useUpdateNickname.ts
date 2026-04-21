@@ -34,21 +34,16 @@ export const useUpdateNickname = () => {
 
             try {
                 // 2. 닉네임이 바뀌었으므로 새 토큰을 발급받습니다
-                const refreshToken = tokenManager.getRefreshToken();
-                if (refreshToken) {
-                    // 무한 루프 방지를 위해 axiosInstance 대신 일반 axios 사용
-                    const refreshRes = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
-                        refreshToken
-                    });
+                // HttpOnly 쿠키 방식을 사용하므로 바디에 토큰을 실어 보낼 필요가 없으며, 
+                // withCredentials: true를 설정하여 브라우저가 쿠키를 서버로 보내도록 합니다.
+                const refreshRes = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {}, {
+                    withCredentials: true
+                });
 
-                    const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
+                const { accessToken } = refreshRes.data.data;
 
-                    // 3. localStorage의 옛날 토큰을 버리고 새 토큰으로 교체
-                    tokenManager.setAccessToken(accessToken);
-                    if (newRefreshToken) {
-                        tokenManager.setRefreshToken(newRefreshToken);
-                    }
-                }
+                // 3. 응답받은 새 Access Token 저장 (Refresh Token은 Set-Cookie로 자동 갱신됨)
+                tokenManager.setAccessToken(accessToken);
             } catch (error) {
                 console.error('Failed to refresh token after nickname update:', error);
             }

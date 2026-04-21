@@ -13,6 +13,7 @@ const axiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true // JWT Refresh Token 쿠키를 서버로 전송하기 위해 필수
 });
 
 // Request Interceptor: 모든 요청 헤더에 Authorization Bearer 토큰 주입
@@ -42,25 +43,19 @@ axiosInstance.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refreshToken = tokenManager.getRefreshToken();
-                if (!refreshToken) {
-                    throw new Error('No refresh token available');
-                }
-
                 // Refresh API 호출 (백엔드 명세: POST /api/v1/auth/refresh)
                 // 중요: 무한 루프 방지를 위해 axiosInstance가 아닌 axios 기본 인스턴스 사용
                 const response = await axios.post<BaseResponse<{ accessToken: string; refreshToken: string }>>(
                     `${axiosInstance.defaults.baseURL}/api/v1/auth/refresh`,
-                    { refreshToken }
+                    {}, // HttpOnly 쿠키로 전송되므로 body는 비워둡니다.
+                    { withCredentials: true } // 기본 axios 인스턴스에도 쿠키 전송 허용
                 );
 
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
-                // 새로운 토큰 저장
+                // 새로운 Access Token 저장 (Refresh Token은 자동으로 쿠키에 저장됨)
                 tokenManager.setAccessToken(accessToken);
-                if (newRefreshToken) {
-                    tokenManager.setRefreshToken(newRefreshToken);
-                }
+                // 쿠키는 브라우저가 관리하므로 localstorage에는 저장하지 않습니다.
 
                 // 실패했던 원래 요청의 헤더를 갱신하여 재전송
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
