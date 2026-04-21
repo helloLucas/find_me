@@ -8,8 +8,12 @@ import com.lucas.auth.service.AuthService;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +26,9 @@ public class AuthController {
 
   private final AuthService authService;
 
+  @Value("${spring.jwt.refresh-token-expiration}")
+  private long refreshTokenExpirationMs;
+
   /**
    * 커스텀 로그인 페이지 (테스트용) SecurityConfig의 .loginPage("/login") 요청 시 이 메서드로 들어옵니다.
    *
@@ -32,44 +39,94 @@ public class AuthController {
     return "<h1>OAuth2 로그인 테스트</h1>" + "<a href='/oauth2/authorization/google'>구글로 로그인하기</a>";
   }
 
-  /**
-   * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다.
-   *
-   * @param request Refresh Token 정보가 담긴 요청 객체
-   * @return 재발급된 토큰 정보를 포함한 응답 객체
-   */
-  @PostMapping("/refresh")
-  public ResponseEntity<BaseResponse<RefreshTokenResponse>> refresh(
-      @Valid @RequestBody RefreshTokenRequest request) {
-    RefreshTokenResponse response = authService.refresh(request.getRefreshToken());
-    return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", response));
-  }
+    /**
+     * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다.
+     * 제약사항: 프론트엔드가 HttpOnly 쿠키의 값을 읽을 수 없으므로, @RequestBody가 아닌 @CookieValue를 사용해 직접 수집합니다.
+     *
+     * @param refreshToken 쿠키에서 넘어온 Refresh Token
+     * @param httpResponse HTTP 응답 객체
+     * @return 재발급된 토큰 정보를 포함한 응답 객체
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<BaseResponse<RefreshTokenResponse>> refresh(
+            @CookieValue(value = "refresh_token", required = false) String refreshToken,
+            HttpServletResponse httpResponse) {
 
-  /**
-   * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제합니다.
-   *
-   * @param principal 인증된 사용자의 정보를 담고 있는 객체
-   * @return 로그아웃 성공 메시지
-   */
-  @PostMapping("/logout")
-  public ResponseEntity<BaseResponse<Void>> logout(
-      @AuthenticationPrincipal CustomUserPrincipal principal) {
-    if (principal == null) {
-      throw new CustomException(ErrorCode.E1000);
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new CustomException(ErrorCode.E1000);
+        }
+
+        RefreshTokenResponse response = authService.refresh(refreshToken);
+
+        // ms -> s
+        long maxAgeSeconds = refreshTokenExpirationMs / 1000;
+
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
+            .httpOnly(true)
+            .secure(true) // SameSite=None 옵션을 위해 필요 (localhost에서는 보통 예외적으로 허용됨)
+            .path("/")
+            .maxAge(maxAgeSeconds)
+            .sameSite("None")
+            .build();
+
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", response));
     }
 
-    authService.logout(principal.getUserId());
-    return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
-  }
+    /**
+     * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제하고 쿠키를 무효화합니다.
+     *
+     * @param principal 인증된 사용자의 정보를 담고 있는 객체
+     * @param response HTTP 응답 객체
+     * @return 로그아웃 성공 메시지
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<BaseResponse<Void>> logout(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            HttpServletResponse response) {
+        if (principal == null) {
+            throw new CustomException(ErrorCode.E1000);
+        }
 
-  /**
-   * 게스트 사용자의 세션을 초기화하고 임시 토큰을 발급합니다.
-   *
-   * @return 발급된 게스트 토큰 정보를 포함한 응답 객체
-   */
-  @GetMapping("/guest-init")
-  public ResponseEntity<BaseResponse<TokenResponse>> initGuest() {
-    TokenResponse response = authService.initGuest();
-    return ResponseEntity.ok(BaseResponse.success("게스트 세션이 초기화되었습니다.", response));
-  }
+        authService.logout(principal.getUserId());
+
+        // 쿠키 무효화 로직 추가
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(0) // 즉시 만료
+            .sameSite("None")
+            .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
+    }
+
+    /**
+     * 게스트 사용자의 세션을 초기화하고 임시 토큰을 발급합니다.
+     *
+     * @param httpResponse HTTP 응답 객체
+     * @return 발급된 게스트 토큰 정보를 포함한 응답 객체
+     */
+    @GetMapping("/guest-init")
+    public ResponseEntity<BaseResponse<TokenResponse>> initGuest(HttpServletResponse httpResponse) {
+        TokenResponse response = authService.initGuest();
+
+        long maxAgeSeconds = refreshTokenExpirationMs / 1000;
+
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(maxAgeSeconds)
+            .sameSite("None")
+            .build();
+
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return ResponseEntity.ok(BaseResponse.success("게스트 세션이 초기화되었습니다.", response));
+    }
 }
