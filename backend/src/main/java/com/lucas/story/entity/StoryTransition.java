@@ -34,7 +34,7 @@ public class StoryTransition {
   @Column(name = "action_type", nullable = false, length = 50)
   private String actionType;
 
-  @Column(name = "expected_input")
+  @Column(name = "expected_input", columnDefinition = "TEXT")
   private String expectedInput;
 
   @Column(name = "validator_type", nullable = false, length = 50)

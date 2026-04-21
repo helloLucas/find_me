@@ -1,5 +1,6 @@
 package com.lucas.story.controller;
 
+import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.story.dto.request.StartStoryRequestDto;
 import com.lucas.story.dto.request.TransitionRequestDto;
@@ -9,6 +10,7 @@ import com.lucas.story.service.StoryService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,8 +34,9 @@ public class StoryController {
    */
   @PostMapping("/start")
   public ResponseEntity<BaseResponse<StoryNodeResponseDto>> startStory(
+      @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody StartStoryRequestDto request) {
-    StoryNodeResponseDto response = storyService.startStory(request);
+    StoryNodeResponseDto response = storyService.startStory(principal.getUserId(), request);
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("스토리 시작 성공", response));
   }
@@ -44,8 +47,9 @@ public class StoryController {
    * @return 현재 진행 중인 스토리 노드 정보
    */
   @GetMapping("/current")
-  public ResponseEntity<BaseResponse<StoryNodeResponseDto>> findCurrentNode() {
-    StoryNodeResponseDto response = storyService.findCurrentNode();
+  public ResponseEntity<BaseResponse<StoryNodeResponseDto>> findCurrentNode(
+      @AuthenticationPrincipal CustomUserPrincipal principal) {
+    StoryNodeResponseDto response = storyService.findCurrentNode(principal.getUserId());
     return ResponseEntity.ok(BaseResponse.success("현재 노드 조회 성공", response));
   }
 
@@ -57,8 +61,9 @@ public class StoryController {
    */
   @PostMapping("/transition")
   public ResponseEntity<BaseResponse<TransitionResponseDto>> processTransition(
+      @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody TransitionRequestDto request) {
-    TransitionResponseDto response = storyService.processTransition(request);
+    TransitionResponseDto response = storyService.processTransition(principal.getUserId(), request);
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("상태 전이 성공", response));
   }
@@ -69,8 +74,9 @@ public class StoryController {
    * @return 최근 명령어 리스트
    */
   @GetMapping("/commands")
-  public ResponseEntity<BaseResponse<List<String>>> getRecentCommands() {
-    List<String> response = storyService.getRecentCommands();
+  public ResponseEntity<BaseResponse<List<String>>> getRecentCommands(
+      @AuthenticationPrincipal CustomUserPrincipal principal) {
+    List<String> response = storyService.getRecentCommands(principal.getUserId());
     return ResponseEntity.ok(BaseResponse.success("최근 명령어 조회 성공", response));
   }
 }
