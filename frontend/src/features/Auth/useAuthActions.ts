@@ -26,24 +26,15 @@ export const useAuthActions = () => {
    */
   const handleGuestAccess = () => {
     if (isGuestInitializing) return;
-
-    const confirmGuest = window.confirm(
-      '익명 접속 시 진행 상황이 저장되지 않을 수 있습니다.\n계속하시겠습니까?'
-    );
-
-    if (confirmGuest) {
-      initGuest();
-    }
+    initGuest();
   };
 
   /**
    * LOGOUT 핸들러
    */
   const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      clearAuth();
-      navigate('/', { replace: true });
-    }
+    clearAuth();
+    navigate('/', { replace: true });
   };
 
   return {
