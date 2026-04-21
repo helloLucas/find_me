@@ -4,20 +4,7 @@
 
 ## 시스템 아키텍처 및 흐름
 
-```mermaid
-sequenceDiagram
-    participant GitLab
-    participant n8n as "n8n (on AWS EC2)"
-    participant AI as "Google Gemini API"
-
-    GitLab->>n8n: "Merge Request 이벤트 발생 (Webhook)"
-    n8n->>GitLab: "MR 상세 변경 사항(Diff) 요청"
-    GitLab-->>n8n: "Diff 데이터 반환"
-    n8n->>n8n: "파일 필터링 (SVG, package.json, docs 제외)"
-    n8n->>AI: "필터링된 Diff 분석 요청"
-    AI-->>n8n: "한국어 분석 결과 반환"
-    n8n->>GitLab: "MR에 리뷰 댓글 게시"
-```
+![mermaid](image.png)
 
 ---
 
