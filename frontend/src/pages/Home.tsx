@@ -64,16 +64,17 @@ const Home = () => {
         };
     }, [checkAuth]);
 
-    const backgroundImageUrl = '/lucas_landing_background_1776648326305.png';
+    const backgroundImageUrl = '/lucas_landing_user_bg.jpg';
 
     return (
         <div
             className="min-h-screen w-full relative overflow-hidden bg-[#0a1118] flex flex-col justify-center select-none pixel-crisp"
             style={{
-                backgroundImage: `linear-gradient(to right, rgba(10, 17, 24, 0.9) 0%, rgba(10, 17, 24, 0.4) 50%, rgba(10, 17, 24, 0.9) 100%), url(${backgroundImageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
+                backgroundImage: `linear-gradient(to right, #000 0%, #000 30%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImageUrl})`,
+                backgroundSize: 'contain',
+                backgroundPosition: 'right center',
+                backgroundRepeat: 'no-repeat',
+                backgroundColor: '#000'
             }}
         >
             <style>{`
@@ -83,6 +84,74 @@ const Home = () => {
                     image-rendering: crisp-edges;
                     image-rendering: pixelated;
                 }
+                .glitch-group {
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.15));
+                }
+                .glitch-text-pro {
+                    position: relative;
+                    color: white;
+                    line-height: 0.9;
+                }
+                /* Higher intensity glitch with color bursts */
+                .glitch-text-pro::before,
+                .glitch-text-pro::after {
+                    content: attr(data-text);
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: transparent;
+                    opacity: 0.8;
+                }
+                .glitch-text-pro::before {
+                    animation: glitch-pixel-1 3s infinite linear alternate-reverse;
+                    text-shadow: -2px 0 #00ffff;
+                    clip-path: inset(45% 0 44% 0);
+                    opacity: 0; /* invisible until glitch */
+                }
+                .glitch-text-pro::after {
+                    animation: glitch-pixel-2 2.5s infinite linear alternate-reverse;
+                    text-shadow: 2px 0 #ff00ff;
+                    clip-path: inset(80% 0 5% 0);
+                    opacity: 0; /* invisible until glitch */
+                }
+                
+                @keyframes glitch-pixel-1 {
+                    0%, 100% { opacity: 0; clip-path: inset(0 0 0 0); transform: translate(0); }
+                    20%, 25% { opacity: 1; clip-path: inset(10% 0 85% 0); transform: translate(-8px, -2px); }
+                    26%, 30% { opacity: 0.4; clip-path: inset(44% 0 43% 0); transform: translate(12px, 2px); }
+                    31%, 35% { opacity: 0; }
+                }
+                @keyframes glitch-pixel-2 {
+                    0%, 70% { opacity: 0; clip-path: inset(80% 0 5% 0); transform: translate(0); }
+                    71%, 75% { opacity: 1; clip-path: inset(44% 0 43% 0); transform: translate(8px, 1px); }
+                    76%, 80% { opacity: 0.4; clip-path: inset(10% 0 85% 0); transform: translate(-12px, -1px); }
+                    81%, 100% { opacity: 0; }
+                }
+
+                /* Slicing Effect */
+                .pixel-slice {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: transparent;
+                    pointer-events: none;
+                    animation: pixel-slice-anim 5s infinite step-end;
+                }
+                @keyframes pixel-slice-anim {
+                    0%, 90% { clip-path: inset(0 0 100% 0); }
+                    91% { clip-path: inset(20% 0 78% 0); transform: translateX(-10px); }
+                    92% { clip-path: inset(50% 0 48% 0); transform: translateX(10px); }
+                    93% { clip-path: inset(80% 0 18% 0); transform: translateX(-5px); }
+                    94%, 100% { clip-path: inset(0 0 100% 0); }
+                }
+
                 .corner-bracket {
                     position: absolute;
                     width: 20px;
@@ -95,14 +164,21 @@ const Home = () => {
                 .corner-br { bottom: -4px; right: -4px; border-left: 0; border-top: 0; }
             `}</style>
 
-            <div className="absolute top-20 left-16 md:top-24 md:left-24 flex flex-col">
-                <header className="flex flex-col mb-16">
-                    <h1 className="font-pixel text-6xl md:text-7xl text-white tracking-wide mb-4 drop-shadow-lg">
-                        Hello
+            <div className="absolute top-32 left-16 md:top-40 md:left-24 flex flex-col">
+                <header className="flex flex-col mb-20 select-none glitch-group">
+                    <h1 
+                        className="glitch-text-pro font-game text-7xl md:text-8xl tracking-tighter"
+                        data-text="FIND ME"
+                    >
+                        FIND ME
                     </h1>
-                    <h2 className="font-pixel text-7xl md:text-8xl text-white tracking-wide leading-tight drop-shadow-xl">
-                        Lucas
+                    <h2 
+                        className="glitch-text-pro font-game text-4xl md:text-5xl tracking-widest self-end -mt-6 mr-4 opacity-80"
+                        data-text=": VOID CITY"
+                    >
+                        : VOID CITY
                     </h2>
+                    <div className="pixel-slice" data-text="FIND ME"></div>
                 </header>
 
                 <MainMenu
@@ -113,7 +189,8 @@ const Home = () => {
             </div>
 
             <div className="absolute bottom-10 left-16 md:left-24 opacity-30">
-                <p className="font-pixel text-[9px] text-gray-700 uppercase tracking-[0.4em]">
+                <p className="font-pixel text-[9px] text-white/40 uppercase tracking-[0.4em] flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse"></span>
                     Connection: Secure // Protocol: Lucas_v3
                 </p>
             </div>
