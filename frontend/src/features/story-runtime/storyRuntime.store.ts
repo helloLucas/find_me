@@ -1,11 +1,15 @@
 import { create } from "zustand";
+import { useAuthStore } from "../../app/store/authStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { normalizeMessengerBundle } from "../messenger/messenger.adapters";
-import { authApi } from "../../shared/api/authApi";
 import { storyApi } from "../../shared/api/storyApi";
 import type { StoryNode } from "../../shared/types/story";
+import {
+  normalizeStoryOutputBundle,
+  shouldOpenBrowserForStoryNode,
+} from "./outputBundle.adapters";
 import { normalizeStoryNodeResponse } from "./storyNode.adapters";
 
 type StoryRuntimeState = {
@@ -26,22 +30,29 @@ function resolveChapterCode(chapterCode: string) {
   return chapterCode || "week01";
 }
 
+function getAuthenticatedPlayerName() {
+  const nickname = useAuthStore.getState().nickname;
+  if (!nickname || nickname === "ANONYMOUS" || nickname === "UNKNOWN_AGENT") return undefined;
+  return nickname;
+}
+
 function applyStoryNodeOutputBundle(node: StoryNode) {
   const outputBundle = node.outputBundle;
   if (!outputBundle) return;
 
-  const scene = outputBundle.scene;
-  if (scene && typeof scene === "object") {
-    // TODO: Wire scene.bgm after the audio runtime is introduced.
-    const glitchLevel = Number(scene.glitchLevel ?? 0);
-    useLucasStore.getState().setGlitchLevel(glitchLevel);
+  const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
+  
+  // TODO: Wire scene.bgm after the audio runtime is introduced.
+  useLucasStore.getState().setGlitchLevel(normalizedOutput.scene.glitchLevel);
 
-    if (scene.mode === "browser" || node.code.includes("NEWS") || node.code.includes("ARTICLE")) {
-      useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
-    }
+  if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
+    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
   }
 
-  const conversation = normalizeMessengerBundle(outputBundle, node);
+  const conversation = normalizeMessengerBundle(outputBundle, node, {
+    playerName: getAuthenticatedPlayerName(),
+  });
+
   if (conversation) {
     useMessengerStore.getState().receiveConversation(conversation);
   }
@@ -54,9 +65,9 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
   initializeStory: async (chapterCode) => {
     set({ isLoading: true, error: null });
-    try {
-      await authApi.ensureGuestSession();
+    useAuthStore.getState().checkAuth();
 
+    try {
       // TODO: Switch between "new start" and "continue" when the play-entry UX is finalized.
       const node = normalizeStoryNodeResponse(await storyApi.startStory(resolveChapterCode(chapterCode)));
       get().setCurrentNode(node);
