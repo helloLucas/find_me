@@ -15,32 +15,30 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-    /**
-     * 특정 사용자의 닉네임을 유효성 검사 후 업데이트합니다.
-     *
-     * @param userId 유저 식별값
-     * @param nickname 새로운 닉네임 문자열
-     * @throws CustomException 닉네임이 비어있거나 너무 길 경우 발생
-     */
-    @Transactional
-    public void updateNickname(Long userId, String nickname) {
-        if (nickname == null || nickname.isBlank()) {
-            throw new CustomException(ErrorCode.H1000);
-        }
-
-        String trimmedNickname = nickname.trim();
-        if (trimmedNickname.length() > 50) {
-            throw new CustomException(ErrorCode.H1000);
-        }
-
-        User user =
-                userRepository
-                        .findById(userId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.E3000));
-
-        user.updateNickname(trimmedNickname);
-        log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);
+  /**
+   * 특정 사용자의 닉네임을 유효성 검사 후 업데이트합니다.
+   *
+   * @param userId 유저 식별값
+   * @param nickname 새로운 닉네임 문자열
+   * @throws CustomException 닉네임이 비어있거나 너무 길 경우 발생
+   */
+  @Transactional
+  public void updateNickname(Long userId, String nickname) {
+    if (nickname == null || nickname.isBlank()) {
+      throw new CustomException(ErrorCode.H1000);
     }
+
+    String trimmedNickname = nickname.trim();
+    if (trimmedNickname.length() > 50) {
+      throw new CustomException(ErrorCode.H1000);
+    }
+
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+
+    user.updateNickname(trimmedNickname);
+    log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);
+  }
 }
