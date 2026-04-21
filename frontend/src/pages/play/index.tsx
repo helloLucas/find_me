@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { Desktop } from "../../widgets/Desktop";
+import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 
 export default function PlayPage() {
@@ -13,6 +14,7 @@ export default function PlayPage() {
 
   return (
     <main className="h-screen w-screen overflow-hidden">
+      <FullscreenEnforcer />
       <Desktop />
 
       {error && (

@@ -2,6 +2,8 @@ version: "3.8"
 
 services:
   backend:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,6 +28,12 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       JWT_SECRET: ${JWT_SECRET:-local-dev-jwt-secret-change-me}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_CDN_URL: ${AWS_CDN_URL:-}
+
 
   postgres:
     image: pgvector/pgvector:pg16

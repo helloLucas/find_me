@@ -44,6 +44,9 @@ dependencies {
 
     // .env 파일 로드 의존성
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+    //S3 의존성
+    implementation 'software.amazon.awssdk:s3:2.25.15'
 }
 
 tasks.named('test') {
