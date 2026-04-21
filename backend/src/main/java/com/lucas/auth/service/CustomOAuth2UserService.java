@@ -3,6 +3,8 @@ package com.lucas.auth.service;
 import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.oauth.OAuthAttributes;
 import com.lucas.auth.principal.CustomOAuth2User;
+import com.lucas.global.exception.CustomException;
+import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.JwtUtil;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
@@ -183,8 +185,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             .findById(guestId)
             .orElseThrow(
                 () ->
-                    new com.lucas.global.exception.CustomException(
-                        com.lucas.global.exception.ErrorCode.E3000));
+                    new CustomException(
+                        ErrorCode.E3000));
 
     guest.upgradeToMember(
         attributes.getEmail(),

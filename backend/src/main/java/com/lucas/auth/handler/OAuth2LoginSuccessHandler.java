@@ -4,12 +4,13 @@ import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.util.JwtUtil;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -71,15 +72,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         authService.replaceRefreshToken(userId, refreshToken);
 
       // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어 및 Cross-Origin 통신 허용)
-      org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("refresh_token", refreshToken)
+      ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
           .httpOnly(true)
           .secure(true) // SameSite=None 옵션을 위해 필요 (localhost에서는 보통 예외적으로 허용됨)
           .path("/")
           .maxAge(refreshTokenExpiration / 1000)
           .sameSite("None") // 프론트와 백엔드의 포트/도메인이 다를 때 필수
           .build();
-      
-      response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
+
+      response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
       // 2. Access Token과 신규 유저 여부만 프론트엔드 콜백 URL 파라미터로 전달
       String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
