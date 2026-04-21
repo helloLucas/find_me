@@ -2,10 +2,12 @@ import React from 'react';
 import { Clock } from '../../shared/ui/Clock';
 import { useClientStore } from '../../app/store/clientStore';
 import { useWindowStore } from '../../app/store/windowStore';
+import { useMessengerStore } from '../../app/store/messengerStore';
 
 export const Taskbar: React.FC = () => {
   const { isTerminalOpen, isTerminalMinimized, restoreTerminal, minimizeTerminal, terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId } = useWindowStore();
+  const { conversation, openMessengerFromTaskbar } = useMessengerStore();
 
   const handleTerminalTaskbarClick = () => {
     if (isTerminalMinimized) {
@@ -18,9 +20,12 @@ export const Taskbar: React.FC = () => {
   return (
     <footer className="fixed bottom-0 left-0 right-0 h-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-md px-1 flex items-center justify-between z-[4000] pixel-font">
       <div className="flex h-full items-center gap-1">
-        {/* Start Button */}
-        <button className="flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-          <img src="/pixel_messanger_icon.svg" alt="Start" className="h-6 w-6 object-contain" style={{ imageRendering: 'pixelated' }} />
+        {/* Messenger Button */}
+        <button
+          className={`flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${conversation ? '' : 'opacity-50 pointer-events-none'}`}
+          onClick={() => conversation && openMessengerFromTaskbar()}
+        >
+          <img src="/pixel_messanger_icon.svg" alt="Messenger" className="h-6 w-6 object-contain" style={{ imageRendering: 'pixelated' }} />
         </button>
 
         {/* Shortcuts */}
