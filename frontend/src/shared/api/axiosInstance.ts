@@ -13,6 +13,7 @@ const axiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true // JWT Refresh Token 쿠키를 서버로 전송하기 위해 필수
 });
 
 // Request Interceptor: 모든 요청 헤더에 Authorization Bearer 토큰 주입
