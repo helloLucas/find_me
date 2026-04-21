@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
   // Redis Key Prefix
   private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
-  private static final long REFRESH_TOKEN_TTL_DAYS = 14;
 
   private final RedisTemplate<String, String> redisTemplate;
   private final JwtUtil jwtUtil;
   private final UserRepository userRepository;
+
+  @Value("${spring.jwt.access-token-expiration}")
+  private long accessTokenExpiration;
+
+  @Value("${spring.jwt.refresh-token-expiration}")
+  private long refreshTokenExpiration;
 
   /**
    * Redis에 사용자의 Refresh Token을 저장하거나 기존 토큰을 갱신합니다.
@@ -37,8 +43,8 @@ public class AuthService {
    */
   public void replaceRefreshToken(Long userId, String refreshToken) {
     String key = REFRESH_TOKEN_PREFIX + userId;
-    // Key: refresh_token:{userId}, Value: token, TTL: 14일
-    redisTemplate.opsForValue().set(key, refreshToken, REFRESH_TOKEN_TTL_DAYS, TimeUnit.DAYS);
+    // Redis 저장 및 TTL 설정 (Refresh Token 만료 시간과 동기화)
+    redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
     log.info("Refresh Token 저장 완료 - userId: {}", userId);
   }
 
@@ -88,7 +94,6 @@ public class AuthService {
           userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      // Access: 30분, Refresh: 14일
       String newAccessToken =
           jwtUtil.createAccessToken(
               user.getId(),
@@ -96,12 +101,12 @@ public class AuthService {
               user.getNickname(),
               user.getProvider(),
               user.getRole().name(),
-              30 * 60 * 1000L);
+              accessTokenExpiration);
 
       String newRefreshToken =
-          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), 14 * 24 * 60 * 60 * 1000L);
+          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
-      // 7. Redis 갱신 및 TTL 재설정 (14일)
+      // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
 
       return RefreshTokenResponse.builder()
@@ -156,9 +161,9 @@ public class AuthService {
             guest.getNickname(),
             null,
             guest.getRole().name(),
-            30 * 60 * 1000L);
+            accessTokenExpiration);
     String refreshToken =
-        jwtUtil.createRefreshToken(guest.getId(), null, 14 * 24 * 60 * 60 * 1000L);
+        jwtUtil.createRefreshToken(guest.getId(), null, refreshTokenExpiration);
 
     replaceRefreshToken(guest.getId(), refreshToken); // Redis 저장
 
