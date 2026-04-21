@@ -7,7 +7,6 @@ import { useWindowStore } from '../../app/store/windowStore';
 import { Window } from '../../shared/ui/Window';
 import { Browser } from '../../features/Browser';
 import { Lucas } from '../../features/Lucas/Lucas';
-import { GlitchOverlay } from '../../shared/ui/GlitchOverlay';
 
 export const Desktop: React.FC = () => {
   const { openTerminal } = useClientStore();
@@ -143,9 +142,6 @@ export const Desktop: React.FC = () => {
 
       {/* Taskbar */}
       <Taskbar />
-
-      {/* Global Glitch Effect */}
-      <GlitchOverlay />
     </div>
   );
 };

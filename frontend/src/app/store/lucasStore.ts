@@ -68,11 +68,10 @@ export const useLucasStore = create<LucasState>((set) => ({
     if (nextIndex < state.currentScene.messages.length) {
       return { currentMessageIndex: nextIndex };
     } else {
-      // Scene finished
+      // Scene finished - RESET GLITCH
       return { 
         isDialogueActive: false,
-        // Keep Lucas visible if it's not a dismissive scene
-        // isVisible: state.isVisible 
+        glitchLevel: 0
       };
     }
   }),
@@ -80,7 +79,8 @@ export const useLucasStore = create<LucasState>((set) => ({
   endDialogue: () => set({ 
     isDialogueActive: false, 
     currentScene: null, 
-    currentMessageIndex: 0 
+    currentMessageIndex: 0,
+    glitchLevel: 0
   }),
 
   setGlitchLevel: (level) => set({ glitchLevel: level }),

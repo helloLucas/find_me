@@ -4,7 +4,7 @@ import type { LucasMessage } from '../../app/store/lucasStore';
 import './Lucas.css';
 
 export const Lucas: React.FC = () => {
-  const { 
+    const { 
     isVisible, 
     currentScene, 
     currentMessageIndex, 
@@ -13,7 +13,8 @@ export const Lucas: React.FC = () => {
     isHintMode,
     chatHistory,
     addChatMessage,
-    toggleHintMode
+    toggleHintMode,
+    glitchLevel
   } = useLucasStore();
 
   const [displayText, setDisplayText] = useState('');
@@ -138,6 +139,14 @@ export const Lucas: React.FC = () => {
           alt="Lucas" 
           className="lucas-avatar"
         />
+        {/* Scoped Glitch Effect */}
+        {glitchLevel > 0 && (
+          <div className={`glitch-avatar-layer intensity-${Math.min(10, Math.max(0, glitchLevel))}`}>
+            <img src="/lucas.svg" alt="" className="glitch-copy" />
+            <img src="/lucas.svg" alt="" className="glitch-copy" />
+            <img src="/lucas.svg" alt="" className="glitch-copy" />
+          </div>
+        )}
         <div className="lucas-glow" />
       </div>
     </div>
