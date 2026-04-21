@@ -9,6 +9,7 @@ import lombok.Getter;
 @Builder
 public class StoryNodeResponseDto {
 
+  private final Long id;
   private final String nodeCode;
   private final String nodeType;
   private final String promptType;
@@ -19,6 +20,7 @@ public class StoryNodeResponseDto {
 
   public static StoryNodeResponseDto from(StoryNode node) {
     return StoryNodeResponseDto.builder()
+        .id(node.getId())
         .nodeCode(node.getCode())
         .nodeType(node.getNodeType())
         .promptType(node.getPromptType())
