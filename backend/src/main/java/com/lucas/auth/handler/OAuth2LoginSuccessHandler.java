@@ -5,6 +5,7 @@ import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.util.JwtUtil;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -22,7 +23,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
     private final AuthService authService;
-    private final ObjectMapper objectMapper;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -65,15 +65,24 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // refresh token 을 Redis에 저장
         authService.replaceRefreshToken(userId, refreshToken);
 
-        // JSON 응답을 보내는 대신, 리다이렉트 URL을 생성
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
-                .queryParam("isNewUser", isNewUser)
-                .build()
-                .toUriString();
+      // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어)
+      Cookie refreshTokenCookie = new Cookie("refresh_token", refreshToken);
+      refreshTokenCookie.setHttpOnly(true); // 자바스크립트에서 접근 불가
 
-        // 브라우저를 프론트엔드의 oauth-callback 페이지로 이동
-        response.sendRedirect(targetUrl);
+      // HTTPS 접속일 때만 브라우저가 쿠키를 저장하도록 강제하는 옵션
+      // 로컬 환경(http://localhost)에서 쿠키가 안 구워진다면 임시로 setSecure 옵션을 false로 변경하거나 주석 처리
+      refreshTokenCookie.setSecure(true);
+
+      refreshTokenCookie.setPath("/");      // 사이트 전역에서 이 쿠키를 사용
+      refreshTokenCookie.setMaxAge(14 * 24 * 60 * 60); // 14일 유지
+      response.addCookie(refreshTokenCookie);
+
+      // 2. Access Token과 신규 유저 여부만 프론트엔드 콜백 URL 파라미터로 전달
+      String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
+          .queryParam("accessToken", accessToken)
+          .queryParam("isNewUser", isNewUser)
+          .build().toUriString();
+
+      response.sendRedirect(targetUrl);
     }
 }
