@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { DesktopIcon } from '../../shared/ui/DesktopIcon';
 import { Taskbar } from '../Taskbar';
 import { TerminalScene } from '../../features/command-input/TerminalScene';
@@ -6,16 +6,80 @@ import { useClientStore } from '../../app/store/clientStore';
 import { useWindowStore } from '../../app/store/windowStore';
 import { Window } from '../../shared/ui/Window';
 import { Browser } from '../../features/Browser';
+import { MessengerNotificationCard, MessengerWindow } from '../../features/messenger';
+import { useMessengerStore } from '../../app/store/messengerStore';
+import { normalizeMessengerBundle } from '../../features/messenger/messenger.adapters';
 import { Lucas } from '../../features/Lucas/Lucas';
 
 export const Desktop: React.FC = () => {
   const { openTerminal } = useClientStore();
   const { windows, openWindow } = useWindowStore();
+  const { receiveConversation } = useMessengerStore();
   const [selectionBox, setSelectionBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
   React.useEffect(() => {
     // Initial initialization of global triggers if needed
   }, []);
+
+  // ── Demo: simulate a messenger notification arriving after 2s ──
+  // TODO: Replace with real story node response integration
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const demoBundle = {
+        messenger: {
+          conversationId: "conv-chingu-001",
+          title: "친구 (Chingu)",
+          online: true,
+          senderAvatar: undefined,
+          messages: [
+            {
+              id: "msg-1",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "야! 들었어? 대박... 그 네온 시티 레벨 4 차원 포털이 방금 열렸대! 전설의 홀로그램 DJ가 거기서 연주 한다는데 완전 난리. 지금 당장 가야 해!",
+              timestamp: "1분 전",
+            },
+            {
+              id: "msg-2",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "아니 대박이다 진짜! 갈 거야?",
+              timestamp: "3분 전",
+            },
+            {
+              id: "msg-3",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "당연하지! 지금 준비 중이야. 너도 와!",
+              timestamp: "3분 전",
+            },
+            {
+              id: "msg-4",
+              senderId: "user",
+              senderName: "나",
+              text: "그래! 30분 뒤에 센트럴 시티 포털 앞에서 만나자.",
+              timestamp: "5분 전",
+            },
+            {
+              id: "msg-5",
+              senderId: "user",
+              senderName: "나",
+              text: "확인! <승인>",
+              timestamp: "6분 전",
+            },
+          ],
+          actions: [
+            { label: "답장하기", actionType: "reply" },
+            { label: "나중에 보기", actionType: "dismiss" },
+            { label: "지도 보기", actionType: "map" },
+          ],
+        },
+      };
+      const conv = normalizeMessengerBundle(demoBundle);
+      if (conv) receiveConversation(conv);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [receiveConversation]);
 
   // Generate rain drops
   const rainDrops = useMemo(() => {
@@ -137,6 +201,11 @@ export const Desktop: React.FC = () => {
         </Window>
       ))}
 
+
+      {/* Messenger System */}
+      <MessengerNotificationCard />
+      <MessengerWindow />
+
       {/* Lucas Character and Hint System */}
       <Lucas />
 
@@ -145,3 +214,4 @@ export const Desktop: React.FC = () => {
     </div>
   );
 };
+
