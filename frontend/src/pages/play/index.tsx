@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { Desktop } from "../../widgets/Desktop";
 import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
+import { GlitchOverlay } from "../../shared/ui/GlitchOverlay";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 
 export default function PlayPage() {
@@ -16,6 +17,7 @@ export default function PlayPage() {
     <main className="h-screen w-screen overflow-hidden">
       <FullscreenEnforcer />
       <Desktop />
+      <GlitchOverlay />
 
       {error && (
         <div className="absolute left-4 top-4 z-[100] max-w-[360px] rounded border border-red-400/50 bg-black/80 px-3 py-2 text-xs text-red-100">
