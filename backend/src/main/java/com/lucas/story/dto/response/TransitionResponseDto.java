@@ -1,5 +1,6 @@
 package com.lucas.story.dto.response;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import lombok.Builder;
@@ -20,7 +21,7 @@ public class TransitionResponseDto {
     private Long id;
     private String code;
     private String nodeType;
-    private Map<String, Object> outputBundle;
+    private JsonNode outputBundle;
     private String promptType;
     private boolean isCheckpoint;
     private boolean isTerminal;

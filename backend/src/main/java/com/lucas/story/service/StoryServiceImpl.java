@@ -3,8 +3,6 @@ package com.lucas.story.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.lucas.auth.entity.AuthProvider;
-import com.lucas.auth.entity.UserRole;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
 import com.lucas.global.exception.CustomException;
@@ -27,7 +25,6 @@ import com.lucas.story.repository.StoryTransitionRepository;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,7 +47,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class StoryServiceImpl implements StoryService {
 
-  private static final String GUEST_EMAIL = "guest@nexus.com";
   private static final String ACTION_TYPE_COMMAND = "command";
 
   private final UserRepository userRepository;
@@ -75,7 +71,7 @@ public class StoryServiceImpl implements StoryService {
    */
   @Override
   @Transactional
-  public StoryNodeResponseDto startStory(StartStoryRequestDto request) {
+  public StoryNodeResponseDto startStory(Long userId, StartStoryRequestDto request) {
     // 요청된 챕터 코드로 챕터 조회
     Chapter chapter =
         chapterRepository
@@ -88,9 +84,9 @@ public class StoryServiceImpl implements StoryService {
             .findFirstByChapter_CodeOrderByIdAsc(request.getChapterCode())
             .orElseThrow(() -> new CustomException(ErrorCode.E3002));
 
-    // TODO: OAuth2 인증 연동 후 실제 로그인 유저로 교체 (현재는 게스트 유저 사용)
-    User user = findOrCreateGuestUser();
-    UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
+    User user = getAuthenticatedUser(userId);
+    UserStoryProgress progress =
+        userStoryProgressRepository.findById(user.getId()).orElse(null);
 
     // 챕터 해금 상태 검증
     validateChapterUnlocked(user, chapter);
@@ -129,9 +125,10 @@ public class StoryServiceImpl implements StoryService {
    * @throws CustomException E3003 - 진행 기록 미존재
    */
   @Override
-  public StoryNodeResponseDto findCurrentNode() {
-    // 현재 유저 조회
-    User user = findOrCreateGuestUser();
+  @Transactional
+  public StoryNodeResponseDto findCurrentNode(Long userId) {
+    // 유저 조회
+    User user = getAuthenticatedUser(userId);
 
     // 유저의 진행 기록 조회 (없으면 에러)
     UserStoryProgress progress =
@@ -159,9 +156,8 @@ public class StoryServiceImpl implements StoryService {
    */
   @Override
   @Transactional
-  public TransitionResponseDto processTransition(TransitionRequestDto request) {
-    // TODO: OAuth2 인증 연동 후 실제 로그인 유저로 교체
-    User user = findOrCreateGuestUser();
+  public TransitionResponseDto processTransition(Long userId, TransitionRequestDto request) {
+    User user = getAuthenticatedUser(userId);
 
     // ── Step 1: 명령어 로깅 (Redis) ──
     // 유저가 입력한 명령어를 Redis에 기록하여
@@ -170,13 +166,6 @@ public class StoryServiceImpl implements StoryService {
       commandLogService.logCommand(user.getId(), request.getInputValue());
     }
 
-    // ── Step 2: Mock 명령어 처리 ──
-    // ls, pwd, whoami, cat 등 터미널 시뮬레이션 대상 명령어는
-    // DB 전이를 거치지 않고 즉시 가상 응답을 반환한다.
-    if (ACTION_TYPE_COMMAND.equals(request.getActionType())
-        && isMockCommand(request.getInputValue())) {
-      return handleMockCommand(request);
-    }
 
     // ── Step 3: DB 기반 스토리 전이 ──
     // 현재 노드에서 출발하는 전이 목록을 우선순위 순으로 조회하고,
@@ -217,8 +206,8 @@ public class StoryServiceImpl implements StoryService {
       handleChapterCompletion(user, chapter);
     }
 
-    // 다음 노드 정보를 응답 DTO로 변환하여 반환
-    return buildResponseFromNode(nextNode);
+    // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
+    return buildResponseFromNode(nextNode, matched.getEffectBundle());
   }
 
   // ──────────────────────────────────────────────
@@ -231,8 +220,11 @@ public class StoryServiceImpl implements StoryService {
    * @return 최근 입력 명령어 문자열 리스트
    */
   @Override
-  public List<String> getRecentCommands() {
-    User user = findOrCreateGuestUser();
+  @Transactional
+  public List<String> getRecentCommands(Long userId) {
+    // 유저 조회
+    User user = getAuthenticatedUser(userId);
+    // Redis에서 해당 유저의 최근 명령어 리스트 조회
     return commandLogService.getRecentCommands(user.getId());
   }
 
@@ -241,92 +233,53 @@ public class StoryServiceImpl implements StoryService {
   // ══════════════════════════════════════════════
 
   /**
-   * 게스트 유저를 조회하거나, 없으면 새로 생성한다.
+   * 인증된 유저를 조회하고, 스토리 진행을 위한 초기 환경(1챕터 해금)을 확인/조성한다.
    *
-   * <p>TODO: OAuth2 인증이 완성되면 이 메서드를 제거하고, SecurityContext에서 인증된 유저를 가져오는 방식으로 전환해야 한다. 현재는 개발/테스트
-   * 편의를 위해 고정 게스트 계정을 사용한다.
-   *
-   * @return 게스트 유저 엔티티
+   * @param userId 유저 식별값
+   * @return 유저 엔티티
+   * @throws CustomException E3000 - 유저 미존재
    */
-  private User findOrCreateGuestUser() {
-    // 고정 이메일로 게스트 유저 조회, 없으면 새로 생성하여 DB에 저장
-    return userRepository
-        .findByEmail(GUEST_EMAIL)
-        .orElseGet(
-            () -> {
-              // 1. 유저 생성
-              User newUser =
-                  userRepository.save(
-                      User.builder()
-                          .email(GUEST_EMAIL)
-                          .oauthName("Guest")
-                          .nickname("GuestUser")
-                          .provider(AuthProvider.GOOGLE)
-                          .providerUserId("GUEST_" + System.currentTimeMillis())
-                          .role(UserRole.GUEST)
-                          .build());
+  private User getAuthenticatedUser(Long userId) {
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
-              // 2. 최초 플레이를 위한 1챕터 해금
-              chapterRepository
-                  .findBySortOrder(1)
-                  .ifPresent(
-                      firstChapter ->
-                          userChapterProgressRepository.save(
-                              UserChapterProgress.builder()
-                                  .user(newUser)
-                                  .chapter(firstChapter)
-                                  .status(ChapterStatus.UNLOCKED)
-                                  .build()));
+    // 최초 플레이인 경우 진행 환경(1챕터 해금 및 최초 스토리 진행 레코드)을 조성해준다.
+    if (!userChapterProgressRepository.existsByUserId(user.getId())) {
+      chapterRepository
+          .findBySortOrder(1)
+          .ifPresent(
+              firstChapter -> {
+                // 1. 챕터 해금 처리
+                userChapterProgressRepository.save(
+                    UserChapterProgress.builder()
+                        .user(user)
+                        .chapter(firstChapter)
+                        .status(ChapterStatus.UNLOCKED)
+                        .build());
 
-              return newUser;
-            });
+                // 2. 해당 챕터의 첫 번째 노드 조회
+                storyNodeRepository
+                    .findFirstByChapter_CodeOrderByIdAsc(firstChapter.getCode())
+                    .ifPresent(
+                        firstNode -> {
+                          // 3. 최초 스토리 진행 레코드(UserStoryProgress) 생성
+                          if (!userStoryProgressRepository.existsById(user.getId())) {
+                            userStoryProgressRepository.save(
+                                UserStoryProgress.builder()
+                                    .user(user)
+                                    .latestChapter(firstChapter)
+                                    .latestNode(firstNode)
+                                    .latestSnapshotJson(createEmptySnapshot(firstChapter, firstNode))
+                                    .build());
+                          }
+                        });
+              });
+      log.info("Initialized Chapter 1 and Story Progress for user: {}", userId);
+    }
+
+    return user;
   }
 
-  /**
-   * 주어진 명령어가 Mock(시뮬레이션) 대상인지 판별한다.
-   *
-   * <p>TODO: Mock 대상 명령어 목록을 설정 파일 또는 DB로 외부화할 것. 현재는 하드코딩된 리스트(ls, pwd, whoami, cat)로 판별한다.
-   *
-   * @param input 유저가 입력한 명령어 문자열
-   * @return Mock 대상이면 true
-   */
-  private boolean isMockCommand(String input) {
-    if (input == null) return false;
-    // 첫 번째 토큰(명령어 이름)만 추출하여 목록과 비교
-    String cmd = input.trim().split(" ")[0];
-    return List.of("ls", "pwd", "whoami", "cat").contains(cmd);
-  }
-
-  /**
-   * Mock 명령어에 대한 가상 터미널 응답을 생성한다.
-   *
-   * <p>TODO: 실제 터미널 시뮬레이션 엔진으로 교체 필요. 현재는 단순 문자열 조합으로 가짜 출력을 반환하는 목업(Mock) 상태이다. 향후 각 명령어별 파일시스템
-   * 상태, 현재 디렉토리 등을 반영한 Context-aware 시뮬레이터를 구현해야 한다.
-   *
-   * @param request 유저 액션 정보
-   * @return 가상 터미널 출력을 담은 응답 DTO
-   */
-  private TransitionResponseDto handleMockCommand(TransitionRequestDto request) {
-    // 유저 입력 명령어 추출 (앞뒤 공백 제거)
-    String input = request.getInputValue().trim();
-    // TODO: 명령어별 분기 처리 구현 (ls → 파일목록, pwd → 경로, whoami → 유저명 등)
-    String output = "Executing " + input + "... (Mock Output)";
-
-    // Mock 응답 DTO 빌드 — 노드 이동 없이 가상 출력만 반환
-    return TransitionResponseDto.builder()
-        .nextNode(
-            NextNodeDto.builder()
-                .id(request.getNodeId()) // TODO: 실제 다음 노드 ID 계산 로직 필요
-                .code("MOCK_NODE") // TODO: 실제 노드 코드로 교체
-                .nodeType("system")
-                .outputBundle(Map.of("stdout", output)) // 가상 stdout 출력
-                .build())
-        .result("success")
-        .effects(
-            List.of(
-                EffectDto.builder().type("append_output").payload(output).build())) // 프론트에 출력 추가 지시
-        .build();
-  }
 
   /**
    * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라 exact(완전 일치) 또는
@@ -354,28 +307,36 @@ public class StoryServiceImpl implements StoryService {
     };
   }
 
-  /**
-   * DB에서 조회한 StoryNode를 TransitionResponseDto로 변환한다.
-   *
-   * <p>TODO: outputBundle, effectBundle 등 노드의 전체 데이터를 응답에 포함하도록 확장 필요. 현재는 메타데이터만 반환한다.
-   *
-   * @param node 전이 완료 후 도착한 스토리 노드
-   * @return 전이 결과 응답 DTO
-   */
-  private TransitionResponseDto buildResponseFromNode(StoryNode node) {
-    // 노드 메타데이터만 담아 응답 빌드 (outputBundle 등은 TODO)
-    return TransitionResponseDto.builder()
-        .nextNode(
-            NextNodeDto.builder()
-                .id(node.getId()) // 노드 PK
-                .code(node.getCode()) // 노드 고유 코드 (e.g. CH1_FRIEND_CHAT_PUSH)
-                .nodeType(node.getNodeType()) // narrative, console, network 등
-                .promptType(node.getPromptType()) // command, click, inspect 등
-                .isCheckpoint(node.isCheckpoint()) // 체크포인트 여부
-                .isTerminal(node.isTerminal()) // 엔딩 노드 여부
-                .build())
-        .result("success")
-        .build();
+  private TransitionResponseDto buildResponseFromNode(StoryNode node, JsonNode effectBundle) {
+    // 노드의 대사(outputBundle)와 메타데이터를 포함하여 응답 빌드
+    TransitionResponseDto.TransitionResponseDtoBuilder builder =
+        TransitionResponseDto.builder()
+            .nextNode(
+                NextNodeDto.builder()
+                    .id(node.getId())
+                    .code(node.getCode())
+                    .nodeType(node.getNodeType())
+                    .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
+                    .promptType(node.getPromptType())
+                    .isCheckpoint(node.isCheckpoint())
+                    .isTerminal(node.isTerminal())
+                    .build())
+            .result("success");
+
+    // 효과(effectBundle)가 존재하면 DTO 리스트로 변환하여 추가
+    if (effectBundle != null && !effectBundle.isEmpty()) {
+      // JsonNode (ObjectNode)의 필드들을 순회하며 EffectDto 리스트 생성
+      List<EffectDto> effects = new java.util.ArrayList<>();
+      effectBundle.fields().forEachRemaining(entry -> {
+          effects.add(EffectDto.builder()
+              .type(entry.getKey())
+              .payload(entry.getValue())
+              .build());
+      });
+      builder.effects(effects);
+    }
+
+    return builder.build();
   }
 
   /** 챕터 시작 전 해금 여부를 검증한다. */

@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gitlab-mr-review",
+        "options": {}
+      },
+      "id": "trigger-node",
+      "name": "GitLab Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://lab.ssafy.com/api/v4/projects/{{ $node[\"GitLab Webhook\"].json.body.project.id }}/merge_requests/{{ $node[\"GitLab Webhook\"].json.body.object_attributes.iid }}/diffs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "YOUR_GITLAB_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-diffs",
+      "name": "Fetch MR Diffs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const excludedExtensions = ['.svg', '.json', '.md'];\nconst excludedPaths = ['docs/'];\n\nconst items = Array.isArray($input.all()) ? $input.all() : [$input.all()];\n\nconst filtered = items.filter(item => {\n  const path = item.json.new_path;\n  if (!path) return false;\n  const isExcludedExt = excludedExtensions.some(ext => path.endsWith(ext));\n  const isExcludedPath = excludedPaths.some(p => path.startsWith(p));\n  return !isExcludedExt && !isExcludedPath;\n});\n\n// Combine all diffs into one text block\nconst combinedDiff = filtered.map(item => `File: ${item.json.new_path}\\nDiff:\\n${item.json.diff}`).join('\\n\\n---\\n\\n');\n\nreturn [{ json: { combinedDiff, fileCount: filtered.length } }];"
+      },
+      "id": "filter-node",
+      "name": "Filter & Combine Diffs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-lite",
+        "prompt": "={{ $json.combinedDiff }}",
+        "options": {
+          "systemMessage": "당신은 전문적인 시니어 소프트웨어 엔지니어이자 코드 리뷰어입니다.\n제공된 GitLab Merge Request의 코드 변경 사항(diff)을 분석하여 한국어로 리뷰를 작성해주세요.\n\n분석 기준:\n1. 잠재적인 버그나 에지 케이스 체크\n2. 성능 개선 제안\n3. 코드 가독성 및 유지보수성 향상 방법\n4. 보안 취약점 확인\n\n답변 형식:\n- 요약: 변경 사항에 대한 짧은 요약\n- 주요 피드백: 개선이 필요한 부분 (있는 경우)\n- 종합 의견: 특별한 문제가 없다면 'LGTM' 포함\n\n답변은 친절하고 건설적인 톤으로 Markdown 형식을 사용하여 작성해주세요.\n리뷰할 파일이 너무 많다면 가장 중요한 로직 위주로 리뷰해주세요."
+        }
+      },
+      "id": "gemini-node",
+      "name": "Google Gemini",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [1000, 300],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://lab.ssafy.com/api/v4/projects/{{ $node[\"GitLab Webhook\"].json.body.project.id }}/merge_requests/{{ $node[\"GitLab Webhook\"].json.body.object_attributes.iid }}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "YOUR_GITLAB_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $node[\"Google Gemini\"].json.content.parts[0].text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "post-comment",
+      "name": "Post MR Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "GitLab Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch MR Diffs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MR Diffs": {
+      "main": [
+        [
+          {
+            "node": "Filter & Combine Diffs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & Combine Diffs": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini": {
+      "main": [
+        [
+          {
+            "node": "Post MR Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
