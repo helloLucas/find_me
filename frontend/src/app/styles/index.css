@@ -1,7 +1,14 @@
 @import "tailwindcss";
+@import url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css');
+
+@font-face {
+  font-family: 'NeoDunggeunmoPro';
+  src: url('/fonts/NeoDunggeunmoPro-Regular.ttf') format('truetype');
+  font-style: normal;
+}
 
 @theme {
-  --font-pixel: "Press Start 2P", cursive;
+  --font-pixel: "Press Start 2P", "NeoDunggeunmoPro", "NeoDunggeunmo", cursive;
 }
 
 html,
