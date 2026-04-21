@@ -39,6 +39,12 @@ public enum ErrorCode {
       "Progress not found",
       "진행 상태를 찾을 수 없습니다.",
       "/problems/progress-not-found"),
+  E3004(
+      "E3004",
+      HttpStatus.NOT_FOUND,
+      "File not found",
+      "파일을 찾을 수 없습니다.",
+      "/problems/file-not-found"),
   A1000(
       "A1000",
       HttpStatus.BAD_REQUEST,
@@ -57,6 +63,12 @@ public enum ErrorCode {
       "Previous chapter not completed",
       "이전 챕터를 완료해야 진행할 수 있습니다.",
       "/problems/prev-chapter-incomplete"),
+  A1004(
+      "A1004",
+      HttpStatus.FORBIDDEN,
+      "Access denied to storage",
+      "스토리지 접근 권한이 없습니다.",
+      "/problems/storage-access-denied"),
   A2000(
       "A2000",
       HttpStatus.FORBIDDEN,
