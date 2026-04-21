@@ -16,9 +16,19 @@ export const useAuthActions = () => {
 
   /**
    * SYSTEM ACCESS 버튼 핸들러 (Login)
+   * 전체화면 유지를 위해 팝업창 도구를 통해 구글 OAuth 로그인을 시도합니다.
    */
   const handleSystemAccess = () => {
-    window.location.href = GOOGLE_AUTH_URL;
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    
+    window.open(
+      GOOGLE_AUTH_URL, 
+      'VoidCityLogin', 
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
   };
 
   /**
