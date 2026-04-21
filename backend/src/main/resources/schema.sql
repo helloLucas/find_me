@@ -48,7 +48,7 @@ CREATE TABLE story_transitions (
     action_type VARCHAR(50) NOT NULL CHECK (
         action_type IN ('command', 'click', 'inspect', 'choice', 'system')
     ),
-    expected_input VARCHAR(255),
+    expected_input TEXT,
     validator_type VARCHAR(50) NOT NULL CHECK (
         validator_type IN ('exact', 'regex', 'server_rule')
     ),

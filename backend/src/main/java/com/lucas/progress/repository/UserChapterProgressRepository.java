@@ -11,4 +11,6 @@ public interface UserChapterProgressRepository extends JpaRepository<UserChapter
   Optional<UserChapterProgress> findByUserIdAndChapterId(Long userId, Long chapterId);
 
   boolean existsByUserIdAndChapterId(Long userId, Long chapterId);
+  
+  boolean existsByUserId(Long userId);
 }
