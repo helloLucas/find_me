@@ -17,7 +17,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
 
   // 공통 스타일 클래스 정의
   const baseClass = "font-pixel cursor-pointer transition-colors drop-shadow-md hover:text-gray-400";
-  const sizeClass = "text-2xl md:text-3xl"; // 폰트 크기 통일
+  const sizeClass = "text-4xl md:text-5xl uppercase tracking-tighter";
 
   return (
     <nav className="flex flex-col gap-6 ml-2 select-none">
