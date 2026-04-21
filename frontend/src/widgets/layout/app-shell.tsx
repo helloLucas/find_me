@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
+import { tokenManager } from "../../shared/utils/tokenManager";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -15,9 +16,15 @@ export default function AppShell({ children }: PropsWithChildren) {
 
       if (event.data?.type === 'AUTH_SUCCESS') {
         setIsAccessing(true);
-        const { isNewUser } = event.data;
+        const { isNewUser, accessToken, refreshToken } = event.data;
         
-        // 1. 토큰 동기화 (이미 팝업에서 저장함)
+        // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
+        if (accessToken && refreshToken) {
+            tokenManager.setAccessToken(accessToken);
+            tokenManager.setRefreshToken(refreshToken);
+        }
+
+        // 2. Zustand 스토어 인증 상태 동기화
         checkAuth();
         
         // 2. 약간의 지연 후 라우팅 (UX 몰입도)

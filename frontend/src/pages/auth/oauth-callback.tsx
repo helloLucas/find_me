@@ -4,7 +4,7 @@ import { tokenManager } from '../../shared/utils/tokenManager';
 
 /**
  * OAuthCallbackPage
- * 
+ *
  * OAuth2 로그인 성공 후 백엔드에서 리다이렉트되어 도달하는 페이지입니다.
  * URL 파라미터에서 토큰과 신규 유저 여부를 파싱하여 초기화 및 라우팅을 수행합니다.
  */
@@ -13,25 +13,25 @@ const OAuthCallbackPage = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const accessToken = searchParams.get('accessToken');
-        const refreshToken = searchParams.get('refreshToken');
-        const isNewUser = searchParams.get('isNewUser') === 'true';
+          const accessToken = searchParams.get('accessToken');
+          const isNewUser = searchParams.get('isNewUser') === 'true';
 
-        if (accessToken && refreshToken) {
-            // 1. 토큰 저장
+          // refreshToken 체크 조건 제거 (쿠키로 안전하게 들어왔음)
+          if (accessToken) {
+            // 1. Access Token만 메모리나 로컬 스토리지에 저장
             tokenManager.setAccessToken(accessToken);
-            tokenManager.setRefreshToken(refreshToken);
+            // tokenManager.setRefreshToken(...) <- 이 줄은 삭제! 브라우저가 알아서 쿠키로 관리함
 
-            // 2. 팝업 모드 대응: 부모 창이 있다면 메시지 전송 후 종료
+            // 2. 팝업 모드 대응 (부모 창으로 Access Token만 전달)
             if (window.opener) {
-                window.opener.postMessage({
-                    type: 'AUTH_SUCCESS',
-                    accessToken,
-                    refreshToken,
-                    isNewUser
-                }, window.location.origin);
-                window.close();
-                return;
+              window.opener.postMessage({
+                type: 'AUTH_SUCCESS',
+                accessToken,
+                isNewUser
+                // refreshToken 전송 삭제
+              }, window.location.origin);
+              window.close();
+              return;
             }
 
             // 3. 일반 모드(Fallback): 신규 유저 여부에 따른 강제 라우팅
