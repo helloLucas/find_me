@@ -9,7 +9,10 @@ import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
+import com.lucas.progress.entity.ChapterStatus;
+import com.lucas.progress.entity.UserChapterProgress;
 import com.lucas.progress.entity.UserStoryProgress;
+import com.lucas.progress.repository.UserChapterProgressRepository;
 import com.lucas.progress.repository.UserStoryProgressRepository;
 import com.lucas.story.dto.request.StartStoryRequestDto;
 import com.lucas.story.dto.request.TransitionRequestDto;
@@ -55,6 +58,7 @@ public class StoryServiceImpl implements StoryService {
   private final StoryNodeRepository storyNodeRepository;
   private final StoryTransitionRepository storyTransitionRepository;
   private final UserStoryProgressRepository userStoryProgressRepository;
+  private final UserChapterProgressRepository userChapterProgressRepository;
   private final CommandLogService commandLogService;
   private final ObjectMapper objectMapper;
 
@@ -88,8 +92,8 @@ public class StoryServiceImpl implements StoryService {
     User user = findOrCreateGuestUser();
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
 
-    // 챕터 순서 검증 (첫 챕터가 아닌데 이전 챕터 완료 기록이 없으면 차단)
-    validateChapterProgression(progress, chapter);
+    // 챕터 해금 상태 검증
+    validateChapterUnlocked(user, chapter);
 
     // 초기 스냅샷 생성 (챕터/노드 식별 정보만 포함)
     JsonNode emptySnapshot = createEmptySnapshot(chapter, firstNode);
@@ -207,6 +211,12 @@ public class StoryServiceImpl implements StoryService {
     progress.updateProgress(chapter, nextNode, snapshot);
     userStoryProgressRepository.save(progress);
 
+    // ── Step 4: 챕터 완료 및 다음 챕터 해금 처리 ──
+    // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
+    if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
+      handleChapterCompletion(user, chapter);
+    }
+
     // 다음 노드 정보를 응답 DTO로 변환하여 반환
     return buildResponseFromNode(nextNode);
   }
@@ -243,19 +253,33 @@ public class StoryServiceImpl implements StoryService {
     return userRepository
         .findByEmail(GUEST_EMAIL)
         .orElseGet(
-            () ->
-                userRepository.save(
-                    User.builder()
-                        .email(GUEST_EMAIL)
-                        .oauthName("Guest")
-                        .nickname("GuestUser")
-                        .provider(AuthProvider.GOOGLE) // TODO: 게스트 전용 provider 분리
-                        // 검토
-                        .providerUserId("GUEST_" + System.currentTimeMillis()) // 고유성
-                        // 보장용
-                        // 타임스탬프
-                        .role(UserRole.GUEST)
-                        .build()));
+            () -> {
+              // 1. 유저 생성
+              User newUser =
+                  userRepository.save(
+                      User.builder()
+                          .email(GUEST_EMAIL)
+                          .oauthName("Guest")
+                          .nickname("GuestUser")
+                          .provider(AuthProvider.GOOGLE)
+                          .providerUserId("GUEST_" + System.currentTimeMillis())
+                          .role(UserRole.GUEST)
+                          .build());
+
+              // 2. 최초 플레이를 위한 1챕터 해금
+              chapterRepository
+                  .findBySortOrder(1)
+                  .ifPresent(
+                      firstChapter ->
+                          userChapterProgressRepository.save(
+                              UserChapterProgress.builder()
+                                  .user(newUser)
+                                  .chapter(firstChapter)
+                                  .status(ChapterStatus.UNLOCKED)
+                                  .build()));
+
+              return newUser;
+            });
   }
 
   /**
@@ -354,23 +378,49 @@ public class StoryServiceImpl implements StoryService {
         .build();
   }
 
-  /**
-   * 챕터 순서 검증: 이전 챕터를 완료하지 않으면 다음 챕터를 시작할 수 없다.
-   *
-   * <p>TODO: 챕터 완료 조건 상세 로직 구현 필요. 현재는 sortOrder == 1 (첫 챕터)만 무조건 허용하고, 그 외 챕터의 진행 조건(이전 챕터 ending
-   * 도달 여부 등)은 미구현 상태이다.
-   */
-  private void validateChapterProgression(
-      UserStoryProgress currentProgress, Chapter requestedChapter) {
-    if (currentProgress == null) {
-      // 진행 기록이 없으면 첫 번째 챕터만 시작 가능
-      if (requestedChapter.getSortOrder() != 1) {
-        throw new CustomException(ErrorCode.A1002);
-      }
-      return;
+  /** 챕터 시작 전 해금 여부를 검증한다. */
+  private void validateChapterUnlocked(User user, Chapter chapter) {
+    UserChapterProgress chapterProgress =
+        userChapterProgressRepository
+            .findByUserIdAndChapterId(user.getId(), chapter.getId())
+            .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+
+    if (chapterProgress.getStatus() == ChapterStatus.LOCKED) {
+      throw new CustomException(ErrorCode.A1002);
     }
-    // TODO: 현재 챕터의 ending 노드 도달 여부를 확인하여
-    //       다음 챕터 개방 조건을 검증하는 로직 추가 필요
+  }
+
+  /** 챕터 완료를 처리하고 다음 챕터를 해금한다. */
+  private void handleChapterCompletion(User user, Chapter currentChapter) {
+    // 1. 현재 챕터 완료 처리
+    userChapterProgressRepository
+        .findByUserIdAndChapterId(user.getId(), currentChapter.getId())
+        .ifPresent(
+            cp -> {
+              cp.complete();
+              userChapterProgressRepository.save(cp);
+            });
+
+    // 2. 다음 챕터 조회 및 해금 (sortOrder + 1)
+    chapterRepository
+        .findBySortOrder(currentChapter.getSortOrder() + 1)
+        .ifPresent(
+            nextChapter -> {
+              // 이미 해금되어 있는지 확인 후 없으면 생성
+              if (!userChapterProgressRepository.existsByUserIdAndChapterId(
+                  user.getId(), nextChapter.getId())) {
+                userChapterProgressRepository.save(
+                    UserChapterProgress.builder()
+                        .user(user)
+                        .chapter(nextChapter)
+                        .status(ChapterStatus.UNLOCKED)
+                        .build());
+                log.info(
+                    "Next chapter unlocked: User={}, Chapter={}",
+                    user.getId(),
+                    nextChapter.getCode());
+              }
+            });
   }
 
   /**
