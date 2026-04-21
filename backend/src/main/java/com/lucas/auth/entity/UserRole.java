@@ -8,11 +8,11 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum UserRole {
-    /** 소셜 로그인 전의 임시 게스트 권한 */
-    GUEST("ROLE_GUEST"),
-    /** 소셜 로그인이 완료된 정식 회원 권한 */
-    MEMBER("ROLE_MEMBER");
+  /** 소셜 로그인 전의 임시 게스트 권한 */
+  GUEST("ROLE_GUEST"),
+  /** 소셜 로그인이 완료된 정식 회원 권한 */
+  MEMBER("ROLE_MEMBER");
 
-    /** Spring Security에서 사용하는 권한 식별 키 */
-    private final String key;
+  /** Spring Security에서 사용하는 권한 식별 키 */
+  private final String key;
 }

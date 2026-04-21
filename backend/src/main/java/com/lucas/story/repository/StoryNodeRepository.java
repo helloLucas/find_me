@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StoryNodeRepository extends JpaRepository<StoryNode, Long> {
 
-    Optional<StoryNode> findByCode(String code);
+  Optional<StoryNode> findByCode(String code);
 
-    Optional<StoryNode> findFirstByChapter_CodeOrderByIdAsc(String chapterCode);
+  Optional<StoryNode> findFirstByChapter_CodeOrderByIdAsc(String chapterCode);
 }

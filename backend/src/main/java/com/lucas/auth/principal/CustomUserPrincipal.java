@@ -13,24 +13,24 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @Builder
 public class CustomUserPrincipal {
 
-    /** 애플리케이션 내부 유저 식별값 */
-    private Long userId;
+  /** 애플리케이션 내부 유저 식별값 */
+  private Long userId;
 
-    /** 유저 이메일 */
-    private String email;
+  /** 유저 이메일 */
+  private String email;
 
-    /** 유저 닉네임 */
-    private String nickname;
+  /** 유저 닉네임 */
+  private String nickname;
 
-    /** 유저 권한 */
-    private UserRole role;
+  /** 유저 권한 */
+  private UserRole role;
 
-    /**
-     * 사용자의 권한 목록을 반환합니다.
-     *
-     * @return GrantedAuthority 컬렉션
-     */
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority(role.getKey()));
-    }
+  /**
+   * 사용자의 권한 목록을 반환합니다.
+   *
+   * @return GrantedAuthority 컬렉션
+   */
+  public Collection<? extends GrantedAuthority> getAuthorities() {
+    return Collections.singleton(new SimpleGrantedAuthority(role.getKey()));
+  }
 }
