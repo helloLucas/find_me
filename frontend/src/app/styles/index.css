@@ -7,8 +7,15 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Cafe24PROUP';
+  src: url('/fonts/Cafe24PROUP.otf') format('opentype');
+  font-style: normal;
+}
+
 @theme {
   --font-pixel: "Press Start 2P", "NeoDunggeunmoPro", "NeoDunggeunmo", cursive;
+  --font-game: "Cafe24PROUP", "NeoDunggeunmoPro", sans-serif;
 }
 
 html,

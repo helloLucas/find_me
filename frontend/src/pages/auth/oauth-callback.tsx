@@ -22,17 +22,31 @@ const OAuthCallbackPage = () => {
             tokenManager.setAccessToken(accessToken);
             tokenManager.setRefreshToken(refreshToken);
 
-            // 2. 신규 유저 여부에 따른 강제 라우팅
+            // 2. 팝업 모드 대응: 부모 창이 있다면 메시지 전송 후 종료
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'AUTH_SUCCESS',
+                    accessToken,
+                    refreshToken,
+                    isNewUser
+                }, window.location.origin);
+                window.close();
+                return;
+            }
+
+            // 3. 일반 모드(Fallback): 신규 유저 여부에 따른 강제 라우팅
             if (isNewUser) {
-                // 신규 유저라면 닉네임 설정 페이지로 이동
                 navigate('/setup-nickname', { replace: true });
             } else {
-                // 기존 유저라면 로비로 이동
                 navigate('/lobby', { replace: true });
             }
         } else {
             console.error('Authentication failed: Missing tokens in callback URL');
-            // 토큰이 없는 경우 로그인 페이지로 복귀
+            if (window.opener) {
+                window.opener.postMessage({ type: 'AUTH_ERROR' }, window.location.origin);
+                window.close();
+                return;
+            }
             navigate('/login', { replace: true });
         }
     }, [searchParams, navigate]);
