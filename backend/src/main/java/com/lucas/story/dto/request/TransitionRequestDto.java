@@ -10,13 +10,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TransitionRequestDto {
 
-    @NotNull(message = "nodeId는 필수입니다.")
-    private Long nodeId;
+  @NotNull(message = "nodeId는 필수입니다.")
+  private Long nodeId;
 
-    @NotBlank(message = "actionType은 필수입니다.")
-    private String actionType;
+  @NotBlank(message = "actionType은 필수입니다.")
+  private String actionType;
 
-    private String inputValue;
+  private String inputValue;
 
-    private Map<String, Object> meta;
+  private Map<String, Object> meta;
 }

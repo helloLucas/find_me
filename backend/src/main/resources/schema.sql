@@ -4,12 +4,15 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE,
-    name VARCHAR(50),
-    ssafy_id BIGINT UNIQUE,
-    region VARCHAR(50),
-    role VARCHAR(50) NOT NULL CHECK (role IN ('USER', 'GUEST', 'ADMIN')),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    email VARCHAR(255),
+    oauth_name VARCHAR(50) NOT NULL,
+    nickname VARCHAR(50),
+    provider VARCHAR(30),
+    provider_user_id VARCHAR(100),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('GUEST', 'MEMBER')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    modified_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_users_provider_provider_user_id UNIQUE (provider, provider_user_id)
 );
 
 CREATE TABLE chapters (
@@ -72,6 +75,16 @@ CREATE TABLE user_fragments (
     UNIQUE (user_id, fragment_code)
 );
 
+CREATE TABLE user_chapter_progress (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    chapter_id BIGINT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('LOCKED', 'UNLOCKED', 'COMPLETED')),
+    unlocked_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    UNIQUE (user_id, chapter_id)
+);
+
 CREATE TABLE save_slots (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -126,6 +139,9 @@ CREATE INDEX idx_unlocked_endings_user_id
 
 CREATE INDEX idx_user_fragments_user_id
     ON user_fragments(user_id);
+
+CREATE INDEX idx_user_chapter_progress_user_id
+    ON user_chapter_progress(user_id);
 
 CREATE INDEX idx_save_slots_user_id
     ON save_slots(user_id);
