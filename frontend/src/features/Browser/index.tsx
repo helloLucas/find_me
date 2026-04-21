@@ -5,6 +5,8 @@ import { HomeTab } from './components/HomeTab';
 import { PacmanTab } from './components/PacmanTab';
 import { NetworkDevTools } from './components/NetworkDevTools';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
+import { useLucasStore } from '../../app/store/lucasStore';
+import type { LucasScene } from '../../app/store/lucasStore';
 
 interface Tab {
   id: string;
@@ -94,6 +96,39 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       }
     };
   }, [activeTabId, windowId]);
+
+  useEffect(() => {
+    // Expose connect_core globally for the browser console
+    (window as any).connect_core = () => {
+      const startScene = useLucasStore.getState().startScene;
+      
+      const chapter1Scene: LucasScene = {
+        id: "CH1_LUCAS_DOG_APPEAR",
+        mode: "system",
+        bgm: "rain",
+        glitchLevel: 3,
+        messages: [
+          { speaker: "LUCAS", channel: "bubble", text: "드디어 연결됐다.", blocking: true },
+          { speaker: "LUCAS", channel: "bubble", text: "설명할 시간 없어. 방금 네가 한 행동 때문에 시스템이 널 비정상적 관측자로 인식했어.", blocking: true },
+          { speaker: "LUCAS", channel: "bubble", text: "이제 넌 저들 눈에 띄었고, 곧 삭제 대상이 될 거야.", blocking: true },
+          { speaker: "LUCAS", channel: "bubble", text: "내 서버는 아직 시스템 눈을 피하고 있어.", blocking: true },
+          { speaker: "LUCAS", channel: "bubble", text: "살고 싶으면 터미널을 열어서 거기로 접속해야 해.", blocking: true },
+          { speaker: "LUCAS", channel: "bubble", text: "먼저 접속 주소를 찾아. 방금 네가 본 요청 기록 안에 있어.", blocking: true }
+        ],
+        effects: {
+          showDogAvatar: true,
+          breakLayout: true
+        }
+      };
+      
+      startScene(chapter1Scene);
+      console.log("%c[SYSTEM] Core connection established. Lucas is online.", "color: #0ff; font-weight: bold;");
+    };
+
+    return () => {
+      delete (window as any).connect_core;
+    };
+  }, []);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();

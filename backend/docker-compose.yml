@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  backend:
+    # TODO: Prod 환경은 빌드가 아닌 이미지를 Pull 받아 실행합니다.
+    # 본인의 Container Registry 주소(Docker Hub 등)에 맞춰 수정이 필요합니다.
+    image: lucas-backend:latest
+    container_name: lucas-backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    # Jenkins 또는 서버 환경 변수에서 주입받는 값을 사용합니다.
+    environment:
+      - SPRING_DATASOURCE_URL=${DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET}

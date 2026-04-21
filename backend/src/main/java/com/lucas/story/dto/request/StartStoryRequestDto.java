@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StartStoryRequestDto {
 
-    @NotBlank(message = "챕터 코드는 필수입니다.")
-    private String chapterCode;
+  @NotBlank(message = "챕터 코드는 필수입니다.")
+  private String chapterCode;
 }

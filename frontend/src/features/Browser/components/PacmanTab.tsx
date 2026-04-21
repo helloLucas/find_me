@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // 0: empty, 1: wall, 2: dot, 3: power pellet (optional, acting as dot for now)
 const INITIAL_GRID = [

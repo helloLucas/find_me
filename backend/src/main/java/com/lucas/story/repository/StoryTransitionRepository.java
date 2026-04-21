@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StoryTransitionRepository extends JpaRepository<StoryTransition, Long> {
 
-    List<StoryTransition> findByFromNode_IdOrderByPriorityDesc(Long fromNodeId);
+  List<StoryTransition> findByFromNode_IdOrderByPriorityDesc(Long fromNodeId);
 }

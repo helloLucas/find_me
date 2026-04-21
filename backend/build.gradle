@@ -52,7 +52,7 @@ tasks.named('test') {
 
 spotless {
     java {
-        googleJavaFormat().aosp()
+        googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()

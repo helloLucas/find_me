@@ -9,18 +9,16 @@ import { Browser } from '../../features/Browser';
 import { MessengerNotificationCard, MessengerWindow } from '../../features/messenger';
 import { useMessengerStore } from '../../app/store/messengerStore';
 import { normalizeMessengerBundle } from '../../features/messenger/messenger.adapters';
+import { Lucas } from '../../features/Lucas/Lucas';
 
 export const Desktop: React.FC = () => {
   const { openTerminal } = useClientStore();
   const { windows, openWindow } = useWindowStore();
   const { receiveConversation } = useMessengerStore();
   const [selectionBox, setSelectionBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
-  const [showCoreCharacter, setShowCoreCharacter] = useState(false);
 
   React.useEffect(() => {
-    const handleSpawn = () => setShowCoreCharacter(true);
-    window.addEventListener('SPAWN_CORE_CHARACTER', handleSpawn);
-    return () => window.removeEventListener('SPAWN_CORE_CHARACTER', handleSpawn);
+    // Initial initialization of global triggers if needed
   }, []);
 
   // ── Demo: simulate a messenger notification arriving after 2s ──
@@ -101,7 +99,7 @@ export const Desktop: React.FC = () => {
     { id: 'notepad', label: 'Notebook', icon: '/pixel_notepad_icon.svg' },
   ];
 
-  const handleIconDoubleClick = (id: string, iconUrl?: string) => {
+  const handleIconDoubleClick = (id: string) => {
     if (id === 'terminal') {
       openTerminal();
     } else if (id === 'chrome') {
@@ -183,27 +181,10 @@ export const Desktop: React.FC = () => {
             key={icon.id}
             label={icon.label}
             iconPath={icon.icon}
-            onDoubleClick={() => handleIconDoubleClick(icon.id, icon.icon)}
+            onDoubleClick={() => handleIconDoubleClick(icon.id)}
           />
         ))}
       </div>
-
-      {/* Core Character Easter Egg */}
-      {showCoreCharacter && (
-        <div className="absolute bottom-16 right-16 z-[5000] animate-bounce pointer-events-none drop-shadow-[0_0_15px_#0ff]">
-          <div className="w-16 h-16 bg-[#0a0514] border-2 border-[#0ff] rounded-lg flex items-center justify-center relative overflow-hidden">
-            <div className="absolute top-0 w-full h-1 bg-[#0ff]/50 animate-pulse" />
-            <div className="flex gap-2">
-              <div className="w-3 h-3 bg-[#ff3366] rounded-full animate-pulse" />
-              <div className="w-3 h-3 bg-[#ff3366] rounded-full animate-pulse" />
-            </div>
-            <div className="absolute bottom-3 w-6 h-1 bg-[#0ff] rounded-full" />
-          </div>
-          <div className="text-[#0ff] font-pixel text-xs mt-2 text-center drop-shadow-[0_0_5px_#0ff] tracking-widest bg-black/50 px-2 py-1 rounded">
-            CORE.ONLINE
-          </div>
-        </div>
-      )}
 
       {/* Terminal Modals/Scenes on top of Desktop */}
       <TerminalScene />
@@ -220,9 +201,13 @@ export const Desktop: React.FC = () => {
         </Window>
       ))}
 
+
       {/* Messenger System */}
       <MessengerNotificationCard />
       <MessengerWindow />
+
+      {/* Lucas Character and Hint System */}
+      <Lucas />
 
       {/* Taskbar */}
       <Taskbar />

@@ -21,63 +21,58 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final JwtUtil jwtUtil;
-    private final AuthService authService;
-    private final ObjectMapper objectMapper;
+  private final JwtUtil jwtUtil;
+  private final AuthService authService;
+  private final ObjectMapper objectMapper;
 
-    /**
-     * 인증 성공 시 호출되어 사용자의 JWT 토큰을 발급하고 성공 응답을 전송합니다.
-     *
-     * @param request HTTP 요청 객체
-     * @param response HTTP 응답 객체
-     * @param authentication 인증된 사용자의 정보를 포함한 인증 객체
-     * @throws IOException 입출력 예외
-     * @throws ServletException 서블릿 예외
-     */
-    @Override
-    public void onAuthenticationSuccess(
-            HttpServletRequest request, HttpServletResponse response, Authentication authentication)
-            throws IOException, ServletException {
+  /**
+   * 인증 성공 시 호출되어 사용자의 JWT 토큰을 발급하고 성공 응답을 전송합니다.
+   *
+   * @param request HTTP 요청 객체
+   * @param response HTTP 응답 객체
+   * @param authentication 인증된 사용자의 정보를 포함한 인증 객체
+   * @throws IOException 입출력 예외
+   * @throws ServletException 서블릿 예외
+   */
+  @Override
+  public void onAuthenticationSuccess(
+      HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+      throws IOException, ServletException {
 
-        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+    CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-        Long userId = customOAuth2User.getUserId();
-        String email = customOAuth2User.getEmail();
-        String role = customOAuth2User.getRole().name();
-        String nickname = customOAuth2User.getNickname();
+    Long userId = customOAuth2User.getUserId();
+    String email = customOAuth2User.getEmail();
+    String role = customOAuth2User.getRole().name();
+    String nickname = customOAuth2User.getNickname();
 
-        // 닉네임이 없거나 임시 닉네임인 경우 새로운 사용자로 판단
-        boolean isNewUser = (nickname == null || nickname.startsWith("방랑자_"));
+    // 닉네임이 없거나 임시 닉네임인 경우 새로운 사용자로 판단
+    boolean isNewUser = (nickname == null || nickname.startsWith("방랑자_"));
 
-        String accessToken =
-                jwtUtil.createAccessToken(
-                        userId,
-                        email,
-                        nickname,
-                        customOAuth2User.getProvider(),
-                        role,
-                        30 * 60 * 1000L);
+    String accessToken =
+        jwtUtil.createAccessToken(
+            userId, email, nickname, customOAuth2User.getProvider(), role, 30 * 60 * 1000L);
 
-        String refreshToken = jwtUtil.createRefreshToken(userId, email, 14 * 24 * 60 * 60 * 1000L);
+    String refreshToken = jwtUtil.createRefreshToken(userId, email, 14 * 24 * 60 * 60 * 1000L);
 
-        // refresh token 을 Redis에 저장
-        authService.replaceRefreshToken(userId, refreshToken);
+    // refresh token 을 Redis에 저장
+    authService.replaceRefreshToken(userId, refreshToken);
 
-        TokenResponse tokenResponse =
-                TokenResponse.builder()
-                        .accessToken(accessToken)
-                        .refreshToken(refreshToken)
-                        .userId(userId)
-                        .role(role)
-                        .nickname(nickname)
-                        .isNewUser(isNewUser)
-                        .build();
+    TokenResponse tokenResponse =
+        TokenResponse.builder()
+            .accessToken(accessToken)
+            .refreshToken(refreshToken)
+            .userId(userId)
+            .role(role)
+            .nickname(nickname)
+            .isNewUser(isNewUser)
+            .build();
 
-        BaseResponse<TokenResponse> successResponse =
-                BaseResponse.success("로그인에 성공했습니다.", tokenResponse);
+    BaseResponse<TokenResponse> successResponse =
+        BaseResponse.success("로그인에 성공했습니다.", tokenResponse);
 
-        response.setStatus(HttpStatus.OK.value());
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(successResponse));
-    }
+    response.setStatus(HttpStatus.OK.value());
+    response.setContentType("application/json;charset=UTF-8");
+    response.getWriter().write(objectMapper.writeValueAsString(successResponse));
+  }
 }

@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NicknameRequest {
 
-    /** 수정할 닉네임 문자열 */
-    @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(max = 50, message = "닉네임은 50자 이하로 입력해주세요.")
-    private String nickname;
+  /** 수정할 닉네임 문자열 */
+  @NotBlank(message = "닉네임은 필수입니다.")
+  @Size(max = 50, message = "닉네임은 50자 이하로 입력해주세요.")
+  private String nickname;
 }
