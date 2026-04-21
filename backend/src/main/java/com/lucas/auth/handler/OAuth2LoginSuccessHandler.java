@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtUtil jwtUtil;
     private final AuthService authService;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     /**
      * 인증 성공 시 호출되어 사용자의 JWT 토큰을 발급하고 성공 응답을 전송합니다.
@@ -62,7 +66,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         authService.replaceRefreshToken(userId, refreshToken);
 
         // JSON 응답을 보내는 대신, 리다이렉트 URL을 생성
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 .queryParam("isNewUser", isNewUser)
