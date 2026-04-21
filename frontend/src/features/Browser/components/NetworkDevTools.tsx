@@ -20,6 +20,10 @@ export const NetworkDevTools: React.FC = () => {
     { type: 'error', text: 'Failed to load resource: the server responded with a status of 404 (Not Found)' }
   ]);
 
+  React.useEffect(() => {
+    // Initial initialization of global triggers if needed
+  }, []);
+
   const handleConsoleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && consoleInput.trim()) {
       const val = consoleInput.trim();
@@ -27,9 +31,13 @@ export const NetworkDevTools: React.FC = () => {
       setConsoleHistory(prev => [...prev, { type: 'in', text: val }]);
 
       if (val === 'connect_core()') {
-        setConsoleHistory(prev => [...prev, { type: 'success', text: 'Connecting... Core access granted.' }]);
-        // Trigger a custom event for the Desktop to pick up
-        window.dispatchEvent(new CustomEvent('SPAWN_CORE_CHARACTER'));
+        const connectFn = (window as any).connect_core;
+        if (typeof connectFn === 'function') {
+          connectFn();
+          setConsoleHistory(prev => [...prev, { type: 'success', text: 'Connecting... Core access granted.' }]);
+        } else {
+          setConsoleHistory(prev => [...prev, { type: 'error', text: 'Error: Core connection interface not initialized.' }]);
+        }
       } else {
         setConsoleHistory(prev => [...prev, { type: 'error', text: `Uncaught ReferenceError: ${val} is not defined` }]);
       }

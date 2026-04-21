@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { Desktop } from "../../widgets/Desktop";
 
 export default function PlayPage() {
-  const { chapterCode } = useParams();
+  useParams();
 
   return (
     <main className="h-screen w-screen overflow-hidden">
