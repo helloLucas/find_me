@@ -10,9 +10,11 @@ const SetupNicknamePage = () => {
     const { mutate, isPending } = useUpdateNickname();
     const navigate = useNavigate();
 
+    const isValid = nickname.trim().length >= 2;
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!nickname.trim() || isPending) return;
+        if (!isValid || isPending) return;
         mutate({ nickname });
     };
 
@@ -85,6 +87,7 @@ const SetupNicknamePage = () => {
                                             value={nickname}
                                             onChange={(e) => setNickname(e.target.value)}
                                             required
+                                            minLength={2}
                                             maxLength={15}
                                             disabled={isPending}
                                             autoComplete="off"
@@ -97,19 +100,25 @@ const SetupNicknamePage = () => {
                                             {nickname.length}/15
                                         </div>
                                     </div>
-                                    <p className="text-[10px] text-gray-600 tracking-wide uppercase relative z-10">
-                                        {`>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED`}
+                                    <p className={`text-[10px] tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
+                                        {nickname.length > 0 && !isValid 
+                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)' 
+                                            : '>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED'}
                                     </p>
                                 </div>
 
                                 <button
                                     type="submit"
-                                    disabled={isPending || !nickname.trim()}
-                                    className="w-full relative group overflow-hidden border-2 border-gray-500 py-5 active:scale-[0.98] transition-transform"
+                                    disabled={isPending || !isValid}
+                                    className={`w-full relative group overflow-hidden border-2 py-5 transition-all
+                                        ${isValid ? 'border-gray-500 cursor-pointer active:scale-[0.98]' : 'border-gray-800 cursor-not-allowed opacity-50'}`}
                                 >
-                                    {/* 호버 시 화이트로 채워짐 */}
-                                    <div className="absolute inset-0 translate-y-full group-hover:translate-y-0 bg-white transition-transform duration-300 ease-out"></div>
-                                    <span className="relative z-10 text-sm tracking-[0.4em] font-bold text-gray-400 group-hover:text-black transition-colors uppercase">
+                                    {/* 호버 시 화이트로 채워짐 (유효할 때만) */}
+                                    {isValid && (
+                                        <div className="absolute inset-0 translate-y-full group-hover:translate-y-0 bg-white transition-transform duration-300 ease-out"></div>
+                                    )}
+                                    <span className={`relative z-10 text-sm tracking-[0.4em] font-bold uppercase transition-colors
+                                        ${isValid ? 'text-gray-400 group-hover:text-black' : 'text-gray-700'}`}>
                                         {isPending ? 'STABILIZING...' : 'ESTABLISH'}
                                     </span>
                                 </button>
