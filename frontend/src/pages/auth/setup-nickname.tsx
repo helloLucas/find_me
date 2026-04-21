@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
 
 /**
@@ -7,6 +8,7 @@ import { useUpdateNickname } from '../../features/User/useUpdateNickname';
 const SetupNicknamePage = () => {
     const [nickname, setNickname] = useState('');
     const { mutate, isPending } = useUpdateNickname();
+    const navigate = useNavigate();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,13 +38,21 @@ const SetupNicknamePage = () => {
                 {/* 터미널 본체 (금속질감 회색 테두리) */}
                 <div className="relative border-2 border-gray-600 bg-[#121212]/95 rounded-sm overflow-hidden shadow-2xl">
 
-                    {/* 상단 타이틀 바 */}
-                    <div className="bg-gray-800/80 border-b-2 border-gray-600 px-4 py-2 flex items-center justify-between select-none">
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-gray-400"></div>
-                            <span className="text-[10px] tracking-[0.3em] text-gray-300">SYSTEM_AUTH_INITIALIZE</span>
+                    {/* 상단 타이틀 바 (뒤로가기 버튼 통합) */}
+                    <div className="bg-gray-800/80 border-b-2 border-gray-600 flex items-center justify-between select-none">
+                        <div className="flex items-center">
+                            <button 
+                                onClick={() => navigate('/')}
+                                className="px-4 py-2 border-r border-gray-600 hover:bg-white hover:text-black transition-colors text-[10px] tracking-widest font-bold"
+                            >
+                                {"<"} BACK
+                            </button>
+                            <div className="flex items-center gap-3 px-4">
+                                <div className="w-2 h-2 bg-gray-500"></div>
+                                <span className="text-[10px] tracking-[0.3em] text-gray-400">INITIALIZE_ID</span>
+                            </div>
                         </div>
-                        <div className="flex gap-2 opacity-30">
+                        <div className="flex gap-2 opacity-30 pr-4">
                             <div className="w-2 h-2 border border-white"></div>
                             <div className="w-2 h-2 border border-white"></div>
                         </div>
