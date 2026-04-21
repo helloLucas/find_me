@@ -1,20 +1,18 @@
 package com.lucas.auth.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lucas.auth.dto.response.TokenResponse;
 import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
-import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.util.JwtUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /** OAuth2 소셜 로그인 성공 시 처리를 담당하는 핸들러 클래스입니다. JWT 토큰 발급 및 Redis 토큰 저장, 로그인 성공 응답 구성을 수행합니다. */
 @Component
@@ -63,21 +61,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // refresh token 을 Redis에 저장
         authService.replaceRefreshToken(userId, refreshToken);
 
-        TokenResponse tokenResponse =
-                TokenResponse.builder()
-                        .accessToken(accessToken)
-                        .refreshToken(refreshToken)
-                        .userId(userId)
-                        .role(role)
-                        .nickname(nickname)
-                        .isNewUser(isNewUser)
-                        .build();
+        // JSON 응답을 보내는 대신, 리다이렉트 URL을 생성
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+                .queryParam("accessToken", accessToken)
+                .queryParam("refreshToken", refreshToken)
+                .queryParam("isNewUser", isNewUser)
+                .build()
+                .toUriString();
 
-        BaseResponse<TokenResponse> successResponse =
-                BaseResponse.success("로그인에 성공했습니다.", tokenResponse);
-
-        response.setStatus(HttpStatus.OK.value());
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(successResponse));
+        // 브라우저를 프론트엔드의 oauth-callback 페이지로 이동
+        response.sendRedirect(targetUrl);
     }
 }

@@ -7,13 +7,15 @@ import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 
-/** 각 소셜에서 받아오는 데이터가 다르므로 소셜별로 데이터를 받는 데이터를 분기 처리하는 DTO 클래스 */
-/** 각 소셜 제공자로부터 받아오는 데이터를 공통 형식으로 변환하고 분기 처리하는 DTO 클래스입니다. */
+import java.util.Map;
+
+/**
+ * 각 소셜 제공자로부터 받아오는 데이터를 공통 형식으로 변환하고 분기 처리하는 DTO 클래스입니다.
+ */
 @Getter
 public class OAuthAttributes {
     /** OAuth2 로그인 진행 시 키가 되는 필드 값 (PK와 같은 의미) */
     private String nameAttributeKey;
-
     /** 소셜 타입별로 매핑된 로그인 유저 정보 */
     private OAuth2UserInfo oauth2UserInfo;
 
@@ -56,7 +58,8 @@ public class OAuthAttributes {
     }
 
     /**
-     * 추출된 사용자 정보를 바탕으로 User 엔티티 객체를 생성합니다. 신규 가입 사용자의 초기 상태는 GUEST로 설정됩니다.
+     * 추출된 사용자 정보를 바탕으로 User 엔티티 객체를 생성합니다.
+     * 신규 가입 사용자의 초기 상태는 GUEST로 설정됩니다.
      *
      * @param provider 소셜 로그인 제공자
      * @param oauth2UserInfo 소셜 타입별 유저 정보
@@ -64,12 +67,12 @@ public class OAuthAttributes {
      */
     public User toEntity(AuthProvider provider, OAuth2UserInfo oauth2UserInfo) {
         return User.builder()
-                .provider(provider)
-                .providerUserId(oauth2UserInfo.getId())
-                .email(oauth2UserInfo.getEmail())
-                .oauthName(oauth2UserInfo.getName())
-                .role(UserRole.GUEST)
-                .build();
+            .provider(provider)
+            .providerUserId(oauth2UserInfo.getId())
+            .email(oauth2UserInfo.getEmail())
+            .oauthName(oauth2UserInfo.getName())
+            .role(UserRole.MEMBER)
+            .build();
     }
 
     /**
