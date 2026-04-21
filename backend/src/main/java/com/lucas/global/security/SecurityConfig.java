@@ -5,11 +5,14 @@ import com.lucas.auth.service.CustomOAuth2UserService;
 import com.lucas.global.config.JwtProperties;
 import com.lucas.global.util.JwtAuthenticationFilter;
 import com.lucas.global.util.JwtUtil;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,15 +32,21 @@ public class SecurityConfig {
   private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
   private final JwtUtil jwtUtil;
 
+  @Value("${app.cors.allowed-origins}")
+  private String corsAllowedOrigins;
+
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-    http.csrf(csrf -> csrf.disable())
+    http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(csrf -> csrf.disable())
         .formLogin(form -> form.disable())
         .httpBasic(basic -> basic.disable())
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers(
+                auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+                    .permitAll()
+                    .requestMatchers(
                         "/",
                         "/api/v1/auth/login",
                         "/api/v1/auth/refresh",
@@ -69,9 +78,14 @@ public class SecurityConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
 
-    config.setAllowedOriginPatterns(List.of("*"));
+    config.setAllowedOrigins(
+        Arrays.stream(corsAllowedOrigins.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isBlank())
+            .toList());
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
+    config.setExposedHeaders(List.of("Authorization"));
     config.setAllowCredentials(true);
     config.setMaxAge(3600L);
 
