@@ -38,13 +38,13 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
-                        "/**",
                         "/login",
                         "/api/v1/auth/login",
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/guest-init",
                         // TODO: 개발 단계 편의를 위해 임시 개방. 배포 전 인증 필요 경로로 이동 필요
                         "/api/v1/story/**",
+                        "/api/v1/files/**",
                         "/oauth2/**",
                         "/error")
                     .permitAll()

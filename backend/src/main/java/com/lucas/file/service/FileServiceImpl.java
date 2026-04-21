@@ -116,8 +116,15 @@ public class FileServiceImpl implements FileService {
       log.error("다운로드 Presigned URL 발급 실패. objectKey={}, statusCode={}, message={}",
           objectKey, e.statusCode(), e.awsErrorDetails() != null ? e.awsErrorDetails().errorMessage() : e.getMessage(), e);
 
-      // 파일이 없거나 접근 불가한 경우 프로젝트 공통 예외로 변환
-      throw new CustomException(ErrorCode.H1000);
+      // 상태 코드에 따라 구체적인 예외로 변환
+      if (e.statusCode() == 404) {
+          throw new CustomException(ErrorCode.E3004);
+      } else if (e.statusCode() == 403) {
+          throw new CustomException(ErrorCode.A1004);
+      }
+
+      // 그 외의 경우 공통 서버 오류 발생
+      throw new CustomException(ErrorCode.G1000);
     }
   }
 
