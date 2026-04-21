@@ -12,21 +12,21 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TokenResponse {
 
-    /** Access Token 문자열 */
-    private String accessToken;
+  /** Access Token 문자열 */
+  private String accessToken;
 
-    /** Refresh Token 문자열 */
-    private String refreshToken;
+  /** Refresh Token 문자열 */
+  private String refreshToken;
 
-    /** 사용자의 식별값 */
-    private Long userId;
+  /** 사용자의 식별값 */
+  private Long userId;
 
-    /** 사용자의 권한 (GUEST, MEMBER) */
-    private String role;
+  /** 사용자의 권한 (GUEST, MEMBER) */
+  private String role;
 
-    /** 사용자의 닉네임 */
-    private String nickname;
+  /** 사용자의 닉네임 */
+  private String nickname;
 
-    /** 닉네임 설정이 필요한 신규 사용자인지 여부 */
-    private boolean isNewUser;
+  /** 닉네임 설정이 필요한 신규 사용자인지 여부 */
+  private boolean isNewUser;
 }

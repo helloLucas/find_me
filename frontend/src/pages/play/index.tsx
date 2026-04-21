@@ -3,7 +3,7 @@ import { Desktop } from "../../widgets/Desktop";
 import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
 
 export default function PlayPage() {
-  const { chapterCode } = useParams();
+  useParams();
 
   return (
     <main className="h-screen w-screen overflow-hidden">

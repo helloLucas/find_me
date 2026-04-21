@@ -9,23 +9,23 @@ import lombok.Getter;
 @Builder
 public class StoryNodeResponseDto {
 
-    private final String nodeCode;
-    private final String nodeType;
-    private final String promptType;
-    private final JsonNode outputBundle;
-    private final JsonNode promptMeta;
-    private final boolean checkpoint;
-    private final boolean terminal;
+  private final String nodeCode;
+  private final String nodeType;
+  private final String promptType;
+  private final JsonNode outputBundle;
+  private final JsonNode promptMeta;
+  private final boolean checkpoint;
+  private final boolean terminal;
 
-    public static StoryNodeResponseDto from(StoryNode node) {
-        return StoryNodeResponseDto.builder()
-                .nodeCode(node.getCode())
-                .nodeType(node.getNodeType())
-                .promptType(node.getPromptType())
-                .outputBundle(node.getOutputBundle())
-                .promptMeta(node.getPromptMeta())
-                .checkpoint(node.isCheckpoint())
-                .terminal(node.isTerminal())
-                .build();
-    }
+  public static StoryNodeResponseDto from(StoryNode node) {
+    return StoryNodeResponseDto.builder()
+        .nodeCode(node.getCode())
+        .nodeType(node.getNodeType())
+        .promptType(node.getPromptType())
+        .outputBundle(node.getOutputBundle())
+        .promptMeta(node.getPromptMeta())
+        .checkpoint(node.isCheckpoint())
+        .terminal(node.isTerminal())
+        .build();
+  }
 }

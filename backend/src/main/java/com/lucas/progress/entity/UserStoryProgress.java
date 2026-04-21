@@ -22,53 +22,53 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 public class UserStoryProgress {
 
-    @Id private Long userId;
+  @Id private Long userId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "user_id")
-    private User user;
+  @OneToOne(fetch = FetchType.LAZY)
+  @MapsId
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "latest_chapter_id", nullable = false)
-    private Chapter latestChapter;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "latest_chapter_id", nullable = false)
+  private Chapter latestChapter;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "latest_node_id", nullable = false)
-    private StoryNode latestNode;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "latest_node_id", nullable = false)
+  private StoryNode latestNode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "latest_checkpoint_node_id")
-    private StoryNode latestCheckpointNode;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "latest_checkpoint_node_id")
+  private StoryNode latestCheckpointNode;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "latest_snapshot_json", nullable = false, columnDefinition = "jsonb")
-    private JsonNode latestSnapshotJson;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "latest_snapshot_json", nullable = false, columnDefinition = "jsonb")
+  private JsonNode latestSnapshotJson;
 
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+  @LastModifiedDate
+  @Column(name = "updated_at", nullable = false)
+  private LocalDateTime updatedAt;
 
-    @Builder
-    public UserStoryProgress(
-            User user,
-            Chapter latestChapter,
-            StoryNode latestNode,
-            StoryNode latestCheckpointNode,
-            JsonNode latestSnapshotJson) {
-        this.user = user;
-        this.latestChapter = latestChapter;
-        this.latestNode = latestNode;
-        this.latestCheckpointNode = latestCheckpointNode;
-        this.latestSnapshotJson = latestSnapshotJson;
+  @Builder
+  public UserStoryProgress(
+      User user,
+      Chapter latestChapter,
+      StoryNode latestNode,
+      StoryNode latestCheckpointNode,
+      JsonNode latestSnapshotJson) {
+    this.user = user;
+    this.latestChapter = latestChapter;
+    this.latestNode = latestNode;
+    this.latestCheckpointNode = latestCheckpointNode;
+    this.latestSnapshotJson = latestSnapshotJson;
+  }
+
+  public void updateProgress(Chapter chapter, StoryNode node, JsonNode snapshotJson) {
+    this.latestChapter = chapter;
+    this.latestNode = node;
+    this.latestSnapshotJson = snapshotJson;
+    if (node.isCheckpoint()) {
+      this.latestCheckpointNode = node;
     }
-
-    public void updateProgress(Chapter chapter, StoryNode node, JsonNode snapshotJson) {
-        this.latestChapter = chapter;
-        this.latestNode = node;
-        this.latestSnapshotJson = snapshotJson;
-        if (node.isCheckpoint()) {
-            this.latestCheckpointNode = node;
-        }
-    }
+  }
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { DesktopIcon } from '../../shared/ui/DesktopIcon';
 import { Taskbar } from '../Taskbar';
 import { TerminalScene } from '../../features/command-input/TerminalScene';
@@ -6,18 +6,80 @@ import { useClientStore } from '../../app/store/clientStore';
 import { useWindowStore } from '../../app/store/windowStore';
 import { Window } from '../../shared/ui/Window';
 import { Browser } from '../../features/Browser';
+import { MessengerNotificationCard, MessengerWindow } from '../../features/messenger';
+import { useMessengerStore } from '../../app/store/messengerStore';
+import { normalizeMessengerBundle } from '../../features/messenger/messenger.adapters';
+import { Lucas } from '../../features/Lucas/Lucas';
 
 export const Desktop: React.FC = () => {
   const { openTerminal } = useClientStore();
   const { windows, openWindow } = useWindowStore();
+  const { receiveConversation } = useMessengerStore();
   const [selectionBox, setSelectionBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
-  const [showCoreCharacter, setShowCoreCharacter] = useState(false);
 
   React.useEffect(() => {
-    const handleSpawn = () => setShowCoreCharacter(true);
-    window.addEventListener('SPAWN_CORE_CHARACTER', handleSpawn);
-    return () => window.removeEventListener('SPAWN_CORE_CHARACTER', handleSpawn);
+    // Initial initialization of global triggers if needed
   }, []);
+
+  // ── Demo: simulate a messenger notification arriving after 2s ──
+  // TODO: Replace with real story node response integration
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const demoBundle = {
+        messenger: {
+          conversationId: "conv-chingu-001",
+          title: "친구 (Chingu)",
+          online: true,
+          senderAvatar: undefined,
+          messages: [
+            {
+              id: "msg-1",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "야! 들었어? 대박... 그 네온 시티 레벨 4 차원 포털이 방금 열렸대! 전설의 홀로그램 DJ가 거기서 연주 한다는데 완전 난리. 지금 당장 가야 해!",
+              timestamp: "1분 전",
+            },
+            {
+              id: "msg-2",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "아니 대박이다 진짜! 갈 거야?",
+              timestamp: "3분 전",
+            },
+            {
+              id: "msg-3",
+              senderId: "chingu",
+              senderName: "친구",
+              text: "당연하지! 지금 준비 중이야. 너도 와!",
+              timestamp: "3분 전",
+            },
+            {
+              id: "msg-4",
+              senderId: "user",
+              senderName: "나",
+              text: "그래! 30분 뒤에 센트럴 시티 포털 앞에서 만나자.",
+              timestamp: "5분 전",
+            },
+            {
+              id: "msg-5",
+              senderId: "user",
+              senderName: "나",
+              text: "확인! <승인>",
+              timestamp: "6분 전",
+            },
+          ],
+          actions: [
+            { label: "답장하기", actionType: "reply" },
+            { label: "나중에 보기", actionType: "dismiss" },
+            { label: "지도 보기", actionType: "map" },
+          ],
+        },
+      };
+      const conv = normalizeMessengerBundle(demoBundle);
+      if (conv) receiveConversation(conv);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [receiveConversation]);
 
   // Generate rain drops
   const rainDrops = useMemo(() => {
@@ -37,7 +99,7 @@ export const Desktop: React.FC = () => {
     { id: 'notepad', label: 'Notebook', icon: '/pixel_notepad_icon.svg' },
   ];
 
-  const handleIconDoubleClick = (id: string, iconUrl?: string) => {
+  const handleIconDoubleClick = (id: string) => {
     if (id === 'terminal') {
       openTerminal();
     } else if (id === 'chrome') {
@@ -119,27 +181,10 @@ export const Desktop: React.FC = () => {
             key={icon.id}
             label={icon.label}
             iconPath={icon.icon}
-            onDoubleClick={() => handleIconDoubleClick(icon.id, icon.icon)}
+            onDoubleClick={() => handleIconDoubleClick(icon.id)}
           />
         ))}
       </div>
-
-      {/* Core Character Easter Egg */}
-      {showCoreCharacter && (
-        <div className="absolute bottom-16 right-16 z-[5000] animate-bounce pointer-events-none drop-shadow-[0_0_15px_#0ff]">
-          <div className="w-16 h-16 bg-[#0a0514] border-2 border-[#0ff] rounded-lg flex items-center justify-center relative overflow-hidden">
-            <div className="absolute top-0 w-full h-1 bg-[#0ff]/50 animate-pulse" />
-            <div className="flex gap-2">
-              <div className="w-3 h-3 bg-[#ff3366] rounded-full animate-pulse" />
-              <div className="w-3 h-3 bg-[#ff3366] rounded-full animate-pulse" />
-            </div>
-            <div className="absolute bottom-3 w-6 h-1 bg-[#0ff] rounded-full" />
-          </div>
-          <div className="text-[#0ff] font-pixel text-xs mt-2 text-center drop-shadow-[0_0_5px_#0ff] tracking-widest bg-black/50 px-2 py-1 rounded">
-            CORE.ONLINE
-          </div>
-        </div>
-      )}
 
       {/* Terminal Modals/Scenes on top of Desktop */}
       <TerminalScene />
@@ -156,8 +201,17 @@ export const Desktop: React.FC = () => {
         </Window>
       ))}
 
+
+      {/* Messenger System */}
+      <MessengerNotificationCard />
+      <MessengerWindow />
+
+      {/* Lucas Character and Hint System */}
+      <Lucas />
+
       {/* Taskbar */}
       <Taskbar />
     </div>
   );
 };
+
