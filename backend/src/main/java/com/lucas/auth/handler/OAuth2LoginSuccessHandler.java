@@ -1,6 +1,5 @@
 package com.lucas.auth.handler;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.util.JwtUtil;
@@ -26,6 +25,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    @Value("${spring.jwt.access-token-expiration}")
+    private long accessTokenExpiration;
+
+    @Value("${spring.jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
 
     /**
      * 인증 성공 시 호출되어 사용자의 JWT 토큰을 발급하고 성공 응답을 전송합니다.
@@ -58,9 +63,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                         nickname,
                         customOAuth2User.getProvider(),
                         role,
-                        30 * 60 * 1000L);
+                        accessTokenExpiration);
 
-        String refreshToken = jwtUtil.createRefreshToken(userId, email, 14 * 24 * 60 * 60 * 1000L);
+        String refreshToken = jwtUtil.createRefreshToken(userId, email, refreshTokenExpiration);
 
         // refresh token 을 Redis에 저장
         authService.replaceRefreshToken(userId, refreshToken);
@@ -74,7 +79,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
       refreshTokenCookie.setSecure(true);
 
       refreshTokenCookie.setPath("/");      // 사이트 전역에서 이 쿠키를 사용
-      refreshTokenCookie.setMaxAge(14 * 24 * 60 * 60); // 14일 유지
+      refreshTokenCookie.setMaxAge((int) (refreshTokenExpiration / 1000)); // 14일 유지 (ms -> s 변환)
       response.addCookie(refreshTokenCookie);
 
       // 2. Access Token과 신규 유저 여부만 프론트엔드 콜백 URL 파라미터로 전달
