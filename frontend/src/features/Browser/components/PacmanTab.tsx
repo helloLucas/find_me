@@ -43,7 +43,6 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   const [ghosts, setGhosts] = useState<Ghost[]>([
     { x: 7, y: 6, color: '#f00', dir: 'LEFT' },
     { x: 8, y: 6, color: '#ffb8ff', dir: 'RIGHT' },
-    { x: 6, y: 6, color: '#00ffff', dir: 'UP' },
   ]);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -122,7 +121,6 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
     setGhosts([
       { x: 7, y: 6, color: '#f00', dir: 'LEFT' },
       { x: 8, y: 6, color: '#ffb8ff', dir: 'RIGHT' },
-      { x: 6, y: 6, color: '#00ffff', dir: 'UP' },
     ]);
     setScore(0);
     setGameOver(false);
