@@ -9,7 +9,6 @@ interface MessengerState {
   hasUserOpened: boolean;
   shouldResetPosition: boolean;
 
-  // Actions
   receiveConversation: (conv: MessengerConversation) => void;
   openMessengerWindow: () => void;
   openMessengerFromTaskbar: () => void;
@@ -27,16 +26,19 @@ export const useMessengerStore = create<MessengerState>((set) => ({
   shouldResetPosition: false,
 
   receiveConversation: (conv) =>
-    set({
-      conversation: conv,
-      isNotificationVisible: true,
-      isUnread: true,
-      isWindowOpen: false,
-      hasUserOpened: false,
-      shouldResetPosition: true,
+    set((state) => {
+      const shouldKeepWindowOpen = state.isWindowOpen;
+
+      return {
+        conversation: conv,
+        isNotificationVisible: !shouldKeepWindowOpen,
+        isUnread: !shouldKeepWindowOpen,
+        isWindowOpen: shouldKeepWindowOpen,
+        hasUserOpened: shouldKeepWindowOpen ? true : false,
+        shouldResetPosition: shouldKeepWindowOpen ? false : true,
+      };
     }),
 
-  // Open from notification card click (keeps last drag position if any)
   openMessengerWindow: () =>
     set({
       isWindowOpen: true,
@@ -45,7 +47,6 @@ export const useMessengerStore = create<MessengerState>((set) => ({
       hasUserOpened: true,
     }),
 
-  // Open from taskbar button: always reset to center
   openMessengerFromTaskbar: () =>
     set({
       isWindowOpen: true,

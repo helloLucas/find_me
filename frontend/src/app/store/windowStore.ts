@@ -20,7 +20,7 @@ interface WindowStore {
   restoreWindow: (id: string) => void;
 }
 
-let nextZIndex = 10;
+let nextZIndex = 50;
 
 export const useWindowStore = create<WindowStore>((set) => ({
   windows: [],
@@ -31,7 +31,6 @@ export const useWindowStore = create<WindowStore>((set) => ({
     const exists = state.windows.find(w => w.id === windowId);
     
     if (exists) {
-      // If it exists, just focus and restore if minimized
       return {
         windows: state.windows.map(w =>
           w.id === windowId ? { ...w, isMinimized: false, zIndex: ++nextZIndex } : w
@@ -40,7 +39,6 @@ export const useWindowStore = create<WindowStore>((set) => ({
       };
     }
     
-    // Create new window
     const newWindow: WindowState = {
       id: windowId,
       type,
