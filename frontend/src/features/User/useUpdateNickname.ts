@@ -1,11 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import axiosInstance from '../../shared/api/axiosInstance';
 import { tokenManager } from '../../shared/utils/tokenManager';
 import type { BaseResponse } from '../../shared/types/api';
 import { useClientStore } from '../../app/store/clientStore';
 import { useAuthStore } from '../../app/store/authStore';
+import { useModalStore } from '../../app/store/modalStore';
 
 interface UpdateNicknameRequest {
     nickname: string;
@@ -20,9 +20,6 @@ interface UpdateNicknameRequest {
 export const useUpdateNickname = () => {
     const navigate = useNavigate();
     const setTerminalContext = useClientStore((state) => state.setTerminalContext);
-
-    // 환경변수 또는 하드코딩된 API 주소
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
     return useMutation({
         mutationFn: async (data: UpdateNicknameRequest) => {
@@ -48,7 +45,11 @@ export const useUpdateNickname = () => {
         onError: (error: any) => {
             console.error('Failed to update nickname:', error);
             const detail = error.response?.data?.detail || '초기 닉네임 설정 중 오류가 발생했습니다.';
-            alert(`Error: ${detail}`);
+            useModalStore.getState().openModal({
+                title: 'SYSTEM_ERROR',
+                message: `Error: ${detail}`,
+                type: 'alert'
+            });
         },
     });
 };

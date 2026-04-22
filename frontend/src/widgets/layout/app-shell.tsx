@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
 import { tokenManager } from "../../shared/utils/tokenManager";
+import { useModalStore } from "../../app/store/modalStore";
+import { GlobalModal } from "../GlobalModal";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const openModal = useModalStore((state) => state.openModal);
   const [isAccessing, setIsAccessing] = useState(false);
 
   useEffect(() => {
@@ -42,7 +45,11 @@ export default function AppShell({ children }: PropsWithChildren) {
         }, 1500);
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
-        alert('>> AUTHENTICATION_FAILED: ACCESS_DENIED');
+        openModal({
+          title: 'AUTH_ERROR',
+          message: '>> AUTHENTICATION_FAILED: ACCESS_DENIED',
+          type: 'alert'
+        });
       }
     };
 
@@ -66,6 +73,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       )}
 
       {children}
+      <GlobalModal />
     </div>
   );
 }
