@@ -35,7 +35,7 @@ public class User extends BaseEntity {
   private String oauthName;
 
   /** 애플리케이션 내에서 사용하는 유효 닉네임 */
-  @Column(name = "nickname", length = 50)
+  @Column(name = "nickname", length = 15)
   private String nickname;
 
   /** 소셜 로그인 인증 제공자 (GOOGLE 등) */
