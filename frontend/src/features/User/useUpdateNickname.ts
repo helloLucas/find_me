@@ -5,6 +5,7 @@ import axiosInstance from '../../shared/api/axiosInstance';
 import { tokenManager } from '../../shared/utils/tokenManager';
 import type { BaseResponse } from '../../shared/types/api';
 import { useClientStore } from '../../app/store/clientStore';
+import { useAuthStore } from '../../app/store/authStore';
 
 interface UpdateNicknameRequest {
     nickname: string;
@@ -25,35 +26,23 @@ export const useUpdateNickname = () => {
 
     return useMutation({
         mutationFn: async (data: UpdateNicknameRequest) => {
-            const response = await axiosInstance.patch<BaseResponse<void>>('/api/v1/users/nickname', data);
+            const response = await axiosInstance.patch<BaseResponse<{ accessToken: string }>>('/api/v1/users/nickname', data);
             return response.data;
         },
-        onSuccess: async (_, variables) => {
-            // 1. 전역 상태 업데이트 (기존 유지)
+        onSuccess: async (response, variables) => {
+            // 1. 터미널 컨텍스트 업데이트
             setTerminalContext(variables.nickname);
 
-            try {
-                // 2. 닉네임이 바뀌었으므로 새 토큰을 발급받습니다
-                const refreshToken = tokenManager.getRefreshToken();
-                if (refreshToken) {
-                    // 무한 루프 방지를 위해 axiosInstance 대신 일반 axios 사용
-                    const refreshRes = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
-                        refreshToken
-                    });
-
-                    const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
-
-                    // 3. localStorage의 옛날 토큰을 버리고 새 토큰으로 교체
-                    tokenManager.setAccessToken(accessToken);
-                    if (newRefreshToken) {
-                        tokenManager.setRefreshToken(newRefreshToken);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to refresh token after nickname update:', error);
+            // 2. 서버에서 보내준 새 토큰 (새 닉네임 포함) 적용
+            const newAccessToken = response.data?.accessToken;
+            if (newAccessToken) {
+                // 토큰 저장
+                tokenManager.setAccessToken(newAccessToken);
+                // 전역 스토어 업데이트 (Reactivity 확보)
+                useAuthStore.getState().setAuth(newAccessToken);
             }
 
-            // 4. 로비로 이동
+            // 3. 로비로 이동
             navigate('/lobby', { replace: true });
         },
         onError: (error: any) => {
