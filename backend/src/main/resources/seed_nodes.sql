@@ -25,7 +25,8 @@ VALUES
       "scene": {
         "id": "CH1_FRIEND_CHAT_PUSH",
         "mode": "desktop",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
+        "preVideo": "ch01_prologue/ch01_prologue.m3u8",
         "glitchLevel": 0
       },
       "messages": [
