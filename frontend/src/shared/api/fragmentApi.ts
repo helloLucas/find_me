@@ -2,8 +2,7 @@ import { apiClient } from "./client";
 
 export const fragmentApi = {
   checkFragment: (code: string): Promise<boolean> => {
-    return apiClient.get<{ data: boolean }>(`/api/v1/fragments/check/${code}`)
-      .then(res => res.data.data);
+    return apiClient.get<boolean>(`/api/v1/fragments/check/${code}`);
   },
 
   acquireFragment: (code: string): Promise<void> => {
