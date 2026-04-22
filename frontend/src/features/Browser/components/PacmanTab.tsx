@@ -107,15 +107,15 @@ export const PacmanTab: React.FC = () => {
         const padding = 20;
         const availableW = width - padding;
         const availableH = height - padding - 120; // Account for UI bars and score
-        const sizeW = availableW / grid[0].length;
-        const sizeH = availableH / grid.length;
+        const sizeW = availableW / INITIAL_GRID[0].length;
+        const sizeH = availableH / INITIAL_GRID.length;
         setCellSize(Math.min(sizeW, sizeH, 60)); // Max size 60px
       }
     };
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
-  }, [grid]);
+  }, []);
   
   // Controls
   useEffect(() => {
@@ -236,14 +236,17 @@ export const PacmanTab: React.FC = () => {
       }
     }
     // Win (no more dots: 2)
+    const DEBUG_MODE = true; // Set to true to win after eating 1 bone
     const hasDots = grid.some(row => row.includes(2));
-    if (!hasDots) {
+    if (!won && (!hasDots || (DEBUG_MODE && score >= 10))) {
       setWon(true);
       if (!isCleared) {
+        // Optimistically update the cache so new tabs immediately see it
+        queryClient.setQueryData(['fragment', '1'], true);
         acquireMutation.mutate();
       }
     }
-  }, [pacman, ghosts, grid, isCleared]);
+  }, [pacman, ghosts, grid, isCleared, score, won, queryClient, acquireMutation]);
 
   if (isCheckLoading) {
     return (
@@ -253,7 +256,7 @@ export const PacmanTab: React.FC = () => {
     );
   }
 
-  if (isCleared) {
+  if (isCleared && !won) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#ff2255] font-pixel p-10 text-center">
         <div className="text-6xl mb-4">404</div>
@@ -273,8 +276,7 @@ export const PacmanTab: React.FC = () => {
         <span>SCORE: {score}</span>
         <div className="flex items-center gap-4">
           {gameOver && <span className="text-red-500 font-bold animate-bounce">GAME OVER</span>}
-          {won && <span className="text-green-500 font-bold animate-bounce">YOU WIN!</span>}
-          {(gameOver || won) && (
+          {gameOver && (
             <button 
               onClick={handleRetry}
               className="px-4 py-1 bg-[#2255ff] hover:bg-[#3366ff] text-white rounded border-2 border-white/20 transition-all active:scale-95 text-sm"
@@ -286,7 +288,7 @@ export const PacmanTab: React.FC = () => {
       </div>
       
       <div 
-        className="grid gap-[1px] bg-[#000d33] border-4 border-[#2255ff] shadow-[0_0_20px_rgba(34,85,255,0.3)]"
+        className="relative grid gap-[1px] bg-[#000d33] border-4 border-[#2255ff] shadow-[0_0_20px_rgba(34,85,255,0.3)]"
         style={{ 
           gridTemplateColumns: `repeat(${grid[0].length}, ${cellSize}px)`,
           gridTemplateRows: `repeat(${grid.length}, ${cellSize}px)`
@@ -343,7 +345,19 @@ export const PacmanTab: React.FC = () => {
             </div>
           );
         }))}
+        
+        {/* CLEAR Overlay */}
+        {won && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-50">
+            <span className="text-6xl md:text-8xl text-[#22ff55] font-bold mb-4 animate-pulse drop-shadow-[0_0_20px_rgba(34,255,85,0.8)]">CLEAR!</span>
+            <span className="text-white text-sm md:text-base border-t border-[#22ff55] pt-2 mt-2 tracking-widest text-center">
+              SYSTEM RESOURCE SECURED<br/>
+              (FRAGMENT 1 ACQUIRED)
+            </span>
+          </div>
+        )}
       </div>
+      
       
       <div className="text-[#a48cff] text-xs mt-6 text-center max-w-[300px] leading-relaxed">
         Use W A S D or Arrow Keys to move the dog.<br/>
