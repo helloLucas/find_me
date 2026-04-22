@@ -207,15 +207,111 @@ docker-compose up -d
 docker ps
 ```
 
-### [참고] 주요 파일 및 디렉토리 구조
-현재까지 구축된 lucas-ops-mgmt 서버의 주요 파일 위치입니다.
+<br>  
 
+---
+## 4. Kubernetes 마스터 노드 설정
+본 섹션은 서버를 Kubernetes 클러스터의 관리자(Master Node)로 설정하고, 향후 AWS 로드밸런서 및 운영 서버(Worker Node) 연결을 위한 기반을 마련하는 과정을 담고 있습니다.
+
+### [1] 시스템 환경 최적화
+K8s의 안정적인 운영을 위해 리눅스 시스템의 설정을 컨테이너 통신에 최적화된 상태로 변경합니다.
+
+```bash
+# 1. 스왑 메모리 비활성화
+# K8s는 메모리 사용량을 정확히 예측하기 위해 스왑 사용을 금지합니다.
+# 이후 worker node 설정 후 마스터 노드가 안정되면 다시 활성화 가능합니다.
+sudo swapoff -a
+sudo sed -i '/swapfile/s/^/#/' /etc/fstab # 재부팅 시에도 스왑이 켜지지 않도록 설정
+
+# 2. 커널 모듈 로드
+# 컨테이너 간 트래픽이 리눅스 브리지를 통과할 수 있게 필수 모듈을 활성화합니다.
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# 3. 네트워크 브리지 설정 (IP Forwarding)
+# 컨테이너 간의 통신 패킷이 운영체제 단에서 올바르게 전달되도록 허용합니다.
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+sudo sysctl --system
 ```
-/home/ubuntu/              # 사용자 홈 디렉토리
-└── lucas-elk/             # ELK 스택 메인 폴더
-    ├── docker-compose.yml # 3개 컨테이너(ES, Logstash, Kibana) 통합 관리 설정
-    ├── elasticsearch_data/# ES의 실제 로그 데이터가 영구 저장되는 곳 (볼륨 마운트)
-    └── logstash/          # Logstash 전용 설정 폴더
-        └── logstash.conf  # 로그 수집 규칙(입력/필터/출력) 정의 파일
+### [2] 컨테이너 런타임 최적화
+K8s가 컨테이너를 실제로 실행하는 엔진인 containerd의 설정을 K8s 권장 사양에 맞춥니다.
+
+```bash
+# 1. containerd 기본 설정 생성
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
+
+# 2. SystemdCgroup 활성화
+# 시스템의 자원 관리 도구와 컨테이너 엔진의 관리 도구를 일치시켜 안정성을 높입니다.
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+```
+### [3] K8s 공식 도구 설치
+클러스터를 구축하고 관리하는 데 필요한 3대 핵심 도구를 설치합니다.
+
+```bash
+# 1. 패키지 보안 검증을 위한 GPG 키 및 저장소 추가
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# 2. 도구 설치
+# kubelet: 노드에서 컨테이너 실행 상태 관리
+# kubeadm: 클러스터 구축(초기화, 조인) 도구
+# kubectl: 사용자가 클러스터에 명령을 내리는 CLI 도구
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl # 자동 업데이트로 인한 클러스터 붕괴 방지
+```
+### [4] 클러스터 초기화 및 네트워크 구성
+서버를 실제 마스터 노드로 작동시키고 내부 가상 통신망을 구축합니다.
+
+```bash
+# 1. 마스터 노드 초기화 (AWS 로드밸런서 대비형)
+# --apiserver-cert-extra-sans: 외부(퍼블릭IP/LB)에서 접속 시 보안 인증서 에러를 방지합니다.
+sudo kubeadm init \
+  --pod-network-cidr=192.168.0.0/16 \
+  --apiserver-advertise-address=<사설-IP> \
+  --apiserver-cert-extra-sans=<퍼블릭-IP>
+
+# 2. kubectl 사용자 권한 설정
+# 관리자(root)가 아닌 일반 유저가 클러스터를 제어할 수 있도록 설정 파일을 복사합니다.
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# 3. Calico 네트워크 플러그인 설치
+# 컨테이너(Pod) 간의 실제 통신이 가능하도록 가상 네트워크 도로를 설치합니다.
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/tigera-operator.yaml
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/custom-resources.yaml
 ```
 
+<br>  
+
+---
+## [참고] 서버 파일 구조
+```
+/home/ubuntu/
+├── .kube/                        # [K8s] 사용 권한 및 클러스터 접속 정보
+│   └── config                    # 'kubectl' 명령어가 참조하는 핵심 인증 파일
+│
+├── lucas-elk/                    # [ELK] 로그 관리 통합 디렉토리
+│   ├── docker-compose.yml        # 3개 컨테이너(ES, Logstash, Kibana) 통합 관리 설정
+│   ├── elasticsearch_data/       # 로그 데이터가 실제로 쌓이는 저장소
+│   └── logstash/                 # 로그 수집 규칙 설정 폴더
+│       └── logstash.conf         # 로그 수집 규칙(입력/필터/출력) 정의 파일
+│
+└── lucas-k8s/                    # [NEW] Kubernetes 관련 설정 및 키 보관
+    └── join-command.txt          # 워커 노드 조인 명령어 (여기 보관하는 게 더 적절합니다!)
+```
