@@ -28,13 +28,12 @@ const OAuthCallbackPage = () => {
                 type: 'AUTH_SUCCESS',
                 accessToken,
                 isNewUser
-                // refreshToken 전송 삭제
               }, window.location.origin);
               window.close();
               return;
             }
 
-            // 3. 일반 모드(Fallback): 신규 유저 여부에 따른 강제 라우팅
+            // 3. 일반 모드(Fallback): 신규 가입자만 닉네임 설정으로 유도
             if (isNewUser) {
                 navigate('/setup-nickname', { replace: true });
             } else {

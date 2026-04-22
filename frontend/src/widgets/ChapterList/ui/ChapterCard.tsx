@@ -1,5 +1,5 @@
-import React from 'react';
 import { CHAPTER_STATUS, type ChapterStatusValue } from '../../../entities/Chapter/hooks/useChapterStatus';
+import { useModalStore } from '../../../app/store/modalStore';
 
 interface ChapterCardProps {
     code: string;
@@ -21,7 +21,7 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
     labelClass: string;
     titleClass: string;
     watermarkClass: string;
-    action: (onClick: () => void) => void;
+    action: (onClick: () => void, openModal: any) => void;
 }> = {
     [CHAPTER_STATUS.DISABLED]: {
         containerClass: "border-gray-800/40 bg-transparent cursor-not-allowed opacity-50",
@@ -29,7 +29,11 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
         labelClass: "text-gray-600",
         titleClass: "text-gray-500",
         watermarkClass: "text-white/[0.02]",
-        action: () => alert("아직 시스템에 배포되지 않은 챕터입니다."),
+        action: (_, openModal) => openModal({
+            title: 'SYSTEM_LOCK',
+            message: '아직 시스템에 배포되지 않은 챕터입니다.',
+            type: 'alert'
+        }),
     },
     [CHAPTER_STATUS.LOCKED]: {
         containerClass: "border-gray-700 bg-[#0a0a0a] cursor-not-allowed",
@@ -37,7 +41,11 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
         labelClass: "text-gray-500",
         titleClass: "text-gray-400",
         watermarkClass: "text-gray-800",
-        action: () => alert("아직 접근할 수 없습니다. 이전 챕터를 클리어해주세요."),
+        action: (_, openModal) => openModal({
+            title: 'SECURITY_ENFORCEMENT',
+            message: '아직 접근할 수 없습니다. 이전 챕터를 클리어해주세요.',
+            type: 'alert'
+        }),
     },
     [CHAPTER_STATUS.UNLOCKED]: {
         containerClass: "border-gray-600 bg-[#0a0c08] hover:border-[#a3e635] hover:bg-[#12170d] cursor-pointer group shadow-sm",
@@ -63,6 +71,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     status,
     onClick,
 }) => {
+    const openModal = useModalStore((state) => state.openModal);
     // 안전장치: 매핑되지 않은 status가 들어올 경우 LOCKED 처리
     const config = STATUS_CONFIG[status] || STATUS_CONFIG[CHAPTER_STATUS.LOCKED];
     const chapterId = extractChapterNumber(code);
@@ -70,7 +79,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
     return (
         <div
-            onClick={() => config.action(onClick)}
+            onClick={() => config.action(onClick, openModal)}
             className={`flex-1 border px-6 py-4 flex flex-col justify-center relative overflow-hidden rounded-sm transition-all duration-300 ${config.containerClass}`}
         >
             <div className="z-10">

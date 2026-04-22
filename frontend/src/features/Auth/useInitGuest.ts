@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { useModalStore } from '../../app/store/modalStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { tokenManager } from '../../shared/utils/tokenManager';
@@ -48,8 +49,11 @@ export const useInitGuest = () => {
         onError: (error: any) => {
             console.error('Guest initialization failed:', error);
             
-            // 사이버펑크 스타일의 에러 통지 (단순 alert -> 추후 custom toast 반영 권장)
-            alert('>> CRITICAL ERROR: GUEST PROTOCOL INITIALIZATION FAILED.\n>> REASON: REMOTE CONNECTION TERMINATED.');
+            useModalStore.getState().openModal({
+                title: 'CRITICAL_SYSTEM_ERROR',
+                message: '>> CRITICAL ERROR: GUEST PROTOCOL INITIALIZATION FAILED.\n>> REASON: REMOTE CONNECTION TERMINATED.',
+                type: 'alert'
+            });
         }
     });
 };

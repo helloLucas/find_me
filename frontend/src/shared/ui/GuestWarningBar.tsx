@@ -1,13 +1,16 @@
 import React from 'react';
+import { useAuthActions } from '../../features/Auth/useAuthActions';
 
 /**
  * 4. GuestWarningBar (Shared Component)
  * - 세션이 GUEST_MODE일 때만 노출되는 노란색 경고 바
  */
 export const GuestWarningBar: React.FC = () => {
+    const { handleSystemAccess } = useAuthActions();
+
     return (
         <div 
-            onClick={() => window.location.href = 'http://localhost:8080/oauth2/authorization/google'}
+            onClick={handleSystemAccess}
             className="shrink-0 w-full max-w-4xl mx-auto border border-yellow-600 bg-[#1a1600] p-4 flex flex-col md:flex-row items-center justify-center gap-4 cursor-pointer hover:bg-[#251e00] transition-colors rounded-sm z-50 mb-4"
         >
             <p className="text-[10px] md:text-xs text-yellow-500 font-pixel tracking-tighter">

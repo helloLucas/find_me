@@ -33,6 +33,12 @@ public class CustomOAuth2User extends DefaultOAuth2User {
   /** 유저 권한 */
   private final UserRole role;
 
+  /** 신규 가입자 여부 */
+  private final boolean isNewUser;
+
+  /** 게스트 계승(전환) 여부 */
+  private final boolean isGuest;
+
   /**
    * @param authorities Spring Security 권한 목록
    * @param attributes OAuth 제공자(Google 등)가 준 원본 사용자 정보
@@ -43,6 +49,8 @@ public class CustomOAuth2User extends DefaultOAuth2User {
    * @param provider 인증 제공자
    * @param providerUserId 제공자 측 식별값
    * @param role 사용자 권한
+   * @param isNewUser 신규 가입 여부 플래그
+   * @param isGuest 게스트 승격 여부 플래그
    */
   public CustomOAuth2User(
       Collection<? extends GrantedAuthority> authorities,
@@ -53,7 +61,9 @@ public class CustomOAuth2User extends DefaultOAuth2User {
       String nickname,
       AuthProvider provider,
       String providerUserId,
-      UserRole role) {
+      UserRole role,
+      boolean isNewUser,
+      boolean isGuest) {
     super(authorities, attributes, nameAttributeKey);
     this.userId = userId;
     this.email = email;
@@ -61,5 +71,7 @@ public class CustomOAuth2User extends DefaultOAuth2User {
     this.provider = provider;
     this.providerUserId = providerUserId;
     this.role = role;
+    this.isNewUser = isNewUser;
+    this.isGuest = isGuest;
   }
 }
