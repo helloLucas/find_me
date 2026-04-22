@@ -23,7 +23,7 @@ const SetupNicknamePage = () => {
 
             {/* 배경 패턴 (회색 처리) */}
             <div className="absolute inset-0 opacity-5 pointer-events-none"
-                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54.627 0l.83.828-1.415 1.415L51.8 0h2.827zM5.373 0l-.83.828L5.96 2.243 8.2 0H5.374zM48 0l3 3 3-3h-6zm-36 0l-3 3-3-3h6zM30 0l3 3 3-3h-6zM0 30l3 3 3-3H0zm0 18l3 3 3-3H0zM0 12l3 3 3-3H0zm0-6l3 3 3-3H0zm0 36l3 3 3-3H0zm60 0l-3 3-3-3h6zM60 12l-3 3-3-3h6zm0-6l-3 3-3-3h6zm0 30l-3 3-3-3h6zm0 18l-3 3-3-3h6zM30 60l-3-3-3 3h6zm18 0l-3-3-3 3h6zm-36 0l3-3 3 3h-6zm36-60l-3 3-3-3h6zm-36 0l3 3 3-3h-6z' fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")` }}>
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54.627 0l.83.828-1.415 1.415L51.8 0h2.827zM5.373 0l-.83.828L5.96 2.243 8.2 0H5.374zM48 0l3 3 3-3h-6zm-36 0l-3 3-3-3h6zM30 0l3 3 3-3h-6zM0 30l3 3 3-3H0zm0 18l3 3 3-3H0zM0 12l3 3 3-3H0zm0-6l3 3 3-3H0zm0 36l3 3 3-3H0zm60 0l-3 3-3-3h6zM60 12l-3 3-3-3h6zm0-6l-3 3-3-3h6zm0 30l-3 3-3-3h6zm0 18l-3 3-3-3h6zM30 60l-3-3-3 3h6zm18 0l-3-3-3 3h6zm-36 0l3-3 3 3h-6zm36-60l-3 3-3-3h6zm-36 0l3 3 3-3h-6z' fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")` }}>
             </div>
 
             <div className="absolute inset-0 pointer-events-none">
@@ -43,7 +43,7 @@ const SetupNicknamePage = () => {
                     {/* 상단 타이틀 바 (뒤로가기 버튼 통합) */}
                     <div className="bg-gray-800/80 border-b-2 border-gray-600 flex items-center justify-between select-none">
                         <div className="flex items-center">
-                            <button 
+                            <button
                                 onClick={() => navigate('/')}
                                 className="px-4 py-2 border-r border-gray-600 hover:bg-white hover:text-black transition-colors text-[10px] tracking-widest font-bold"
                             >
@@ -64,7 +64,7 @@ const SetupNicknamePage = () => {
                     <div className="p-8 md:p-10 relative">
                         {/* 미묘한 도트 패턴 */}
                         <div className="absolute inset-0 opacity-[0.02]"
-                             style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+                            style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
                         </div>
 
                         <div className="relative z-20">
@@ -81,26 +81,31 @@ const SetupNicknamePage = () => {
                             <form onSubmit={handleSubmit} className="space-y-12">
                                 <div className="space-y-6">
                                     <div className="relative group">
-                                        <label className="block text-[10px] text-gray-500 mb-2 tracking-[0.2em]">IDENTIFIER://</label>
+                                        <label className="block text-sm text-gray-500 mb-2 tracking-[0.2em]">IDENTIFIER://</label>
                                         <input
                                             type="text"
                                             value={nickname}
-                                            onChange={(e) => setNickname(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val.length <= 15) {
+                                                    setNickname(val);
+                                                }
+                                            }}
                                             required
                                             minLength={2}
                                             maxLength={15}
                                             disabled={isPending}
                                             autoComplete="off"
-                                            className="w-full bg-white/5 border-b-2 border-gray-700 px-0 py-4 focus:outline-none focus:border-white text-2xl tracking-[0.2em] placeholder:text-gray-800 transition-all text-white font-bold relative z-10"
+                                            className="w-full bg-white/5 border-b-2 border-gray-700 px-0 py-6 focus:outline-none focus:border-white text-4xl tracking-[0.2em] placeholder:text-gray-800 transition-all text-white font-bold relative z-10"
                                         />
                                         {/* 커서 역할을 하는 하단 선 */}
                                         <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-white transition-all duration-500 group-focus-within:w-full z-20"></div>
 
-                                        <div className="absolute top-0 right-0 p-2 text-[10px] text-gray-700">
+                                        <div className="absolute top-0 right-0 p-2 text-sm text-gray-700">
                                             {nickname.length}/15
                                         </div>
                                     </div>
-                                    <p className={`text-[10px] tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
+                                    <p className={`text-sm tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
                                         {nickname.length > 0 && !isValid 
                                             ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)' 
                                             : '>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED'}

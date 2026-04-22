@@ -43,18 +43,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
     log.info("CustomOAuth2UserService.loadUser() 실행 - OAuth2 로그인 요청 진입");
 
-    /**
-     * DefaultOAuth2UserService 객체를 생성하여, loadUser(userRequest)를 통해 DefaultOAuth2User 객체를 생성 후 반환
-     * DefaultOAuth2UserService의 loadUser()는 소셜 로그인 API의 사용자 정보 제공 URI로 요청을 보내서 사용자 정보를 얻은 후, 이를 통해
-     * DefaultOAuth2User 객체를 생성 후 반환한다. 결과적으로, OAuth2User는 OAuth 서비스에서 가져온 유저 정보를 담고 있는 유저
-     */
     OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = new DefaultOAuth2UserService();
     OAuth2User oAuth2User = delegate.loadUser(userRequest);
 
-    /**
-     * userRequest에서 registrationId 추출 후 registrationId로 AuthProvider 저장 userNameAttributeName은 이후에
-     * nameAttributeKey로 설정된다.
-     */
     String registrationId = userRequest.getClientRegistration().getRegistrationId();
     AuthProvider provider = getAuthProvider(registrationId);
     String userNameAttributeName =
@@ -70,19 +61,22 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     OAuthAttributes extractAttributes =
         OAuthAttributes.of(provider, userNameAttributeName, attributes);
 
-    User createdUser = getUser(extractAttributes, provider); // getUser() 메소드로 User 객체 생성 후 반환
+    UserContext context = getUser(extractAttributes, provider);
+    User user = context.user();
 
-    // DefaultOAuth2User를 구현한 CustomOAuth2User 객체를 생성해서 반환
     return new CustomOAuth2User(
-        Collections.singleton(new SimpleGrantedAuthority(createdUser.getRole().getKey())),
+        Collections.singleton(new SimpleGrantedAuthority(user.getRole().getKey())),
         attributes,
         extractAttributes.getNameAttributeKey(),
-        createdUser.getId(),
-        createdUser.getEmail(),
-        createdUser.getNickname(),
-        createdUser.getProvider(),
-        createdUser.getProviderUserId(),
-        createdUser.getRole());
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getProvider(),
+        user.getProviderUserId(),
+        user.getRole(),
+        context.isNewUser(),
+        context.isGuest()
+    );
   }
 
   /**
@@ -107,7 +101,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    * @param provider 소셜 로그인 제공자
    * @return 조회되거나 생성/전환된 User 객체
    */
-  private User getUser(OAuthAttributes attributes, AuthProvider provider) {
+  private UserContext getUser(OAuthAttributes attributes, AuthProvider provider) {
     String providerUserId = attributes.getOauth2UserInfo().getId();
 
     // 이미 가입된 사용자인지 확인
@@ -115,24 +109,29 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         .findByProviderAndProviderUserId(provider, providerUserId)
         .map(
             user -> {
-              log.info(
-                  "기존 회원 로그인 - provider={}, providerUserId={}, userId={}",
-                  provider,
-                  providerUserId,
-                  user.getId());
-              return user;
+              log.info("기존 회원 로그인 - provider={}, providerUserId={}, userId={}", provider, providerUserId, user.getId());
+              return new UserContext(user, false, false);
             })
         .orElseGet(
             () -> {
-              // [회원 전환 로직] 가입되지 않았다면, 현재 게스트 상태인지 확인
+              // [회원 전환 로직] 가입되지 않았다면, 쿠키(refresh_token) 존재 여부 확인
               Long guestId = getCurrentGuestId();
               if (guestId != null) {
-                return upgradeGuestToMember(guestId, attributes, provider);
+                // [GUEST -> MEMBER 전환] DB Role을 MEMBER로 승격
+                User upgradedUser = upgradeGuestToMember(guestId, attributes, provider);
+                log.info("게스트 -> 회원 승격 완료: userId={}", upgradedUser.getId());
+
+                return new UserContext(upgradedUser, false, true);
               }
               // [신규 가입 로직] 게스트도 아니면 새로 저장
-              return saveUser(attributes, provider);
+              User savedUser = saveUser(attributes, provider);
+              log.info("신규 회원 가입 완료: userId={}", savedUser.getId());
+
+              return new UserContext(savedUser, true, false);
             });
   }
+
+  private record UserContext(User user, boolean isNewUser, boolean isGuest) {}
 
   /**
    * 현재 HTTP 요청에서 게스트 토큰 정보를 파싱하여 게스트 ID를 반환합니다.
@@ -140,29 +139,20 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    * @return 게스트 유저의 식별값 또는 null
    */
   private Long getCurrentGuestId() {
-    // 클라이언트가 보낸 헤더에서 '게스트 토큰'을 찾아 그 안의 userId를 반환
     try {
       HttpServletRequest request =
           ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
-      // 헤더에서 확인
-      String authHeader = request.getHeader("Authorization");
-      if (authHeader != null && authHeader.startsWith("Bearer ")) {
-        String token = authHeader.substring(7);
-        // 액세스 토큰에서 userId 추출
-        return jwtUtil.getUserId(token);
-      }
-
-      // 쿠키에서 확인
       if (request.getCookies() != null) {
         for (Cookie cookie : request.getCookies()) {
-          if ("guest_token".equals(cookie.getName())) {
+          // HttpOnly로 발급된 refresh_token을 통해 guest 여부 식별
+          if ("refresh_token".equals(cookie.getName())) {
             return jwtUtil.getUserId(cookie.getValue());
           }
         }
       }
     } catch (Exception e) {
-      log.debug("현재 요청에서 게스트 정보를 찾을 수 없습니다.");
+      log.debug("현재 요청에서 인증(Refresh) 쿠키가 발견되지 않았습니다.");
     }
     return null;
   }

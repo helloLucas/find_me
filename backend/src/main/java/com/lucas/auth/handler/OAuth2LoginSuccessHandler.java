@@ -54,8 +54,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String role = customOAuth2User.getRole().name();
         String nickname = customOAuth2User.getNickname();
 
-        // 닉네임이 없거나 임시 닉네임인 경우 새로운 사용자로 판단
-        boolean isNewUser = (nickname == null || nickname.startsWith("방랑자_"));
+        // [보안/아키텍처 개선] 닉네임 존재 여부만으로 신규 가입자(true)와 기존 회원/게스트 전환자(false)를 구분
+        boolean isNewUser = customOAuth2User.isNewUser();
+        boolean isGuest = customOAuth2User.isGuest();
 
         String accessToken =
                 jwtUtil.createAccessToken(
@@ -86,6 +87,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
       String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
           .queryParam("accessToken", accessToken)
           .queryParam("isNewUser", isNewUser)
+          .queryParam("isGuest", isGuest)
           .build().toUriString();
 
       response.sendRedirect(targetUrl);
