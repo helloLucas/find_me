@@ -12,6 +12,7 @@ import {
 } from "./outputBundle.adapters";
 import { normalizeStoryNodeResponse } from "./storyNode.adapters";
 
+
 type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
@@ -42,7 +43,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
   
-  // TODO: Wire scene.bgm after the audio runtime is introduced.
+  // BGM is handled in PlayPage to support deferring until preVideo finishes.
   useLucasStore.getState().setGlitchLevel(normalizedOutput.scene.glitchLevel);
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {

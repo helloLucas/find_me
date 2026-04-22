@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import HomePage from "../../pages/Home";
 import LoginPage from "../../pages/auth/login-page";
 import SignupPage from "../../pages/auth/signup-page";
-import LobbyPage from "../../pages/Lobby/index";
+import LobbyPage from "../../pages/lobby/index";
 import PlayPage from "../../pages/play";
 import EndingPage from "../../pages/ending";
 import OAuthCallbackPage from "../../pages/auth/oauth-callback";

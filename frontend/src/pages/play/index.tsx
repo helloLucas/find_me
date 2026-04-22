@@ -1,21 +1,56 @@
 import { useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Desktop } from "../../widgets/Desktop";
 import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputBundle.adapters";
+import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
+import { audioManager } from "../../features/story-runtime/audioManager";
 
 export default function PlayPage() {
   const { chapterCode } = useParams();
-  const { error, initializeStory } = useStoryRuntimeStore();
+  const { error, initializeStory, currentNode } = useStoryRuntimeStore();
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     initializeStory(chapterCode ?? "week01");
+    return () => {
+      audioManager.stopBgm();
+    };
   }, [chapterCode, initializeStory]);
+
+  useEffect(() => {
+    if (currentNode) {
+      const output = normalizeStoryOutputBundle(currentNode.outputBundle);
+      if (output.scene.preVideo) {
+        setIsPlayingVideo(true);
+        setCurrentPreVideoUrl(output.scene.preVideo);
+      } else {
+        audioManager.playBgm(output.scene.bgm);
+      }
+    }
+  }, [currentNode]);
+
+  const handleVideoFinish = () => {
+    setIsPlayingVideo(false);
+    setCurrentPreVideoUrl(null);
+    if (currentNode) {
+      const output = normalizeStoryOutputBundle(currentNode.outputBundle);
+      audioManager.playBgm(output.scene.bgm);
+    }
+  };
 
   return (
     <main className="h-screen w-screen overflow-hidden">
-      <FullscreenEnforcer />
-      <Desktop />
+      {isPlayingVideo && currentPreVideoUrl ? (
+        <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
+      ) : (
+        <>
+          <FullscreenEnforcer />
+          <Desktop />
+        </>
+      )}
 
       {error && (
         <div className="absolute left-4 top-4 z-[100] max-w-[360px] rounded border border-red-400/50 bg-black/80 px-3 py-2 text-xs text-red-100">
