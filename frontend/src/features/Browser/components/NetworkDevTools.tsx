@@ -1,109 +1,251 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
+import { useBrowserContentStore } from "../../../app/store/browserContentStore";
+import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
+import {
+  canSubmitStoryAction,
+  getStoryInspectTarget,
+} from "../../story-runtime/storyActionGuards";
+import {
+  objectRecord,
+  recordArray,
+  stringValue,
+} from "../../story-runtime/outputBundle.adapters";
+
+type DevToolsTab = "elements" | "network" | "console";
+type DetailTab = "Headers" | "Response";
 
 interface Log {
   id: string;
   status: number;
   method: string;
   name: string;
+  path?: string;
   domain: string;
   timeMs: number;
   size: string;
+  selected?: boolean;
 }
 
+const CORE_ANCHOR_LOG: Log = {
+  id: "req_037",
+  status: 200,
+  method: "GET",
+  name: "core_anchor",
+  path: "/api/laplace/core_anchor",
+  domain: "api.nexus-news.net",
+  timeMs: 187,
+  size: "1.9 KB",
+};
+
+const FALLBACK_LOGS: Log[] = [
+  CORE_ANCHOR_LOG,
+  { id: "req_029", status: 404, method: "GET", name: "track.js", domain: "cdn.nexus-news.net", timeMs: 23, size: "0.4 KB" },
+  { id: "req_030", status: 404, method: "GET", name: "analytics/ping.gif", domain: "metrics.nexus-news.net", timeMs: 41, size: "0.2 KB" },
+  { id: "req_031", status: 404, method: "GET", name: "ads.js", domain: "static.nexus-news.net", timeMs: 18, size: "0.5 KB" },
+];
+
 export const NetworkDevTools: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'network' | 'console'>('network');
-  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
-  const [detailTab, setDetailTab] = useState<'Headers' | 'Response'>('Headers');
+  const {
+    currentNode,
+    isLoading,
+    submitStoryClick,
+    submitStoryInspect,
+    submitStoryCommand,
+  } = useStoryRuntimeStore();
+  const persistedContent = useBrowserContentStore((state) => state.content);
+  const isRelayClueUnlocked = useBrowserContentStore((state) => state.isRelayClueUnlocked);
+  const [activeTab, setActiveTab] = useState<DevToolsTab>("elements");
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>("Headers");
+  const [consoleInput, setConsoleInput] = useState("");
+  const [consoleHistory, setConsoleHistory] = useState<
+    { type: "in" | "out" | "error" | "success"; text: string }[]
+  >([{ type: "error", text: "Failed to load resource: the server responded with a status of 404 (Not Found)" }]);
 
-  const [consoleInput, setConsoleInput] = useState('');
-  const [consoleHistory, setConsoleHistory] = useState<{type: 'in' | 'out' | 'error' | 'success', text: string}[]>([
-    { type: 'error', text: 'Failed to load resource: the server responded with a status of 404 (Not Found)' }
-  ]);
+  const currentScene = objectRecord(currentNode?.outputBundle?.scene) ?? {};
+  const currentSceneMode = stringValue(currentScene.mode);
+  const shouldApplyCurrentContent =
+    currentNode?.nodeType === "network" || currentSceneMode === "network";
+  const currentContent = objectRecord(currentNode?.outputBundle?.content) ?? {};
+  const content = useMemo(
+    () => ({
+      ...persistedContent,
+      ...(shouldApplyCurrentContent ? currentContent : {}),
+    }),
+    [currentContent, persistedContent, shouldApplyCurrentContent]
+  );
 
-  React.useEffect(() => {
-    // Initial initialization of global triggers if needed
-  }, []);
+  const rawHeaders = objectRecord(content.headers) ?? {};
+  const rawResponseBody = content.responseBody;
+  const responseRecord = objectRecord(rawResponseBody);
+  const isRelayResponseBody = Boolean(objectRecord(responseRecord?.relay));
+  const headersAreRelay = Object.prototype.hasOwnProperty.call(rawHeaders, "x-relay-host");
+  const headers = headersAreRelay && !isRelayClueUnlocked ? {} : rawHeaders;
+  const responseBody = isRelayResponseBody && !isRelayClueUnlocked ? undefined : rawResponseBody;
 
-  const handleConsoleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && consoleInput.trim()) {
-      const val = consoleInput.trim();
-      setConsoleInput('');
-      setConsoleHistory(prev => [...prev, { type: 'in', text: val }]);
+  const logs = useMemo(() => {
+    const requests = recordArray(content.networkRequests).map(normalizeNetworkLog);
+    if (requests.length > 0) return requests;
+    if (Object.keys(headers).length > 0 || responseBody) return [CORE_ANCHOR_LOG];
+    return FALLBACK_LOGS;
+  }, [content.networkRequests, headers, responseBody]);
 
-      if (val === 'connect_core()') {
-        const connectFn = (window as any).connect_core;
-        if (typeof connectFn === 'function') {
-          connectFn();
-          setConsoleHistory(prev => [...prev, { type: 'success', text: 'Connecting... Core access granted.' }]);
-        } else {
-          setConsoleHistory(prev => [...prev, { type: 'error', text: 'Error: Core connection interface not initialized.' }]);
-        }
-      } else {
-        setConsoleHistory(prev => [...prev, { type: 'error', text: `Uncaught ReferenceError: ${val} is not defined` }]);
-      }
+  const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
+  const consoleLogs = Array.isArray(content.consoleLogs) ? content.consoleLogs.map(String) : [];
+  const detailTabs = normalizeDetailTabs(content.detailTabs);
+  const inspectTarget = getStoryInspectTarget(currentNode);
+  const canInspectResponse =
+    responseBody !== undefined &&
+    inspectTarget != null &&
+    canSubmitStoryAction(currentNode, "inspect", inspectTarget);
+
+  useEffect(() => {
+    if (currentNode?.code === "CH1_RELAY_CLUE_REVISIT") {
+      // 강아지가 주소를 다시 찾으라고 한 직후: Network 탭 전환 + 선택/탭 초기화
+      // → 플레이어가 req_037 클릭 → Response 탭 직접 눌러야 주소 확인 가능
+      setActiveTab("network");
+      setDetailTab("Headers");
+      setSelectedLogId(null);
+      return;
+    }
+
+    // 현재 노드 own-content에 selected:true가 명시된 경우에만 자동 선택
+    // (그 외에는 사용자의 현재 선택 상태를 유지한다)
+    const ownContent = objectRecord(currentNode?.outputBundle?.content) ?? {};
+    const ownLogs = recordArray(ownContent.networkRequests).map(normalizeNetworkLog);
+    const autoSelected = ownLogs.find((log) => log.selected);
+    if (autoSelected) {
+      setSelectedLogId(autoSelected.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentNode?.code]);
+
+
+  useEffect(() => {
+    if (detailTab !== "Response") return;
+    if (inspectTarget !== "packet_message") return;
+    if (!canSubmitStoryAction(currentNode, "inspect", "packet_message")) return;
+
+    const timer = window.setTimeout(() => {
+      void submitStoryInspect("packet_message");
+    }, 1500);
+
+    return () => window.clearTimeout(timer);
+  }, [currentNode, detailTab, inspectTarget, submitStoryInspect]);
+
+  const handleNetworkTabClick = () => {
+    setActiveTab("network");
+    if (canSubmitStoryAction(currentNode, "click", "network_tab")) {
+      void submitStoryClick("network_tab");
     }
   };
 
-  // Generate 1 successful request and 20 404s
-  const logs: Log[] = [
-    { 
-      id: "req_000", 
-      status: 200, 
-      method: "GET",
-      name: "render-state.bin",
-      domain: "api.nexus-news.net",
-      timeMs: 12, 
-      size: "1.2 KB" 
-    },
-    ...Array.from({ length: 20 }).map((_, i) => ({
-      id: `req_${(i + 1).toString().padStart(3, '0')}`,
-      status: 404,
-      method: "GET",
-      name: `img_${Math.random().toString(36).substring(7)}.png`,
-      domain: "api.nexus-news.net",
-      timeMs: Math.floor(Math.random() * 50 + 10),
-      size: "0 KB"
-    }))
-  ];
+  const handleRequestClick = (log: Log) => {
+    setSelectedLogId(log.id);
+    if (canSubmitStoryAction(currentNode, "click", log.id)) {
+      void submitStoryClick(log.id);
+    }
+  };
+
+  const handleDetailTabClick = (tab: DetailTab) => {
+    setDetailTab(tab);
+    if (
+      inspectTarget === "headers_or_response" &&
+      canSubmitStoryAction(currentNode, "inspect", inspectTarget)
+    ) {
+      void submitStoryInspect(inspectTarget);
+    }
+  };
+
+  const handleInspectResponse = () => {
+    if (inspectTarget && canSubmitStoryAction(currentNode, "inspect", inspectTarget)) {
+      void submitStoryInspect(inspectTarget);
+    }
+  };
+
+  const handleConsoleSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" || !consoleInput.trim()) return;
+
+    const command = consoleInput.trim();
+    setConsoleInput("");
+    setConsoleHistory((prev) => [...prev, { type: "in", text: command }]);
+
+    if (isLoading) {
+      setConsoleHistory((prev) => [...prev, { type: "error", text: "System is busy processing a previous task..." }]);
+      return;
+    }
+
+    let node = useStoryRuntimeStore.getState().currentNode;
+
+    if (command === "connect_core()" && node?.code === "CH1_PACKET_MESSAGE") {
+      if (canSubmitStoryAction(node, "click", "go_to_console")) {
+        await submitStoryClick("go_to_console");
+        node = useStoryRuntimeStore.getState().currentNode;
+      }
+    }
+
+    if (canSubmitStoryAction(node, "command", command)) {
+      await submitStoryCommand(command);
+      setConsoleHistory((prev) => [...prev, { type: "success", text: "Command executed." }]);
+      return;
+    }
+
+    setConsoleHistory((prev) => [
+      ...prev,
+      { type: "error", text: `Uncaught ReferenceError: ${command} is not defined` },
+    ]);
+  };
 
   return (
     <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-sans text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
-      
-      {/* DevTools Top Navigation Bar */}
       <div className="flex items-center bg-[#1e1e1e] border-b border-[#333] px-2 h-7 flex-shrink-0">
-        <button 
-          className={`px-3 py-1 ${activeTab === 'network' ? 'border-b-2 border-[#5394fb] text-white' : 'text-[#888] hover:text-[#ccc]'}`}
-          onClick={() => setActiveTab('network')}
+        <button
+          className={`px-3 py-1 ${activeTab === "elements" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
+          onClick={() => setActiveTab("elements")}
+        >
+          Elements
+        </button>
+        <button
+          className={`px-3 py-1 ${activeTab === "network" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
+          onClick={handleNetworkTabClick}
         >
           Network
         </button>
-        <button 
-          className={`px-3 py-1 ${activeTab === 'console' ? 'border-b-2 border-[#5394fb] text-white' : 'text-[#888] hover:text-[#ccc]'}`}
-          onClick={() => setActiveTab('console')}
+        <button
+          className={`px-3 py-1 ${activeTab === "console" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
+          onClick={() => setActiveTab("console")}
         >
           Console
         </button>
       </div>
 
-      {activeTab === 'console' && (
+      {activeTab === "elements" && (
+        <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-3 font-mono text-[11px] text-[#888]">
+          <div>&lt;article data-render-state="corrupted"&gt;</div>
+          <div className="pl-4 text-[#ccc]">Open Network to inspect blocked requests.</div>
+          <div>&lt;/article&gt;</div>
+        </div>
+      )}
+
+      {activeTab === "console" && (
         <div className="flex-1 p-2 font-mono text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
           <div className="border-b border-[#333] pb-1 mb-1 opacity-50 flex-shrink-0">top</div>
           <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-2">
-            {consoleHistory.map((item, i) => (
+            {[...consoleHistory, ...consoleLogs.map((text) => ({ type: "out" as const, text }))].map((item, i) => (
               <div key={i} className={`
-                ${item.type === 'in' ? 'text-[#ccc]' : ''}
-                ${item.type === 'error' ? 'text-red-400 bg-red-900/10 px-1 border-l-2 border-red-500' : ''}
-                ${item.type === 'success' ? 'text-green-400 bg-green-900/10 px-1 border-l-2 border-green-500' : ''}
-                ${item.type === 'out' ? 'text-[#888]' : ''}
+                ${item.type === "in" ? "text-[#ccc]" : ""}
+                ${item.type === "error" ? "text-red-400 bg-red-900/10 px-1 border-l-2 border-red-500" : ""}
+                ${item.type === "success" ? "text-green-400 bg-green-900/10 px-1 border-l-2 border-green-500" : ""}
+                ${item.type === "out" ? "text-[#888]" : ""}
               `}>
-                {item.type === 'in' ? '> ' : ''}{item.text}
+                {item.type === "in" ? "> " : ""}{item.text}
               </div>
             ))}
           </div>
           <div className="flex items-center text-[#5394fb] mt-2 shrink-0">
             <span className="mr-2">&gt;</span>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="flex-1 bg-transparent outline-none text-[#ccc]"
               value={consoleInput}
               onChange={(e) => setConsoleInput(e.target.value)}
@@ -115,11 +257,9 @@ export const NetworkDevTools: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'network' && (
+      {activeTab === "network" && (
         <div className="flex-1 flex flex-row overflow-hidden relative bg-[#1e1e1e]">
-          
-          {/* Main Network Table (shrinks when detail is open) */}
-          <div className={`flex-1 overflow-x-auto overflow-y-auto ${selectedLog ? 'border-r border-[#444] hidden md:block' : ''}`}>
+          <div className={`flex-1 overflow-x-auto overflow-y-auto ${selectedLog ? "border-r border-[#444] hidden md:block" : ""}`}>
             <table className="min-w-full text-left table-fixed whitespace-nowrap font-mono text-[11px]">
               <thead className="sticky top-0 bg-[#2d2d2d] text-[#ccc] border-b border-[#444]">
                 <tr>
@@ -132,15 +272,15 @@ export const NetworkDevTools: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {logs.map(log => (
-                  <tr 
-                    key={log.id} 
-                    className={`border-b border-[#333] cursor-pointer hover:bg-[#2a2d2e] ${selectedLog?.id === log.id ? 'bg-[#094771] text-white' : ''}`}
-                    onClick={() => log.status === 200 && setSelectedLog(log)}
+                {logs.map((log) => (
+                  <tr
+                    key={log.id}
+                    className={`border-b border-[#333] cursor-pointer hover:bg-[#2a2d2e] ${selectedLog?.id === log.id ? "bg-[#094771] text-white" : ""}`}
+                    onClick={() => handleRequestClick(log)}
                   >
                     <td className="px-2 py-0.5 flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${log.status === 200 ? 'bg-[#3fb950]' : 'bg-[#f85149]'}`} />
-                      <span className={selectedLog?.id === log.id ? "text-white" : log.status === 200 ? 'text-[#3fb950]' : 'text-[#f85149]'}>{log.status}</span>
+                      <div className={`w-2 h-2 rounded-full ${log.status === 200 ? "bg-[#3fb950]" : "bg-[#f85149]"}`} />
+                      <span className={selectedLog?.id === log.id ? "text-white" : log.status === 200 ? "text-[#3fb950]" : "text-[#f85149]"}>{log.status}</span>
                     </td>
                     <td className="px-2 py-0.5">{log.method}</td>
                     <td className="px-2 py-0.5 truncate" title={log.name}>{log.name}</td>
@@ -153,59 +293,76 @@ export const NetworkDevTools: React.FC = () => {
             </table>
           </div>
 
-          {/* Network Detail Pane */}
           {selectedLog && (
             <div className="w-full md:w-[300px] flex-shrink-0 flex flex-col bg-[#242424]">
-              {/* Detail Header */}
               <div className="flex items-center px-2 py-1 border-b border-[#444] bg-[#2d2d2d] gap-2 shrink-0">
-                <button 
+                <button
                   className="w-4 h-4 flex items-center justify-center hover:bg-[#444] rounded text-lg"
-                  onClick={() => setSelectedLog(null)}
-                >×</button>
+                  onClick={() => setSelectedLogId(null)}
+                >x</button>
                 <span className="truncate flex-1 font-bold text-white text-[12px]">{selectedLog.name}</span>
               </div>
-              
-              {/* Detail Tabs */}
+
               <div className="flex items-center border-b border-[#444] bg-[#242424] px-2 h-7 shrink-0 text-[11px]">
-                {['Headers', 'Response'].map(tab => (
-                  <button 
+                {detailTabs.map((tab) => (
+                  <button
                     key={tab}
-                    className={`px-3 py-1 h-full ${detailTab === tab ? 'border-b-2 border-[#5394fb] text-white' : 'text-[#888] hover:text-[#ccc]'}`}
-                    onClick={() => setDetailTab(tab as any)}
+                    className={`px-3 py-1 h-full ${detailTab === tab ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
+                    onClick={() => handleDetailTabClick(tab)}
                   >
                     {tab}
                   </button>
                 ))}
               </div>
 
-              {/* Detail Content */}
               <div className="flex-1 overflow-y-auto p-2 text-[11px] leading-relaxed">
-                {detailTab === 'Headers' && (
+                {detailTab === "Headers" && (
                   <div className="flex flex-col gap-4">
                     <div>
-                      <div className="font-bold text-[#ccc] mb-1">▼ General</div>
+                      <div className="font-bold text-[#ccc] mb-1">General</div>
                       <div className="pl-3 flex flex-col gap-1">
-                        <div className="flex"><span className="w-24 text-[#888]">Request URL:</span><span className="flex-1 break-all text-white">https://{selectedLog.domain}/{selectedLog.name}</span></div>
+                        <div className="flex"><span className="w-24 text-[#888]">Request URL:</span><span className="flex-1 break-all text-white">{buildRequestUrl(selectedLog)}</span></div>
                         <div className="flex"><span className="w-24 text-[#888]">Request Method:</span><span className="flex-1 text-white">{selectedLog.method}</span></div>
-                        <div className="flex"><span className="w-24 text-[#888]">Status Code:</span><span className="flex-1 flex items-center gap-1 text-white"><div className="w-2 h-2 rounded-full bg-[#3fb950]"/> 200 OK</span></div>
-                        <div className="flex"><span className="w-24 text-[#888]">Remote Address:</span><span className="flex-1 text-white">208.103.161.1:443</span></div>
-                        <div className="flex"><span className="w-24 text-[#888]">Referrer Policy:</span><span className="flex-1 text-white">strict-origin-when-cross-origin</span></div>
+                        <div className="flex"><span className="w-24 text-[#888]">Status Code:</span><span className="flex-1 flex items-center gap-1 text-white"><div className={`w-2 h-2 rounded-full ${selectedLog.status === 200 ? "bg-[#3fb950]" : "bg-[#f85149]"}`}/> {selectedLog.status}</span></div>
                       </div>
                     </div>
                     <div>
-                      <div className="font-bold text-[#ccc] mb-1">▼ Response Headers</div>
+                      <div className="font-bold text-[#ccc] mb-1">Response Headers</div>
                       <div className="pl-3 flex flex-col gap-1">
-                        <div className="flex"><span className="w-32 text-[#888]">Content-Type:</span><span className="flex-1 text-white">application/octet-stream</span></div>
-                        <div className="flex"><span className="w-32 text-[#888]">Cache-Control:</span><span className="flex-1 text-white">no-cache</span></div>
-                        <div className="flex"><span className="w-32 text-[#888]">Server:</span><span className="flex-1 text-white">nginx/1.24.0</span></div>
-                        <div className="flex"><span className="w-32 text-[#888]">X-Powered-By:</span><span className="flex-1 text-white">VoidCity-Core/3.4</span></div>
+                        {Object.keys(headers).length > 0 ? (
+                          Object.entries(headers).map(([key, value]) => (
+                            <div className="flex" key={key}>
+                              <span className="w-32 text-[#888]">{key}:</span>
+                              <span className="flex-1 text-white">{String(value)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[#888]">Select Headers or Response to decode this packet.</div>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
-                {detailTab === 'Response' && (
-                  <div className="font-mono text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded">
-                    {`{"success": true, "timestamp": 1893456000, "payload": "U2FsdGVkX19/4s8cR9tQZz0Y..."}`}
+
+                {detailTab === "Response" && (
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      className={`font-mono text-left text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded ${
+                        canInspectResponse
+                          ? "cursor-pointer hover:bg-[#1a2333] hover:border-[#0ff] hover:text-[#0ff] transition-all hover:shadow-[0_0_8px_rgba(0,255,255,0.4)]"
+                          : "cursor-default"
+                      }`}
+                      onClick={canInspectResponse ? handleInspectResponse : undefined}
+                      disabled={!canInspectResponse}
+                    >
+                      {responseBody ? formatJson(responseBody) : '{"status":"pending","payload":"encrypted"}'}
+                    </button>
+                    {consoleLogs.map((line, idx) => (
+                      <div key={idx} className="font-mono text-[#f0c674]">
+                        {line}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -216,3 +373,35 @@ export const NetworkDevTools: React.FC = () => {
     </div>
   );
 };
+
+function normalizeNetworkLog(raw: Record<string, unknown>): Log {
+  return {
+    id: stringValue(raw.id) ?? "req_unknown",
+    status: Number(raw.status ?? 0),
+    method: stringValue(raw.method) ?? "GET",
+    name: stringValue(raw.name) ?? "unknown",
+    path: stringValue(raw.path),
+    domain: stringValue(raw.domain) ?? "api.nexus-news.net",
+    timeMs: Number(raw.timeMs ?? 0),
+    size: stringValue(raw.size) ?? "0 KB",
+    selected: raw.selected === true,
+  };
+}
+
+function normalizeDetailTabs(value: unknown): DetailTab[] {
+  if (!Array.isArray(value)) return ["Headers", "Response"];
+  const tabs = value.filter((tab): tab is DetailTab => tab === "Headers" || tab === "Response");
+  return tabs.length > 0 ? tabs : ["Headers", "Response"];
+}
+
+function buildRequestUrl(log: Log) {
+  return `https://${log.domain}${log.path ?? `/${log.name}`}`;
+}
+
+function formatJson(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}

@@ -23,6 +23,7 @@ public class TransitionResponseDto {
     private String nodeType;
     private JsonNode outputBundle;
     private String promptType;
+    private JsonNode promptMeta;
     private boolean isCheckpoint;
     private boolean isTerminal;
   }

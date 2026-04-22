@@ -7,7 +7,9 @@ import { useMessengerStore } from '../../app/store/messengerStore';
 export const Taskbar: React.FC = () => {
   const { isTerminalOpen, isTerminalMinimized, restoreTerminal, minimizeTerminal, terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId } = useWindowStore();
-  const { conversation, openMessengerFromTaskbar } = useMessengerStore();
+  const { conversations, openMessengerFromTaskbar } = useMessengerStore();
+
+  const hasConversations = Object.keys(conversations).length > 0;
 
   const handleTerminalTaskbarClick = () => {
     if (isTerminalMinimized) {
@@ -22,8 +24,8 @@ export const Taskbar: React.FC = () => {
       <div className="flex h-full items-center gap-1">
         {/* Messenger Button */}
         <button
-          className={`flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${conversation ? '' : 'opacity-50 pointer-events-none'}`}
-          onClick={() => conversation && openMessengerFromTaskbar()}
+          className={`flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${hasConversations ? '' : 'opacity-50 pointer-events-none'}`}
+          onClick={() => hasConversations && openMessengerFromTaskbar()}
         >
           <img src="/pixel_messanger_icon.svg" alt="Messenger" className="h-6 w-6 object-contain" style={{ imageRendering: 'pixelated' }} />
         </button>
