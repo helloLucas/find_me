@@ -128,13 +128,13 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   const terminalOutput = normalizedOutput.content.terminalOutput;
-  const consoleLogs  = normalizedOutput.content.consoleLogs;   // FAIL/system 노드에서 사용
+  const consoleLogs = normalizedOutput.content.consoleLogs;   // FAIL/system 노드에서 사용
   const completionTitle = normalizedOutput.content.completionTitle;
   const completionText = normalizedOutput.content.completionText;
   const terminalLines = [
     ...(typeof completionTitle === "string" ? [completionTitle] : []),
     ...(Array.isArray(terminalOutput) ? terminalOutput.map(String) : []),
-    ...(Array.isArray(consoleLogs)    ? consoleLogs.map(String)    : []),
+    ...(Array.isArray(consoleLogs) ? consoleLogs.map(String) : []),
     ...(Array.isArray(completionText) ? completionText.map(String) : []),
   ];
 
