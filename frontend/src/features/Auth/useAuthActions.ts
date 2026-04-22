@@ -41,10 +41,20 @@ export const useAuthActions = () => {
 
   /**
    * LOGOUT 핸들러
+   * 백엔드의 로그아웃 API를 호출하여 세션을 종료하고 쿠키를 삭제합니다.
    */
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/', { replace: true });
+  const handleLogout = async () => {
+    try {
+      // 백엔드 로그아웃 API 호출 (HttpOnly 쿠키 삭제를 위해 필수)
+      const axiosInstance = (await import('../../shared/api/axiosInstance')).default;
+      await axiosInstance.post('/api/v1/auth/logout');
+    } catch (error) {
+      console.error('Logout API failed:', error);
+    } finally {
+      // 로컬 상태 및 토큰 초기화 후 홈으로 이동
+      clearAuth();
+      navigate('/', { replace: true });
+    }
   };
 
   return {

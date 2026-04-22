@@ -33,7 +33,8 @@ export const useInitGuest = () => {
         // 401 Interceptor에 영향을 받지 않기 위해 기본 axios 인스턴스 사용
         mutationFn: async () => {
             const response = await axios.get<BaseResponse<TokenResponse>>(
-                `${API_BASE_URL}/api/v1/auth/guest-init`
+                `${API_BASE_URL}/api/v1/auth/guest-init`,
+                { withCredentials: true }
             );
             return response.data.data;
         },
