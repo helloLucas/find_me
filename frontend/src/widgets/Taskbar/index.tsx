@@ -10,12 +10,9 @@ export const Taskbar: React.FC = () => {
   const navigate = useNavigate();
   const { isTerminalOpen, isTerminalMinimized, restoreTerminal, minimizeTerminal, terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId } = useWindowStore();
-<<<<<<< HEAD
   const { conversations, openMessengerFromTaskbar } = useMessengerStore();
+  const hasConversations = conversations && Object.keys(conversations).length > 0;
 
-  const hasConversations = Object.keys(conversations).length > 0;
-=======
-  const { conversation, openMessengerFromTaskbar } = useMessengerStore();
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
   const handleExitConfirm = () => {
