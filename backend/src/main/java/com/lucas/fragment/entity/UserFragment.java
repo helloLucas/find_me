@@ -42,6 +42,10 @@ public class UserFragment extends BaseEntity {
     public UserFragment(User user, String fragmentCode) {
         this.user = user;
         this.fragmentCode = fragmentCode;
+    }
+
+    @PrePersist
+    public void prePersist() {
         this.acquiredAt = LocalDateTime.now();
     }
 }

@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserFragmentController {
 
     private final UserFragmentService userFragmentService;
-    private final UserRepository userRepository;
 
     @GetMapping("/check/{code}")
     public BaseResponse<Boolean> checkFragment(
@@ -29,9 +28,7 @@ public class UserFragmentController {
     public BaseResponse<Void> acquireFragment(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @PathVariable String code) {
-        User user = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        userFragmentService.acquireFragment(user, code);
+        userFragmentService.acquireFragment(principal.getUserId(), code);
         return BaseResponse.success("Fragment acquired");
     }
 }
