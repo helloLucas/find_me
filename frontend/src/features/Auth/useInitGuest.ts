@@ -41,7 +41,6 @@ export const useInitGuest = () => {
         onSuccess: (data) => {
             // 1. 발급받은 JWT 토큰 저장
             tokenManager.setAccessToken(data.accessToken);
-            tokenManager.setRefreshToken(data.refreshToken);
 
             // 2. 신규 유저와 마찬가지로 닉네임 설정 페이지로 이동
             navigate('/setup-nickname', { replace: true });

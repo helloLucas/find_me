@@ -16,12 +16,11 @@ export default function AppShell({ children }: PropsWithChildren) {
 
       if (event.data?.type === 'AUTH_SUCCESS') {
         setIsAccessing(true);
-        const { isNewUser, accessToken, refreshToken } = event.data;
+        const { isNewUser, accessToken } = event.data;
         
         // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
-        if (accessToken && refreshToken) {
+        if (accessToken) {
             tokenManager.setAccessToken(accessToken);
-            tokenManager.setRefreshToken(refreshToken);
         }
 
         // 2. Zustand 스토어 인증 상태 동기화
