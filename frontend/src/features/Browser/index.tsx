@@ -190,7 +190,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === 'home' && (
             <HomeTab onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} />
           )}
-          {activeTab?.component === 'pacman' && <PacmanTab />}
+          {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
         </div>
         
         {/* DevTools Pane */}
