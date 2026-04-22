@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { tokenManager } from '../utils/tokenManager';
+import { userApi } from '../api/userApi';
 
 /**
  * SessionMode 타입 정의
@@ -27,6 +28,8 @@ export const useAuthStatus = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
+        let isMounted = true;
+
         const accessToken = tokenManager.getAccessToken();
 
         if (accessToken) {
@@ -43,8 +46,27 @@ export const useAuthStatus = () => {
                 } else {
                     setSessionMode('GUEST_MODE');
                 }
+
+                userApi.getMe()
+                    .then((user) => {
+                        if (!isMounted) return;
+                        setNickname(user.nickname || decoded.nickname || 'UNKNOWN_AGENT');
+                        setSessionMode(user.role === 'MEMBER' ? 'USER_MODE' : 'GUEST_MODE');
+                    })
+                    .catch((error) => {
+                        console.error('현재 사용자 프로필 동기화에 실패했습니다:', error);
+                    })
+                    .finally(() => {
+                        if (isMounted) {
+                            setIsLoading(false);
+                        }
+                    });
+
+                return () => {
+                    isMounted = false;
+                };
             } catch (error) {
-                console.error('Invalid token detected:', error);
+                console.error('유효하지 않은 토큰을 감지했습니다:', error);
                 // 토큰이 손상되었을 경우 초기화
                 tokenManager.clearTokens();
                 setNickname('ANONYMOUS');
@@ -57,6 +79,10 @@ export const useAuthStatus = () => {
         }
         
         setIsLoading(false);
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return { 

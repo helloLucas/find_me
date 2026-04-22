@@ -4,6 +4,11 @@ import { jwtDecode } from "jwt-decode";
 
 export type UserRole = 'GUEST' | 'MEMBER';
 
+type AuthUserProfile = {
+  nickname?: string;
+  role?: UserRole | null;
+};
+
 interface AuthState {
   isLoggedIn: boolean;
   role: UserRole | null;
@@ -13,6 +18,7 @@ interface AuthState {
   // Actions
   checkAuth: () => void;
   setAuth: (accessToken: string) => void;
+  setUserProfile: (profile: AuthUserProfile) => void;
   clearAuth: () => void;
 }
 
@@ -42,7 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isInitialized: true,
         });
       } catch (e) {
-        console.error("Auth initialization failed:", e);
+        console.error("인증 상태 초기화에 실패했습니다:", e);
         tokenManager.clearTokens();
         set({ isLoggedIn: false, role: null, nickname: "ANONYMOUS", isInitialized: true });
       }
@@ -64,8 +70,17 @@ export const useAuthStore = create<AuthState>((set) => ({
           isInitialized: true,
         });
     } catch (e) {
-        console.error("Invalid token set:", e);
+        console.error("유효하지 않은 토큰입니다:", e);
     }
+  },
+
+  setUserProfile: (profile) => {
+    set((state) => ({
+      isLoggedIn: true,
+      role: profile.role ?? state.role,
+      nickname: profile.nickname ?? state.nickname,
+      isInitialized: true,
+    }));
   },
 
   /**
