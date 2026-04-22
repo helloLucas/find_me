@@ -32,7 +32,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       return;
     }
 
-    // "Bearer " 제거
     String token = authorization.substring(7);
 
     try {

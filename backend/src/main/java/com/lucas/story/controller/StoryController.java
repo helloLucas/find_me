@@ -59,7 +59,7 @@ public class StoryController {
    * @param request 사용자의 입력값 및 액션 타입이 포함된 DTO
    * @return 전이된 이후의 새로운 스토리 노드 정보
    */
-  @PostMapping("/transition")
+  @PostMapping("/transitions")
   public ResponseEntity<BaseResponse<TransitionResponseDto>> processTransition(
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody TransitionRequestDto request) {

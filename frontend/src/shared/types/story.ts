@@ -20,6 +20,17 @@ export interface StoryNode {
   isTerminal: boolean;
 }
 
+export interface StoryNodeResponse {
+  id: number;
+  nodeCode: string;
+  nodeType: StoryNode["nodeType"];
+  outputBundle?: OutputBundle;
+  promptType: StoryNode["promptType"];
+  promptMeta?: PromptMeta | null;
+  checkpoint: boolean;
+  terminal: boolean;
+}
+
 export interface EffectBundle {
   type: string;
   payload?: any;

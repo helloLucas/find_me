@@ -61,6 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoggedIn: true,
           role: decoded.role || null,
           nickname: decoded.nickname || "UNKNOWN_AGENT",
+          isInitialized: true,
         });
     } catch (e) {
         console.error("Invalid token set:", e);
