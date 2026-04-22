@@ -16,23 +16,27 @@ export default function AppShell({ children }: PropsWithChildren) {
 
       if (event.data?.type === 'AUTH_SUCCESS') {
         setIsAccessing(true);
-        const { isNewUser, accessToken, refreshToken } = event.data;
-        
+
+        // 1. 전달받은 데이터 한 번에 구조 분해 할당 (refreshToken 제거)
+        const { accessToken, isNewUser } = event.data;
+
         // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
-        if (accessToken && refreshToken) {
+        if (accessToken) {
             tokenManager.setAccessToken(accessToken);
-            tokenManager.setRefreshToken(refreshToken);
         }
 
         // 2. Zustand 스토어 인증 상태 동기화
         checkAuth();
-        
-        // 2. 약간의 지연 후 라우팅 (UX 몰입도)
+
+        // 3. 우선순위에 따른 라우팅 (UX 몰입도)
         setTimeout(() => {
           setIsAccessing(false);
+
           if (isNewUser) {
+            // 완전 신규 가입자: 닉네임 설정이 필요함
             navigate('/setup-nickname', { replace: true });
           } else {
+            // 기존 회원 혹은 게스트 전환자 (이미 닉네임이 있음)
             navigate('/lobby', { replace: true });
           }
         }, 1500);
@@ -48,7 +52,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   return (
     <div className="min-h-screen bg-black text-white relative">
-      
+
       {/* SYSTEM ACCESS OVERLAY */}
       {isAccessing && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md">

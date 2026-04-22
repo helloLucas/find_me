@@ -23,10 +23,10 @@ export const useAuthActions = () => {
     const height = 600;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
-    
+
     window.open(
-      GOOGLE_AUTH_URL, 
-      'VoidCityLogin', 
+      GOOGLE_AUTH_URL,
+      'VoidCityLogin',
       `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
     );
   };
