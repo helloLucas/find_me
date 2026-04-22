@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock } from '../../shared/ui/Clock';
 import { useClientStore } from '../../app/store/clientStore';
 import { useWindowStore } from '../../app/store/windowStore';
 import { useMessengerStore } from '../../app/store/messengerStore';
+import { ExitGameOverlay } from '../../shared/ui/ExitGameOverlay/ExitGameOverlay';
 
 export const Taskbar: React.FC = () => {
+  const navigate = useNavigate();
   const { isTerminalOpen, isTerminalMinimized, restoreTerminal, minimizeTerminal, terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId } = useWindowStore();
   const { conversation, openMessengerFromTaskbar } = useMessengerStore();
+  const [showExitOverlay, setShowExitOverlay] = useState(false);
+
+  const handleExitConfirm = () => {
+    setShowExitOverlay(false);
+    navigate('/lobby', { replace: true });
+  };
 
   const handleTerminalTaskbarClick = () => {
     if (isTerminalMinimized) {
@@ -18,8 +27,19 @@ export const Taskbar: React.FC = () => {
   };
 
   return (
+    <>
     <footer className="fixed bottom-0 left-0 right-0 h-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-md px-1 flex items-center justify-between z-[4000] pixel-font">
       <div className="flex h-full items-center gap-1">
+        {/* Exit Game Button */}
+        <button
+          className="flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-red-900/40 active:bg-red-900/60 hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+          onClick={() => setShowExitOverlay(true)}
+        >
+          <img src="/pixel_power_icon.svg" alt="Exit" className="h-5 w-5 object-contain opacity-60 hover:opacity-100" style={{ imageRendering: 'pixelated' }} />
+        </button>
+
+        <div className="h-6 w-px bg-white/10 mx-1" />
+
         {/* Messenger Button */}
         <button
           className={`flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${conversation ? '' : 'opacity-50 pointer-events-none'}`}
@@ -83,5 +103,15 @@ export const Taskbar: React.FC = () => {
         <Clock />
       </div>
     </footer>
+
+      {/* Exit Game Overlay */}
+      {showExitOverlay && (
+        <ExitGameOverlay
+          onConfirm={handleExitConfirm}
+          onCancel={() => setShowExitOverlay(false)}
+          subMessage="종료 시 처음부터 다시 시작해야 합니다."
+        />
+      )}
+    </>
   );
 };
