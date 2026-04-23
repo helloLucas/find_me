@@ -364,12 +364,38 @@ public class StoryServiceImpl implements StoryService {
 
   /** 챕터 시작 전 해금 여부를 검증한다. */
   private void validateChapterUnlocked(User user, Chapter chapter) {
-    UserChapterProgress chapterProgress =
-        userChapterProgressRepository
-            .findByUserIdAndChapterId(user.getId(), chapter.getId())
-            .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+    java.util.Optional<UserChapterProgress> progressOpt =
+        userChapterProgressRepository.findByUserIdAndChapterId(user.getId(), chapter.getId());
 
-    if (chapterProgress.getStatus() == ChapterStatus.LOCKED) {
+    if (progressOpt.isPresent()) {
+      if (progressOpt.get().getStatus() == ChapterStatus.LOCKED) {
+        throw new CustomException(ErrorCode.A1002);
+      }
+      return;
+    }
+
+    // 데이터가 없는 경우: 이전 챕터(sortOrder - 1) 클리어 여부 검사 후 동적 해금
+    if (chapter.getSortOrder() > 1) {
+      Chapter prevChapter = chapterRepository.findBySortOrder(chapter.getSortOrder() - 1)
+          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+          
+      UserChapterProgress prevProgress = userChapterProgressRepository
+          .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
+          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+
+      if (prevProgress.getStatus() != ChapterStatus.COMPLETED) {
+        throw new CustomException(ErrorCode.A1002);
+      }
+
+      // 이전 챕터를 깼으므로 현재 챕터 UNLOCKED 레코드 동적 생성 및 진입 허용
+      UserChapterProgress newProgress = UserChapterProgress.builder()
+          .user(user)
+          .chapter(chapter)
+          .status(ChapterStatus.UNLOCKED)
+          .build();
+      userChapterProgressRepository.save(newProgress);
+      log.info("Dynamically unlocked chapter: User={}, Chapter={}", user.getId(), chapter.getCode());
+    } else {
       throw new CustomException(ErrorCode.A1002);
     }
   }
