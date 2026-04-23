@@ -84,7 +84,7 @@ export const NewsTab: React.FC = () => {
       if (!isScrollTriggeredArticleNode) return;
 
       const element = event.currentTarget;
-      const scrollThreshold = 16;
+      const scrollThreshold = Math.max(16, element.clientHeight * 0.1);
       const isAtBottom =
         element.scrollTop + element.clientHeight >= element.scrollHeight - scrollThreshold;
 
