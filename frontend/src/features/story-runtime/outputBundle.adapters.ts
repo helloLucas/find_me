@@ -60,11 +60,13 @@ function resolveStoryPlaceholder(
 }
 
 export function shouldOpenBrowserForStoryNode(
-  node: Pick<StoryNode, "code">,
+  node: Pick<StoryNode, "code" | "nodeType">,
   output: NormalizedStoryOutputBundle
 ): boolean {
   return (
     output.scene.mode === "browser" ||
+    output.scene.mode === "network" ||
+    node.nodeType === "network" ||
     node.code.includes("NEWS") ||
     node.code.includes("ARTICLE")
   );

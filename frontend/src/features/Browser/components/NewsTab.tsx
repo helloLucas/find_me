@@ -1,5 +1,10 @@
 import React from "react";
+import { useBrowserContentStore } from "../../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
+import {
+  canSubmitStoryAction,
+  getStoryInspectTarget,
+} from "../../story-runtime/storyActionGuards";
 
 type NewsCard = {
   id: string;
@@ -10,11 +15,14 @@ type NewsCard = {
 };
 
 export const NewsTab: React.FC = () => {
-  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
-  const content = currentNode?.outputBundle?.content ?? {};
+  const { currentNode, submitStoryClick, submitStoryInspect } = useStoryRuntimeStore();
+  const content = useBrowserContentStore((state) => state.content);
   const newsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const articleTitle = typeof content.articleTitle === "string" ? content.articleTitle : null;
   const articleBody: string[] = Array.isArray(content.articleBody) ? content.articleBody.map(String) : [];
+  const inspectTarget = getStoryInspectTarget(currentNode);
+  const canInspectArticle =
+    inspectTarget != null && canSubmitStoryAction(currentNode, "inspect", inspectTarget);
 
   return (
     <div className="w-full h-full p-4 overflow-y-auto bg-[#0a0514] font-pixel selection:bg-[#a48cff] selection:text-[#0a0514]">
@@ -33,12 +41,22 @@ export const NewsTab: React.FC = () => {
             </h2>
             <div className="space-y-4">
               {articleBody.map((paragraph, index) => (
-                <p
+                <button
                   key={`${currentNode?.code}-article-${index}`}
-                  className="text-[#0ff] text-base leading-relaxed drop-shadow-[0_0_2px_#00ffff]"
+                  className={`block w-full text-left text-base leading-relaxed drop-shadow-[0_0_2px_#00ffff] ${
+                    paragraph.includes("[Data_Corrupted]")
+                      ? "text-[#ff3ecf] underline decoration-dashed underline-offset-4"
+                      : "text-[#0ff]"
+                  }`}
+                  type="button"
+                  onClick={() => {
+                    if (paragraph.includes("[Data_Corrupted]") && canInspectArticle && inspectTarget) {
+                      void submitStoryInspect(inspectTarget);
+                    }
+                  }}
                 >
                   {paragraph}
-                </p>
+                </button>
               ))}
             </div>
           </article>
@@ -53,8 +71,8 @@ export const NewsTab: React.FC = () => {
                   <button
                     className="block w-full text-left"
                     onClick={() => {
-                      if (card.id === "dark_article") {
-                        submitStoryClick("dark_article");
+                      if (canSubmitStoryAction(currentNode, "click", card.id)) {
+                        void submitStoryClick(card.id);
                       }
                     }}
                   >

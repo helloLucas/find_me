@@ -3,8 +3,10 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 
 export const MessengerNotificationCard: React.FC = () => {
-  const { conversation, isNotificationVisible, isUnread, openMessengerWindow } = useMessengerStore();
+  const { conversations, activeRoomId, isNotificationVisible, isUnread, openMessengerWindow } = useMessengerStore();
   const { submitStoryClick } = useStoryRuntimeStore();
+
+  const conversation = activeRoomId ? conversations[activeRoomId] : null;
 
   if (!isNotificationVisible || !conversation) return null;
 

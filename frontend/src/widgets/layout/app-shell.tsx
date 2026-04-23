@@ -21,7 +21,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         setIsAccessing(true);
 
         // 1. 전달받은 데이터 한 번에 구조 분해 할당 (refreshToken 제거)
-        const { accessToken, isNewUser } = event.data;
+        const { isNewUser, accessToken } = event.data;
 
         // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
         if (accessToken) {

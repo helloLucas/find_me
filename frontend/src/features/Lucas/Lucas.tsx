@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
+import { useStoryRuntimeStore } from '../story-runtime/storyRuntime.store';
+import { canSubmitStoryAction } from '../story-runtime/storyActionGuards';
 import './Lucas.css';
 
 export const Lucas: React.FC = () => {
@@ -56,7 +58,18 @@ export const Lucas: React.FC = () => {
       setDisplayText(currentMessage?.text || '');
       setIsTyping(false);
     } else {
+      const isLastMessage = currentScene
+        ? currentMessageIndex >= currentScene.messages.length - 1
+        : false;
       nextMessage();
+
+      if (isLastMessage) {
+        const storyRuntime = useStoryRuntimeStore.getState();
+        const node = storyRuntime.currentNode;
+        if (canSubmitStoryAction(node, 'click', 'reopen_network_clue')) {
+          void storyRuntime.submitStoryClick('reopen_network_clue');
+        }
+      }
     }
   };
 

@@ -1,12 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useClientStore } from "../../app/store/clientStore";
-import { storyApi } from "../../shared/api/storyApi";
-import { CustomClientException } from "../../shared/api/CustomClientException";
+import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
-
-// Note: In an actual Story runtime, nodeId would be passed from a server state / Story Engine.
-// Using a mock nodeId for the current MVP integration.
-const MOCK_CURRENT_NODE_ID = 1;
 
 export const TerminalScene: React.FC = () => {
   const { 
@@ -18,9 +13,9 @@ export const TerminalScene: React.FC = () => {
     appendTerminalOutput,
     terminalUser,
     terminalHost,
-    terminalPath,
-    setTerminalContext
+    terminalPath
   } = useClientStore();
+  const { currentNode, submitStoryCommand } = useStoryRuntimeStore();
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -51,45 +46,28 @@ export const TerminalScene: React.FC = () => {
     e.preventDefault();
     if (!inputValue.trim() || isProcessing) return;
 
-    const command = inputValue.trim();
-    appendTerminalOutput("input", `${promptString} ${command}`);
+    const rawCommand = inputValue.trim();
+    const normalizedWhitespaceCommand = rawCommand.replace(/\s+/g, " ").trim();
+    const command =
+      currentNode?.code === "CH1_SSH_AUTH_PROMPT" && rawCommand.toLowerCase() === "yes"
+        ? "YES"
+        : currentNode?.code === "CH1_TERMINAL_SSH_READY" &&
+            /^ssh\s+guest@172\.22\.4\.19$/.test(normalizedWhitespaceCommand)
+          ? "ssh guest@172.22.4.19"
+        : rawCommand;
+    appendTerminalOutput("input", `${promptString} ${rawCommand}`);
     setInputValue("");
     setIsProcessing(true);
 
     try {
-      const response = await storyApi.submitTransition({
-        nodeId: MOCK_CURRENT_NODE_ID,
-        actionType: "command",
-        inputValue: command,
-        meta: { directory: terminalPath }, 
-      });
+      await submitStoryCommand(command, { directory: terminalPath });
 
-      // Handle successful transition
-      // The effects array instructs the UI what to show
-      if (response.effects && response.effects.length > 0) {
-        response.effects.forEach((effect) => {
-          if (effect.type === "append_output" && effect.payload) {
-            appendTerminalOutput("output", effect.payload);
-          } else if (effect.type === "update_prompt") {
-            // payload expected to be { user?: string, host?: string, path?: string }
-            const payload = effect.payload || {};
-            setTerminalContext(payload.user, payload.host, payload.path);
-          }
-          // Handle other effects...
-        });
-      } else if (response.nextNode?.outputBundle?.text) {
-        // Fallback if the node has output text directly
-        appendTerminalOutput("output", response.nextNode.outputBundle.text);
-      } else {
-         appendTerminalOutput("system", "[Command Executed]");
+      const runtimeError = useStoryRuntimeStore.getState().error;
+      if (runtimeError) {
+        appendTerminalOutput("error", runtimeError);
       }
-    } catch (error: any) {
-      // Handle RFC 9457 custom exceptions
-      if (error instanceof CustomClientException) {
-        appendTerminalOutput("error", `Error [${error.code}]: ${error.detail}`);
-      } else {
-        appendTerminalOutput("error", "System Error: Failed to execute command.");
-      }
+    } catch {
+      appendTerminalOutput("error", "System Error: Failed to execute command.");
     } finally {
       setIsProcessing(false);
       // Keep focus on input
