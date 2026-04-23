@@ -5,6 +5,7 @@ import { useClientStore } from '../../app/store/clientStore';
 import { useWindowStore } from '../../app/store/windowStore';
 import { useMessengerStore } from '../../app/store/messengerStore';
 import { ExitGameOverlay } from '../../shared/ui/ExitGameOverlay/ExitGameOverlay';
+import { VolumeControl } from './VolumeControl';
 
 export const Taskbar: React.FC = () => {
   const navigate = useNavigate();
@@ -98,6 +99,7 @@ export const Taskbar: React.FC = () => {
       <div className="mr-2 flex items-center gap-3">
         {/* Status Area */}
         <div className="flex items-center gap-2 px-2">
+          <VolumeControl />
           <img src="/pixel_wifi.svg" alt="WiFi" className="h-4 w-4 object-contain brightness-90" style={{ imageRendering: 'pixelated' }} />
           <img src="/pixel_signal.svg" alt="Signal" className="h-4 w-4 object-contain brightness-90" style={{ imageRendering: 'pixelated' }} />
         </div>

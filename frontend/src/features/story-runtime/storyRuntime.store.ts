@@ -18,6 +18,7 @@ import {
 import { normalizeStoryNodeResponse } from "./storyNode.adapters";
 import { userApi } from "../../shared/api/userApi";
 
+
 type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
@@ -71,6 +72,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   if (!outputBundle) return;
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
+
   const browserStore = useBrowserContentStore.getState();
   if (node.code === "CH1_RELAY_CLUE_REVISIT") {
     browserStore.setRelayClueUnlocked(true);
@@ -82,6 +84,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
     normalizedOutput.scene.mode === "network";
 
   // TODO: wire scene.bgm when audio runtime is introduced.
+
   useLucasStore.getState().setGlitchLevel(normalizedOutput.scene.glitchLevel);
   if (isBrowserContext) {
     browserStore.mergeContent(normalizedOutput.content);
@@ -125,13 +128,13 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   const terminalOutput = normalizedOutput.content.terminalOutput;
-  const consoleLogs  = normalizedOutput.content.consoleLogs;   // FAIL/system 노드에서 사용
+  const consoleLogs = normalizedOutput.content.consoleLogs;   // FAIL/system 노드에서 사용
   const completionTitle = normalizedOutput.content.completionTitle;
   const completionText = normalizedOutput.content.completionText;
   const terminalLines = [
     ...(typeof completionTitle === "string" ? [completionTitle] : []),
     ...(Array.isArray(terminalOutput) ? terminalOutput.map(String) : []),
-    ...(Array.isArray(consoleLogs)    ? consoleLogs.map(String)    : []),
+    ...(Array.isArray(consoleLogs) ? consoleLogs.map(String) : []),
     ...(Array.isArray(completionText) ? completionText.map(String) : []),
   ];
 
