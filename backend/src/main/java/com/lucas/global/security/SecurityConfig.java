@@ -54,6 +54,7 @@ public class SecurityConfig {
                         "/api/v1/auth/guest-init",
                         "/api/v1/health",
                         "/oauth2/**",
+                        "/actuator/**",
                         "/error")
                     .permitAll()
                     .anyRequest()
