@@ -39,9 +39,9 @@ const LobbyPage = () => {
     const renderShell = (content: React.ReactNode, warningBar?: React.ReactNode) => (
         <div className="select-none h-screen w-screen overflow-hidden flex flex-col relative p-4 md:p-8 bg-darkbg text-white font-pixel">
             {/* Header */}
-            <header className="shrink-0 flex justify-between items-center w-full max-w-5xl mx-auto tracking-widest border-b border-gray-800 pb-5 mb-8 transition-opacity duration-300">
+            <header className="shrink-0 flex justify-between items-center w-full max-w-5xl mx-auto tracking-widest border-b border-gray-800 pb-3 mb-4 transition-opacity duration-300">
                 <div className="flex gap-6 items-center">
-                    <button 
+                    <button
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-sm md:text-lg font-bold text-gray-300 hover:text-[#a3e635] transition-all group"
                     >
@@ -69,8 +69,13 @@ const LobbyPage = () => {
             </header>
 
             <main className="flex-1 flex flex-col items-center w-full max-w-4xl mx-auto min-h-0 relative">
+                {/* 우측 상단 플로팅 경고 바 (Top-Right Placement) */}
+                <div className={`absolute -top-1 right-0 md:right-0 z-[60] transition-all duration-300 ${isGuest && !isLoading ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+                    {warningBar}
+                </div>
+
                 {/* 타이틀 */}
-                <h1 className="shrink-0 text-3xl md:text-4xl tracking-[0.3em] mt-4 mb-8 text-white font-bold drop-shadow-lg uppercase text-center">
+                <h1 className="shrink-0 text-3xl md:text-4xl tracking-[0.3em] mt-4 mb-4 text-white font-bold drop-shadow-lg uppercase text-center">
                     SELECT CHAPTER
                 </h1>
 
@@ -79,11 +84,8 @@ const LobbyPage = () => {
                     {content}
                 </div>
 
-                {/* 하단 고정 영역: 경고 바 렌더링용 빈 공간 미리 확보하여 레이아웃 흔들림 제거 */}
+                {/* 하단 고정 영역 제거 (상단으로 이동됨) */}
                 <div className="w-full shrink-0 flex items-end">
-                    <div className={`w-full transition-all duration-300 ${isGuest && !isLoading ? 'mt-4 max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-                        {warningBar}
-                    </div>
                 </div>
             </main>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface AuthSelectionModalProps {
     isOpen: boolean;
@@ -7,10 +8,11 @@ interface AuthSelectionModalProps {
 }
 
 export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({ isOpen, onClose, onSelect }) => {
-    if (!isOpen) return null;
+    // 1. 모달이 닫혀있거나, Portal을 붙일 body가 아직 없으면 렌더링하지 않음 (안전장치)
+    if (!isOpen || typeof document === 'undefined' || !document.body) return null;
 
-    return (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-300">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-[4px] animate-in fade-in duration-300">
             {/* Background click to close */}
             <div className="absolute inset-0" onClick={onClose} />
 
@@ -121,6 +123,7 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({ isOpen, 
                     [ CLOSE ]
                 </button>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

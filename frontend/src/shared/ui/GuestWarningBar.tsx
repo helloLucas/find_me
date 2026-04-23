@@ -12,26 +12,26 @@ export const GuestWarningBar: React.FC = () => {
 
     return (
         <>
-            <div 
+            <div
                 onClick={() => setIsAuthModalOpen(true)}
-                className="shrink-0 w-full max-w-4xl mx-auto border border-yellow-600 bg-[#1a1600] p-4 flex flex-col md:flex-row items-center justify-center gap-4 cursor-pointer hover:bg-[#251e00] transition-colors rounded-sm z-50 mb-4"
+                className="shrink-0 border border-yellow-600/50 bg-[#1a1600]/80 backdrop-blur-md py-1.5 px-3 flex items-center gap-3 cursor-pointer hover:bg-[#251e00] transition-all rounded-sm z-50 shadow-lg group"
             >
-                <p className="text-[10px] md:text-xs text-yellow-500 font-pixel tracking-tighter">
-                    <span className="font-bold mr-2">[!] SYSTEM_WARNING:</span>
-                    게스트 세션은 저장이 불가능합니다.
+                <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>
+                <p className="text-[9px] md:text-[15px] text-yellow-500 font-pixel tracking-tighter">
+                    Change to User Mode
                 </p>
-                <span className="text-[10px] md:text-xs text-white border border-white px-3 py-1 font-pixel hover:bg-white hover:text-black transition-colors">
-                    LOGIN_REQUIRED
+                <span className="text-[9px] text-white border border-white/40 px-2 py-0.5 font-pixel group-hover:bg-white group-hover:text-black transition-colors">
+                    LOGIN
                 </span>
             </div>
-            
-            <AuthSelectionModal 
-                isOpen={isAuthModalOpen} 
-                onClose={() => setIsAuthModalOpen(false)} 
+
+            <AuthSelectionModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
                 onSelect={(provider) => {
                     setIsAuthModalOpen(false);
                     handleLoginWithProvider(provider);
-                }} 
+                }}
             />
         </>
     );
