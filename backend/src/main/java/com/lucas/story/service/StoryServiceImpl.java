@@ -366,7 +366,16 @@ public class StoryServiceImpl implements StoryService {
     return builder.build();
   }
 
-  /** 챕터 시작 전 해금 여부를 검증한다. */
+  /**
+   * 챕터 시작 전 해당 유저의 챕터 접근 권한(해금 여부)을 검증한다.
+   *
+   * <p>현재 챕터에 대한 진행 데이터가 없더라도 직전 챕터가 완료(COMPLETED)된 상태라면,
+   * 동적으로 현재 챕터의 진행 상태를 해금(UNLOCKED)으로 생성하여 진입을 허용한다.
+   *
+   * @param user 검증 대상 유저 엔티티
+   * @param chapter 접근하려는 대상 챕터 엔티티
+   * @throws CustomException A1002 - 챕터 접근 권한이 없거나 이전 챕터를 클리어하지 않은 경우
+   */
   private void validateChapterUnlocked(User user, Chapter chapter) {
     java.util.Optional<UserChapterProgress> progressOpt =
         userChapterProgressRepository.findByUserIdAndChapterId(user.getId(), chapter.getId());
