@@ -1,11 +1,13 @@
-import { apiClient } from "./client";
+import axiosInstance from "./axiosInstance";
+import type { BaseResponse } from "../types/api";
 
 export const fragmentApi = {
-  checkFragment: (code: string): Promise<boolean> => {
-    return apiClient.get<boolean>(`/api/v1/fragments/check/${code}`);
+  checkFragment: async (code: string): Promise<boolean> => {
+    const response = await axiosInstance.get<BaseResponse<boolean>>(`/api/v1/fragments/check/${code}`);
+    return response.data.data;
   },
 
-  acquireFragment: (code: string): Promise<void> => {
-    return apiClient.post(`/api/v1/fragments/acquire/${code}`);
-  }
+  acquireFragment: async (code: string): Promise<void> => {
+    await axiosInstance.post<BaseResponse<null>>(`/api/v1/fragments/acquire/${code}`);
+  },
 };
