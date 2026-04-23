@@ -14,7 +14,7 @@ pipeline {
         FRONT_IMAGE = "${DOCKER_HUB_ID}/find-me-frontend"
         BACK_IMAGE = "${DOCKER_HUB_ID}/find-me-backend"
         
-        ENV_TAG = "${env.BRANCH_NAME == 'main' ? 'prod' : 'dev'}"
+        ENV_TAG = "${(env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").contains('main') ? 'prod' : 'dev'}"
         
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
     }
@@ -50,23 +50,8 @@ pipeline {
                         env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
                     }
                     
-                    // 5. 이후 단계를 위해 브랜치명을 표준화된 변수로 저장 (선택 사항)
+                    // 5. 이후 단계를 위해 브랜치명을 표준화된 변수로 저장
                     env.NORMALIZED_BRANCH = currentBranch
-                    // if (!(env.BRANCH_NAME in ['main', 'develop'])) {
-                    //     currentBuild.result = 'ABORTED'
-                    //     error "배포 중단: 대상 브랜치가 아닙니다."
-                    // }
-
-                    // if (env.BRANCH_NAME == 'main') {
-                    //     echo "--- 운영 환경 ---"
-                    //     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                    //         sh "export GL_TOKEN=${GIT_TOKEN} && npx semantic-release"
-                    //     }
-                    //     env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
-                    // } else {
-                    //     echo "--- 개발 환경 ---"
-                    //     env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
-                    // }
                 }
             }
         }
@@ -74,7 +59,7 @@ pipeline {
         stage('Frontend Build & Push') {
             when { 
                 anyOf { branch 'main'; branch 'develop' }
-                changeset "frontend/**" 
+                // changeset "frontend/**" 
             }
             steps {
                 script {
@@ -98,7 +83,7 @@ pipeline {
         stage('Backend Build & Push') {
             when { 
                 anyOf { branch 'main'; branch 'develop' }
-                changeset "backend/**" 
+                // changeset "backend/**" 
             }
             steps {
                 script {
