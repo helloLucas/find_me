@@ -46,6 +46,17 @@ export interface StoryNodeResponse {
   terminal: boolean;
 }
 
+export interface TransitionNextNodeResponse {
+  id: number;
+  code: string;
+  nodeType: StoryNode["nodeType"];
+  outputBundle?: OutputBundle;
+  promptType: StoryNode["promptType"];
+  promptMeta?: PromptMeta | null;
+  checkpoint: boolean;
+  terminal: boolean;
+}
+
 export interface EffectBundle {
   type: string;
   payload?: any;
@@ -63,7 +74,7 @@ export interface TransitionRequest {
 }
 
 export interface TransitionResponse {
-  nextNode: StoryNode;
+  nextNode: TransitionNextNodeResponse;
   snapshot: ProgressSnapshot;
   effects?: EffectBundle[];
   result: "success" | "fail" | "retry" | "game_over";

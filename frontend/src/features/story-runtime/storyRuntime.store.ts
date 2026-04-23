@@ -15,7 +15,10 @@ import {
   shouldOpenBrowserForStoryNode,
   stringValue,
 } from "./outputBundle.adapters";
-import { normalizeStoryNodeResponse } from "./storyNode.adapters";
+import {
+  normalizeStoryNodeResponse,
+  normalizeTransitionNodeResponse,
+} from "./storyNode.adapters";
 import { userApi } from "../../shared/api/userApi";
 
 
@@ -205,13 +208,14 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         inputValue,
         meta,
       });
+      const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "retry") {
         // FAIL 노드 응답: currentNode 진행상태는 유지하고 FAIL 노드의 outputBundle만 UI에 반영한다.
         // 이렇게 해야 다음 입력도 여전히 현재 노드(currentNode) 기준으로 전이 판정된다.
-        applyStoryNodeOutputBundle(response.nextNode);
+        applyStoryNodeOutputBundle(normalizedNextNode);
       } else {
-        get().setCurrentNode(response.nextNode);
+        get().setCurrentNode(normalizedNextNode);
       }
     } catch (error) {
       set({

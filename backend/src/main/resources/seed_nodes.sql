@@ -464,7 +464,90 @@ VALUES
         "glitchLevel": 1
       },
       "content": {
+        "networkPanel": {
+          "totalRequests": 58,
+          "currentScrollIndex": 29,
+          "visibleRange": [29, 40],
+          "statusSummary": {
+            "200": 1,
+            "404": 49,
+            "500": 3,
+            "pending": 5
+          }
+        },
         "networkRequests": [
+          {
+            "id": "req_029",
+            "status": 404,
+            "method": "GET",
+            "name": "track.js",
+            "domain": "cdn.nexus-news.net",
+            "timeMs": 23,
+            "size": "0.4 KB"
+          },
+          {
+            "id": "req_030",
+            "status": 404,
+            "method": "GET",
+            "name": "analytics/ping.gif",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 41,
+            "size": "0.2 KB"
+          },
+          {
+            "id": "req_031",
+            "status": 404,
+            "method": "GET",
+            "name": "ads.js",
+            "domain": "static.nexus-news.net",
+            "timeMs": 18,
+            "size": "0.5 KB"
+          },
+          {
+            "id": "req_032",
+            "status": 404,
+            "method": "GET",
+            "name": "impression.log",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 37,
+            "size": "0.2 KB"
+          },
+          {
+            "id": "req_033",
+            "status": 404,
+            "method": "GET",
+            "name": "stat.gif",
+            "domain": "cdn.nexus-news.net",
+            "timeMs": 29,
+            "size": "0.1 KB"
+          },
+          {
+            "id": "req_034",
+            "status": 404,
+            "method": "GET",
+            "name": "user-cache.json",
+            "domain": "api.nexus-news.net",
+            "timeMs": 64,
+            "size": "0.8 KB"
+          },
+          {
+            "id": "req_035",
+            "status": 404,
+            "method": "GET",
+            "name": "session-trace.map",
+            "domain": "edge.nexus-news.net",
+            "timeMs": 57,
+            "size": "0.6 KB"
+          },
+          {
+            "id": "req_036",
+            "status": 404,
+            "method": "GET",
+            "name": "render-state.bin",
+            "domain": "api.nexus-news.net",
+            "timeMs": 92,
+            "size": "1.1 KB"
+          },
           {
             "id": "req_037",
             "status": 200,
@@ -475,6 +558,33 @@ VALUES
             "timeMs": 187,
             "size": "1.9 KB",
             "selected": true
+          },
+          {
+            "id": "req_038",
+            "status": 404,
+            "method": "GET",
+            "name": "prefetch-manifest.json",
+            "domain": "static.nexus-news.net",
+            "timeMs": 21,
+            "size": "0.7 KB"
+          },
+          {
+            "id": "req_039",
+            "status": 404,
+            "method": "GET",
+            "name": "banner-slot.js",
+            "domain": "ads.nexus-news.net",
+            "timeMs": 33,
+            "size": "0.5 KB"
+          },
+          {
+            "id": "req_040",
+            "status": 404,
+            "method": "GET",
+            "name": "tracking-seed.txt",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 47,
+            "size": "0.2 KB"
           }
         ],
         "detailTabs": ["Headers", "Response"]
@@ -500,6 +610,130 @@ VALUES
         "glitchLevel": 1
       },
       "content": {
+        "networkPanel": {
+          "totalRequests": 58,
+          "currentScrollIndex": 29,
+          "visibleRange": [29, 40],
+          "statusSummary": {
+            "200": 1,
+            "404": 49,
+            "500": 3,
+            "pending": 5
+          }
+        },
+        "networkRequests": [
+          {
+            "id": "req_029",
+            "status": 404,
+            "method": "GET",
+            "name": "track.js",
+            "domain": "cdn.nexus-news.net",
+            "timeMs": 23,
+            "size": "0.4 KB"
+          },
+          {
+            "id": "req_030",
+            "status": 404,
+            "method": "GET",
+            "name": "analytics/ping.gif",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 41,
+            "size": "0.2 KB"
+          },
+          {
+            "id": "req_031",
+            "status": 404,
+            "method": "GET",
+            "name": "ads.js",
+            "domain": "static.nexus-news.net",
+            "timeMs": 18,
+            "size": "0.5 KB"
+          },
+          {
+            "id": "req_032",
+            "status": 404,
+            "method": "GET",
+            "name": "impression.log",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 37,
+            "size": "0.2 KB"
+          },
+          {
+            "id": "req_033",
+            "status": 404,
+            "method": "GET",
+            "name": "stat.gif",
+            "domain": "cdn.nexus-news.net",
+            "timeMs": 29,
+            "size": "0.1 KB"
+          },
+          {
+            "id": "req_034",
+            "status": 404,
+            "method": "GET",
+            "name": "user-cache.json",
+            "domain": "api.nexus-news.net",
+            "timeMs": 64,
+            "size": "0.8 KB"
+          },
+          {
+            "id": "req_035",
+            "status": 404,
+            "method": "GET",
+            "name": "session-trace.map",
+            "domain": "edge.nexus-news.net",
+            "timeMs": 57,
+            "size": "0.6 KB"
+          },
+          {
+            "id": "req_036",
+            "status": 404,
+            "method": "GET",
+            "name": "render-state.bin",
+            "domain": "api.nexus-news.net",
+            "timeMs": 92,
+            "size": "1.1 KB"
+          },
+          {
+            "id": "req_037",
+            "status": 200,
+            "method": "GET",
+            "name": "core_anchor",
+            "path": "/api/laplace/core_anchor",
+            "domain": "api.nexus-news.net",
+            "timeMs": 187,
+            "size": "1.9 KB",
+            "selected": true
+          },
+          {
+            "id": "req_038",
+            "status": 404,
+            "method": "GET",
+            "name": "prefetch-manifest.json",
+            "domain": "static.nexus-news.net",
+            "timeMs": 21,
+            "size": "0.7 KB"
+          },
+          {
+            "id": "req_039",
+            "status": 404,
+            "method": "GET",
+            "name": "banner-slot.js",
+            "domain": "ads.nexus-news.net",
+            "timeMs": 33,
+            "size": "0.5 KB"
+          },
+          {
+            "id": "req_040",
+            "status": 404,
+            "method": "GET",
+            "name": "tracking-seed.txt",
+            "domain": "metrics.nexus-news.net",
+            "timeMs": 47,
+            "size": "0.2 KB"
+          }
+        ],
+        "detailTabs": ["Headers", "Response"],
         "headers": {
           "x-relay-host": "172.22.4.19",
           "x-relay-port": 22,
