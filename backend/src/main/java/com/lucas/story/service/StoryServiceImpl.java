@@ -85,8 +85,7 @@ public class StoryServiceImpl implements StoryService {
             .orElseThrow(() -> new CustomException(ErrorCode.E3002));
 
     User user = getAuthenticatedUser(userId);
-    UserStoryProgress progress =
-        userStoryProgressRepository.findById(user.getId()).orElse(null);
+    UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
 
     // 챕터 해금 상태 검증
     validateChapterUnlocked(user, chapter);
@@ -166,7 +165,6 @@ public class StoryServiceImpl implements StoryService {
       commandLogService.logCommand(user.getId(), request.getInputValue());
     }
 
-
     // ── Step 3: DB 기반 스토리 전이 ──
     // 현재 노드에서 출발하는 전이 목록을 우선순위 순으로 조회하고,
     // 유저의 액션과 매칭되는 전이를 찾아 다음 노드로 진행한다.
@@ -199,7 +197,10 @@ public class StoryServiceImpl implements StoryService {
     boolean isFailNode = nextNode.getCode().contains("_FAIL_");
 
     if (isFailNode) {
-      log.info("Fail node reached (progress NOT updated): User={}, FailNode={}", user.getId(), nextNode.getCode());
+      log.info(
+          "Fail node reached (progress NOT updated): User={}, FailNode={}",
+          user.getId(),
+          nextNode.getCode());
       return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry");
     }
 
@@ -281,7 +282,8 @@ public class StoryServiceImpl implements StoryService {
                                     .user(user)
                                     .latestChapter(firstChapter)
                                     .latestNode(firstNode)
-                                    .latestSnapshotJson(createEmptySnapshot(firstChapter, firstNode))
+                                    .latestSnapshotJson(
+                                        createEmptySnapshot(firstChapter, firstNode))
                                     .build());
                           }
                         });
@@ -291,7 +293,6 @@ public class StoryServiceImpl implements StoryService {
 
     return user;
   }
-
 
   /**
    * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라 exact(완전 일치) 또는
@@ -323,13 +324,15 @@ public class StoryServiceImpl implements StoryService {
   private boolean matchesServerRuleTransition(
       StoryTransition transition, TransitionRequestDto request) {
     JsonNode config = transition.getValidatorConfig();
-    String trigger = config != null && config.has("trigger") ? config.get("trigger").asText() : null;
+    String trigger =
+        config != null && config.has("trigger") ? config.get("trigger").asText() : null;
 
     // TODO: 정식 서버 룰 엔진 도입 전까지 system:auto 전이만 최소 지원한다.
     return "auto".equals(trigger) && "auto".equals(request.getInputValue());
   }
 
-  private TransitionResponseDto buildResponseFromNode(StoryNode node, JsonNode effectBundle, String result) {
+  private TransitionResponseDto buildResponseFromNode(
+      StoryNode node, JsonNode effectBundle, String result) {
     // 노드의 대사(outputBundle)와 메타데이터를 포함하여 응답 빌드
     TransitionResponseDto.TransitionResponseDtoBuilder builder =
         TransitionResponseDto.builder()
@@ -350,12 +353,13 @@ public class StoryServiceImpl implements StoryService {
     if (effectBundle != null && !effectBundle.isEmpty()) {
       // JsonNode (ObjectNode)의 필드들을 순회하며 EffectDto 리스트 생성
       List<EffectDto> effects = new java.util.ArrayList<>();
-      effectBundle.fields().forEachRemaining(entry -> {
-          effects.add(EffectDto.builder()
-              .type(entry.getKey())
-              .payload(entry.getValue())
-              .build());
-      });
+      effectBundle
+          .fields()
+          .forEachRemaining(
+              entry -> {
+                effects.add(
+                    EffectDto.builder().type(entry.getKey()).payload(entry.getValue()).build());
+              });
       builder.effects(effects);
     }
 
@@ -376,25 +380,30 @@ public class StoryServiceImpl implements StoryService {
 
     // 데이터가 없는 경우: 이전 챕터(sortOrder - 1) 클리어 여부 검사 후 동적 해금
     if (chapter.getSortOrder() > 1) {
-      Chapter prevChapter = chapterRepository.findBySortOrder(chapter.getSortOrder() - 1)
-          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
-          
-      UserChapterProgress prevProgress = userChapterProgressRepository
-          .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
-          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+      Chapter prevChapter =
+          chapterRepository
+              .findBySortOrder(chapter.getSortOrder() - 1)
+              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+
+      UserChapterProgress prevProgress =
+          userChapterProgressRepository
+              .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
+              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
 
       if (prevProgress.getStatus() != ChapterStatus.COMPLETED) {
         throw new CustomException(ErrorCode.A1002);
       }
 
       // 이전 챕터를 깼으므로 현재 챕터 UNLOCKED 레코드 동적 생성 및 진입 허용
-      UserChapterProgress newProgress = UserChapterProgress.builder()
-          .user(user)
-          .chapter(chapter)
-          .status(ChapterStatus.UNLOCKED)
-          .build();
+      UserChapterProgress newProgress =
+          UserChapterProgress.builder()
+              .user(user)
+              .chapter(chapter)
+              .status(ChapterStatus.UNLOCKED)
+              .build();
       userChapterProgressRepository.save(newProgress);
-      log.info("Dynamically unlocked chapter: User={}, Chapter={}", user.getId(), chapter.getCode());
+      log.info(
+          "Dynamically unlocked chapter: User={}, Chapter={}", user.getId(), chapter.getCode());
     } else {
       throw new CustomException(ErrorCode.A1002);
     }

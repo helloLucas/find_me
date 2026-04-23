@@ -44,7 +44,9 @@ public class AuthService {
   public void replaceRefreshToken(Long userId, String refreshToken) {
     String key = REFRESH_TOKEN_PREFIX + userId;
     // Redis 저장 및 TTL 설정 (Refresh Token 만료 시간과 동기화)
-    redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
+    redisTemplate
+        .opsForValue()
+        .set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
     log.info("Refresh Token 저장 완료 - userId: {}", userId);
   }
 
@@ -162,8 +164,7 @@ public class AuthService {
             null,
             guest.getRole().name(),
             accessTokenExpiration);
-    String refreshToken =
-        jwtUtil.createRefreshToken(guest.getId(), null, refreshTokenExpiration);
+    String refreshToken = jwtUtil.createRefreshToken(guest.getId(), null, refreshTokenExpiration);
 
     replaceRefreshToken(guest.getId(), refreshToken); // Redis 저장
 

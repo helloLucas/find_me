@@ -19,23 +19,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class FileController {
 
-    private final FileService fileService;
+  private final FileService fileService;
 
-    @PostMapping("/presigned/uploads")
-    public ResponseEntity<BaseResponse<PresignedUrlResponseDto>> getPresignedUrl(
-            @Valid @RequestBody PresignedUrlRequestDto request) {
+  @PostMapping("/presigned/uploads")
+  public ResponseEntity<BaseResponse<PresignedUrlResponseDto>> getPresignedUrl(
+      @Valid @RequestBody PresignedUrlRequestDto request) {
 
-        PresignedUrlResponseDto response = fileService.getUploadPresignedUrl(request);
+    PresignedUrlResponseDto response = fileService.getUploadPresignedUrl(request);
 
-        return ResponseEntity.ok(BaseResponse.success("Presigned URL for Upload 발급 성공", response));
-    }
-    @PostMapping("/presigned/downloads")
-    public ResponseEntity<BaseResponse<DownloadPresignedUrlResponseDto>> getDownloadPresignedUrl(
-        @Valid @RequestBody DownloadPresignedUrlRequestDto request) {
+    return ResponseEntity.ok(BaseResponse.success("Presigned URL for Upload 발급 성공", response));
+  }
 
-      DownloadPresignedUrlResponseDto response = fileService.getDownloadPresignedUrl(request);
+  @PostMapping("/presigned/downloads")
+  public ResponseEntity<BaseResponse<DownloadPresignedUrlResponseDto>> getDownloadPresignedUrl(
+      @Valid @RequestBody DownloadPresignedUrlRequestDto request) {
 
-      return ResponseEntity.ok(BaseResponse.success("다운로드 Presigned URL 발급 성공", response));
-    }
+    DownloadPresignedUrlResponseDto response = fileService.getDownloadPresignedUrl(request);
 
+    return ResponseEntity.ok(BaseResponse.success("다운로드 Presigned URL 발급 성공", response));
+  }
 }

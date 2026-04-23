@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PresignedUrlRequestDto {
 
-    @NotBlank(message = "파일 이름은 필수입니다.")
-    private String fileName;
+  @NotBlank(message = "파일 이름은 필수입니다.")
+  private String fileName;
 
-    @NotBlank(message = "Content-Type은 필수입니다 (예: image/jpeg).")
-    private String contentType;
+  @NotBlank(message = "Content-Type은 필수입니다 (예: image/jpeg).")
+  private String contentType;
 }

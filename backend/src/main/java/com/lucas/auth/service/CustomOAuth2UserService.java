@@ -75,8 +75,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         user.getProviderUserId(),
         user.getRole(),
         context.isNewUser(),
-        context.isGuest()
-    );
+        context.isGuest());
   }
 
   /**
@@ -109,7 +108,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         .findByProviderAndProviderUserId(provider, providerUserId)
         .map(
             user -> {
-              log.info("기존 회원 로그인 - provider={}, providerUserId={}, userId={}", provider, providerUserId, user.getId());
+              log.info(
+                  "기존 회원 로그인 - provider={}, providerUserId={}, userId={}",
+                  provider,
+                  providerUserId,
+                  user.getId());
               return new UserContext(user, false, false);
             })
         .orElseGet(
@@ -171,12 +174,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     // 게스트의 정보를 회원 정보로 덮어쓰고 role을 MEMBER로 전환
     User guest =
-        userRepository
-            .findById(guestId)
-            .orElseThrow(
-                () ->
-                    new CustomException(
-                        ErrorCode.E3000));
+        userRepository.findById(guestId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     guest.upgradeToMember(
         attributes.getEmail(),
