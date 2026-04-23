@@ -9,7 +9,6 @@ import com.lucas.progress.repository.UserChapterProgressRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 챕터(Chapter) 데이터 및 유저의 챕터 진행 상태(Progress)와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
- *
- * 시스템에 등록된 챕터 배포 여부 및 유저의 종속적 클리어 조건을 종합하여 화면 노출용 상태를 계산합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,58 +35,44 @@ public class ChapterService {
    * @return 챕터 상태 목록 (항상 4개)
    */
   public List<ChapterProgressResponse> getChapterProgressList(Long userId) {
-    // 1. 배포된 챕터(DB에 존재하는 챕터) 목록을 가져옵니다.
+    // 1. 배포된 챕터 목록 조회 및 Map 변환
     List<Chapter> publishedChapters = chapterRepository.findAll();
+    Map<String, Chapter> chapterMap = publishedChapters.stream()
+        .collect(Collectors.toMap(Chapter::getCode, chapter -> chapter));
 
-    // 코드별로 쉽게 접근하기 위한 Map
-    Map<String, Chapter> chapterMap =
-        publishedChapters.stream().collect(Collectors.toMap(Chapter::getCode, chapter -> chapter));
+    // 2. 유저의 전체 진행 상태를 한 번에 조회하여 Map으로 구성
+    List<UserChapterProgress> userProgressList = userChapterProgressRepository.findAllByUserId(userId);
+    Map<Long, UserChapterProgress> progressMap = userProgressList.stream()
+        .collect(Collectors.toMap(progress -> progress.getChapter().getId(), progress -> progress));
 
     List<ChapterProgressResponse> result = new ArrayList<>();
 
-    // 조건 3 (이전 챕터 완료 검증)을 위한 직전 챕터 진행상태 추적
-    // week01은 이전 챕터 조건이 필요 없으나 로직 통일성을 위해 초기값을 true 로 설정
-    boolean isPreviousChapterCompletedOrNull = true;
-
-    // 화면엔 고정으로 week01 ~ week04가 노출되어야 합니다 (기본 노출 요건)
-    for (int i = 0; i < FIXED_CHAPTER_CODES.size(); i++) {
-      String code = FIXED_CHAPTER_CODES.get(i);
+    for (String code : FIXED_CHAPTER_CODES) {
       Chapter chapter = chapterMap.get(code);
 
-      // 1. 미배포 챕터: DB에 코드가 없음
+      // 미배포 챕터: DB에 챕터 정보가 없음
       if (chapter == null) {
         result.add(ChapterProgressResponse.of(code, "Unknown", "DISABLED"));
-        // 현재 챕터가 미배포이므로, 다음 챕터도 해금 불가능
-        isPreviousChapterCompletedOrNull = false;
         continue;
       }
 
-      // 해당 챕터의 유저 진행 상태 조회
-      Optional<UserChapterProgress> progressOpt =
-          userChapterProgressRepository.findByUserIdAndChapterId(userId, chapter.getId());
-
+      // 챕터가 존재할 경우, 유저의 진행 상태 확인
+      UserChapterProgress progress = progressMap.get(chapter.getId());
       String currentStatus;
 
-      // 2. 유저 진행 상태가 존재(진행중이거나 클리어)하는 경우 -> 이미 활성화 상태
-      if (progressOpt.isPresent()) {
-        ChapterStatus status = progressOpt.get().getStatus();
-        currentStatus = status.name(); // LOCKED, UNLOCKED, COMPLETED
-
-        // 다음 챕터의 활성화 여부를 결정
-        isPreviousChapterCompletedOrNull =
-            (status == ChapterStatus.COMPLETED || status == ChapterStatus.UNLOCKED);
-
+      if (progress != null) {
+        // 유저 진행 상태 레코드가 존재함 (UNLOCKED 또는 COMPLETED)
+        // 이전 챕터를 클리어하여 데이터가 생성되었거나, 이미 완료한 상태
+        currentStatus = progress.getStatus().name();
       } else {
-        // 3. 유저 진행 상태가 없는 경우
-        // week01이거나 이전 챕터를 클리어하여 현재 챕터가 접근 가능한 상태
-        if (isPreviousChapterCompletedOrNull) {
+        // 유저 진행 상태 레코드가 없음
+        // 다음 챕터 해금 시 레코드가 생성되어야 하므로, 데이터가 없다는 것은 아직 도달하지 못한 챕터임을 의미 (LOCKED)
+        // 단, 첫 챕터(week01)는 이전 챕터가 없으므로 데이터가 없더라도 기본적으로 UNLOCKED 처리
+        if ("week01".equals(code)) {
           currentStatus = "UNLOCKED";
         } else {
           currentStatus = "LOCKED";
         }
-
-        // 현재 진행 기록이 없으므로 당연히 완료한 것도 아님. 다음 챕터는 비활성화.
-        isPreviousChapterCompletedOrNull = false;
       }
 
       result.add(ChapterProgressResponse.of(chapter.getCode(), chapter.getTitle(), currentStatus));
