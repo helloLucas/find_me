@@ -72,7 +72,7 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
         watermarkClass: "text-gray-800",
         action: (_, openModal) => openModal({
             title: 'SECURITY_ENFORCEMENT',
-            message: '아직 접근할 수 없습니다. 이전 챕터를 클리어해주세요.',
+            message: '아직 접근할 수 없습니다.\n이전 챕터를 클리어해주세요.',
             type: 'alert'
         }),
     },

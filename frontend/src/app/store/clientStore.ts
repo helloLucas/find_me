@@ -18,6 +18,10 @@ interface ClientState {
   terminalOutput: Array<{ type: "input" | "output" | "error" | "system", text: string, id: string }>;
   appendTerminalOutput: (type: "input" | "output" | "error" | "system", text: string) => void;
   clearTerminalOutput: () => void;
+
+  // System Access State
+  isAccessing: boolean;
+  setIsAccessing: (isAccessing: boolean) => void;
 }
 
 export const useClientStore = create<ClientState>((set) => ({
@@ -46,4 +50,7 @@ export const useClientStore = create<ClientState>((set) => ({
       ],
     })),
   clearTerminalOutput: () => set({ terminalOutput: [] }),
+
+  isAccessing: false,
+  setIsAccessing: (isAccessing) => set({ isAccessing }),
 }));

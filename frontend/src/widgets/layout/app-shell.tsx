@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
+import { useClientStore } from "../../app/store/clientStore";
 import { tokenManager } from "../../shared/utils/tokenManager";
 import { useModalStore } from "../../app/store/modalStore";
 import { GlobalModal } from "../GlobalModal";
@@ -10,7 +11,7 @@ export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const openModal = useModalStore((state) => state.openModal);
-  const [isAccessing, setIsAccessing] = useState(false);
+  const { isAccessing, setIsAccessing } = useClientStore();
 
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
@@ -18,43 +19,32 @@ export default function AppShell({ children }: PropsWithChildren) {
       if (event.origin !== window.location.origin) return;
 
       if (event.data?.type === 'AUTH_SUCCESS') {
-        setIsAccessing(true);
-
-        // 1. 전달받은 데이터 한 번에 구조 분해 할당 (refreshToken 제거)
         const { isNewUser, accessToken } = event.data;
 
-        // 1. 전달받은 토큰을 로컬에 안전하게 저장 (URL 노출 방지)
         if (accessToken) {
-            tokenManager.setAccessToken(accessToken);
+          tokenManager.setAccessToken(accessToken);
         }
 
-        // 2. Zustand 스토어 인증 상태 동기화
         checkAuth();
 
-        // 3. 우선순위에 따른 라우팅 (UX 몰입도)
-        setTimeout(() => {
-          setIsAccessing(false);
-
-          if (isNewUser) {
-            // 완전 신규 가입자: 닉네임 설정이 필요함
-            navigate('/setup-nickname', { replace: true });
-          } else {
-            // 기존 회원 혹은 게스트 전환자 (이미 닉네임이 있음)
+        if (isNewUser) {
+          // 신규 유저라면 오버레이 없이 즉시 닉네임 설정으로 이동
+          navigate('/setup-nickname', { replace: true });
+        } else {
+          // 기존 회원이면 접속 오버레이를 보여준 후 로비로 이동
+          setIsAccessing(true);
+          setTimeout(() => {
+            setIsAccessing(false);
             navigate('/lobby', { replace: true });
-          }
-        }, 1500);
+          }, 1500);
+        }
       } else if (event.data?.type === 'AUTH_PENDING_REGISTRATION') {
-        // 신규 가입 대기 상태: 닉네임 설정으로 유도
+        // 신규 가입 대기 상태: 오버레이 없이 즉시 닉네임 설정으로 유도
         const { tempKey, guestId } = event.data;
-        setIsAccessing(true);
-
-        setTimeout(() => {
-          setIsAccessing(false);
-          navigate('/setup-nickname', {
-            replace: true,
-            state: { tempKey, guestId }
-          });
-        }, 1500);
+        navigate('/setup-nickname', {
+          replace: true,
+          state: { tempKey, guestId }
+        });
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
         openModal({

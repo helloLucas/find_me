@@ -35,6 +35,8 @@ export const useUpdateNickname = () => {
             }
         },
         onSuccess: async (response, variables) => {
+            const setIsAccessing = useClientStore.getState().setIsAccessing;
+
             // 1. 터미널 컨텍스트 업데이트
             setTerminalContext(variables.nickname);
 
@@ -47,8 +49,12 @@ export const useUpdateNickname = () => {
                 useAuthStore.getState().setAuth(newAccessToken);
             }
 
-            // 3. 로비로 이동
-            navigate('/lobby', { replace: true });
+            // 3. 접속 오버레이 표시 후 로비로 이동
+            setIsAccessing(true);
+            setTimeout(() => {
+                setIsAccessing(false);
+                navigate('/lobby', { replace: true });
+            }, 1500);
         },
         onError: (error: any) => {
             console.error('Failed to update nickname:', error);
