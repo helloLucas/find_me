@@ -1,5 +1,5 @@
 # 1단계: 빌드 (Node 20 환경)
-FROM node:20-alpine AS build-stage
+FROM node:24-alpine AS build-stage
 WORKDIR /app
 
 # 종속성 설치 최적화 (package-lock.json 기준)
