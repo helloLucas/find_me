@@ -35,7 +35,6 @@ type StoryRuntimeState = {
 };
 
 const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
-  CH1_DARK_ARTICLE_OPEN: "auto",
   CH1_CONNECT_CORE_SUCCESS: "auto",
   CH1_SSH_CONNECTED: "auto",
 };

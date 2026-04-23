@@ -1,6 +1,21 @@
+export type ArticleCorruptionIntensity = "subtle" | "active";
+
+export interface ArticleCorruption {
+  paragraphIndexes: number[];
+  inspectIndex?: number;
+  intensity: ArticleCorruptionIntensity;
+}
+
+export interface StoryContent {
+  articleTitle?: string;
+  articleBody?: string[];
+  articleCorruption?: ArticleCorruption;
+  [key: string]: any;
+}
+
 export interface OutputBundle {
-  // Add specific fields if known, otherwise generic for now
   text?: string;
+  content?: StoryContent;
   [key: string]: any;
 }
 
