@@ -54,6 +54,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             .getProviderDetails()
             .getUserInfoEndpoint()
             .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
+
     Map<String, Object> attributes =
         oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
 
@@ -88,6 +89,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   private AuthProvider getAuthProvider(String registrationId) {
     if ("google".equalsIgnoreCase(registrationId)) {
       return AuthProvider.GOOGLE;
+    } else if ("ssafy".equalsIgnoreCase(registrationId)) {
+      return AuthProvider.SSAFY;
     }
     throw new OAuth2AuthenticationException("지원하지 않는 OAuth Provider 입니다: " + registrationId);
   }

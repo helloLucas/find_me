@@ -13,6 +13,7 @@ export type NormalizedStoryOutputBundle = {
     id?: string;
     mode?: string;
     bgm?: string;
+    preVideo?: string;
     glitchLevel: number;
   };
   content: StoryOutputBundleRecord;
@@ -33,6 +34,7 @@ export function normalizeStoryOutputBundle(
       id: stringValue(scene.id),
       mode: stringValue(scene.mode),
       bgm: stringValue(scene.bgm),
+      preVideo: stringValue(scene.preVideo),
       glitchLevel: numberValue(scene.glitchLevel, 0),
     },
     content: objectRecord(raw.content) ?? {},

@@ -33,10 +33,18 @@ public class OAuthAttributes {
   public static OAuthAttributes of(
       AuthProvider provider, String userNameAttributeName, Map<String, Object> attributes) {
 
-    //        if (provider == AuthProvider.MATTERMOST) {
-    //            return ofMattermost(userNameAttributeName, attributes);
-    //        }
+    if (provider == AuthProvider.SSAFY) {
+      return ofSsafy(userNameAttributeName, attributes);
+    }
     return ofGoogle(userNameAttributeName, attributes);
+  }
+
+  private static OAuthAttributes ofSsafy(
+      String userNameAttributeName, Map<String, Object> attributes) {
+    return OAuthAttributes.builder()
+        .nameAttributeKey(userNameAttributeName)
+        .oauth2UserInfo(new SsafyOAuth2UserInfo(attributes))
+        .build();
   }
 
   /**

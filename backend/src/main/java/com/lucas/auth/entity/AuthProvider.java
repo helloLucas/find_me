@@ -4,6 +4,6 @@ package com.lucas.auth.entity;
 public enum AuthProvider {
   /** 구글 소셜 로그인 */
   GOOGLE,
-  /** 매터모스트 소셜 로그인 */
-  MATTERMOST
+  /** SSAFY 소셜 로그인 */
+  SSAFY
 }

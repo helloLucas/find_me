@@ -1,14 +1,25 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '../app/store/authStore';
 import { useAuthActions } from '../features/Auth/useAuthActions';
 import MainMenu from '../widgets/MainMenu/MainMenu';
 import { useModalStore } from '../app/store/modalStore';
+import { AuthSelectionModal } from '../widgets/AuthSelection';
 
 const Home = () => {
     const checkAuth = useAuthStore((state) => state.checkAuth);
-    const { handleSystemAccess, handleGuestAccess, handleLogout } = useAuthActions();
+    const { handleLoginWithProvider, handleGuestAccess, handleLogout } = useAuthActions();
 
     const openModal = useModalStore((state) => state.openModal);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+    const handleLoginClick = () => {
+        setIsAuthModalOpen(true);
+    };
+
+    const handleSelectProvider = (provider: 'google' | 'ssafy') => {
+        setIsAuthModalOpen(false);
+        handleLoginWithProvider(provider);
+    };
 
     const handleGuestClick = () => {
         openModal({
@@ -167,7 +178,7 @@ const Home = () => {
                 </header>
 
                 <MainMenu
-                    onLoginClick={handleSystemAccess}
+                    onLoginClick={handleLoginClick}
                     onGuestClick={handleGuestClick}
                     onLogoutClick={handleLogoutClick}
                 />
@@ -180,8 +191,11 @@ const Home = () => {
                 </p>
             </div>
 
-
-
+            <AuthSelectionModal 
+                isOpen={isAuthModalOpen} 
+                onClose={() => setIsAuthModalOpen(false)} 
+                onSelect={handleSelectProvider}
+            />
         </div>
     );
 };

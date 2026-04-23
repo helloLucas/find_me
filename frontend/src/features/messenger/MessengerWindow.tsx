@@ -15,12 +15,13 @@ export const MessengerWindow: React.FC = () => {
   const allRooms = Object.values(conversations);
 
   // 드래그 중에는 React 렌더링 없이 ref 값만 갱신한다.
+  // 초기 렌더링 시 화면 중앙에 배치되도록 설정한다.
   const drag = useRef({
     isDragging: false,
     startX: 0,
     startY: 0,
-    x: 0,
-    y: 0,
+    x: typeof window !== "undefined" ? Math.round(window.innerWidth / 2 - WINDOW_W / 2) : 0,
+    y: typeof window !== "undefined" ? Math.round(window.innerHeight / 2 - WINDOW_H / 2) : 0,
     startLeft: 0,
     startTop: 0,
   });
