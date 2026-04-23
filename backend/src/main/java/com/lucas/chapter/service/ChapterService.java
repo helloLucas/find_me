@@ -3,7 +3,6 @@ package com.lucas.chapter.service;
 import com.lucas.chapter.dto.response.ChapterProgressResponse;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
-import com.lucas.progress.entity.ChapterStatus;
 import com.lucas.progress.entity.UserChapterProgress;
 import com.lucas.progress.repository.UserChapterProgressRepository;
 import java.util.ArrayList;
@@ -68,7 +67,7 @@ public class ChapterService {
         // 유저 진행 상태 레코드가 없음
         // 다음 챕터 해금 시 레코드가 생성되어야 하므로, 데이터가 없다는 것은 아직 도달하지 못한 챕터임을 의미 (LOCKED)
         // 단, 첫 챕터(week01)는 이전 챕터가 없으므로 데이터가 없더라도 기본적으로 UNLOCKED 처리
-        if ("week01".equals(code)) {
+        if (FIXED_CHAPTER_CODES.get(0).equals(code)) {
           currentStatus = "UNLOCKED";
         } else {
           currentStatus = "LOCKED";
