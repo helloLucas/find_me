@@ -58,8 +58,7 @@ pipeline {
 
         stage('Frontend Build & Push') {
             when { 
-                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
-                return b.contains('main') || b.contains('develop')
+                expression { return isTargetBranch() }
                 // anyOf { branch 'main'; branch 'develop' }
                 // changeset "frontend/**" 
             }
@@ -84,8 +83,7 @@ pipeline {
 
         stage('Backend Build & Push') {
             when { 
-                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
-                return b.contains('main') || b.contains('develop')
+                expression { return isTargetBranch() }
                 // anyOf { branch 'main'; branch 'develop' }
                 // changeset "backend/**" 
             }
@@ -106,8 +104,7 @@ pipeline {
 
         stage('K8s Manifest Update & Push') {
             when { 
-                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
-                return b.contains('main') || b.contains('develop')
+                expression { return isTargetBranch() }
                 // anyOf { branch 'main'; branch 'develop' } 
                 }
             steps {
@@ -136,4 +133,11 @@ pipeline {
             }
         }
     }
+}
+
+def isTargetBranch() {
+    // 젠킨스가 인식하는 여러 브랜치 변수들 중 하나라도 'main'이나 'develop'을 포함하는지 확인
+    def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: ""
+    echo "--- 현재 브랜치 체크: ${b} ---"
+    return b.contains('develop') || b.contains('main')
 }
