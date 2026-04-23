@@ -58,7 +58,9 @@ pipeline {
 
         stage('Frontend Build & Push') {
             when { 
-                anyOf { branch 'main'; branch 'develop' }
+                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
+                return b.contains('main') || b.contains('develop')
+                // anyOf { branch 'main'; branch 'develop' }
                 // changeset "frontend/**" 
             }
             steps {
@@ -82,7 +84,9 @@ pipeline {
 
         stage('Backend Build & Push') {
             when { 
-                anyOf { branch 'main'; branch 'develop' }
+                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
+                return b.contains('main') || b.contains('develop')
+                // anyOf { branch 'main'; branch 'develop' }
                 // changeset "backend/**" 
             }
             steps {
@@ -101,7 +105,11 @@ pipeline {
         }
 
         stage('K8s Manifest Update & Push') {
-            when { anyOf { branch 'main'; branch 'develop' } }
+            when { 
+                def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ""
+                return b.contains('main') || b.contains('develop')
+                // anyOf { branch 'main'; branch 'develop' } 
+                }
             steps {
                 script {
                     def backendSecretId = "backend-env-${ENV_TAG}"
