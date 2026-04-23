@@ -39,6 +39,9 @@ public class CustomOAuth2User extends DefaultOAuth2User {
   /** 게스트 계승(전환) 여부 */
   private final boolean isGuest;
 
+  /** 닉네임 입력 대기 중인 임시 유저 여부 (DB 저장 전) */
+  private final boolean isPendingRegistration;
+
   /**
    * @param authorities Spring Security 권한 목록
    * @param attributes OAuth 제공자(Google 등)가 준 원본 사용자 정보
@@ -51,6 +54,7 @@ public class CustomOAuth2User extends DefaultOAuth2User {
    * @param role 사용자 권한
    * @param isNewUser 신규 가입 여부 플래그
    * @param isGuest 게스트 승격 여부 플래그
+   * @param isPendingRegistration 닉네임 입력 대기 여부 플래그
    */
   public CustomOAuth2User(
       Collection<? extends GrantedAuthority> authorities,
@@ -63,7 +67,8 @@ public class CustomOAuth2User extends DefaultOAuth2User {
       String providerUserId,
       UserRole role,
       boolean isNewUser,
-      boolean isGuest) {
+      boolean isGuest,
+      boolean isPendingRegistration) {
     super(authorities, attributes, nameAttributeKey);
     this.userId = userId;
     this.email = email;
@@ -73,5 +78,6 @@ public class CustomOAuth2User extends DefaultOAuth2User {
     this.role = role;
     this.isNewUser = isNewUser;
     this.isGuest = isGuest;
+    this.isPendingRegistration = isPendingRegistration;
   }
 }

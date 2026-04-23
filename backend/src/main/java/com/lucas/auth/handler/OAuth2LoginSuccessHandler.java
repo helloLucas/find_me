@@ -1,5 +1,6 @@
 package com.lucas.auth.handler;
 
+import com.lucas.auth.dto.PendingUserInfo;
 import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.util.JwtUtil;
@@ -49,23 +50,47 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
+        // 닉네임 입력 대기 중인 경우 (DB 저장 전)
+        if (customOAuth2User.isPendingRegistration()) {
+            PendingUserInfo pendingInfo = PendingUserInfo.builder()
+                    .email(customOAuth2User.getEmail())
+                    .provider(customOAuth2User.getProvider())
+                    .providerUserId(customOAuth2User.getProviderUserId())
+                    .oauthName(customOAuth2User.getName()) // nameAttributeKey에 해당하는 값
+                    .build();
+
+            String tempKey = authService.savePendingUserInfo(pendingInfo); // redis에 임시 저장
+
+            // 게스트 전환 대기 중인 경우 guestId도 함께 전달
+            Long guestId = customOAuth2User.getUserId(); // context.user()가 guest일 경우 ID가 있음
+
+            String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
+                    .queryParam("tempKey", tempKey)
+                    .queryParam("isNewUser", true)
+                    .queryParam("isGuest", customOAuth2User.isGuest())
+                    .queryParam("guestId", guestId != null ? guestId.toString() : "")
+                    .build().toUriString();
+
+            response.sendRedirect(targetUrl);
+            return;
+        }
+
         Long userId = customOAuth2User.getUserId();
         String email = customOAuth2User.getEmail();
         String role = customOAuth2User.getRole().name();
         String nickname = customOAuth2User.getNickname();
 
-        // [보안/아키텍처 개선] 닉네임 존재 여부만으로 신규 가입자(true)와 기존 회원/게스트 전환자(false)를 구분
+        // 전용 서비스(CustomOAuth2UserService)에서 판단한 플래그를 사용하여 경로를 결정합니다.
         boolean isNewUser = customOAuth2User.isNewUser();
         boolean isGuest = customOAuth2User.isGuest();
 
-        String accessToken =
-                jwtUtil.createAccessToken(
-                        userId,
-                        email,
-                        nickname,
-                        customOAuth2User.getProvider(),
-                        role,
-                        accessTokenExpiration);
+        String accessToken = jwtUtil.createAccessToken(
+                userId,
+                email,
+                nickname,
+                customOAuth2User.getProvider(),
+                role,
+                accessTokenExpiration);
 
         String refreshToken = jwtUtil.createRefreshToken(userId, email, refreshTokenExpiration);
 

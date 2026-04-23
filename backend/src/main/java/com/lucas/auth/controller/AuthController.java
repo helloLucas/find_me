@@ -1,10 +1,11 @@
 package com.lucas.auth.controller;
 
 import com.lucas.auth.dto.response.RefreshTokenResponse;
-import com.lucas.auth.dto.response.TokenResponse;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.dto.BaseResponse;
+import java.util.HashMap;
+import java.util.Map;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
@@ -87,19 +88,18 @@ public class AuthController {
     }
 
     /**
-     * 게스트 사용자의 세션을 초기화하고 임시 토큰을 발급합니다.
+     * 게스트 사용자의 정보를 임시 보관하고 식별용 임시 키를 발급합니다.
      *
-     * @param response HTTP 응답 객체
-     * @return 발급된 게스트 토큰 정보를 포함한 응답 객체
+     * @return 발급된 임시 식별 키(tempKey) 정보를 포함한 응답 객체
      */
     @GetMapping("/guest-init")
-    public ResponseEntity<BaseResponse<TokenResponse>> initGuest(HttpServletResponse response) {
-        TokenResponse result = authService.initGuest();
+    public ResponseEntity<BaseResponse<Map<String, String>>> initGuest() {
+        String tempKey = authService.initGuest();
 
-        // 발급된 리프레시 토큰을 쿠키에 설정 (yml 설정값 반영)
-        setRefreshTokenCookie(response, result.getRefreshToken(), refreshTokenExpiration / 1000);
+        Map<String, String> data = new HashMap<>();
+        data.put("tempKey", tempKey);
 
-        return ResponseEntity.ok(BaseResponse.success("게스트 세션이 초기화되었습니다.", result));
+        return ResponseEntity.ok(BaseResponse.success("게스트 세션이 임시 생성되었습니다.", data));
     }
 
     /**
