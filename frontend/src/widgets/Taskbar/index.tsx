@@ -19,7 +19,6 @@ export const Taskbar: React.FC = () => {
     setShowExitOverlay(false);
     navigate('/lobby', { replace: true });
   };
->>>>>>> 7eaa1d8d552d3937072a116676d0157cf404df63
 
   const handleTerminalTaskbarClick = () => {
     if (isTerminalMinimized) {
