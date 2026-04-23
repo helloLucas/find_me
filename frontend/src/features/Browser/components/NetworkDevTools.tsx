@@ -53,7 +53,7 @@ export const NetworkDevTools: React.FC = () => {
     submitStoryCommand,
   } = useStoryRuntimeStore();
   const persistedContent = useBrowserContentStore((state) => state.content);
-  const isRelayClueUnlocked = useBrowserContentStore((state) => state.isRelayClueUnlocked);
+
   const [activeTab, setActiveTab] = useState<DevToolsTab>("elements");
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("Headers");
@@ -77,11 +77,8 @@ export const NetworkDevTools: React.FC = () => {
 
   const rawHeaders = objectRecord(content.headers) ?? {};
   const rawResponseBody = content.responseBody;
-  const responseRecord = objectRecord(rawResponseBody);
-  const isRelayResponseBody = Boolean(objectRecord(responseRecord?.relay));
-  const headersAreRelay = Object.prototype.hasOwnProperty.call(rawHeaders, "x-relay-host");
-  const headers = headersAreRelay && !isRelayClueUnlocked ? {} : rawHeaders;
-  const responseBody = isRelayResponseBody && !isRelayClueUnlocked ? undefined : rawResponseBody;
+  const headers = rawHeaders;
+  const responseBody = rawResponseBody;
 
   const logs = useMemo(() => {
     const requests = recordArray(content.networkRequests).map(normalizeNetworkLog);

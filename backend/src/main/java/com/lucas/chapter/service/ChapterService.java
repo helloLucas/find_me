@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 챕터(Chapter) 데이터 및 유저의 챕터 진행 상태(Progress)와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
+ *
+ * <p>시스템에 등록된 챕터 배포 여부 및 유저의 종속적 클리어 조건을 종합하여 화면 노출용 상태를 계산합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,13 +38,16 @@ public class ChapterService {
   public List<ChapterProgressResponse> getChapterProgressList(Long userId) {
     // 1. 배포된 챕터 목록 조회 및 Map 변환
     List<Chapter> publishedChapters = chapterRepository.findAll();
-    Map<String, Chapter> chapterMap = publishedChapters.stream()
-        .collect(Collectors.toMap(Chapter::getCode, chapter -> chapter));
+    Map<String, Chapter> chapterMap =
+        publishedChapters.stream().collect(Collectors.toMap(Chapter::getCode, chapter -> chapter));
 
     // 2. 유저의 전체 진행 상태를 한 번에 조회하여 Map으로 구성
-    List<UserChapterProgress> userProgressList = userChapterProgressRepository.findAllByUserId(userId);
-    Map<Long, UserChapterProgress> progressMap = userProgressList.stream()
-        .collect(Collectors.toMap(progress -> progress.getChapter().getId(), progress -> progress));
+    List<UserChapterProgress> userProgressList =
+        userChapterProgressRepository.findAllByUserId(userId);
+    Map<Long, UserChapterProgress> progressMap =
+        userProgressList.stream()
+            .collect(
+                Collectors.toMap(progress -> progress.getChapter().getId(), progress -> progress));
 
     List<ChapterProgressResponse> result = new ArrayList<>();
 

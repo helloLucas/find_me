@@ -1,7 +1,6 @@
 package com.lucas.progress.repository;
 
 import com.lucas.progress.entity.UserChapterProgress;
-
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 챕터와 관련된 클라이언트 요청을 처리하는 컨트롤러 클래스입니다.
  *
- * 사용자별 챕터 접근 및 진행 상태 조회 기능을 제공합니다.
+ * <p>사용자별 챕터 접근 및 진행 상태 조회 기능을 제공합니다.
  */
 @RestController
 @RequiredArgsConstructor

@@ -18,19 +18,19 @@ public class RedisConfig {
   @Value("${spring.data.redis.port}")
   private int port;
 
-    @Value("${spring.data.redis.password}")
-    private String password;
+  @Value("${spring.data.redis.password}")
+  private String password;
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        // 호스트, 포트, 비밀번호를 포함한 독립형 Redis 설정 생성
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
-        if (password != null && !password.isBlank()) {
-            config.setPassword(password);
-        }
-        
-        return new LettuceConnectionFactory(config);
+  @Bean
+  public RedisConnectionFactory redisConnectionFactory() {
+    // 호스트, 포트, 비밀번호를 포함한 독립형 Redis 설정 생성
+    RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
+    if (password != null && !password.isBlank()) {
+      config.setPassword(password);
     }
+
+    return new LettuceConnectionFactory(config);
+  }
 
   @Bean
   public RedisTemplate<String, String> redisTemplate() {
