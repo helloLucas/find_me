@@ -55,6 +55,7 @@ public class SecurityConfig {
                         "/api/v1/users/register",
                         "/api/v1/health",
                         "/oauth2/**",
+                        "/actuator/**",
                         "/error")
                     .permitAll()
                     .anyRequest()

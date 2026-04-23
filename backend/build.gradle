@@ -42,6 +42,10 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // 모니터링 의존성
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
     // .env 파일 로드 의존성
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
@@ -60,4 +64,8 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
+}
+
+jar {
+    enabled = false // plain.jar 생성 방지
 }
