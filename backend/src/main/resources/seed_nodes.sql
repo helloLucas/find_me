@@ -705,7 +705,7 @@ VALUES
     'click',
     $${
       "allowedActions": ["click"],
-      "clickTargets": ["reopen_network_clue"]
+      "clickTargets": ["open_terminal"]
     }$$::jsonb,
     false,
     false
@@ -846,21 +846,8 @@ VALUES
         "bgm": "rain",
         "glitchLevel": 0
       },
-      "content": {
-        "completionTitle": "Chapter 01 Complete",
-        "completionText": [
-          "루카스 서버 접속에 성공했습니다.",
-          "다음 챕터 준비 중..."
-        ]
-      },
-      "notifications": [
-        {
-          "type": "system",
-          "title": "로비 복귀",
-          "body": "다음 챕터 공개 시점은 로비에서 확인할 수 있습니다.",
-          "priority": "medium"
-        }
-      ]
+      "content": {},
+      "notifications": []
     }$$::jsonb,
     'none',
     $${
