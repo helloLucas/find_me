@@ -30,8 +30,8 @@ public class UserController {
   private long accessTokenExpiration;
 
   /**
-   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다.
-   * 수정 성공 시, 변경된 닉네임이 반영된 새로운 Access Token을 반환합니다.
+   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다. 수정 성공 시, 변경된 닉네임이 반영된 새로운
+   * Access Token을 반환합니다.
    *
    * @param principal 인증된 사용자의 정보
    * @param request 수정할 닉네임 정보가 담긴 DTO
@@ -45,18 +45,20 @@ public class UserController {
     userService.updateNickname(principal.getUserId(), request.getNickname());
 
     // 최신 정보로 토큰 갱신을 위해 DB 재조회
-    User user = userRepository.findById(principal.getUserId())
+    User user =
+        userRepository
+            .findById(principal.getUserId())
             .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
     // 새로운 Access Token 생성 (새 닉네임 포함)
-    String newAccessToken = jwtUtil.createAccessToken(
+    String newAccessToken =
+        jwtUtil.createAccessToken(
             user.getId(),
             user.getEmail(),
             user.getNickname(),
             user.getProvider(),
             user.getRole().name(),
-            accessTokenExpiration
-    );
+            accessTokenExpiration);
 
     Map<String, String> data = new HashMap<>();
     data.put("accessToken", newAccessToken);

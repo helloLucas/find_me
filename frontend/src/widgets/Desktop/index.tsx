@@ -8,10 +8,15 @@ import { Window } from '../../shared/ui/Window';
 import { Browser } from '../../features/Browser';
 import { MessengerNotificationCard, MessengerWindow } from '../../features/messenger';
 import { Lucas } from '../../features/Lucas/Lucas';
+import { useStoryRuntimeStore } from '../../features/story-runtime/storyRuntime.store';
+import { canSubmitStoryAction } from '../../features/story-runtime/storyActionGuards';
+
 
 export const Desktop: React.FC = () => {
   const { openTerminal } = useClientStore();
   const { windows, openWindow } = useWindowStore();
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+
   const [selectionBox, setSelectionBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
   React.useEffect(() => {
@@ -39,6 +44,10 @@ export const Desktop: React.FC = () => {
   const handleIconDoubleClick = (id: string) => {
     if (id === 'terminal') {
       openTerminal();
+      // 터미널 아이콘을 여는 행위를 스토리 완수 조건으로 인식하게 함
+      if (canSubmitStoryAction(currentNode, "click", "open_terminal")) {
+        void submitStoryClick("open_terminal");
+      }
     } else if (id === 'chrome') {
       openWindow('browser', 'Web Browser', id);
     } else {

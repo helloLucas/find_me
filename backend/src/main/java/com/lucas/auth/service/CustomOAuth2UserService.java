@@ -55,7 +55,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             .getUserInfoEndpoint()
             .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
 
-    Map<String, Object> attributes = oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
+    Map<String, Object> attributes =
+        oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
 
     // provider에 따라 유저 정보를 통해 OAuthAttributes 객체 생성
     OAuthAttributes extractAttributes =
@@ -75,8 +76,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         user.getProviderUserId(),
         user.getRole(),
         context.isNewUser(),
-        context.isGuest()
-    );
+        context.isGuest());
   }
 
   /**
@@ -111,7 +111,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         .findByProviderAndProviderUserId(provider, providerUserId)
         .map(
             user -> {
-              log.info("기존 회원 로그인 - provider={}, providerUserId={}, userId={}", provider, providerUserId, user.getId());
+              log.info(
+                  "기존 회원 로그인 - provider={}, providerUserId={}, userId={}",
+                  provider,
+                  providerUserId,
+                  user.getId());
               return new UserContext(user, false, false);
             })
         .orElseGet(
@@ -173,12 +177,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     // 게스트의 정보를 회원 정보로 덮어쓰고 role을 MEMBER로 전환
     User guest =
-        userRepository
-            .findById(guestId)
-            .orElseThrow(
-                () ->
-                    new CustomException(
-                        ErrorCode.E3000));
+        userRepository.findById(guestId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     guest.upgradeToMember(
         attributes.getEmail(),

@@ -6,6 +6,7 @@ import com.lucas.file.dto.response.DownloadPresignedUrlResponseDto;
 import com.lucas.file.dto.response.PresignedUrlResponseDto;
 
 public interface FileService {
-    PresignedUrlResponseDto getUploadPresignedUrl(PresignedUrlRequestDto request);
-    DownloadPresignedUrlResponseDto getDownloadPresignedUrl(DownloadPresignedUrlRequestDto request);
+  PresignedUrlResponseDto getUploadPresignedUrl(PresignedUrlRequestDto request);
+
+  DownloadPresignedUrlResponseDto getDownloadPresignedUrl(DownloadPresignedUrlRequestDto request);
 }

@@ -6,6 +6,7 @@ import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.
 import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputBundle.adapters";
 import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
+import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 
 function getIsFullscreen() {
   return !!document.fullscreenElement || (window.innerHeight === screen.height);
@@ -83,6 +84,10 @@ export default function PlayPage() {
         <div className="absolute left-4 top-4 z-[100] max-w-[360px] rounded border border-red-400/50 bg-black/80 px-3 py-2 text-xs text-red-100">
           {error}
         </div>
+      )}
+
+      {currentNode?.isTerminal && (
+        <ChapterCompletionModal />
       )}
 
       {/* Hidden info for development/debugging */}

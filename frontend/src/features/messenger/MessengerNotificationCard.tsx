@@ -31,9 +31,9 @@ export const MessengerNotificationCard: React.FC = () => {
     }
   };
 
-  return (
+    return (
     <div
-      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none"
+      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-pixel"
       onClick={handleOpenNotification}
     >
       <div

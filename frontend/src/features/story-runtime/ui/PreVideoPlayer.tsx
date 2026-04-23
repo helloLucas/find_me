@@ -13,9 +13,9 @@ export function PreVideoPlayer({ videoUrl, onFinish }: PreVideoPlayerProps) {
 
   useEffect(() => {
     const video = videoRef.current;
-    video.volume = 0.5;
 
     if (!video) return;
+    video.volume = 0.5;
 
     let hls: Hls | null = null;
 

@@ -113,7 +113,7 @@ export const MessengerWindow: React.FC = () => {
   return (
     <div
       ref={windowRef}
-      className="absolute top-0 left-0 hover:z-[9999]"
+      className="absolute top-0 left-0 hover:z-[9999] font-pixel"
       style={{ width: 400, height: WINDOW_H, zIndex: messengerZIndex }}
       onMouseDown={focusMessenger}
     >
