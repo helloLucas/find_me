@@ -23,12 +23,23 @@ pipeline {
         stage('Initialize & Release') {
             steps {
                 script {
-                    if (!(env.BRANCH_NAME in ['main', 'develop'])) {
+                    // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
+                    // env.BRANCH_NAME이 없으면 env.GIT_BRANCH나 GitLab 플러그인 변수를 확인합니다.
+                    def rawBranch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.gitlabTargetBranch ?: ""
+                    
+                    // 2. 'origin/develop' 같이 경로가 포함된 경우를 대비해 순수 이름만 추출
+                    def currentBranch = rawBranch.replace('origin/', '')
+                    
+                    echo "--- 디버깅: 현재 인식된 브랜치명: ${currentBranch} ---"
+
+                    // 3. 브랜치 검증
+                    if (!(currentBranch in ['main', 'develop'])) {
                         currentBuild.result = 'ABORTED'
-                        error "배포 중단: 대상 브랜치가 아닙니다."
+                        error "배포 중단: 대상 브랜치가 아닙니다. (인식된 브랜치: ${currentBranch})"
                     }
 
-                    if (env.BRANCH_NAME == 'main') {
+                    // 4. 환경에 따른 처리 (currentBranch 변수 사용)
+                    if (currentBranch == 'main') {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                             sh "export GL_TOKEN=${GIT_TOKEN} && npx semantic-release"
@@ -38,6 +49,24 @@ pipeline {
                         echo "--- 개발 환경 ---"
                         env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
                     }
+                    
+                    // 5. 이후 단계를 위해 브랜치명을 표준화된 변수로 저장 (선택 사항)
+                    env.NORMALIZED_BRANCH = currentBranch
+                    // if (!(env.BRANCH_NAME in ['main', 'develop'])) {
+                    //     currentBuild.result = 'ABORTED'
+                    //     error "배포 중단: 대상 브랜치가 아닙니다."
+                    // }
+
+                    // if (env.BRANCH_NAME == 'main') {
+                    //     echo "--- 운영 환경 ---"
+                    //     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    //         sh "export GL_TOKEN=${GIT_TOKEN} && npx semantic-release"
+                    //     }
+                    //     env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
+                    // } else {
+                    //     echo "--- 개발 환경 ---"
+                    //     env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
+                    // }
                 }
             }
         }
