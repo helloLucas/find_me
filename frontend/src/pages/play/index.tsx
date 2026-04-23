@@ -7,20 +7,32 @@ import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputB
 import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
 
+function getIsFullscreen() {
+  return !!document.fullscreenElement || (window.innerHeight === screen.height);
+}
+
 export default function PlayPage() {
   const { chapterCode } = useParams();
   const { error, initializeStory, currentNode } = useStoryRuntimeStore();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const processedNodeIdRef = useRef<number | string | null>(null);
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const syncFullscreenState = () => {
+      setIsFullscreen(getIsFullscreen());
     };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+
+    syncFullscreenState();
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    window.addEventListener("resize", syncFullscreenState);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      window.removeEventListener("resize", syncFullscreenState);
+    };
   }, []);
 
   useEffect(() => {
