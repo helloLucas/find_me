@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
+import { useAuthStore } from '../../app/store/authStore';
 
 /**
  * SetupNicknamePage
@@ -9,13 +10,33 @@ const SetupNicknamePage = () => {
     const [nickname, setNickname] = useState('');
     const { mutate, isPending } = useUpdateNickname();
     const navigate = useNavigate();
+    const location = useLocation();
+    const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+    // location.state 타입 가드 및 추출
+    const state = location.state as { tempKey?: string; guestId?: string } | null;
+    const tempKey = state?.tempKey;
+    const guestId = state?.guestId;
+
+    // 가입 세션체크: tempKey가 없으면서 로그인도 되어있지 않은 경우에만 로그인으로 리다이렉트
+    // (게스트 모드는 이미 isLoggedIn이 true인 상태로 진입하므로 통과됨)
+    useEffect(() => {
+        if (!tempKey && !isLoggedIn) {
+            console.warn('Sign-up session expired or state lost. Redirecting to login.');
+            navigate('/login', { replace: true });
+        }
+    }, [tempKey, isLoggedIn, navigate]);
 
     const isValid = nickname.trim().length >= 2;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!isValid || isPending) return;
-        mutate({ nickname });
+        mutate({ 
+            nickname,
+            tempKey,
+            guestId: guestId ? parseInt(guestId, 10) : null
+        });
     };
 
     return (

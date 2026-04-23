@@ -9,12 +9,14 @@ import { useModalStore } from '../../app/store/modalStore';
 
 interface UpdateNicknameRequest {
     nickname: string;
+    tempKey?: string;
+    guestId?: number | null;
 }
 
 /**
  * useUpdateNickname (Hook)
  *
- * 사용자 닉네임을 변경하는 API 호출을 관리합니다.
+ * 사용자 닉네임을 변경하거나 신규 가입을 완료하는 API 호출을 관리합니다.
  * 성공 시 터미널 컨텍스트를 업데이트하고 로비로 이동합니다.
  */
 export const useUpdateNickname = () => {
@@ -23,8 +25,14 @@ export const useUpdateNickname = () => {
 
     return useMutation({
         mutationFn: async (data: UpdateNicknameRequest) => {
-            const response = await axiosInstance.patch<BaseResponse<{ accessToken: string }>>('/api/v1/users/nickname', data);
-            return response.data;
+            // tempKey가 있으면 신규 가입(POST /register), 없으면 닉네임 수정(PATCH /nickname)
+            if (data.tempKey) {
+                const response = await axiosInstance.post<BaseResponse<{ accessToken: string }>>('/api/v1/users/register', data);
+                return response.data;
+            } else {
+                const response = await axiosInstance.patch<BaseResponse<{ accessToken: string }>>('/api/v1/users/nickname', data);
+                return response.data;
+            }
         },
         onSuccess: async (response, variables) => {
             // 1. 터미널 컨텍스트 업데이트

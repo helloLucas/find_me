@@ -3,6 +3,7 @@ import { useModalStore } from '../../app/store/modalStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { tokenManager } from '../../shared/utils/tokenManager';
+import { useAuthStore } from '../../app/store/authStore';
 import type { BaseResponse } from '../../shared/types/api';
 
 /**
@@ -33,18 +34,19 @@ export const useInitGuest = () => {
     return useMutation({
         // 401 Interceptor에 영향을 받지 않기 위해 기본 axios 인스턴스 사용
         mutationFn: async () => {
-            const response = await axios.get<BaseResponse<TokenResponse>>(
+            const response = await axios.get<BaseResponse<{ tempKey: string }>>(
                 `${API_BASE_URL}/api/v1/auth/guest-init`,
                 { withCredentials: true }
             );
             return response.data.data;
         },
         onSuccess: (data) => {
-            // 1. 발급받은 JWT 토큰 저장
-            tokenManager.setAccessToken(data.accessToken);
-
-            // 2. 신규 유저와 마찬가지로 닉네임 설정 페이지로 이동
-            navigate('/setup-nickname', { replace: true });
+            // [리팩토링] 이제 게스트도 즉시 토큰을 받지 않고, 닉네임 입력 전까지 tempKey만 보유함
+            // 닉네임 설정 페이지로 이동할 때 tempKey를 state로 전달
+            navigate('/setup-nickname', { 
+                replace: true, 
+                state: { tempKey: data.tempKey } 
+            });
         },
         onError: (error: any) => {
             console.error('Guest initialization failed:', error);

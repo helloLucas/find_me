@@ -43,6 +43,18 @@ export default function AppShell({ children }: PropsWithChildren) {
             navigate('/lobby', { replace: true });
           }
         }, 1500);
+      } else if (event.data?.type === 'AUTH_PENDING_REGISTRATION') {
+        // 신규 가입 대기 상태: 닉네임 설정으로 유도
+        const { tempKey, guestId } = event.data;
+        setIsAccessing(true);
+
+        setTimeout(() => {
+          setIsAccessing(false);
+          navigate('/setup-nickname', {
+            replace: true,
+            state: { tempKey, guestId }
+          });
+        }, 1500);
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
         openModal({

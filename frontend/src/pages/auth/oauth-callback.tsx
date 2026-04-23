@@ -15,14 +15,13 @@ const OAuthCallbackPage = () => {
     useEffect(() => {
           const accessToken = searchParams.get('accessToken');
           const isNewUser = searchParams.get('isNewUser') === 'true';
+          const tempKey = searchParams.get('tempKey');
+          const guestId = searchParams.get('guestId');
 
-          // refreshToken 체크 조건 제거 (쿠키로 안전하게 들어왔음)
+          // 1. 이미 가입된 회원이거나 게스트 승격 완료된 경우
           if (accessToken) {
-            // 1. Access Token만 메모리나 로컬 스토리지에 저장
             tokenManager.setAccessToken(accessToken);
-            // tokenManager.setRefreshToken(...) <- 이 줄은 삭제! 브라우저가 알아서 쿠키로 관리함
 
-            // 2. 팝업 모드 대응 (부모 창으로 Access Token만 전달)
             if (window.opener) {
               window.opener.postMessage({
                 type: 'AUTH_SUCCESS',
@@ -33,21 +32,42 @@ const OAuthCallbackPage = () => {
               return;
             }
 
-            // 3. 일반 모드(Fallback): 신규 가입자만 닉네임 설정으로 유도
+            // 회원이면 로비로, 신규 가입자면 닉네임 설정으로 (기존 로직 유지)
             if (isNewUser) {
                 navigate('/setup-nickname', { replace: true });
             } else {
                 navigate('/lobby', { replace: true });
             }
-        } else {
-            console.error('Authentication failed: Missing tokens in callback URL');
+            return;
+        } 
+        
+        // 2. 신규 가입 대기 상태 (DB 저장 전, Redis 임시 키 보유)
+        if (tempKey) {
             if (window.opener) {
-                window.opener.postMessage({ type: 'AUTH_ERROR' }, window.location.origin);
+                window.opener.postMessage({
+                    type: 'AUTH_PENDING_REGISTRATION',
+                    tempKey,
+                    guestId
+                }, window.location.origin);
                 window.close();
                 return;
             }
-            navigate('/login', { replace: true });
+            // 닉네임 설정 페이지로 이동할 때 tempKey와 guestId를 state로 전달
+            navigate('/setup-nickname', { 
+                replace: true, 
+                state: { tempKey, guestId } 
+            });
+            return;
         }
+
+        // 3. 에러 케이스
+        console.error('Authentication failed: Missing tokens or keys in callback URL');
+        if (window.opener) {
+            window.opener.postMessage({ type: 'AUTH_ERROR' }, window.location.origin);
+            window.close();
+            return;
+        }
+        navigate('/login', { replace: true });
     }, [searchParams, navigate]);
 
     return (
