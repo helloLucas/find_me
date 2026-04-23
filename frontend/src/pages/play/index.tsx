@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Desktop } from "../../widgets/Desktop";
 import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
@@ -12,16 +12,28 @@ export default function PlayPage() {
   const { error, initializeStory, currentNode } = useStoryRuntimeStore();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+  const processedNodeIdRef = useRef<number | string | null>(null);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     initializeStory(chapterCode ?? "week01");
+    processedNodeIdRef.current = null;
     return () => {
       audioManager.stopBgm();
     };
   }, [chapterCode, initializeStory]);
 
   useEffect(() => {
-    if (currentNode) {
+    if (currentNode && isFullscreen && processedNodeIdRef.current !== currentNode.id) {
+      processedNodeIdRef.current = currentNode.id;
       const output = normalizeStoryOutputBundle(currentNode.outputBundle);
       if (output.scene.preVideo) {
         setIsPlayingVideo(true);
@@ -30,7 +42,7 @@ export default function PlayPage() {
         audioManager.playBgm(output.scene.bgm);
       }
     }
-  }, [currentNode]);
+  }, [currentNode, isFullscreen]);
 
   const handleVideoFinish = () => {
     setIsPlayingVideo(false);
@@ -43,12 +55,15 @@ export default function PlayPage() {
 
   return (
     <main className="h-screen w-screen overflow-hidden">
-      {isPlayingVideo && currentPreVideoUrl ? (
-        <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
+      {!isFullscreen ? (
+        <FullscreenEnforcer />
       ) : (
         <>
-          <FullscreenEnforcer />
-          <Desktop />
+          {isPlayingVideo && currentPreVideoUrl ? (
+            <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
+          ) : (
+            <Desktop />
+          )}
         </>
       )}
 
