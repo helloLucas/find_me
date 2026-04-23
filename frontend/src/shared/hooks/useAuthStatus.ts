@@ -10,7 +10,7 @@ export type SessionMode = 'USER_MODE' | 'GUEST_MODE';
 
 /**
  * useAuthStatus (Hook)
- * 
+ *
  * 전역 인증 스토어(Zustand)와 연동하여 유저의 현재 인증 상태를 반환합니다.
  * 스토어 상태 변경 시 즉각적으로 반응(Reactive)합니다.
  */
@@ -24,11 +24,11 @@ export const useAuthStatus = () => {
 
     const sessionMode: SessionMode = role === 'MEMBER' ? 'USER_MODE' : 'GUEST_MODE';
 
-    return { 
-        nickname, 
-        sessionMode, 
+    return {
+        nickname,
+        sessionMode,
         isGuest: sessionMode === 'GUEST_MODE',
         isMember: sessionMode === 'USER_MODE',
-        isLoading: !isInitialized 
+        isLoading: !isInitialized
     };
 };

@@ -6,10 +6,13 @@ const WINDOW_W = 300;
 const WINDOW_H = 500;
 
 export const MessengerWindow: React.FC = () => {
-  const { conversation, isWindowOpen, closeMessengerWindow, shouldResetPosition } = useMessengerStore();
+  const { conversations, activeRoomId, setActiveRoom, isWindowOpen, closeMessengerWindow, shouldResetPosition, messengerZIndex, focusMessenger } = useMessengerStore();
   const { submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
+
+  const conversation = activeRoomId ? conversations[activeRoomId] : null;
+  const allRooms = Object.values(conversations);
 
   // 드래그 중에는 React 렌더링 없이 ref 값만 갱신한다.
   const drag = useRef({
@@ -35,12 +38,37 @@ export const MessengerWindow: React.FC = () => {
     windowRef.current.style.transform = `translate(${drag.current.x}px, ${drag.current.y}px)`;
   }, [isWindowOpen, shouldResetPosition]);
 
-  // 새 대화나 액션 카드가 들어오면 마지막 메시지로 스크롤한다.
+  // 마지막으로 스크롤이 맞춰진 메시지 개수를 방(Room)별로 기억
+  const lastReadIndices = useRef<Record<string, number>>({});
+
   useEffect(() => {
-    if (isWindowOpen) {
-      setTimeout(() => messageEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    if (!isWindowOpen || !conversation) return;
+
+    const roomId = conversation.conversationId;
+    const currentLen = conversation.messages.length;
+    const lastRead = lastReadIndices.current[roomId] || 0;
+
+    // 이 방에 이전에 읽었던 것보다 더 많은(새로운) 메시지가 추가된 경우
+    if (currentLen > lastRead) {
+      // 이전에 여기까지 읽었다면, (lastRead - 1) 인덱스가 사용자가 마지막으로 본 메시지입니다 (예: B)
+      // 만약 처음으로(0개) 읽는 거라면 그냥 첫 메시지(0번)를 타겟으로 잡습니다.
+      const scrollTargetIdx = Math.max(0, lastRead - 1);
+      const msgToScroll = conversation.messages[scrollTargetIdx];
+
+      if (msgToScroll) {
+        setTimeout(() => {
+          const el = document.getElementById(`msg-${msgToScroll.id}`);
+          if (el) {
+            // 마지막으로 읽은 메시지(B)가 화면 상단 부근에 노출되도록 부드럽게 포커싱
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 50);
+      }
+
+      // 여기까지 읽었음을 갱신
+      lastReadIndices.current[roomId] = currentLen;
     }
-  }, [isWindowOpen, conversation?.conversationId, conversation?.messages.length, conversation?.actions?.length]);
+  }, [isWindowOpen, conversation?.conversationId, conversation?.messages.length]);
 
   // ESC 키로 메신저 창을 닫는다.
   useEffect(() => {
@@ -84,18 +112,44 @@ export const MessengerWindow: React.FC = () => {
   return (
     <div
       ref={windowRef}
-      className="absolute top-0 left-0 z-50"
-      style={{ width: WINDOW_W, height: WINDOW_H }}
+      className="absolute top-0 left-0 hover:z-[9999]"
+      style={{ width: 400, height: WINDOW_H, zIndex: messengerZIndex }}
+      onMouseDown={focusMessenger}
     >
       <div
-        className="w-full h-full rounded-lg overflow-hidden flex flex-col"
+        className="w-full h-full rounded-lg overflow-hidden flex"
         style={{
           padding: "3px",
           background: "linear-gradient(180deg, #ff3ecf 0%, #0ff 30%, #0ff 70%, #ff3ecf 100%)",
           boxShadow: "0 0 25px rgba(255,62,207,0.4), 0 0 50px rgba(0,255,255,0.15)",
         }}
       >
-        <div className="flex-1 flex flex-col rounded-[5px] overflow-hidden bg-[#1a1028]">
+        {/* 사이드바 추가 - 여러 방 관리 */}
+        <div className="w-[84px] bg-[#110a18] flex flex-col items-center py-2 gap-2 border-r border-[#3a2040]">
+          {allRooms.map((room) => (
+            <button
+              key={room.conversationId}
+              title={room.title}
+              onClick={() => setActiveRoom(room.conversationId)}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all relative ${
+                activeRoomId === room.conversationId
+                  ? "border-2 border-primary shadow-[0_0_10px_theme(colors.primary.DEFAULT)]"
+                  : "border border-[#2a2040] hover:border-cyan-400/50"
+              }`}
+            >
+              {room.messages[0]?.senderAvatar ? (
+                <img src={room.messages[0].senderAvatar} alt={room.title} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] text-gray-500 font-bold px-1 text-center truncate w-full">{room.title.substring(0, 4)}</span>
+              )}
+              {room.unread && activeRoomId !== room.conversationId && (
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-[#110a18] shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 flex flex-col overflow-hidden bg-[#1a1028]">
           <div
             className="flex items-center justify-between h-9 px-3 bg-[#1a1028] select-none cursor-move flex-shrink-0"
             onMouseDown={handleHeaderMouseDown}
@@ -131,7 +185,7 @@ export const MessengerWindow: React.FC = () => {
               const showAvatar = idx === 0 || conversation.messages[idx - 1]?.senderId !== msg.senderId;
 
               return (
-                <div key={msg.id} className="flex items-end gap-2">
+                <div id={`msg-${msg.id}`} key={msg.id} className="flex items-end gap-2">
                   {showAvatar ? (
                     <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#2a2040] border border-cyan-400/20 flex items-center justify-center overflow-hidden shadow-[0_0_12px_rgba(0,255,255,0.08)]">
                       {msg.senderAvatar ? (

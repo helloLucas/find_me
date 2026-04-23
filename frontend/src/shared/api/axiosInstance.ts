@@ -43,28 +43,19 @@ axiosInstance.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refreshToken = tokenManager.getRefreshToken();
-                if (!refreshToken) {
-                    throw new Error('No refresh token available');
-                }
-
                 // Refresh API 호출 (백엔드 명세: POST /api/v1/auth/refresh)
                 // HttpOnly 쿠키 방식을 사용하므로 바디에 토큰을 실어 보낼 필요가 없으며, 
                 // withCredentials: true를 설정하여 브라우저가 쿠키를 서버로 보내도록 합니다.
-                const response = await axios.post<BaseResponse<{ accessToken: string; refreshToken: string }>>(
+                const response = await axios.post<BaseResponse<{ accessToken: string }>>(
                     `${axiosInstance.defaults.baseURL}/api/v1/auth/refresh`,
-                    {},
+                    undefined,
                     { withCredentials: true }
                 );
 
-                const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+                const { accessToken } = response.data.data;
 
                 // 새로운 토큰 저장
                 tokenManager.setAccessToken(accessToken);
-                if (newRefreshToken) {
-                    tokenManager.setRefreshToken(newRefreshToken);
-                }
-
                 // 실패했던 원래 요청의 헤더를 갱신하여 재전송
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return axiosInstance(originalRequest);

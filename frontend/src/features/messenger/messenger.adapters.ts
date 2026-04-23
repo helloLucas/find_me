@@ -73,11 +73,12 @@ function normalizeTopLevelStoryMessages(
   const chatNotification = bundle.notifications.find((notification) => notification.type === "chat");
   const friendMessage = objectRecord(bundle.content.friendMessage);
   const nodeCode = node?.code ?? String(bundle.scene.id ?? `story-${Date.now()}`);
+  const speaker = String(chatMessages[0]?.speaker ?? "FRIEND").toUpperCase();
 
   const messages: MessengerMessage[] = chatMessages.map((message, idx) => ({
     id: `${nodeCode}-msg-${idx}`,
     senderId: String(message.speaker ?? "friend").toLowerCase(),
-    senderName: String(message.speaker ?? "FRIEND"),
+    senderName: String(message.speaker ?? speaker),
     text: resolveStoryText(message.text, textContext),
     timestampLabel: String(message.timestamp ?? "오후 10:17"),
   }));
@@ -85,8 +86,8 @@ function normalizeTopLevelStoryMessages(
   const actions = normalizeMessengerActions(bundle.actions) ?? createStoryActions(nodeCode, friendMessage);
 
   return {
-    conversationId: `conv-${nodeCode}`,
-    title: String(chatNotification?.title ?? "FRIEND"),
+    conversationId: `conv-${speaker}`,
+    title: String(chatNotification?.title ?? speaker),
     subtitle: chatNotification?.body != null ? String(chatNotification.body) : undefined,
     online: true,
     unread: true,

@@ -1,16 +1,28 @@
-import { apiClient } from "./client";
+import axiosInstance from "./axiosInstance";
+import type { BaseResponse } from "../types/api";
 import type { StoryNodeResponse, TransitionRequest, TransitionResponse } from "../types/story";
 
 export const storyApi = {
-  startStory: (chapterCode: string): Promise<StoryNodeResponse> => {
-    return apiClient.post<StoryNodeResponse>("/api/v1/story/start", { chapterCode });
+  startStory: async (chapterCode: string): Promise<StoryNodeResponse> => {
+    const response = await axiosInstance.post<BaseResponse<StoryNodeResponse>>(
+      "/api/v1/story/start",
+      { chapterCode }
+    );
+    return response.data.data;
   },
 
-  getCurrentNode: (): Promise<StoryNodeResponse> => {
-    return apiClient.get<StoryNodeResponse>("/api/v1/story/current");
+  getCurrentNode: async (): Promise<StoryNodeResponse> => {
+    const response = await axiosInstance.get<BaseResponse<StoryNodeResponse>>(
+      "/api/v1/story/current"
+    );
+    return response.data.data;
   },
 
-  submitTransition: (request: TransitionRequest): Promise<TransitionResponse> => {
-    return apiClient.post<TransitionResponse>("/api/v1/story/transitions", request);
+  submitTransition: async (request: TransitionRequest): Promise<TransitionResponse> => {
+    const response = await axiosInstance.post<BaseResponse<TransitionResponse>>(
+      "/api/v1/story/transitions",
+      request
+    );
+    return response.data.data;
   },
 };

@@ -191,6 +191,18 @@ public class StoryServiceImpl implements StoryService {
 
     // 매칭된 전이의 도착 노드 추출
     StoryNode nextNode = matched.getToNode();
+
+    // ── FAIL 노드 판별 ──
+    // 코드에 "_FAIL_"이 포함된 노드는 일시적 피드백 전용 노드이다.
+    // FAIL 노드로 이동 시에는 유저 진행 상태를 갱신하지 않고, result=retry로 반환한다.
+    // 이렇게 해야 플레이어가 오답 입력 후 다시 정답을 입력했을 때 원래 노드 기준으로 전이가 판정된다.
+    boolean isFailNode = nextNode.getCode().contains("_FAIL_");
+
+    if (isFailNode) {
+      log.info("Fail node reached (progress NOT updated): User={}, FailNode={}", user.getId(), nextNode.getCode());
+      return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry");
+    }
+
     // 도착 노드가 속한 챕터 정보
     Chapter chapter = nextNode.getChapter();
     // 현재 상태 스냅샷 생성
@@ -207,7 +219,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
-    return buildResponseFromNode(nextNode, matched.getEffectBundle());
+    return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success");
   }
 
   // ──────────────────────────────────────────────
@@ -303,11 +315,21 @@ public class StoryServiceImpl implements StoryService {
     return switch (t.getValidatorType()) {
       case "exact" -> request.getInputValue().equals(t.getExpectedInput()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
+      case "server_rule" -> matchesServerRuleTransition(t, request);
       default -> false; // TODO: server_rule 등 추가 validatorType 지원 시 확장
     };
   }
 
-  private TransitionResponseDto buildResponseFromNode(StoryNode node, JsonNode effectBundle) {
+  private boolean matchesServerRuleTransition(
+      StoryTransition transition, TransitionRequestDto request) {
+    JsonNode config = transition.getValidatorConfig();
+    String trigger = config != null && config.has("trigger") ? config.get("trigger").asText() : null;
+
+    // TODO: 정식 서버 룰 엔진 도입 전까지 system:auto 전이만 최소 지원한다.
+    return "auto".equals(trigger) && "auto".equals(request.getInputValue());
+  }
+
+  private TransitionResponseDto buildResponseFromNode(StoryNode node, JsonNode effectBundle, String result) {
     // 노드의 대사(outputBundle)와 메타데이터를 포함하여 응답 빌드
     TransitionResponseDto.TransitionResponseDtoBuilder builder =
         TransitionResponseDto.builder()
@@ -318,10 +340,11 @@ public class StoryServiceImpl implements StoryService {
                     .nodeType(node.getNodeType())
                     .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
                     .promptType(node.getPromptType())
+                    .promptMeta(node.getPromptMeta())
                     .isCheckpoint(node.isCheckpoint())
                     .isTerminal(node.isTerminal())
                     .build())
-            .result("success");
+            .result(result);
 
     // 효과(effectBundle)가 존재하면 DTO 리스트로 변환하여 추가
     if (effectBundle != null && !effectBundle.isEmpty()) {
