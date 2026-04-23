@@ -2,6 +2,7 @@
 #agents
 .agents
 **/.env*
+!.env.example
 
 ### IntelliJ IDEA (Root & Global) ###
 .idea/
