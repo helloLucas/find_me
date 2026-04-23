@@ -14,18 +14,27 @@ const SetupNicknamePage = () => {
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
     // location.state 타입 가드 및 추출
-    const state = location.state as { tempKey?: string; guestId?: string } | null;
+    const state = location.state as { 
+        tempKey?: string; 
+        guestId?: string;
+        confirmSwitch?: boolean;
+    } | null;
     const tempKey = state?.tempKey;
     const guestId = state?.guestId;
+    const confirmSwitch = state?.confirmSwitch;
 
-    // 가입 세션체크: tempKey가 없으면서 로그인도 되어있지 않은 경우에만 로그인으로 리다이렉트
-    // (게스트 모드는 이미 isLoggedIn이 true인 상태로 진입하므로 통과됨)
+    // 가입 세션체크 및 계정 전환(Switch) 자동 처리
     useEffect(() => {
+        if (confirmSwitch && tempKey) {
+            mutate({ tempKey, nickname: '', confirmSwitch: true });
+            return;
+        }
+
         if (!tempKey && !isLoggedIn) {
             console.warn('Sign-up session expired or state lost. Redirecting to login.');
             navigate('/login', { replace: true });
         }
-    }, [tempKey, isLoggedIn, navigate]);
+    }, [tempKey, isLoggedIn, confirmSwitch, mutate, navigate]);
 
     const isValid = nickname.trim().length >= 2;
 
@@ -35,7 +44,8 @@ const SetupNicknamePage = () => {
         mutate({ 
             nickname,
             tempKey,
-            guestId: guestId ? parseInt(guestId, 10) : null
+            guestId: guestId ? parseInt(guestId, 10) : null,
+            confirmSwitch: false
         });
     };
 

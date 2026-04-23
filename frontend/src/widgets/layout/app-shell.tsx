@@ -39,11 +39,27 @@ export default function AppShell({ children }: PropsWithChildren) {
           }, 1500);
         }
       } else if (event.data?.type === 'AUTH_PENDING_REGISTRATION') {
-        // 신규 가입 대기 상태: 오버레이 없이 즉시 닉네임 설정으로 유도
         const { tempKey, guestId } = event.data;
         navigate('/setup-nickname', {
           replace: true,
           state: { tempKey, guestId }
+        });
+      } else if (event.data?.type === 'AUTH_CONFLICT') {
+        const { tempKey } = event.data;
+        openModal({
+          title: 'ACCOUNT_CONFLICT',
+          message: '이미 이 소셜 계정으로 가입된 정보가 존재합니다.\n해당 계정으로 전환하시겠습니까?\n(현재 게스트 정보는 사라집니다.)',
+          type: 'confirm',
+          onConfirm: () => {
+             // 닉네임 업데이트 훅을 통해 전환 처리 (AppShell 상위에서 mutate를 쓸 수 있게 함)
+             // 실제로는 useNavigate나 별도 이벤트를 통해 처리할 수도 있지만, 
+             // 여기서는 /setup-nickname으로 보내되 confirmSwitch 플래그를 실어 보낼 수도 있습니다.
+             // 혹은 AppShell에서 직접 register API를 호출하도록 유도합니다.
+             navigate('/setup-nickname', {
+                replace: true,
+                state: { tempKey, confirmSwitch: true }
+             });
+          }
         });
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
