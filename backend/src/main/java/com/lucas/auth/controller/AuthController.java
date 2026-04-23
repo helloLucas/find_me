@@ -23,10 +23,10 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    @Value("${spring.jwt.refresh-token-expiration}")
-    private long refreshTokenExpiration;
+  @Value("${spring.jwt.refresh-token-expiration}")
+  private long refreshTokenExpiration;
 
   /**
    * 커스텀 로그인 페이지 (테스트용) SecurityConfig의 .loginPage("/login") 요청 시 이 메서드로 들어옵니다.

@@ -134,8 +134,6 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(40);
 
-  const gameAreaRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {

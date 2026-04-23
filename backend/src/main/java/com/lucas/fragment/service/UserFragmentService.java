@@ -14,26 +14,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserFragmentService {
 
-    private final UserFragmentRepository userFragmentRepository;
-    private final UserRepository userRepository;
+  private final UserFragmentRepository userFragmentRepository;
+  private final UserRepository userRepository;
 
-    public boolean hasFragment(Long userId, String fragmentCode) {
-        return userFragmentRepository.existsByUserIdAndFragmentCode(userId, fragmentCode);
-    }
+  public boolean hasFragment(Long userId, String fragmentCode) {
+    return userFragmentRepository.existsByUserIdAndFragmentCode(userId, fragmentCode);
+  }
 
-    @Transactional
-    public void acquireFragment(Long userId, String fragmentCode) {
-        try {
-            if (!userFragmentRepository.existsByUserIdAndFragmentCode(userId, fragmentCode)) {
-                User user = userRepository.getReferenceById(userId);
-                UserFragment fragment = UserFragment.builder()
-                        .user(user)
-                        .fragmentCode(fragmentCode)
-                        .build();
-                userFragmentRepository.saveAndFlush(fragment);
-            }
-        } catch (DataIntegrityViolationException e) {
-            // Duplicate insert attempted due to concurrency, safely ignore since the fragment is already acquired
-        }
+  @Transactional
+  public void acquireFragment(Long userId, String fragmentCode) {
+    try {
+      if (!userFragmentRepository.existsByUserIdAndFragmentCode(userId, fragmentCode)) {
+        User user = userRepository.getReferenceById(userId);
+        UserFragment fragment =
+            UserFragment.builder().user(user).fragmentCode(fragmentCode).build();
+        userFragmentRepository.saveAndFlush(fragment);
+      }
+    } catch (DataIntegrityViolationException e) {
+      // Duplicate insert attempted due to concurrency, safely ignore since the fragment is already
+      // acquired
     }
+  }
 }

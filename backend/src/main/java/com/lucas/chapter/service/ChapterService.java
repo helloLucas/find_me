@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 챕터(Chapter) 데이터 및 유저의 챕터 진행 상태(Progress)와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
  *
- * 시스템에 등록된 챕터 배포 여부 및 유저의 종속적 클리어 조건을 종합하여 화면 노출용 상태를 계산합니다.
+ * <p>시스템에 등록된 챕터 배포 여부 및 유저의 종속적 클리어 조건을 종합하여 화면 노출용 상태를 계산합니다.
  */
 @Service
 @RequiredArgsConstructor

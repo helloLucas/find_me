@@ -7,7 +7,7 @@ import lombok.Getter;
 @Builder
 public class PresignedUrlResponseDto {
 
-    private String uploadUrl;
-    private String objectKey;
-    private String accessUrl;
+  private String uploadUrl;
+  private String objectKey;
+  private String accessUrl;
 }

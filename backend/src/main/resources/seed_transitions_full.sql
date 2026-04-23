@@ -343,20 +343,9 @@ VALUES
 ),
 (
     (SELECT id FROM story_nodes WHERE code = 'CH1_LUCAS_DOG_APPEAR'),
-    (SELECT id FROM story_nodes WHERE code = 'CH1_RELAY_CLUE_REVISIT'),
-    'click',
-    'reopen_network_clue',
-    'exact',
-    '{"trim": true}'::jsonb,
-    NULL,
-    '{}'::jsonb,
-    300
-),
-(
-    (SELECT id FROM story_nodes WHERE code = 'CH1_RELAY_CLUE_REVISIT'),
     (SELECT id FROM story_nodes WHERE code = 'CH1_TERMINAL_SSH_READY'),
-    'inspect',
-    'relay_clue_recheck',
+    'click',
+    'open_terminal',
     'exact',
     '{"trim": true}'::jsonb,
     NULL,
