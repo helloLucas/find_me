@@ -16,13 +16,14 @@ public class UserRegisterRequest {
     @NotBlank(message = "임시 키는 필수입니다.")
     private String tempKey;
 
-    /** 사용자가 애플리케이션 내에서 사용할 최종 닉네임 */
-    @NotBlank(message = "닉네임은 필수입니다.")
+    /** 사용자가 애플리케이션 내에서 사용할 최종 닉네임 (신규 가입 시 필수) */
     private String nickname;
 
     /** 
-     * 게스트에서 정식 회원으로 승격(전환)하는 경우 전달되는 게스트 유저 식별값.
      * 신규 가입일 경우 null일 수 있습니다.
      */
     private Long guestId;
+
+    /** 이미 가입된 계정일 경우, 전환(Switch) 여부 확인 플래그 */
+    private boolean confirmSwitch;
 }

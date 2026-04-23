@@ -8,6 +8,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -50,25 +52,30 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-        // 닉네임 입력 대기 중인 경우 (DB 저장 전)
+        // 닉네임 입력 대기 또는 계정 전환 확인이 필요한 경우
         if (customOAuth2User.isPendingRegistration()) {
             PendingUserInfo pendingInfo = PendingUserInfo.builder()
                     .email(customOAuth2User.getEmail())
                     .provider(customOAuth2User.getProvider())
                     .providerUserId(customOAuth2User.getProviderUserId())
-                    .oauthName(customOAuth2User.getName()) // nameAttributeKey에 해당하는 값
+                    .oauthName(customOAuth2User.getName())
+                    .guest(customOAuth2User.isGuest())
+                    .existingMemberId(customOAuth2User.isConflict() ? customOAuth2User.getUserId() : null)
                     .build();
 
             String tempKey = authService.savePendingUserInfo(pendingInfo); // redis에 임시 저장
 
             // 게스트 전환 대기 중인 경우 guestId도 함께 전달
-            Long guestId = customOAuth2User.getUserId(); // context.user()가 guest일 경우 ID가 있음
+            Long targetId = customOAuth2User.getUserId();
 
             String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                     .queryParam("tempKey", tempKey)
-                    .queryParam("isNewUser", true)
+                    .queryParam("isNewUser", customOAuth2User.isNewUser())
                     .queryParam("isGuest", customOAuth2User.isGuest())
-                    .queryParam("guestId", guestId != null ? guestId.toString() : "")
+                    .queryParam("isConflict", customOAuth2User.isConflict())
+                    .queryParam("guestId", (customOAuth2User.isGuest() && !customOAuth2User.isConflict()) ? targetId : "")
+                    .queryParam("nickname", customOAuth2User.isGuest() ? (customOAuth2User.getNickname() != null ? customOAuth2User.getNickname() : "") : "")
+                    .encode(StandardCharsets.UTF_8)
                     .build().toUriString();
 
             response.sendRedirect(targetUrl);

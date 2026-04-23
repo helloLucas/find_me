@@ -25,7 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/** OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스 클래스입니다. */
+/**
+ * OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스
+ * 클래스입니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -80,8 +83,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         role,
         context.isNewUser(),
         context.isGuest(),
-        userId == null // userId가 없으면 가입 대기 상태 (닉네임 미입력 상태)
-    );
+        context.isNewUser() || context.isConflict(), // 가입 또는 전환 대기 시 true
+        context.isConflict());
   }
 
   /**
@@ -101,8 +104,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   }
 
   /**
-   * AuthProvider와 attributes에 들어있는 소셜 로그인의 식별값 id를 통해 회원을 찾아 반환하는 메소드
-   * 만약 회원이 없다면 DB 저장을 하지 않고 가입 대기 상태로 반환한다.
+   * 소셜 정보와 현재 게스트 세션을 조합하여 사용자 상태를 판별합니다.
    *
    * @param attributes 추출된 OAuth 사용자 속성
    * @param provider   소셜 로그인 제공자
@@ -110,33 +112,37 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    */
   private UserContext getUser(OAuthAttributes attributes, AuthProvider provider) {
     String providerUserId = attributes.getOauth2UserInfo().getId();
+    Optional<User> socialUserOpt = userRepository.findByProviderAndProviderUserId(provider, providerUserId);
+    Long guestId = getCurrentGuestId();
 
-    // 1. 이미 가입된 사용자인지 확인
-    Optional<User> userOptional = userRepository.findByProviderAndProviderUserId(provider, providerUserId);
-    if (userOptional.isPresent()) {
-      log.info("기존 회원 로그인 - provider={}, providerUserId={}, userId={}", provider, providerUserId,
-          userOptional.get().getId());
-      return new UserContext(userOptional.get(), false, false);
+    // 소셜 계정이 이미 존재하는 경우
+    if (socialUserOpt.isPresent()) {
+      User socialUser = socialUserOpt.get();
+      if (guestId != null) {
+        // 현재 게스트로 접속 O -> 전환 의사 확인
+        log.info("계정 전환 대기 (충돌) - socialUserId={}, guestId={}", socialUser.getId(), guestId);
+        return new UserContext(socialUser, false, true, true);
+      }
+      // 현재 게스트로 접속 X -> 일반 로그인
+      log.info("기존 회원 로그인 - userId={}", socialUser.getId());
+      return new UserContext(socialUser, false, false, false);
     }
 
-    // 2. 가입되지 않았을 경우, 현재 접속 중인 게스트인지 확인
-    Long guestId = getCurrentGuestId();
+    // 소셜 계정은 없는데 게스트 세션은 있는 경우 -> GUEST -> MEMBER 전환
     if (guestId != null) {
-      // [GUEST -> MEMBER 전환] Role을 MEMBER로 승격
-      Optional<User> guestOptional = userRepository.findById(guestId);
-      if (guestOptional.isPresent() && guestOptional.get().getRole() == UserRole.GUEST) {
-        User upgradedUser = upgradeGuestToMember(guestOptional.get(), attributes, provider);
-        log.info("게스트 -> 회원 승격 완료: userId={}, email={}", upgradedUser.getId(), upgradedUser.getEmail());
-        return new UserContext(upgradedUser, false, true);
+      Optional<User> guestOpt = userRepository.findById(guestId);
+      if (guestOpt.isPresent() && guestOpt.get().getRole() == UserRole.GUEST) {
+        log.info("게스트 승격 대기 (자동) - guestId={}", guestId);
+        return new UserContext(guestOpt.get(), true, true, false);
       }
     }
 
-    // 3. 기존 회원도 아니고, 승격할 게스트 세션도 없다면 신규 가입 대기 (닉네임 설정 필요)
-    log.info("신규 회원 가입 대기 중 (DB 미저장) - email={}", attributes.getEmail());
-    return new UserContext(null, true, false);
+    // 소셜 계정도 없고 게스트 세션도 없는 경우 -> 신규 가입
+    log.info("신규 회원 가입 대기 - email={}", attributes.getEmail());
+    return new UserContext(null, true, false, false);
   }
 
-  private record UserContext(User user, boolean isNewUser, boolean isGuest) {
+  private record UserContext(User user, boolean isNewUser, boolean isGuest, boolean isConflict) {
   }
 
   /**
@@ -146,7 +152,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    */
   private Long getCurrentGuestId() {
     try {
-      HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+      HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+          .getRequest();
 
       if (request.getCookies() != null) {
         for (Cookie cookie : request.getCookies()) {
@@ -165,7 +172,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   /**
    * 기존 게스트 레코드를 소셜 정보를 포함한 회원(MEMBER) 레코드로 승격시킵니다.
    *
-   * @param guest    게스트 유저
+   * @param guest      게스트 유저
    * @param attributes 소셜 로그인 사용자 속성
    * @param provider   소셜 로그인 제공자
    * @return 승격된 User 객체

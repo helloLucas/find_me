@@ -32,4 +32,7 @@ public class PendingUserInfo implements Serializable {
 
     /** 게스트 여부 플래그 (true일 경우 게스트 가입 대기 상태) */
     private boolean guest;
+
+    /** 충돌 상황(승격 시도 중 소셜 계정 발견) 시 기존 멤버의 PK */
+    private Long existingMemberId;
 }

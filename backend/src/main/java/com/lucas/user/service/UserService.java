@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /** 사용자 정보와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다. */
 @Slf4j
 @Service
@@ -39,60 +41,100 @@ public class UserService {
    */
   @Transactional
   public TokenResponse register(UserRegisterRequest request) {
-    // 1. 임시 저장된 유저 정보 조회
+    // 1. Redis에서 임시 사용자 정보 조회
     PendingUserInfo pendingInfo = authService.getPendingUserInfo(request.getTempKey());
 
+    // 닉네임 누락 (신규 회원 가입 or 게스트에서 새로운 소셜 계정으로 승격하는 상황일 때는 닉네임 입력 필수)
+    if (!request.isConfirmSwitch() && (request.getNickname() == null || request.getNickname().isBlank())) {
+      log.warn("닉네임 누락 - 가입 제한");
+      throw new CustomException(ErrorCode.H1000);
+    }
+
+    // 소셜 정보가 있는 경우에만 DB 조회
+    Optional<User> socialUserOpt = Optional.empty();
+    if (pendingInfo.getProvider() != null) { //
+      socialUserOpt = userRepository.findByProviderAndProviderUserId(
+          pendingInfo.getProvider(),
+          pendingInfo.getProviderUserId());
+    }
+
     User user;
-    // 2. 게스트에서 전환하는 경우와 신규 가입하는 경우 분기 처리
-    if (request.getGuestId() != null) { // GUEST -> MEMBER 전환
+
+    // 2. 가입하려는 소셜 계정이 이미 존재하는 경우 처리
+    if (socialUserOpt.isPresent()) {
+      User socialUser = socialUserOpt.get();
+
+      if (!request.isConfirmSwitch()) {
+        log.warn("이미 가입된 소셜 계정 - 가입 제한: provider={}, providerUserId={}",
+            pendingInfo.getProvider(), pendingInfo.getProviderUserId());
+        throw new CustomException(ErrorCode.H1000); // "이미 가입된 소셜 계정입니다."
+      }
+
+      // 전환 확인 시 기존 멤버 정보 반환
+      log.info("계정 전환 승인 - 기존 멤버 세션 사용: userId={}", socialUser.getId());
+      authService.deletePendingUserInfo(request.getTempKey()); // Redis 임시 데이터 삭제
+      return issueTokensForUser(socialUser); // DB에서 찾은 기존 유저의 정보로 토큰을 발급
+    }
+
+    // 3. 상황별 유저 엔티티 준비 (승격 또는 신규 생성)
+    if (request.getGuestId() != null) { // GUEST -> MEMBER 승격 (신규 소셜 계정 사용)
       user = userRepository.findById(request.getGuestId())
           .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+
       user.upgradeToMember(
           pendingInfo.getEmail(),
           pendingInfo.getOauthName(),
           pendingInfo.getProvider(),
           pendingInfo.getProviderUserId());
-    } else if (pendingInfo.isGuest()) { // 신규 게스트 가입 (DB 저장 유예 종료)
+    } else if (pendingInfo.isGuest()) { // 닉네임만 있는 순수 게스트 가입 (닉네임 설정 완료 시점)
       user = User.builder()
           .oauthName(pendingInfo.getOauthName())
+          .nickname(request.getNickname())
           .role(UserRole.GUEST)
           .build();
-    } else { // 신규 소셜 가입 (DB 저장 유예 종료)
+    } else { // 아예 처음인 신규 소셜 회원 가입 (닉네임 설정 완료 시점)
       user = User.builder()
           .email(pendingInfo.getEmail())
           .oauthName(pendingInfo.getOauthName())
+          .nickname(request.getNickname())
           .provider(pendingInfo.getProvider())
           .providerUserId(pendingInfo.getProviderUserId())
-          .role(com.lucas.auth.entity.UserRole.MEMBER)
+          .role(UserRole.MEMBER)
           .build();
     }
 
-    // 3. 닉네임 설정 및 영속화
-    user.updateNickname(request.getNickname());
     User savedUser = userRepository.save(user);
+    log.info("회원 가입/승격 완료: userId={}, email={}", savedUser.getId(), savedUser.getEmail());
 
-    // 4. Redis 임시 정보 삭제
+    // 4. Redis 임시 데이터 삭제
     authService.deletePendingUserInfo(request.getTempKey());
 
-    // 5. 정규 인증 토큰 발급
-    String accessToken = jwtUtil.createAccessToken(
-        savedUser.getId(),
-        savedUser.getEmail(),
-        savedUser.getNickname(),
-        savedUser.getProvider(),
-        savedUser.getRole().name(),
-        accessTokenExpiration);
-    String refreshToken = jwtUtil.createRefreshToken(savedUser.getId(), savedUser.getEmail(), refreshTokenExpiration);
+    // 5. 토큰 발급
+    return issueTokensForUser(savedUser);
+  }
 
-    // Refresh Token Redis 등록
-    authService.replaceRefreshToken(savedUser.getId(), refreshToken);
+  /**
+   * 유저를 위한 토큰 세트를 발급합니다.
+   */
+  private TokenResponse issueTokensForUser(User user) {
+    String accessToken = jwtUtil.createAccessToken(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getProvider(),
+        user.getRole().name(),
+        accessTokenExpiration);
+
+    String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+    authService.replaceRefreshToken(user.getId(), refreshToken);
 
     return TokenResponse.builder()
         .accessToken(accessToken)
         .refreshToken(refreshToken)
-        .userId(savedUser.getId())
-        .role(savedUser.getRole().name())
-        .nickname(savedUser.getNickname())
+        .userId(user.getId())
+        .role(user.getRole().name())
+        .nickname(user.getNickname())
+        .isNewUser(false) // 가입이 완료된 상태이므로 false
         .build();
   }
 
