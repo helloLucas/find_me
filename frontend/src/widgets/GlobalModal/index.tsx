@@ -33,7 +33,7 @@ export const GlobalModal = () => {
                         <span>{title}</span>
                     </div>
 
-                    <p className="font-pixel text-lg md:text-xl text-white/90 leading-relaxed tracking-tight break-keep whitespace-pre-wrap">
+                    <p className="font-pixel text-sm md:text-base text-white/90 leading-relaxed tracking-tight break-keep whitespace-pre-wrap">
                         {message}
                     </p>
                 </div>
@@ -46,8 +46,8 @@ export const GlobalModal = () => {
                             className="relative w-24 h-14 flex items-center justify-center group/btn cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95"
                         >
                             <div className="absolute inset-0 border border-white/20 group-hover/btn:border-white/40 rounded-md" />
-                            <div className="absolute inset-[6px] border border-white/10 group-hover/btn:border-white/30 bg-white/[0.01] flex items-center justify-center rounded-sm">
-                                <span className="font-pixel text-xs text-white/40 group-hover/btn:text-white/70">취소</span>
+                             <div className="absolute inset-[6px] border border-white/10 group-hover/btn:border-white/30 bg-white/[0.01] flex items-center justify-center rounded-sm">
+                                <span className="font-pixel text-[10px] text-white/40 group-hover/btn:text-white/70">취소</span>
                             </div>
                             {/* Depth lines */}
                             <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-white/10 origin-top-left rotate-45" />
@@ -63,8 +63,8 @@ export const GlobalModal = () => {
                         className="relative w-24 h-14 flex items-center justify-center group/btn cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95"
                     >
                         <div className="absolute inset-0 border border-white/30 group-hover/btn:border-white/60 group-hover/btn:shadow-[0_0_15px_rgba(255,255,255,0.2)] rounded-md" />
-                        <div className="absolute inset-[6px] border border-white/20 group-hover/btn:border-white/50 bg-white/[0.03] flex items-center justify-center rounded-sm">
-                            <span className="font-pixel text-xs text-white/80 group-hover/btn:text-white">확인</span>
+                         <div className="absolute inset-[6px] border border-white/20 group-hover/btn:border-white/50 bg-white/[0.03] flex items-center justify-center rounded-sm">
+                            <span className="font-pixel text-[10px] text-white/80 group-hover/btn:text-white">확인</span>
                         </div>
                         {/* Depth lines */}
                         <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-white/20 origin-top-left rotate-45" />
