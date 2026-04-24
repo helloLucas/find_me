@@ -126,14 +126,13 @@ export const useLucasStore = create<LucasState>((set) => ({
     ]
   })),
 
-  resetLucas: () =>
-    set({
-      isVisible: false,
-      currentScene: null,
-      currentMessageIndex: 0,
-      isDialogueActive: false,
-      glitchLevel: 0,
-      isHintMode: false,
-      chatHistory: [],
-    }),
+  resetLucas: () => set({
+    isVisible: false,
+    currentScene: null,
+    currentMessageIndex: 0,
+    isDialogueActive: false,
+    glitchLevel: 0,
+    isHintMode: false,
+    chatHistory: [],
+  }),
 }));

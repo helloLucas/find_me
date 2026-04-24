@@ -41,6 +41,7 @@ type StoryRuntimeState = {
   submitStoryClick: (inputValue: string) => Promise<void>;
   submitStoryInspect: (inputValue: string) => Promise<void>;
   submitStoryCommand: (inputValue: string, meta?: Record<string, unknown>) => Promise<void>;
+  resetStoryRuntime: () => void;
 };
 
 const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
@@ -48,9 +49,6 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_SSH_CONNECTED: "auto",
 };
 
-const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
-const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
-const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
 
 function resolveChapterCode(chapterCode: string) {
   if (chapterCode === "ch1" || chapterCode === "stage1" || chapterCode === "week1") {
@@ -234,13 +232,17 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   error: null,
 
   initializeStory: async (chapterCode) => {
+    if (get().isLoading) return;
     set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
+
+    // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     useBrowserContentStore.getState().resetContent();
+    useClientStore.getState().resetClientStore();
     useMessengerStore.getState().resetMessenger();
-    useClientStore.getState().clearTerminalOutput();
-    useClientStore.getState().setTerminalContext("guest", "lucas-os", "~");
     useLucasStore.getState().resetLucas();
+    useWindowStore.getState().resetWindows();
+
     await syncAuthenticatedUserProfile();
 
     try {
@@ -328,4 +330,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   submitStoryCommand: async (inputValue, meta) => {
     await get().submitStoryAction("command", inputValue, meta);
   },
+
+  resetStoryRuntime: () => set({
+    currentNode: null,
+    isLoading: false,
+    error: null,
+  }),
 }));

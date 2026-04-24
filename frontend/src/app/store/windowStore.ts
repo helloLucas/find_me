@@ -30,6 +30,7 @@ interface WindowStore {
   focusWindow: (id: DesktopWindowId) => void;
   restoreWindow: (id: DesktopWindowId) => void;
   blurAllWindows: () => void;
+  resetWindows: () => void;
 }
 
 let nextZIndex: number = DESKTOP_LAYER.windowBase;
@@ -219,6 +220,12 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   blurAllWindows: () =>
     set(() => ({
+      activeWindowId: null,
+    })),
+
+  resetWindows: () =>
+    set(() => ({
+      windows: [],
       activeWindowId: null,
     })),
 }));

@@ -1,6 +1,6 @@
 package com.lucas.fragment.entity;
 
-import com.lucas.global.util.BaseEntity;
+
 import com.lucas.user.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
           name = "uk_user_fragments_user_id_fragment_code",
           columnNames = {"user_id", "fragment_code"})
     })
-public class UserFragment extends BaseEntity {
+public class UserFragment {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
