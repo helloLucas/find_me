@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: shyunnnn/find-me-frontend:31-dev
+        image: shyunnnn/find-me-frontend:32-dev
         ports:
         - containerPort: 80
 ---
