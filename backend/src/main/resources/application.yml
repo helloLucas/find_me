@@ -71,7 +71,7 @@ server:
 
 management:
   server:
-    port: 8081 # 애플리케이션의 8080과 충돌 및 외부 노출을 막기 위해 분리
+    port: 18081 # 애플리케이션의 8080과 충돌 및 외부 노출을 막기 위해 분리
   endpoints:
     web:
       exposure:
