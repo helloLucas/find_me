@@ -68,7 +68,7 @@ pipeline {
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
                         def apiUrl = sh(script: "grep VITE_API_BASE_URL ${FRONT_ENV_FILE} | cut -d '=' -f2", returnStdout: true).trim()
                         dir('frontend') {
-                            sh "docker build --build-arg VITE_API_BASE_URL=${apiUrl} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
+                            sh "docker build --target ${ENV_TAG} --build-arg VITE_API_BASE_URL=${apiUrl} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
                             sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
                             withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                                 sh "docker login -u $USER -p $PASS"
@@ -112,9 +112,9 @@ pipeline {
                     def backendSecretId = "backend-env-${ENV_TAG}"
                     
                     // 1. K8s Secret 업데이트
-                    withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
-                        sh "kubectl create secret generic backend-secrets --from-env-file=${BACK_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
-                    }
+                    // withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
+                    //     sh "kubectl create secret generic backend-secrets --from-env-file=${BACK_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
+                    // }
 
                     // 2. YAML 이미지 태그 업데이트
                     sh "sed -i 's|${FRONT_IMAGE}:.*|${FRONT_IMAGE}:${env.IMAGE_TAG}|g' k8s/frontend.yaml"
