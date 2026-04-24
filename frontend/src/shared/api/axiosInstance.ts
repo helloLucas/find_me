@@ -63,7 +63,7 @@ axiosInstance.interceptors.response.use(
                 // 리프레시 토큰도 만료되었거나 오류 발생 시 인증 정보 초기화 및 로그인 이동
                 console.error('Session expired. Please login again.');
                 tokenManager.clearTokens();
-                window.location.href = '/login';
+                window.location.href = '/';
                 return Promise.reject(refreshError);
             }
         }

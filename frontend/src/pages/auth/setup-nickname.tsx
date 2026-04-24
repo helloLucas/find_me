@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
+import { useAuthStore } from '../../app/store/authStore';
 
 /**
  * SetupNicknamePage
@@ -9,13 +10,43 @@ const SetupNicknamePage = () => {
     const [nickname, setNickname] = useState('');
     const { mutate, isPending } = useUpdateNickname();
     const navigate = useNavigate();
+    const location = useLocation();
+    const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+    // location.state 타입 가드 및 추출
+    const state = location.state as {
+        tempKey?: string;
+        guestId?: string;
+        confirmSwitch?: boolean;
+    } | null;
+    const tempKey = state?.tempKey;
+    const guestId = state?.guestId;
+    const confirmSwitch = state?.confirmSwitch;
+
+    // 가입 세션체크 및 계정 전환(Switch) 자동 처리
+    useEffect(() => {
+        if (confirmSwitch && tempKey) {
+            mutate({ tempKey, nickname: '', confirmSwitch: true });
+            return;
+        }
+
+        if (!tempKey && !isLoggedIn) {
+            console.warn('Sign-up session expired or state lost. Redirecting to login.');
+            navigate('/', { replace: true });
+        }
+    }, [tempKey, isLoggedIn, confirmSwitch, mutate, navigate]);
 
     const isValid = nickname.trim().length >= 2;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!isValid || isPending) return;
-        mutate({ nickname });
+        mutate({
+            nickname,
+            tempKey,
+            guestId: guestId ? parseInt(guestId, 10) : null,
+            confirmSwitch: false
+        });
     };
 
     return (
@@ -106,8 +137,8 @@ const SetupNicknamePage = () => {
                                         </div>
                                     </div>
                                     <p className={`text-sm tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
-                                        {nickname.length > 0 && !isValid 
-                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)' 
+                                        {nickname.length > 0 && !isValid
+                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)'
                                             : '>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED'}
                                     </p>
                                 </div>

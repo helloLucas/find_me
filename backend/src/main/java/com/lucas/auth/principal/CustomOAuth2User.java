@@ -40,17 +40,27 @@ public class CustomOAuth2User extends DefaultOAuth2User {
   private final boolean isGuest;
 
   /**
-   * @param authorities Spring Security 권한 목록
-   * @param attributes OAuth 제공자(Google 등)가 준 원본 사용자 정보
-   * @param nameAttributeKey OAuth 사용자 대표 식별 키 이름 (예: Google의 sub)
-   * @param userId 애플리케이션 내부 유저 ID
-   * @param email 사용자 이메일
-   * @param nickname 사용자 닉네임
-   * @param provider 인증 제공자
-   * @param providerUserId 제공자 측 식별값
-   * @param role 사용자 권한
-   * @param isNewUser 신규 가입 여부 플래그
-   * @param isGuest 게스트 승격 여부 플래그
+   * 추가 절차(신규 가입의 닉네임 설정 또는 기존 계정으로의 전환 확인)가 필요한 상태인지 여부.
+   */
+  private final boolean isPendingRegistration;
+
+  /** 게스트 승격 시도 중 이미 가입된 소셜 계정 발견 여부 */
+  private final boolean isConflict;
+
+  /**
+   * @param authorities           Spring Security 권한 목록
+   * @param attributes            OAuth 제공자(Google 등)가 준 원본 사용자 정보
+   * @param nameAttributeKey      OAuth 사용자 대표 식별 키 이름 (예: Google의 sub)
+   * @param userId                애플리케이션 내부 유저 ID
+   * @param email                 사용자 이메일
+   * @param nickname              사용자 닉네임
+   * @param provider              인증 제공자
+   * @param providerUserId        제공자 측 식별값
+   * @param role                  사용자 권한
+   * @param isNewUser             신규 가입 여부 플래그
+   * @param isGuest               게스트 승격 여부 플래그
+   * @param isPendingRegistration 추가 절차 필요 여부 플래그
+   * @param isConflict            게스트 승격 시도 중 이미 가입된 계정 발견 여부
    */
   public CustomOAuth2User(
       Collection<? extends GrantedAuthority> authorities,
@@ -63,7 +73,9 @@ public class CustomOAuth2User extends DefaultOAuth2User {
       String providerUserId,
       UserRole role,
       boolean isNewUser,
-      boolean isGuest) {
+      boolean isGuest,
+      boolean isPendingRegistration,
+      boolean isConflict) {
     super(authorities, attributes, nameAttributeKey);
     this.userId = userId;
     this.email = email;
@@ -73,5 +85,7 @@ public class CustomOAuth2User extends DefaultOAuth2User {
     this.role = role;
     this.isNewUser = isNewUser;
     this.isGuest = isGuest;
+    this.isPendingRegistration = isPendingRegistration;
+    this.isConflict = isConflict;
   }
 }

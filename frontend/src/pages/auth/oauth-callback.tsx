@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tokenManager } from '../../shared/utils/tokenManager';
+import { useUpdateNickname } from '../../features/User/useUpdateNickname';
 
 /**
  * OAuthCallbackPage
@@ -11,44 +12,124 @@ import { tokenManager } from '../../shared/utils/tokenManager';
 const OAuthCallbackPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { mutate } = useUpdateNickname();
+    const processedRef = useRef(false);
 
     useEffect(() => {
-          const accessToken = searchParams.get('accessToken');
-          const isNewUser = searchParams.get('isNewUser') === 'true';
+        if (processedRef.current) return;
 
-          // refreshToken 체크 조건 제거 (쿠키로 안전하게 들어왔음)
-          if (accessToken) {
-            // 1. Access Token만 메모리나 로컬 스토리지에 저장
+        const accessToken = searchParams.get('accessToken');
+        const isNewUser = searchParams.get('isNewUser') === 'true';
+        const tempKey = searchParams.get('tempKey');
+        const guestId = searchParams.get('guestId');
+        const nickname = searchParams.get('nickname');
+        const isConflict = searchParams.get('isConflict') === 'true';
+
+        // 1. 이미 가입된 회원이거나 게스트 승격 완료된 경우
+        if (accessToken) {
+            processedRef.current = true;
             tokenManager.setAccessToken(accessToken);
-            // tokenManager.setRefreshToken(...) <- 이 줄은 삭제! 브라우저가 알아서 쿠키로 관리함
 
-            // 2. 팝업 모드 대응 (부모 창으로 Access Token만 전달)
             if (window.opener) {
-              window.opener.postMessage({
-                type: 'AUTH_SUCCESS',
-                accessToken,
-                isNewUser
-              }, window.location.origin);
-              window.close();
-              return;
+                window.opener.postMessage({
+                    type: 'AUTH_SUCCESS',
+                    accessToken,
+                    isNewUser
+                }, window.location.origin);
+                window.close();
+                return;
             }
 
-            // 3. 일반 모드(Fallback): 신규 가입자만 닉네임 설정으로 유도
+            // 회원이면 로비로, 신규 가입자면 닉네임 설정으로 (기존 로직 유지)
             if (isNewUser) {
                 navigate('/setup-nickname', { replace: true });
             } else {
                 navigate('/lobby', { replace: true });
             }
-        } else {
-            console.error('Authentication failed: Missing tokens in callback URL');
+            return;
+        }
+
+        // 2. 신규 가입 대기 상태 또는 계정 전환 대기 상태
+        if (tempKey) {
+            processedRef.current = true;
+
+            // [계정 전환(Switch) 케이스]: 이미 가입된 소셜 계정이 있는 경우
+            if (isConflict) {
+                console.log('Account conflict detected.');
+
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'AUTH_CONFLICT',
+                        tempKey
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
+                // 동적 임포트 후 상태 가져오기 (단독 페이지일 경우 대비)
+                import('../../app/store/modalStore').then((module) => {
+                    const openModal = module.useModalStore.getState().openModal;
+                    openModal({
+                        title: 'ACCOUNT_CONFLICT',
+                        message: '이미 이 소셜 계정으로 가입된 정보가 존재합니다.\n해당 계정으로 전환하시겠습니까?\n(현재 게스트 정보는 사라집니다.)',
+                        type: 'confirm',
+                        onConfirm: () => {
+                            mutate({
+                                tempKey,
+                                nickname: '',
+                                confirmSwitch: true
+                            });
+                        },
+                        onCancel: () => {
+                            navigate('/', { replace: true });
+                        }
+                    });
+                }).catch(err => {
+                    console.error('Failed to load modalStore:', err);
+                    navigate('/', { replace: true });
+                });
+                return;
+            }
+
+            // [자동 승격(Upgrade) 케이스]: 게스트 정보가 있으면 바로 register 호출
+            if (guestId && nickname) {
+                console.log('Detected guest session. Performing automatic linking...');
+                mutate({
+                    tempKey,
+                    nickname,
+                    guestId: parseInt(guestId, 10),
+                    confirmSwitch: false
+                });
+                return;
+            }
+
             if (window.opener) {
-                window.opener.postMessage({ type: 'AUTH_ERROR' }, window.location.origin);
+                window.opener.postMessage({
+                    type: 'AUTH_PENDING_REGISTRATION',
+                    tempKey,
+                    guestId
+                }, window.location.origin);
                 window.close();
                 return;
             }
-            navigate('/login', { replace: true });
+            // 닉네임 설정 페이지로 이동할 때 tempKey와 guestId를 state로 전달
+            navigate('/setup-nickname', {
+                replace: true,
+                state: { tempKey, guestId }
+            });
+            return;
         }
-    }, [searchParams, navigate]);
+
+        // 3. 에러 케이스
+        console.error('Authentication failed: Missing tokens or keys in callback URL');
+        processedRef.current = true;
+        if (window.opener) {
+            window.opener.postMessage({ type: 'AUTH_ERROR' }, window.location.origin);
+            window.close();
+            return;
+        }
+        navigate('/', { replace: true });
+    }, [searchParams, navigate, mutate]);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0c08] text-[#a3e635] font-pixel p-4">

@@ -1,8 +1,8 @@
 package com.lucas.auth.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lucas.auth.dto.PendingUserInfo;
 import com.lucas.auth.dto.response.RefreshTokenResponse;
-import com.lucas.auth.dto.response.TokenResponse;
-import com.lucas.auth.entity.UserRole;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.JwtUtil;
@@ -13,9 +13,8 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
 @Slf4j
@@ -24,10 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
   // Redis Key Prefix
   private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
+  private static final String PENDING_USER_PREFIX = "pending_user:";
 
-  private final RedisTemplate<String, String> redisTemplate;
+  private final StringRedisTemplate redisTemplate;
   private final JwtUtil jwtUtil;
   private final UserRepository userRepository;
+  private final ObjectMapper objectMapper;
 
   @Value("${spring.jwt.access-token-expiration}")
   private long accessTokenExpiration;
@@ -44,9 +45,7 @@ public class AuthService {
   public void replaceRefreshToken(Long userId, String refreshToken) {
     String key = REFRESH_TOKEN_PREFIX + userId;
     // Redis 저장 및 TTL 설정 (Refresh Token 만료 시간과 동기화)
-    redisTemplate
-        .opsForValue()
-        .set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
+    redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
     log.info("Refresh Token 저장 완료 - userId: {}", userId);
   }
 
@@ -92,21 +91,18 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user =
-          userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      String newAccessToken =
-          jwtUtil.createAccessToken(
-              user.getId(),
-              user.getEmail(),
-              user.getNickname(),
-              user.getProvider(),
-              user.getRole().name(),
-              accessTokenExpiration);
+      String newAccessToken = jwtUtil.createAccessToken(
+          user.getId(),
+          user.getEmail(),
+          user.getNickname(),
+          user.getProvider(),
+          user.getRole().name(),
+          accessTokenExpiration);
 
-      String newRefreshToken =
-          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+      String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
       // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
@@ -141,39 +137,63 @@ public class AuthService {
   }
 
   /**
-   * 새로운 게스트 사용자를 생성하고 초기 토큰 정보를 발급합니다.
+   * 게스트 정보를 임시 보관하고 식별용 임시 키를 반환합니다. (DB 미저장)
    *
-   * @return 생성된 게스트의 토큰 정보를 담은 객체
+   * @return 임시 식별 키 (UUID)
    */
-  @Transactional
-  public TokenResponse initGuest() {
-    String tempNickname = "방랑자_" + UUID.randomUUID().toString().substring(0, 4);
-    User guest =
-        User.builder()
-            .nickname(tempNickname)
-            .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
-            .role(UserRole.GUEST)
-            .build();
-    userRepository.save(guest);
-
-    String accessToken =
-        jwtUtil.createAccessToken(
-            guest.getId(),
-            null,
-            guest.getNickname(),
-            null,
-            guest.getRole().name(),
-            accessTokenExpiration);
-    String refreshToken = jwtUtil.createRefreshToken(guest.getId(), null, refreshTokenExpiration);
-
-    replaceRefreshToken(guest.getId(), refreshToken); // Redis 저장
-
-    return TokenResponse.builder()
-        .accessToken(accessToken)
-        .refreshToken(refreshToken)
-        .userId(guest.getId())
-        .role(guest.getRole().name())
-        .nickname(guest.getNickname())
+  public String initGuest() {
+    PendingUserInfo guestInfo = PendingUserInfo.builder()
+        .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
+        .guest(true)
         .build();
+
+    return savePendingUserInfo(guestInfo);
+  }
+
+  /**
+   * 가입 전 임시 유저 정보를 Redis에 저장하고 식별용 임시 키를 반환합니다. (10분 만료)
+   *
+   * @param info 임시 저장할 유저 정보
+   * @return 임시 식별 키 (UUID)
+   */
+  public String savePendingUserInfo(PendingUserInfo info) {
+    String tempKey = UUID.randomUUID().toString();
+    try {
+      String value = objectMapper.writeValueAsString(info);
+      String fullKey = PENDING_USER_PREFIX + tempKey;
+      redisTemplate.opsForValue().set(fullKey, value, 10, TimeUnit.MINUTES);
+      log.info("Redis 저장 완료 - [Full Key: {}]", fullKey);
+      return tempKey;
+    } catch (Exception e) {
+      log.error("임시 가입 정보 저장 실패", e);
+      throw new CustomException(ErrorCode.G1000);
+    }
+  }
+
+  /**
+   * Redis에서 임시 유저 정보를 조회합니다.
+   *
+   * @param tempKey 임시 식별 키
+   * @return 조회된 유저 정보
+   */
+  public PendingUserInfo getPendingUserInfo(String tempKey) {
+    String value = redisTemplate.opsForValue().get(PENDING_USER_PREFIX + tempKey);
+    if (value == null) {
+      log.warn("임시 가입 정보를 찾을 수 없거나 만료되었습니다. tempKey: {}", tempKey);
+      throw new CustomException(ErrorCode.H1000); // 401 혹은 인증 만료 에러
+    }
+    try {
+      return objectMapper.readValue(value, PendingUserInfo.class);
+    } catch (Exception e) {
+      log.error("임시 가입 정보 파싱 실패", e);
+      throw new CustomException(ErrorCode.G1000);
+    }
+  }
+
+  /**
+   * 가입이 완료된 후 사용된 임시 데이터를 삭제합니다.
+   */
+  public void deletePendingUserInfo(String tempKey) {
+    redisTemplate.delete(PENDING_USER_PREFIX + tempKey);
   }
 }
