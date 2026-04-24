@@ -11,6 +11,7 @@ export default defineConfig(({ mode }): UserConfig => {
     plugins: [react(), tailwindcss()],
     server: {
       port: frontendPort,
+      allowedHosts: ["find.me.kr", "www.find.me.kr"],
       proxy: {
         "/api": {
           target: apiBaseUrl,

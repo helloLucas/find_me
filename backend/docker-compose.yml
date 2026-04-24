@@ -7,7 +7,7 @@ services:
     image: lucas-backend:latest
     container_name: lucas-backend
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8888:8080"
       - "18081:18081"
     restart: unless-stopped
     # Jenkins 또는 서버 환경 변수에서 주입받는 값을 사용합니다.
