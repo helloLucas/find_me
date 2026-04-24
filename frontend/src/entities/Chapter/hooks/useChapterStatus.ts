@@ -31,5 +31,15 @@ export const useChapterStatus = () => {
             const response = await axiosInstance.get<BaseResponse<Chapter[]>>('/api/v1/chapters');
             return response.data.data;
         },
+        select: (data) => {
+            let foundFirstDisabled = false;
+            return data.map((chapter) => {
+                if (chapter.status === CHAPTER_STATUS.DISABLED && !foundFirstDisabled) {
+                    foundFirstDisabled = true;
+                    return { ...chapter, title: 'See you in next week' };
+                }
+                return chapter;
+            });
+        },
     });
 };

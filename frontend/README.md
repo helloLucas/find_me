@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# 프론트엔드 애플리케이션 (Frontend Application)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+이 프로젝트는 React, TypeScript, Vite를 기반으로 구축되었습니다.
 
-Currently, two official plugins are available:
+## 보안 및 개발자 도구 방지 기능 (Security & Anti-DevTools)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+프로젝트의 몰입감을 높이고 프로덕션(운영) 환경에서 클라이언트 측 로직을 보호하기 위해 여러 보안 조치를 적용했습니다. 
+**참고: 이 기능들은 운영 환경(`import.meta.env.PROD`)에서만 활성화되며, 로컬 개발(`npm run dev`)에는 영향을 주지 않습니다.**
 
-## React Compiler
+1. **전역 우클릭 방지**
+   - 브라우저의 컨텍스트 메뉴를 완전히 비활성화하여, 사용자가 '요소 검사(Inspect)'나 '페이지 소스 보기'를 쉽게 열 수 없도록 합니다.
+2. **단축키 차단**
+   - 개발자 도구를 여는 일반적인 단축키들을 차단합니다: `F12`, `Ctrl+Shift+I`, `Ctrl+Shift+J`, `Ctrl+Shift+C`, `Ctrl+U`.
+3. **디버거 루프 (Debugger Loop)**
+   - 500ms마다 `debugger` 루프가 실행됩니다. 사용자가 강제로 개발자 도구를 열 경우, 브라우저의 스크립트 실행이 지속적으로 일시 정지되어 Elements 탭이나 콘솔을 통한 분석을 매우 어렵게 만듭니다.
+4. **소스 맵(Source Map) 제거**
+   - `vite.config.ts` 파일에 `build.sourcemap: false`가 설정되어 있습니다. 빌드 시 원본 TypeScript 소스 코드가 포함된 파일이 완전히 제거되어 외부로 노출되지 않습니다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 빌드 및 배포 (Build and Deployment)
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. 로컬 개발 환경 실행
+```bash
+npm run dev
 ```
+로컬 개발 서버를 시작합니다. 보안 기능이 **비활성화**되어 있으므로, 평소처럼 자유롭게 개발자 도구를 사용하고 DOM을 검사할 수 있습니다.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. 프로덕션(운영) 빌드
+```bash
+npm run build
 ```
+배포용 빌드 결과물을 `dist` 디렉토리에 생성합니다. Vite가 자동으로 환경을 `production`으로 설정하며 다음 작업이 수행됩니다:
+- 소스 맵 생성 생략 (`sourcemap: false`)
+- 모든 개발자 도구 방지 및 보안 기능 활성화
+
+### 3. 로컬에서 프로덕션 빌드 테스트
+실제 서버에 배포하기 전에 빌드된 결과물을 확인하고 보안 기능들이 제대로 작동하는지 테스트하려면 아래 명령어를 사용합니다:
+```bash
+npm run preview
+```
+이 명령어는 `dist` 폴더를 직접 서빙하는 로컬 서버(일반적으로 `http://localhost:4173`)를 실행합니다.

@@ -57,6 +57,54 @@ export default function AppShell({ children }: PropsWithChildren) {
     return () => window.removeEventListener('message', handleAuthMessage);
   }, [checkAuth, navigate]);
 
+  // 우클릭 방지 (보안 및 몰입감 향상) - 운영 환경에서만 활성화
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
+  // 개발자 도구 차단 (키보드 단축키 및 디버거 루프) - 운영 환경에서만 활성화
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F12, Ctrl+Shift+I/J/C, Ctrl+U 차단
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'i' || e.key === 'j' || e.key === 'c')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const disableDebugger = () => {
+        // 디버거 루프: 개발자 도구가 열려 있으면 여기서 계속 멈춤
+        setInterval(() => {
+            (function() {
+                return false;
+            }
+            ["constructor"]("debugger")
+            ["call"]());
+        }, 500);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    disableDebugger();
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white relative">
 
