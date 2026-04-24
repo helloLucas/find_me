@@ -1,6 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useInitGuest } from './useInitGuest';
 import { useAuthStore } from '../../app/store/authStore';
+import { useClientStore } from '../../app/store/clientStore';
+import { useStoryRuntimeStore } from '../story-runtime/storyRuntime.store';
+import { useMessengerStore } from '../../app/store/messengerStore';
+import { useLucasStore } from '../../app/store/lucasStore';
+import { useBrowserContentStore } from '../../app/store/browserContentStore';
+import { useWindowStore } from '../../app/store/windowStore';
 import { tokenManager } from '../../shared/utils/tokenManager';
 import { env } from '../../shared/config/env';
 
@@ -10,7 +16,12 @@ import { env } from '../../shared/config/env';
 export const useAuthActions = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-
+  const resetClientStore = useClientStore((state) => state.resetClientStore);
+  const resetStoryRuntime = useStoryRuntimeStore((state) => state.resetStoryRuntime);
+  const resetMessenger = useMessengerStore((state) => state.resetMessenger);
+  const resetLucas = useLucasStore((state) => state.resetLucas);
+  const resetContent = useBrowserContentStore((state) => state.resetContent);
+  const resetWindows = useWindowStore((state) => state.resetWindows);
 
   /**
    * OAuth 로그인 실행 핸들러 (Provider별 분기)
@@ -49,8 +60,15 @@ export const useAuthActions = () => {
     // 1. [핵심] 상태를 지우기 전에 통신에 필요한 Access Token을 변수에 미리 빼둡니다.
     const currentToken = tokenManager.getAccessToken();
 
-    // 2. 로컬 상태 즉시 초기화 및 화면 전환 (낙관적 UI 업데이트)
+    // 2. 전역 상태 즉시 초기화 및 화면 전환 (낙관적 UI 업데이트)
     clearAuth();
+    resetClientStore();
+    resetStoryRuntime();
+    resetMessenger();
+    resetLucas();
+    resetContent();
+    resetWindows();
+    
     navigate('/', { replace: true });
 
     // 3. 백그라운드 세션 종료 요청 (확보해둔 토큰을 헤더에 강제 주입)

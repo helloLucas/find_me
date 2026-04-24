@@ -35,6 +35,7 @@ type StoryRuntimeState = {
   submitStoryClick: (inputValue: string) => Promise<void>;
   submitStoryInspect: (inputValue: string) => Promise<void>;
   submitStoryCommand: (inputValue: string, meta?: Record<string, unknown>) => Promise<void>;
+  resetStoryRuntime: () => void;
 };
 
 const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
@@ -155,6 +156,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   error: null,
 
   initializeStory: async (chapterCode) => {
+    if (get().isLoading) return;
     set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
     useBrowserContentStore.getState().resetContent();
@@ -235,4 +237,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   submitStoryCommand: async (inputValue, meta) => {
     await get().submitStoryAction("command", inputValue, meta);
   },
+
+  resetStoryRuntime: () => set({
+    currentNode: null,
+    isLoading: false,
+    error: null,
+  }),
 }));
