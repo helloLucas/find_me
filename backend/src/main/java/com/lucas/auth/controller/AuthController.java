@@ -28,15 +28,6 @@ public class AuthController {
   @Value("${spring.jwt.refresh-token-expiration}")
   private long refreshTokenExpiration;
 
-  /**
-   * 커스텀 로그인 페이지 (테스트용) SecurityConfig의 .loginPage("/login") 요청 시 이 메서드로 들어옵니다.
-   *
-   * @return 로그인 페이지 HTML 내용
-   */
-  @GetMapping(value = "/login", produces = "text/html; charset=UTF-8")
-  public String loginPage() {
-    return "<h1>OAuth2 로그인 테스트</h1>" + "<a href='/oauth2/authorization/google'>구글로 로그인하기</a>";
-  }
 
     /**
      * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다.

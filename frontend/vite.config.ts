@@ -33,16 +33,23 @@ export default defineConfig(({ mode }): UserConfig => {
           target: proxyTarget,
           changeOrigin: true,
           secure: false,
+          configure: (proxy, _options) => {
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              proxyReq.setHeader('X-Forwarded-Host', req.headers.host || '');
+              proxyReq.setHeader('X-Forwarded-Proto', 'https');
+            });
+          },
         },
         "/oauth2": {
           target: proxyTarget,
           changeOrigin: true,
           secure: false,
-        },
-        "/login": {
-          target: proxyTarget,
-          changeOrigin: true,
-          secure: false,
+          configure: (proxy, _options) => {
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              proxyReq.setHeader('X-Forwarded-Host', req.headers.host || '');
+              proxyReq.setHeader('X-Forwarded-Proto', 'https');
+            });
+          },
         },
       },
     },
