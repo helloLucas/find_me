@@ -14,8 +14,8 @@ const SetupNicknamePage = () => {
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
     // location.state 타입 가드 및 추출
-    const state = location.state as { 
-        tempKey?: string; 
+    const state = location.state as {
+        tempKey?: string;
         guestId?: string;
         confirmSwitch?: boolean;
     } | null;
@@ -32,7 +32,7 @@ const SetupNicknamePage = () => {
 
         if (!tempKey && !isLoggedIn) {
             console.warn('Sign-up session expired or state lost. Redirecting to login.');
-            navigate('/login', { replace: true });
+            navigate('/', { replace: true });
         }
     }, [tempKey, isLoggedIn, confirmSwitch, mutate, navigate]);
 
@@ -41,7 +41,7 @@ const SetupNicknamePage = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!isValid || isPending) return;
-        mutate({ 
+        mutate({
             nickname,
             tempKey,
             guestId: guestId ? parseInt(guestId, 10) : null,
@@ -137,8 +137,8 @@ const SetupNicknamePage = () => {
                                         </div>
                                     </div>
                                     <p className={`text-sm tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
-                                        {nickname.length > 0 && !isValid 
-                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)' 
+                                        {nickname.length > 0 && !isValid
+                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)'
                                             : '>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED'}
                                     </p>
                                 </div>
