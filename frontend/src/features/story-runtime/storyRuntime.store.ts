@@ -93,7 +93,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
+    useWindowStore.getState().openWindow("chrome");
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {

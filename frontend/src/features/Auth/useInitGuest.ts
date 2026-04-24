@@ -2,8 +2,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useModalStore } from '../../app/store/modalStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { tokenManager } from '../../shared/utils/tokenManager';
-import { useAuthStore } from '../../app/store/authStore';
 import type { BaseResponse } from '../../shared/types/api';
 
 /**

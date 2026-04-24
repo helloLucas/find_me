@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fragmentApi } from '../../../shared/api/fragmentApi';
 import { useWindowStore } from '../../../app/store/windowStore';
+import type { DesktopWindowId } from '../../../shared/config/desktopWindows';
 
 // 0: empty, 1: wall, 2: dot, 3: power pellet (optional, acting as dot for now)
 const INITIAL_GRID = [
@@ -34,7 +35,7 @@ interface Ghost extends Entity {
 }
 
 interface PacmanTabProps {
-  windowId?: string;
+  windowId?: DesktopWindowId;
 }
 
 export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
