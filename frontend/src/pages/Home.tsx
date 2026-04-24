@@ -24,7 +24,7 @@ const Home = () => {
     const handleGuestClick = () => {
         openModal({
             title: 'ANONYMOUS_ACCESS_WARNING',
-            message: '익명 접속 시 진행 상황이 저장되지 않을 수 있습니다. 계속하시겠습니까?',
+            message: '익명 접속 시 진행 상황이 저장되지 않을 수 있습니다.\n계속하시겠습니까?',
             type: 'confirm',
             onConfirm: handleGuestAccess
         });
@@ -33,7 +33,7 @@ const Home = () => {
     const handleLogoutClick = () => {
         openModal({
             title: 'LOGOUT_CONFIRMATION',
-            message: '로그아웃 하시겠습니까? 세션이 종료됩니다.',
+            message: '로그아웃 하시겠습니까?\n세션이 종료됩니다.',
             type: 'confirm',
             onConfirm: handleLogout
         });
