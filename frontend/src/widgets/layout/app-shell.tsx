@@ -13,6 +13,19 @@ export default function AppShell({ children }: PropsWithChildren) {
   const openModal = useModalStore((state) => state.openModal);
   const { isAccessing, setIsAccessing } = useClientStore();
 
+  // 세션 만료 팝업 감지 (axiosInstance에서 보낸 신호)
+  useEffect(() => {
+    const showPopup = sessionStorage.getItem('show_session_expired_popup');
+    if (showPopup === 'true') {
+      openModal({
+        title: 'SESSION_EXPIRED',
+        message: '세션이 만료되었습니다.\n다시 로그인해 주세요.',
+        type: 'alert'
+      });
+      sessionStorage.removeItem('show_session_expired_popup');
+    }
+  }, [openModal]);
+
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
       // 보안을 위해 같은 origin인지 확인
@@ -52,7 +65,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           type: 'confirm',
           onConfirm: () => {
              // 닉네임 업데이트 훅을 통해 전환 처리 (AppShell 상위에서 mutate를 쓸 수 있게 함)
-             // 실제로는 useNavigate나 별도 이벤트를 통해 처리할 수도 있지만, 
+             // 실제로는 useNavigate나 별도 이벤트를 통해 처리할 수도 있지만,
              // 여기서는 /setup-nickname으로 보내되 confirmSwitch 플래그를 실어 보낼 수도 있습니다.
              // 혹은 AppShell에서 직접 register API를 호출하도록 유도합니다.
              navigate('/setup-nickname', {
