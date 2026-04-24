@@ -64,17 +64,17 @@ const FullscreenEnforcer = () => {
                                 <div className="absolute inset-0 border-2 border-white/20 group-hover/window:border-white/40 group-hover/key:border-white/60 group-hover/key:shadow-[0_20px_50px_rgba(255,255,255,0.25)] rounded-lg transition-all duration-500" />
 
                                 {/* Inner Surface (Pops out on hover) */}
-                                <div className="absolute inset-[10px] border-2 border-white/20 group-hover/window:border-white/30 group-hover/key:border-white/50 bg-white/[0.02] group-hover/key:bg-white/[0.08] flex items-center justify-center overflow-hidden rounded-md transition-all duration-500 group-hover/key:-translate-y-2 group-hover/key:translate-x-1">
+                                <div className="absolute inset-[10px] border-2 border-white/20 group-hover/window:border-white/30 group-hover/key:border-white/50 bg-white/[0.02] group-hover/key:bg-white/[0.08] flex items-center justify-center overflow-hidden rounded-md transition-all duration-500">
                                     <span className="font-pixel text-2xl text-white/50 group-hover/window:text-white/80 group-hover/key:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/key:drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]">F11</span>
                                     {/* Subtle internal shimmer animation */}
                                     <div className="absolute -inset-x-full top-0 h-full w-full bg-gradient-to-r from-transparent via-white/[0.05] to-transparent animate-[shimmer_3s_infinite]" />
                                 </div>
 
                                 {/* Diagonal Corner Lines (Extends on hover) */}
-                                <div className="absolute top-[2px] left-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 group-hover/key:w-[18px] origin-top-left rotate-45 transition-all duration-500" />
-                                <div className="absolute top-[2px] right-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 group-hover/key:w-[18px] origin-top-right -rotate-45 transition-all duration-500" />
-                                <div className="absolute bottom-[2px] left-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 group-hover/key:w-[18px] origin-bottom-left -rotate-45 transition-all duration-500" />
-                                <div className="absolute bottom-[2px] right-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 group-hover/key:w-[18px] origin-bottom-right rotate-45 transition-all duration-500" />
+                                <div className="absolute top-[2px] left-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-top-left rotate-45 transition-all duration-500" />
+                                <div className="absolute top-[2px] right-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-top-right -rotate-45 transition-all duration-500" />
+                                <div className="absolute bottom-[2px] left-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-bottom-left -rotate-45 transition-all duration-500" />
+                                <div className="absolute bottom-[2px] right-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-bottom-right rotate-45 transition-all duration-500" />
                             </div>
                             <span className="font-pixel text-[11px] text-white/20 group-hover/window:text-white/40 tracking-[0.6em] uppercase transition-all duration-500">
                                 Click to Engage
