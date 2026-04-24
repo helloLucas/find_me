@@ -121,8 +121,7 @@ pipeline {
                     sh "sed -i 's|${BACK_IMAGE}:.*|${BACK_IMAGE}:${env.IMAGE_TAG}|g' k8s/backend.yaml"
 
                     // 3. 푸시할 브랜치명 확정
-                    def rawBranch = env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: "develop"
-                    def targetBranch = rawBranch.replace('origin/', '')
+                    def targetBranch = (env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: "develop").replace('origin/', '')
 
                     // 4. SSAFY GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
@@ -136,6 +135,32 @@ pipeline {
                         // HEAD:${env.BRANCH_NAME} 대신 HEAD:${targetBranch} 사용
                         sh "git push https://${GIT_USER}:${GIT_PASS}@${env.GITLAB_URL} HEAD:${targetBranch}"
                     }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            when { expression { return isTargetBranch() } }
+            steps {
+                script {
+                    echo "--- ${ENV_TAG} 환경에 배포를 시작합니다 ---"
+                    
+                    // 네임스페이스가 없으면 생성 (dev/prod)
+                    sh "kubectl create namespace ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
+                    
+                    // 1. 시크릿 업데이트 (주석 해제 및 활용)
+                    def backendSecretId = "backend-env-${ENV_TAG}"
+                    withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
+                         sh "kubectl create secret generic backend-secrets --from-env-file=${BACK_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
+                    }
+
+                    // 2. 실제 배포 실행 (피어링된 사설 IP를 통해 마스터 노드에 명령 전달)
+                    dir('k8s') {
+                        sh "kubectl apply -f frontend.yaml -n ${ENV_TAG}"
+                        sh "kubectl apply -f backend.yaml -n ${ENV_TAG}"
+                    }
+                    
+                    echo "--- 배포 완료! ---"
                 }
             }
         }
