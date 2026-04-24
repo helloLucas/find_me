@@ -59,7 +59,12 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
       const runtimeError = useStoryRuntimeStore.getState().error;
       if (runtimeError) {
-        appendTerminalOutput("error", runtimeError);
+        if (runtimeError.includes("409")) {
+          const firstWord = rawCommand.split(" ")[0];
+          appendTerminalOutput("error", `${firstWord}: command not found`);
+        } else {
+          appendTerminalOutput("error", runtimeError);
+        }
       }
     } catch {
       appendTerminalOutput("error", "System Error: Failed to execute command.");
@@ -87,7 +92,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       defaultPosition={{ x: window.innerWidth / 2 - 350, y: availableHeight / 2 - 225 }}
     >
       <div
-        className="w-full h-full overflow-y-auto p-4 text-green-400 font-mono text-sm terminal-scrollbar"
+        className="w-full h-full overflow-y-auto p-4 text-gray-200 font-mono text-sm terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
           if (window.getSelection()?.toString() === "") {
@@ -95,21 +100,34 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           }
         }}
       >
-        {terminalOutput.map((output) => (
-          <div
-            key={output.id}
-            className={`mb-1 whitespace-pre-wrap ${
-              output.type === "error"
-                ? "text-red-500"
-                : output.type === "system"
-                  ? "text-gray-400 italic"
-                  : "text-green-400"
-            }`}
-            style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
-          >
-            {output.text}
-          </div>
-        ))}
+        {terminalOutput.map((output) => {
+          if (output.type === "input" && output.text.startsWith(promptString)) {
+            const commandText = output.text.slice(promptString.length);
+            return (
+              <div key={output.id} className="mb-1 whitespace-pre-wrap">
+                <span className="text-green-500 mr-2" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
+                  {promptString}
+                </span>
+                <span className="text-gray-200" style={{ textShadow: "none" }}>
+                  {commandText.trimStart()}
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={output.id}
+              className={`mb-1 whitespace-pre-wrap ${
+                output.type === "system"
+                  ? "text-gray-400"
+                  : "text-gray-200"
+              }`}
+            >
+              {output.text}
+            </div>
+          );
+        })}
 
         {!isProcessing ? (
           <div className="flex items-center mt-2">
@@ -123,16 +141,16 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
                 autoFocus
-                className="flex-1 bg-transparent border-none outline-none text-green-400 focus:ring-0 p-0"
+                className="flex-1 bg-transparent border-none outline-none text-gray-200 focus:ring-0 p-0"
                 autoComplete="off"
                 spellCheck="false"
-                style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+                style={{ textShadow: "none" }}
               />
             </form>
           </div>
         ) : (
-          <div className="flex items-center mt-2 text-green-500">
-            <span className="animate-pulse animate-duration-1000" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
+          <div className="flex items-center mt-2 text-gray-200">
+            <span className="animate-pulse animate-duration-1000" style={{ textShadow: "none" }}>
               _
             </span>
           </div>
