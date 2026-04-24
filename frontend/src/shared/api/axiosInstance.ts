@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { tokenManager } from '../utils/tokenManager';
+import { env } from '../config/env';
 import type { BaseResponse } from '../types/api';
 
 /**
@@ -9,7 +10,7 @@ import type { BaseResponse } from '../types/api';
  * 401 에러 발생 시 Refresh Token을 이용해 토큰을 자동 갱신합니다.
  */
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+    baseURL: env.apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
     },
