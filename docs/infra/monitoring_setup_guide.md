@@ -8,8 +8,8 @@
 
 | 서버 명칭 | 역할 | 설치 대상 (Exporter 및 툴) | 수집 대상 / 포트 |
 | :--- | :--- | :--- | :--- |
-| **운영 서버** | 메인 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(8081) |
-| **예비 서버** | 스탠바이 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(8081) |
+| **운영 서버** | 메인 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(18081) |
+| **예비 서버** | 스탠바이 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(18081) |
 | **Redis 서버** | Redis (Docker) 실행 | `node-exporter`, `cadvisor`, `redis_exporter` | 인프라(9100), 컨테이너(9080), Redis(9121) |
 | **로깅 서버** | 모니터링 중앙 관리 | **Prometheus, Grafana, Pushgateway**, <br> `blackbox_exporter`, `postgres_exporter`, `node-exporter`, `cadvisor` | 외부 API(9115), RDS(9187), 인프라(9100), 컨테이너(9080) |
 | **RDS (PostgreSQL)** | 메인 데이터베이스 | (설치 불필요, 로깅 서버에서 원격 수집) | 5432 (PostgreSQL 기본 포트) |
@@ -74,7 +74,7 @@ AWS 콘솔 웹 화면에서 직접 설정하거나, AWS CLI 권한이 있는 경
 # 1. 운영 서버 전용 (OS, 컨테이너, Spring Boot)
 aws ec2 authorize-security-group-ingress --group-id $PROD_SG_ID --protocol tcp --port 9100 --cidr $LOGGING_SERVER_EIP/32
 aws ec2 authorize-security-group-ingress --group-id $PROD_SG_ID --protocol tcp --port 9080 --cidr $LOGGING_SERVER_EIP/32
-aws ec2 authorize-security-group-ingress --group-id $PROD_SG_ID --protocol tcp --port 8081 --cidr $LOGGING_SERVER_EIP/32
+aws ec2 authorize-security-group-ingress --group-id $PROD_SG_ID --protocol tcp --port 18081 --cidr $LOGGING_SERVER_EIP/32
 
 # 2. Redis 서버 전용 (OS, 컨테이너, Redis)
 aws ec2 authorize-security-group-ingress --group-id $REDIS_SG_ID --protocol tcp --port 9100 --cidr $LOGGING_SERVER_EIP/32
@@ -85,7 +85,7 @@ aws ec2 authorize-security-group-ingress --group-id $REDIS_SG_ID --protocol tcp 
 # 1. 예비 서버 전용 (OS, 컨테이너, Spring Boot)
 aws ec2 authorize-security-group-ingress --group-id $STANDBY_SG_ID --protocol tcp --port 9100 --cidr $LOGGING_SERVER_PRIVATE_IP/32
 aws ec2 authorize-security-group-ingress --group-id $STANDBY_SG_ID --protocol tcp --port 9080 --cidr $LOGGING_SERVER_PRIVATE_IP/32
-aws ec2 authorize-security-group-ingress --group-id $STANDBY_SG_ID --protocol tcp --port 8081 --cidr $LOGGING_SERVER_PRIVATE_IP/32
+aws ec2 authorize-security-group-ingress --group-id $STANDBY_SG_ID --protocol tcp --port 18081 --cidr $LOGGING_SERVER_PRIVATE_IP/32
 
 # 2. RDS (PostgreSQL) 전용
 aws ec2 authorize-security-group-ingress --group-id $RDS_SG_ID --protocol tcp --port 5432 --cidr $LOGGING_SERVER_PRIVATE_IP/32
@@ -101,7 +101,7 @@ AWS 보안 그룹이 이미 넓게 열려 있거나(예: 1024~65535 허용), 인
 # 1. 로깅 서버 IP로부터의 모니터링 포트만 정밀 허용
 sudo ufw allow from [로깅_서버_IP] to any port 9100 proto tcp
 sudo ufw allow from [로깅_서버_IP] to any port 9080 proto tcp
-sudo ufw allow from [로깅_서버_IP] to any port 8081 proto tcp # 운영/예비 전용
+sudo ufw allow from [로깅_서버_IP] to any port 18081 proto tcp # 운영/예비 전용
 sudo ufw allow from [로깅_서버_IP] to any port 9121 proto tcp # Redis 전용
 
 # 2. 기존 서비스 포트(SSH, HTTP 등)가 막히지 않도록 확인 필수!
@@ -261,8 +261,8 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: 
-        - '운영서버IP:8081'
-        - '예비서버IP:8081'
+        - '운영서버IP:18081'
+        - '예비서버IP:18081'
 
   # Redis 모니터링
   - job_name: 'redis_exporter'
@@ -370,7 +370,7 @@ docker compose up -d
 # application.yml
 management:
   server:
-    port: 8081 # 애플리케이션의 8080과 충돌 및 외부 노출을 막기 위해 분리
+    port: 18081 # 애플리케이션의 8080과 충돌 및 외부 노출을 막기 위해 분리
   endpoints:
     web:
       exposure:
@@ -397,7 +397,7 @@ curl http://운영서버_Public_IP:9100/metrics
 curl http://운영서버_Public_IP:9080/metrics
 
 # 3. Spring Boot 지표 (Actuator) 확인
-curl http://운영서버_Public_IP:8081/actuator/prometheus
+curl http://운영서버_Public_IP:18081/actuator/prometheus
 
 # 4. Redis 지표 확인
 curl http://Redis서버_Public_IP:9121/metrics
