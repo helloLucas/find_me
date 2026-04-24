@@ -72,7 +72,7 @@ VALUES
       "scene": {
         "id": "CH1_FRIEND_CHAT_OPEN",
         "mode": "desktop",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 0
       },
       "messages": [
@@ -106,7 +106,7 @@ VALUES
       "scene": {
         "id": "CH1_NEWS_PORTAL",
         "mode": "browser",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 0
       },
       "content": {
@@ -153,7 +153,7 @@ VALUES
       "scene": {
         "id": "CH1_DARK_ARTICLE_OPEN",
         "mode": "browser",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -180,7 +180,7 @@ VALUES
       "messages": [],
       "notifications": [],
       "effects": {
-        "playSound": "audio_distortion_short",
+        "playSound": "electric-noise-v1.mp3",
         "breakLayout": false,
         "showDogAvatar": false
       }
@@ -200,7 +200,7 @@ VALUES
       "scene": {
         "id": "CH1_ARTICLE_SCROLL_CORRUPTION",
         "mode": "browser",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -242,7 +242,7 @@ VALUES
       "scene": {
         "id": "CH1_DEVTOOLS_CUE",
         "mode": "browser",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "notifications": [
@@ -273,7 +273,7 @@ VALUES
       "scene": {
         "id": "CH1_DEVTOOLS_FRAME",
         "mode": "devtools",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -301,7 +301,7 @@ VALUES
       "scene": {
         "id": "CH1_NETWORK_TAB",
         "mode": "network",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -460,7 +460,7 @@ VALUES
       "scene": {
         "id": "CH1_SUCCESS_REQUEST_SELECTED",
         "mode": "network",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -606,7 +606,7 @@ VALUES
       "scene": {
         "id": "CH1_PACKET_HEADERS_RESPONSE",
         "mode": "network",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -772,7 +772,7 @@ VALUES
       "scene": {
         "id": "CH1_PACKET_MESSAGE",
         "mode": "network",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "messages": [
@@ -824,7 +824,7 @@ VALUES
       "scene": {
         "id": "CH1_CONSOLE_CONNECT_READY",
         "mode": "console",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -851,7 +851,7 @@ VALUES
       "scene": {
         "id": "CH1_CONNECT_CORE_SUCCESS",
         "mode": "console",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 3
       },
       "content": {
@@ -871,7 +871,7 @@ VALUES
         }
       ],
       "effects": {
-        "playSound": "warning_alarm",
+        "playSound": "rain-lightning-storm-v1.mp3",
         "breakLayout": true,
         "showDogAvatar": false
       }
@@ -891,7 +891,7 @@ VALUES
       "scene": {
         "id": "CH1_LUCAS_DOG_APPEAR",
         "mode": "system",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 3
       },
       "messages": [
@@ -953,7 +953,7 @@ VALUES
       "scene": {
         "id": "CH1_RELAY_CLUE_REVISIT",
         "mode": "network",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 2
       },
       "content": {
@@ -995,7 +995,7 @@ VALUES
       "scene": {
         "id": "CH1_TERMINAL_SSH_READY",
         "mode": "terminal",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 2
       },
       "content": {
@@ -1021,7 +1021,7 @@ VALUES
       "scene": {
         "id": "CH1_SSH_AUTH_PROMPT",
         "mode": "terminal",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 2
       },
       "content": {
@@ -1046,7 +1046,7 @@ VALUES
       "scene": {
         "id": "CH1_SSH_CONNECTED",
         "mode": "terminal",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -1078,7 +1078,7 @@ VALUES
       "scene": {
         "id": "CH1_COMPLETE",
         "mode": "system",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 0
       },
       "content": {},
@@ -1099,7 +1099,7 @@ VALUES
       "scene": {
         "id": "CH1_FAIL_UNRELATED",
         "mode": "system",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
@@ -1132,7 +1132,7 @@ VALUES
       "scene": {
         "id": "CH1_FAIL_DANGEROUS",
         "mode": "system",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 2
       },
       "content": {
@@ -1166,7 +1166,7 @@ VALUES
       "scene": {
         "id": "CH1_FAIL_SKIP",
         "mode": "system",
-        "bgm": "rain",
+        "bgm": "rain-and-little-storm-v1.mp3",
         "glitchLevel": 1
       },
       "content": {
