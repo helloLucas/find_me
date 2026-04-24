@@ -49,6 +49,10 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_SSH_CONNECTED: "auto",
 };
 
+const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
+const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
+const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
+
 
 function resolveChapterCode(chapterCode: string) {
   if (chapterCode === "ch1" || chapterCode === "stage1" || chapterCode === "week1") {
@@ -222,6 +226,29 @@ function applyStoryNodeOutputBundle(
   }
 }
 
+function safelyApplyStoryNodeOutputBundle(
+  node: StoryNode,
+  transitionSound?: string,
+  sourceActionType?: TransitionRequest["actionType"]
+) {
+  try {
+    applyStoryNodeOutputBundle(node, transitionSound, sourceActionType);
+  } catch (error) {
+    // Prevent stale runtime state when output bundle rendering fails.
+    console.error("[StoryRuntime] Failed to apply node output bundle", {
+      nodeCode: node.code,
+      nodeId: node.id,
+      error,
+    });
+
+    return error instanceof Error
+      ? error.message
+      : "스토리 출력 반영에 실패했습니다.";
+  }
+
+  return null;
+}
+
 function getAutoSystemInputValue(node: StoryNode) {
   return AUTO_SYSTEM_TRANSITIONS[node.code];
 }
@@ -269,7 +296,14 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
   setCurrentNode: (node, options) => {
     set({ currentNode: node, error: null });
-    applyStoryNodeOutputBundle(node, options?.transitionSound, options?.sourceActionType);
+    const applyError = safelyApplyStoryNodeOutputBundle(
+      node,
+      options?.transitionSound,
+      options?.sourceActionType
+    );
+    if (applyError) {
+      set({ error: applyError });
+    }
 
     const autoInputValue = getAutoSystemInputValue(node);
     if (autoInputValue) {
@@ -302,7 +336,14 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
       if (response.result === "retry") {
         // Keep current progress node and only reflect fail node output on UI.
-        applyStoryNodeOutputBundle(normalizedNextNode, transitionPlaySound, actionType);
+        const applyError = safelyApplyStoryNodeOutputBundle(
+          normalizedNextNode,
+          transitionPlaySound,
+          actionType
+        );
+        if (applyError) {
+          set({ error: applyError });
+        }
       } else {
         get().setCurrentNode(normalizedNextNode, {
           transitionSound: transitionPlaySound,
