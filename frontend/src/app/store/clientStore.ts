@@ -12,6 +12,7 @@ interface ClientState {
 
   isAccessing: boolean;
   setIsAccessing: (isAccessing: boolean) => void;
+  resetClientStore: () => void;
 }
 
 export const useClientStore = create<ClientState>((set) => ({
@@ -37,4 +38,11 @@ export const useClientStore = create<ClientState>((set) => ({
 
   isAccessing: false,
   setIsAccessing: (isAccessing) => set({ isAccessing }),
+  resetClientStore: () => set({
+    terminalUser: "guest",
+    terminalHost: "lucas-os",
+    terminalPath: "~",
+    terminalOutput: [],
+    isAccessing: false,
+  }),
 }));
