@@ -3,9 +3,14 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
+import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 const WINDOW_W = 400;
 const WINDOW_H = 500;
+const LINK_LABEL = "\uCE5C\uAD6C\uAC00 \uBCF4\uB0B8 \uB9C1\uD06C";
+const OPEN_LABEL = "\uC5F4\uAE30";
+const TIMESTAMP_LABEL = "\uC624\uD6C4 10:18";
+const MESSAGE_PLACEHOLDER = "\uBA54\uC2DC\uC9C0\uB97C \uC785\uB825\uD558\uC138\uC694..";
 
 interface MessengerWindowProps {
   windowId: DesktopWindowId;
@@ -18,6 +23,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   const { submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const wasVisibleRef = useRef(false);
 
   const conversation = activeRoomId ? conversations[activeRoomId] : null;
   const allRooms = Object.values(conversations);
@@ -65,9 +71,14 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   }, [windowState, conversation]);
 
   useEffect(() => {
-    if (!windowState || windowState.isMinimized) return;
-    markMessengerSeen();
-  }, [windowState, markMessengerSeen, activeRoomId]);
+    const isVisible = Boolean(windowState && !windowState.isMinimized);
+
+    if (isVisible && !wasVisibleRef.current) {
+      markMessengerSeen();
+    }
+
+    wasVisibleRef.current = isVisible;
+  }, [windowState, markMessengerSeen]);
 
   useEffect(() => {
     if (!windowState || windowState.isMinimized) return;
@@ -142,29 +153,41 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
               key={room.conversationId}
               title={room.title}
               onClick={() => setActiveRoom(room.conversationId)}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all relative ${
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-visible transition-all relative ${
                 activeRoomId === room.conversationId
                   ? "border-2 border-primary shadow-[0_0_10px_theme(colors.primary.DEFAULT)]"
                   : "border border-[#2a2040] hover:border-cyan-400/50"
               }`}
             >
-              {room.messages[0]?.senderAvatar ? (
-                <img src={room.messages[0].senderAvatar} alt={room.title} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[10px] text-gray-500 font-bold px-1 text-center truncate w-full">{room.title.substring(0, 4)}</span>
-              )}
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl">
+                {room.messages[0]?.senderAvatar ? (
+                  <img src={room.messages[0].senderAvatar} alt={room.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#414561] p-1.5">
+                    <img
+                      src={resolveMessengerFallbackAvatar(room.messages[0]?.senderId, room.messages[0]?.senderName)}
+                      alt={room.title}
+                      className="h-full w-full object-contain"
+                      style={{ imageRendering: "auto" }}
+                    />
+                  </div>
+                )}
+              </div>
               {room.unread && activeRoomId !== room.conversationId && (
-                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-[#110a18] shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                <span className="absolute -top-1 -right-1 z-10 w-3.5 h-3.5 bg-red-500 rounded-full border border-[#110a18] shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
               )}
             </button>
           ))}
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden bg-[#1a1028]">
-          <div className="flex items-center justify-between h-9 px-3 bg-[#1a1028] select-none cursor-move flex-shrink-0" onMouseDown={handleHeaderMouseDown}>
+          <div
+            className="flex items-center justify-between h-9 px-3 bg-[#1a1028] select-none cursor-move flex-shrink-0"
+            onMouseDown={handleHeaderMouseDown}
+          >
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-xs font-black">MSG</span>
-              <span className="text-white text-sm font-bold tracking-wide">{conversation.title}</span>
+              <span className="text-blue-400 text-xs">MSG</span>
+              <span className="text-white text-sm tracking-wide">{conversation.title}</span>
               {conversation.online && (
                 <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
               )}
@@ -177,7 +200,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                 closeWindow(windowId);
               }}
             >
-              <span className="text-[10px] font-bold">X</span>
+              <span className="text-[10px]">X</span>
             </button>
           </div>
 
@@ -188,34 +211,23 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             }}
           >
             {conversation.messages.map((msg, idx) => {
-              const showAvatar = idx === 0 || conversation.messages[idx - 1]?.senderId !== msg.senderId;
+              const showSenderName = idx === 0 || conversation.messages[idx - 1]?.senderId !== msg.senderId;
+              const avatarSrc =
+                msg.senderAvatar ?? resolveMessengerFallbackAvatar(msg.senderId, msg.senderName);
 
               return (
                 <div id={`msg-${msg.id}`} key={msg.id} className="flex items-end gap-2">
-                  {showAvatar ? (
-                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#2a2040] border border-cyan-400/20 flex items-center justify-center overflow-hidden shadow-[0_0_12px_rgba(0,255,255,0.08)]">
-                      {msg.senderAvatar ? (
-                        <img
-                          src={msg.senderAvatar}
-                          alt={msg.senderName}
-                          className="w-full h-full object-cover"
-                          style={{ imageRendering: "pixelated" }}
-                        />
-                      ) : (
-                        <img
-                          src="/pixel_messanger_icon.svg"
-                          alt={msg.senderName}
-                          className="h-5 w-5 object-contain"
-                          style={{ imageRendering: "pixelated" }}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex-shrink-0 w-9" />
-                  )}
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#2a2040] border border-cyan-400/20 flex items-center justify-center overflow-hidden shadow-[0_0_12px_rgba(0,255,255,0.08)]">
+                    <img
+                      src={avatarSrc}
+                      alt={msg.senderName}
+                      className={msg.senderAvatar ? "w-full h-full object-cover" : "h-full w-full object-contain p-0.5"}
+                      style={{ imageRendering: msg.senderAvatar ? "pixelated" : "auto" }}
+                    />
+                  </div>
 
                   <div className="max-w-[205px] min-w-0">
-                    {showAvatar && <p className="mb-1 text-[10px] font-bold tracking-wide text-blue-300">{msg.senderName}</p>}
+                    {showSenderName && <p className="mb-1 text-[10px] tracking-wide text-blue-300">{msg.senderName}</p>}
                     <div className="rounded-2xl rounded-bl-sm border border-cyan-400/15 bg-[#24163a] px-3 py-2 shadow-[0_0_18px_rgba(0,255,255,0.06)]">
                       <p className="text-cyan-50 text-[13px] leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
                     </div>
@@ -232,12 +244,12 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                   className="max-w-[205px] rounded-2xl rounded-bl-sm border border-pink-400/30 bg-[#2b173f] px-3 py-2 text-left shadow-[0_0_18px_rgba(255,62,207,0.12)] transition-colors hover:border-cyan-300/60 hover:bg-[#322050]"
                   onClick={() => submitStoryClick(action.actionType)}
                 >
-                  <span className="block text-[10px] font-bold tracking-wide text-pink-300">친구가 보낸 링크</span>
-                  <span className="mt-1 block text-[13px] font-black text-cyan-100">&lt;{action.label}&gt;</span>
-                  <span className="mt-2 inline-flex rounded-full border border-cyan-300/30 px-2 py-0.5 text-[10px] font-bold text-cyan-200">
-                    열기
+                  <span className="block text-[10px] tracking-wide text-pink-300">{LINK_LABEL}</span>
+                  <span className="mt-1 block text-[13px] text-cyan-100">&lt;{action.label}&gt;</span>
+                  <span className="mt-2 inline-flex rounded-full border border-cyan-300/30 px-2 py-0.5 text-[10px] text-cyan-200">
+                    {OPEN_LABEL}
                   </span>
-                  <span className="mt-1 block text-[10px] text-gray-500">오후 10:18</span>
+                  <span className="mt-1 block text-[10px] text-gray-500">{TIMESTAMP_LABEL}</span>
                 </button>
               </div>
             ))}
@@ -253,10 +265,25 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             }}
           >
             <div className="flex-1 h-7 rounded-sm bg-[#0d0a18] border border-gray-700/50 px-2 flex items-center">
-              <span className="text-gray-600 text-xs select-none">메시지를 입력하세요..</span>
+              <span className="text-gray-600 text-xs select-none">{MESSAGE_PLACEHOLDER}</span>
             </div>
             <button className="w-7 h-7 flex items-center justify-center bg-cyan-600/80 hover:bg-cyan-500 rounded-sm transition-colors">
-              <span className="text-white text-xs font-bold">전송</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                className="h-3.5 w-3.5 text-white"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ transform: "translateX(0.5px) scaleX(-1)" }}
+              >
+                <path
+                  d="M3.2 10L16.4 4.6L13.6 10L16.4 15.4L3.2 10Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+                <path d="M13.6 10H8.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
         </div>

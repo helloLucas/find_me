@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useBrowserContentStore } from "../../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
 import {
@@ -13,6 +13,7 @@ import {
 
 type DevToolsTab = "elements" | "network" | "console";
 type DetailTab = "Headers" | "Response";
+type ConsoleEntryType = "in" | "out" | "error" | "success";
 
 interface Log {
   id: string;
@@ -24,6 +25,12 @@ interface Log {
   timeMs: number;
   size: string;
   selected?: boolean;
+}
+
+interface ConsoleEntry {
+  id: number;
+  type: ConsoleEntryType;
+  text: string;
 }
 
 const CORE_ANCHOR_LOG: Log = {
@@ -58,9 +65,16 @@ export const NetworkDevTools: React.FC = () => {
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("Headers");
   const [consoleInput, setConsoleInput] = useState("");
-  const [consoleHistory, setConsoleHistory] = useState<
-    { type: "in" | "out" | "error" | "success"; text: string }[]
-  >([{ type: "error", text: "Failed to load resource: the server responded with a status of 404 (Not Found)" }]);
+  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([
+    {
+      id: 0,
+      type: "error",
+      text: "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    },
+  ]);
+  const nextConsoleEntryIdRef = useRef(1);
+  const seenConsoleLogKeysRef = useRef(new Set<string>());
+  const consoleEndRef = useRef<HTMLDivElement>(null);
 
   const currentScene = objectRecord(currentNode?.outputBundle?.scene) ?? {};
   const currentSceneMode = stringValue(currentScene.mode);
@@ -130,6 +144,48 @@ export const NetworkDevTools: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [currentNode, detailTab, inspectTarget, submitStoryInspect]);
 
+  useEffect(() => {
+    const unseenConsoleEntries = consoleLogs.reduce<ConsoleEntry[]>((entries, text, index) => {
+      const key = `${currentNode?.id ?? "persisted"}:${index}:${text}`;
+      if (seenConsoleLogKeysRef.current.has(key)) {
+        return entries;
+      }
+
+      seenConsoleLogKeysRef.current.add(key);
+      entries.push({
+        id: nextConsoleEntryIdRef.current++,
+        type: "out",
+        text,
+      });
+      return entries;
+    }, []);
+
+    if (unseenConsoleEntries.length === 0) return;
+
+    setConsoleEntries((prev) => [...prev, ...unseenConsoleEntries]);
+  }, [consoleLogs, currentNode?.id]);
+
+  useEffect(() => {
+    if (activeTab !== "console") return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      consoleEndRef.current?.scrollIntoView({ block: "end" });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeTab, consoleEntries]);
+
+  const appendConsoleEntry = (type: ConsoleEntryType, text: string) => {
+    setConsoleEntries((prev) => [
+      ...prev,
+      {
+        id: nextConsoleEntryIdRef.current++,
+        type,
+        text,
+      },
+    ]);
+  };
+
   const handleNetworkTabClick = () => {
     setActiveTab("network");
     if (canSubmitStoryAction(currentNode, "click", "network_tab")) {
@@ -165,10 +221,10 @@ export const NetworkDevTools: React.FC = () => {
 
     const command = consoleInput.trim();
     setConsoleInput("");
-    setConsoleHistory((prev) => [...prev, { type: "in", text: command }]);
+    appendConsoleEntry("in", command);
 
     if (isLoading) {
-      setConsoleHistory((prev) => [...prev, { type: "error", text: "System is busy processing a previous task..." }]);
+      appendConsoleEntry("error", "System is busy processing a previous task...");
       return;
     }
 
@@ -183,14 +239,11 @@ export const NetworkDevTools: React.FC = () => {
 
     if (canSubmitStoryAction(node, "command", command)) {
       await submitStoryCommand(command);
-      setConsoleHistory((prev) => [...prev, { type: "success", text: "Command executed." }]);
+      appendConsoleEntry("success", "Command executed.");
       return;
     }
 
-    setConsoleHistory((prev) => [
-      ...prev,
-      { type: "error", text: `Uncaught ReferenceError: ${command} is not defined` },
-    ]);
+    appendConsoleEntry("error", `Uncaught ReferenceError: ${command} is not defined`);
   };
 
   return (
@@ -228,8 +281,8 @@ export const NetworkDevTools: React.FC = () => {
         <div className="flex-1 p-2 font-mono text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
           <div className="border-b border-[#333] pb-1 mb-1 opacity-50 flex-shrink-0">top</div>
           <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-2">
-            {[...consoleHistory, ...consoleLogs.map((text) => ({ type: "out" as const, text }))].map((item, i) => (
-              <div key={i} className={`
+            {consoleEntries.map((item) => (
+              <div key={item.id} className={`
                 ${item.type === "in" ? "text-[#ccc]" : ""}
                 ${item.type === "error" ? "text-red-400 bg-red-900/10 px-1 border-l-2 border-red-500" : ""}
                 ${item.type === "success" ? "text-green-400 bg-green-900/10 px-1 border-l-2 border-green-500" : ""}
@@ -238,6 +291,7 @@ export const NetworkDevTools: React.FC = () => {
                 {item.type === "in" ? "> " : ""}{item.text}
               </div>
             ))}
+            <div ref={consoleEndRef} />
           </div>
           <div className="flex items-center text-[#5394fb] mt-2 shrink-0">
             <span className="mr-2">&gt;</span>

@@ -61,11 +61,11 @@ export const ChapterCompletionModal: React.FC<ChapterCompletionModalProps> = ({
           <div className="flex gap-8 items-center w-full justify-center mt-6">
             <button
               onClick={handleReturnToLobby}
-              className="relative px-8 h-14 flex items-center justify-center group/btn cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95"
+              className="relative min-w-[220px] px-8 h-14 flex items-center justify-center group/btn cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95"
             >
               <div className="absolute inset-0 border border-green-500/40 group-hover/btn:border-green-500/80 group-hover/btn:shadow-[0_0_20px_rgba(34,197,94,0.3)] rounded-md" />
               <div className="absolute inset-[6px] border border-green-500/20 group-hover/btn:border-green-500/50 bg-green-500/[0.05] flex items-center justify-center rounded-sm">
-                <span className="font-pixel text-sm text-green-400/90 group-hover/btn:text-green-300 tracking-wider">
+                <span className="font-pixel text-sm text-green-400/90 group-hover/btn:text-green-300 tracking-wider whitespace-nowrap">
                   메인으로 돌아가기
                 </span>
               </div>

@@ -3,6 +3,7 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { DESKTOP_LAYER } from "../../shared/config/desktopWindows";
+import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 export const MessengerNotificationCard: React.FC = () => {
   const { conversations, activeRoomId, isNotificationVisible, isUnread, markMessengerSeen } =
@@ -14,7 +15,7 @@ export const MessengerNotificationCard: React.FC = () => {
 
   if (!isNotificationVisible || !conversation) return null;
 
-  const preview = conversation.messages[0] ?? null;
+  const preview = conversation.messages[conversation.messages.length - 1] ?? null;
   if (!preview) return null;
 
   const maxLen = 18;
@@ -87,10 +88,10 @@ export const MessengerNotificationCard: React.FC = () => {
                 />
               ) : (
                 <img
-                  src="/pixel_messanger_icon.svg"
+                  src={resolveMessengerFallbackAvatar(preview.senderId, preview.senderName)}
                   alt={preview.senderName}
-                  className="h-6 w-6 object-contain"
-                  style={{ imageRendering: "pixelated" }}
+                  className="h-full w-full object-contain p-1"
+                  style={{ imageRendering: "auto" }}
                 />
               )}
             </div>

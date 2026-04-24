@@ -1,6 +1,26 @@
 import { create } from "zustand";
-import { useWindowStore } from "./windowStore";
 import type { MessengerConversation } from "../../features/messenger/messenger.types";
+
+function hasUnreadConversations(conversations: Record<string, MessengerConversation>) {
+  return Object.values(conversations).some((conversation) => conversation.unread);
+}
+
+function clearConversationUnread(
+  conversations: Record<string, MessengerConversation>,
+  roomId: string | null
+) {
+  if (!roomId || !conversations[roomId]) {
+    return conversations;
+  }
+
+  return {
+    ...conversations,
+    [roomId]: {
+      ...conversations[roomId],
+      unread: false,
+    },
+  };
+}
 
 interface MessengerState {
   conversations: Record<string, MessengerConversation>;
@@ -29,22 +49,23 @@ export const useMessengerStore = create<MessengerState>((set) => ({
         (newMsg) => !existingMessages.some((msg) => msg.text === newMsg.text)
       );
       const mergedMessages = [...existingMessages, ...newMessages];
-      const messengerWindow = useWindowStore
-        .getState()
-        .windows.find((windowState) => windowState.id === "messenger");
-      const isMessengerVisible = Boolean(messengerWindow && !messengerWindow.isMinimized);
+      const nextRoomUnread =
+        newMessages.length > 0 ? true : existingRoom?.unread ?? conv.unread;
+      const nextConversations = {
+        ...state.conversations,
+        [roomId]: {
+          ...conv,
+          messages: mergedMessages,
+          unread: nextRoomUnread,
+        },
+      };
 
       return {
-        conversations: {
-          ...state.conversations,
-          [roomId]: {
-            ...conv,
-            messages: mergedMessages,
-          },
-        },
+        conversations: nextConversations,
         activeRoomId: roomId,
-        isNotificationVisible: !isMessengerVisible,
-        isUnread: !isMessengerVisible,
+        isNotificationVisible:
+          newMessages.length > 0 ? true : state.isNotificationVisible,
+        isUnread: hasUnreadConversations(nextConversations),
       };
     }),
 
@@ -54,9 +75,14 @@ export const useMessengerStore = create<MessengerState>((set) => ({
     }),
 
   markMessengerSeen: () =>
-    set({
-      isNotificationVisible: false,
-      isUnread: false,
+    set((state) => {
+      const conversations = clearConversationUnread(state.conversations, state.activeRoomId);
+
+      return {
+        conversations,
+        isNotificationVisible: false,
+        isUnread: hasUnreadConversations(conversations),
+      };
     }),
 
   resetMessenger: () =>
@@ -68,7 +94,14 @@ export const useMessengerStore = create<MessengerState>((set) => ({
     }),
 
   setActiveRoom: (roomId) =>
-    set({
-      activeRoomId: roomId,
+    set((state) => {
+      const conversations = clearConversationUnread(state.conversations, roomId);
+
+      return {
+        conversations,
+        activeRoomId: roomId,
+        isNotificationVisible: false,
+        isUnread: hasUnreadConversations(conversations),
+      };
     }),
 }));
