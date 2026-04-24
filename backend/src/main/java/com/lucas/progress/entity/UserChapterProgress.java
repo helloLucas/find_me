@@ -56,7 +56,10 @@ public class UserChapterProgress {
 
   public void complete() {
     this.status = ChapterStatus.COMPLETED;
-    this.completedAt = LocalDateTime.now();
+    // 최초 클리어 시점만 기록하고, 재클리어 시에는 덮어쓰지 않는다.
+    if (this.completedAt == null) {
+      this.completedAt = LocalDateTime.now();
+    }
   }
 
   public void unlock() {
