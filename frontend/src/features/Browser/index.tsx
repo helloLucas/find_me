@@ -6,6 +6,7 @@ import { PacmanTab } from "./components/PacmanTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import type { DesktopWindowId } from "../../shared/config/desktopWindows";
 import {
   canSubmitStoryAction,
   getStoryInspectTarget,
@@ -19,7 +20,7 @@ interface Tab {
 }
 
 interface BrowserProps {
-  windowId: string;
+  windowId: DesktopWindowId;
 }
 
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {

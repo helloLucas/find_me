@@ -1,102 +1,72 @@
 import { create } from "zustand";
 import type { MessengerConversation } from "../../features/messenger/messenger.types";
 
+function hasUnreadConversations(conversations: Record<string, MessengerConversation>) {
+  return Object.values(conversations).some((conversation) => conversation.unread);
+}
+
+function clearConversationUnread(
+  conversations: Record<string, MessengerConversation>,
+  roomId: string | null
+) {
+  if (!roomId || !conversations[roomId]) {
+    return conversations;
+  }
+
+  return {
+    ...conversations,
+    [roomId]: {
+      ...conversations[roomId],
+      unread: false,
+    },
+  };
+}
+
 interface MessengerState {
   conversations: Record<string, MessengerConversation>;
   activeRoomId: string | null;
   isNotificationVisible: boolean;
-  isWindowOpen: boolean;
   isUnread: boolean;
-  hasUserOpened: boolean;
-  shouldResetPosition: boolean;
-  messengerZIndex: number;
-
   receiveConversation: (conv: MessengerConversation) => void;
-  openMessengerWindow: () => void;
-  openMessengerFromTaskbar: () => void;
-  closeMessengerWindow: () => void;
   dismissNotification: () => void;
+  markMessengerSeen: () => void;
   resetMessenger: () => void;
-  focusMessenger: () => void;
   setActiveRoom: (roomId: string) => void;
 }
-
-let nextMessengerZIndex = 9000;
 
 export const useMessengerStore = create<MessengerState>((set) => ({
   conversations: {},
   activeRoomId: null,
   isNotificationVisible: false,
-  isWindowOpen: false,
   isUnread: false,
-  hasUserOpened: false,
-  shouldResetPosition: false,
-  messengerZIndex: nextMessengerZIndex,
 
   receiveConversation: (conv) =>
     set((state) => {
-      const shouldKeepWindowOpen = state.isWindowOpen;
       const roomId = conv.conversationId;
-
       const existingRoom = state.conversations[roomId];
       const existingMessages = existingRoom ? existingRoom.messages : [];
-
-      // 중복 메시지 방지 (이미 존재하는 텍스트라면 무시)
       const newMessages = conv.messages.filter(
         (newMsg) => !existingMessages.some((msg) => msg.text === newMsg.text)
       );
-
-      const mergedMessages = [
-        ...existingMessages,
-        ...newMessages
-      ];
-
-      // 새 메시지 수신 시 자동으로 해당 방으로 포커싱하거나 누적
-      return {
-        messengerZIndex: ++nextMessengerZIndex,
-        conversations: {
-          ...state.conversations,
-          [roomId]: {
-            ...conv,
-            messages: mergedMessages
-          }
+      const mergedMessages = [...existingMessages, ...newMessages];
+      const nextRoomUnread =
+        newMessages.length > 0 ? true : existingRoom?.unread ?? conv.unread;
+      const nextConversations = {
+        ...state.conversations,
+        [roomId]: {
+          ...conv,
+          messages: mergedMessages,
+          unread: nextRoomUnread,
         },
-        activeRoomId: roomId,
-        isNotificationVisible: !shouldKeepWindowOpen,
-        isUnread: !shouldKeepWindowOpen,
-        isWindowOpen: shouldKeepWindowOpen,
-        hasUserOpened: shouldKeepWindowOpen ? true : false,
-        shouldResetPosition: shouldKeepWindowOpen ? false : true,
       };
-    }),
 
-  setActiveRoom: (roomId) =>
-    set({
-      activeRoomId: roomId,
-    }),
-
-  openMessengerWindow: () =>
-    set({
-      isWindowOpen: true,
-      isUnread: false,
-      isNotificationVisible: false,
-      hasUserOpened: true,
-      messengerZIndex: ++nextMessengerZIndex,
-    }),
-
-  openMessengerFromTaskbar: () =>
-    set({
-      isWindowOpen: true,
-      isUnread: false,
-      hasUserOpened: true,
-      shouldResetPosition: true,
-      messengerZIndex: ++nextMessengerZIndex,
-    }),
-
-  closeMessengerWindow: () =>
-    set({
-      isWindowOpen: false,
-      isNotificationVisible: false,
+      return {
+        conversations: nextConversations,
+        activeRoomId: roomId,
+        isNotificationVisible:
+          newMessages.length > 0 ? true : state.isNotificationVisible,
+        isUnread: hasUnreadConversations(nextConversations),
+      };
     }),
 
   dismissNotification: () =>
@@ -104,20 +74,34 @@ export const useMessengerStore = create<MessengerState>((set) => ({
       isNotificationVisible: false,
     }),
 
+  markMessengerSeen: () =>
+    set((state) => {
+      const conversations = clearConversationUnread(state.conversations, state.activeRoomId);
+
+      return {
+        conversations,
+        isNotificationVisible: false,
+        isUnread: hasUnreadConversations(conversations),
+      };
+    }),
+
   resetMessenger: () =>
     set({
       conversations: {},
       activeRoomId: null,
       isNotificationVisible: false,
-      isWindowOpen: false,
       isUnread: false,
-      hasUserOpened: false,
-      shouldResetPosition: false,
-      messengerZIndex: 9000,
     }),
 
-  focusMessenger: () =>
-    set({
-      messengerZIndex: ++nextMessengerZIndex,
+  setActiveRoom: (roomId) =>
+    set((state) => {
+      const conversations = clearConversationUnread(state.conversations, roomId);
+
+      return {
+        conversations,
+        activeRoomId: roomId,
+        isNotificationVisible: false,
+        isUnread: hasUnreadConversations(conversations),
+      };
     }),
 }));

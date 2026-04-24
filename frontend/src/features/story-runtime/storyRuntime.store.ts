@@ -21,7 +21,6 @@ import {
 } from "./storyNode.adapters";
 import { userApi } from "../../shared/api/userApi";
 
-
 type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
@@ -65,7 +64,7 @@ async function syncAuthenticatedUserProfile() {
       role: user.role,
     });
   } catch {
-    // TODO: collect this failure in production logging pipeline.
+    // Intentionally ignore profile sync failures during story boot.
   }
 }
 
@@ -81,11 +80,10 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   } else if (node.code === "CH1_LUCAS_DOG_APPEAR") {
     browserStore.setRelayClueUnlocked(false);
   }
+
   const isBrowserContext =
     shouldOpenBrowserForStoryNode(node, normalizedOutput) ||
     normalizedOutput.scene.mode === "network";
-
-  // TODO: wire scene.bgm when audio runtime is introduced.
 
   useLucasStore.getState().setGlitchLevel(normalizedOutput.scene.glitchLevel);
   if (isBrowserContext) {
@@ -93,7 +91,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
+    useWindowStore.getState().openWindow("chrome");
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {
@@ -107,6 +105,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   const bubbleMessages = normalizedOutput.messages.filter(
     (message) => stringValue(message.channel) === "bubble"
   );
+
   if (bubbleMessages.length > 0) {
     const effects = objectRecord(normalizedOutput.raw.effects) ?? {};
     useLucasStore.getState().startScene({
@@ -130,7 +129,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   const terminalOutput = normalizedOutput.content.terminalOutput;
-  const consoleLogs = normalizedOutput.content.consoleLogs;   // FAIL/system 노드에서 사용
+  const consoleLogs = normalizedOutput.content.consoleLogs;
   const completionTitle = normalizedOutput.content.completionTitle;
   const completionText = normalizedOutput.content.completionText;
   const terminalLines = [
@@ -162,17 +161,17 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     await syncAuthenticatedUserProfile();
 
     try {
-      const node = normalizeStoryNodeResponse(await storyApi.startStory(resolveChapterCode(chapterCode)));
+      const node = normalizeStoryNodeResponse(
+        await storyApi.startStory(resolveChapterCode(chapterCode))
+      );
       get().setCurrentNode(node);
     } catch (startError) {
-      try {
-        const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
-        get().setCurrentNode(fallbackNode);
-      } catch {
-        set({
-          error: startError instanceof Error ? startError.message : "스토리 초기화에 실패했습니다.",
-        });
-      }
+      set({
+        error:
+          startError instanceof Error
+            ? startError.message
+            : "스토리 초기화에 실패했습니다.",
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -211,15 +210,14 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "retry") {
-        // FAIL 노드 응답: currentNode 진행상태는 유지하고 FAIL 노드의 outputBundle만 UI에 반영한다.
-        // 이렇게 해야 다음 입력도 여전히 현재 노드(currentNode) 기준으로 전이 판정된다.
         applyStoryNodeOutputBundle(normalizedNextNode);
       } else {
         get().setCurrentNode(normalizedNextNode);
       }
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "스토리 전이에 실패했습니다.",
+        error:
+          error instanceof Error ? error.message : "스토리 전이에 실패했습니다.",
       });
     } finally {
       set({ isLoading: false });

@@ -1,75 +1,88 @@
-import React, { useMemo, useState } from 'react';
-import { DesktopIcon } from '../../shared/ui/DesktopIcon';
-import { Taskbar } from '../Taskbar';
-import { TerminalScene } from '../../features/command-input/TerminalScene';
-import { useClientStore } from '../../app/store/clientStore';
-import { useWindowStore } from '../../app/store/windowStore';
-import { Window } from '../../shared/ui/Window';
-import { Browser } from '../../features/Browser';
-import { MessengerNotificationCard, MessengerWindow } from '../../features/messenger';
-import { Lucas } from '../../features/Lucas/Lucas';
-import { useStoryRuntimeStore } from '../../features/story-runtime/storyRuntime.store';
-import { canSubmitStoryAction } from '../../features/story-runtime/storyActionGuards';
-
+import React, { useMemo, useState } from "react";
+import { DesktopIcon } from "../../shared/ui/DesktopIcon";
+import { Taskbar } from "../Taskbar";
+import { TerminalScene } from "../../features/command-input/TerminalScene";
+import { useWindowStore } from "../../app/store/windowStore";
+import { Window } from "../../shared/ui/Window";
+import { Browser } from "../../features/Browser";
+import { MessengerNotificationCard, MessengerWindow } from "../../features/messenger";
+import { Lucas } from "../../features/Lucas/Lucas";
+import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
+import {
+  DESKTOP_TASKBAR_HEIGHT,
+  DESKTOP_WINDOW_DEFINITIONS,
+} from "../../shared/config/desktopWindows";
 
 export const Desktop: React.FC = () => {
-  const { openTerminal } = useClientStore();
-  const { windows, openWindow } = useWindowStore();
+  const { windows, openWindow, blurAllWindows } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const [selectionBox, setSelectionBox] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
 
-  const [selectionBox, setSelectionBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
-
-  React.useEffect(() => {
-    // Initial initialization of global triggers if needed
-  }, []);
-
-  // Generate rain drops
-  const rainDrops = useMemo(() => {
-    return Array.from({ length: 50 }).map((_, i) => ({
-      id: i,
+  const [rainDrops] = useState(() =>
+    Array.from({ length: 50 }).map((_, index) => ({
+      id: index,
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 2}s`,
       duration: `${0.5 + Math.random() * 0.5}s`,
       opacity: 0.1 + Math.random() * 0.3,
-    }));
-  }, []);
+    }))
+  );
+
+  const orderedWindows = useMemo(
+    () => [...windows].sort((left, right) => left.zIndex - right.zIndex),
+    [windows]
+  );
 
   const icons = [
-    { id: 'terminal', label: 'Terminal', icon: '/pixel_terminal_icon.svg' },
-    { id: 'trash', label: 'Recycle Bin', icon: '/pixel_trash_icon.svg' },
-    { id: 'chrome', label: 'Browser', icon: '/pixel_chrome_icon.svg' },
-    { id: 'notepad', label: 'Notebook', icon: '/pixel_notepad_icon.svg' },
+    { id: "terminal", label: "Terminal", icon: DESKTOP_WINDOW_DEFINITIONS.terminal.iconPath },
+    { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" },
+    { id: "chrome", label: "Browser", icon: DESKTOP_WINDOW_DEFINITIONS.chrome.iconPath },
+    { id: "notepad", label: "Notebook", icon: "/pixel_notepad_icon.svg" },
   ];
 
   const handleIconDoubleClick = (id: string) => {
-    if (id === 'terminal') {
-      openTerminal();
-      // 터미널 아이콘을 여는 행위를 스토리 완수 조건으로 인식하게 함
+    if (id === "terminal") {
+      openWindow("terminal");
       if (canSubmitStoryAction(currentNode, "click", "open_terminal")) {
         void submitStoryClick("open_terminal");
       }
-    } else if (id === 'chrome') {
-      openWindow('browser', 'Web Browser', id);
-    } else {
-      console.log(`Opening ${id}`);
+      return;
     }
+
+    if (id === "chrome") {
+      openWindow("chrome");
+      return;
+    }
+
+    console.log(`Opening ${id}`);
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      setSelectionBox({
-        startX: e.clientX,
-        startY: e.clientY,
-        currentX: e.clientX,
-        currentY: e.clientY,
-      });
-    }
+  const handleMouseDown = (event: React.MouseEvent) => {
+    if (event.target !== event.currentTarget) return;
+
+    blurAllWindows();
+    setSelectionBox({
+      startX: event.clientX,
+      startY: event.clientY,
+      currentX: event.clientX,
+      currentY: event.clientY,
+    });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (selectionBox) {
-      setSelectionBox({ ...selectionBox, currentX: e.clientX, currentY: e.clientY });
-    }
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (!selectionBox) return;
+
+    setSelectionBox({
+      ...selectionBox,
+      currentX: event.clientX,
+      currentY: event.clientY,
+    });
   };
 
   const handleMouseUp = () => {
@@ -82,13 +95,8 @@ export const Desktop: React.FC = () => {
     <div
       className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none"
       style={{ backgroundImage: 'url("/display_background.png")' }}
-      onContextMenu={(e) => e.preventDefault()}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onContextMenu={(event) => event.preventDefault()}
     >
-      {/* Rain Effect */}
       <div className="rain-container">
         {rainDrops.map((drop) => (
           <div
@@ -98,67 +106,71 @@ export const Desktop: React.FC = () => {
               left: drop.left,
               animationDelay: drop.delay,
               animationDuration: drop.duration,
-              opacity: drop.opacity
+              opacity: drop.opacity,
             }}
           />
         ))}
       </div>
 
-      {/* Drag Selection Box */}
-      {selectionBox && (
-        <div
-          className="absolute border border-[#0ff] bg-[#0ff]/20 pointer-events-none z-0"
-          style={{
-            left: Math.min(selectionBox.startX, selectionBox.currentX),
-            top: Math.min(selectionBox.startY, selectionBox.currentY),
-            width: Math.abs(selectionBox.currentX - selectionBox.startX),
-            height: Math.abs(selectionBox.currentY - selectionBox.startY),
-          }}
-        />
-      )}
-
-      {/* Retro Overlay for atmosphere */}
       <div className="absolute inset-0 bg-indigo-900/10 pointer-events-none mix-blend-overlay" />
 
-      {/* Desktop Icons */}
-      <div className="absolute left-4 top-4 flex flex-col gap-2 z-10 w-24">
-        {icons.map((icon) => (
-          <DesktopIcon
-            key={icon.id}
-            label={icon.label}
-            iconPath={icon.icon}
-            onDoubleClick={() => handleIconDoubleClick(icon.id)}
+      <div
+        className="absolute inset-0"
+        style={{ bottom: DESKTOP_TASKBAR_HEIGHT }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {selectionBox && (
+          <div
+            className="absolute border border-[#0ff] bg-[#0ff]/20 pointer-events-none z-0"
+            style={{
+              left: Math.min(selectionBox.startX, selectionBox.currentX),
+              top: Math.min(selectionBox.startY, selectionBox.currentY),
+              width: Math.abs(selectionBox.currentX - selectionBox.startX),
+              height: Math.abs(selectionBox.currentY - selectionBox.startY),
+            }}
           />
-        ))}
+        )}
+
+        <div className="absolute left-4 top-4 flex flex-col gap-2 z-10 w-24">
+          {icons.map((icon) => (
+            <DesktopIcon
+              key={icon.id}
+              label={icon.label}
+              iconPath={icon.icon}
+              onDoubleClick={() => handleIconDoubleClick(icon.id)}
+            />
+          ))}
+        </div>
+
+        {orderedWindows.map((windowState) => {
+          if (windowState.type === "browser") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+              >
+                <Browser windowId={windowState.id} />
+              </Window>
+            );
+          }
+
+          if (windowState.type === "terminal") {
+            return <TerminalScene key={windowState.id} windowId={windowState.id} />;
+          }
+
+          return <MessengerWindow key={windowState.id} windowId={windowState.id} />;
+        })}
+
+        <MessengerNotificationCard />
+        <Lucas />
       </div>
 
-      {/* Terminal Modals/Scenes on top of Desktop */}
-      <TerminalScene />
-
-      {/* Windows Manager */}
-      {windows.map((win) => (
-        <Window
-          key={win.id}
-          id={win.id}
-          title={win.title}
-          icon={icons.find(i => i.id === win.id)?.icon}
-        >
-          {win.type === 'browser' && <Browser windowId={win.id} />}
-        </Window>
-      ))}
-
-
-      {/* Messenger System */}
-      <MessengerNotificationCard />
-      {/* TODO: 메신저 창도 Window 컴포넌트/windowStore에 편입해서 z-index, 포커스, 최소화 규칙을 일반 윈도우와 통합한다. */}
-      <MessengerWindow />
-
-      {/* Lucas Character and Hint System */}
-      <Lucas />
-
-      {/* Taskbar */}
       <Taskbar />
     </div>
   );
 };
-

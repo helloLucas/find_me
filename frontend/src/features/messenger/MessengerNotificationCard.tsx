@@ -1,16 +1,21 @@
 import React from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
+import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { DESKTOP_LAYER } from "../../shared/config/desktopWindows";
+import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 export const MessengerNotificationCard: React.FC = () => {
-  const { conversations, activeRoomId, isNotificationVisible, isUnread, openMessengerWindow } = useMessengerStore();
+  const { conversations, activeRoomId, isNotificationVisible, isUnread, markMessengerSeen } =
+    useMessengerStore();
+  const openWindow = useWindowStore((state) => state.openWindow);
   const { submitStoryClick } = useStoryRuntimeStore();
 
   const conversation = activeRoomId ? conversations[activeRoomId] : null;
 
   if (!isNotificationVisible || !conversation) return null;
 
-  const preview = conversation.messages[0] ?? null;
+  const preview = conversation.messages[conversation.messages.length - 1] ?? null;
   if (!preview) return null;
 
   const maxLen = 18;
@@ -20,7 +25,8 @@ export const MessengerNotificationCard: React.FC = () => {
       : preview.text;
 
   const handleOpenNotification = () => {
-    openMessengerWindow();
+    openWindow("messenger");
+    markMessengerSeen();
 
     const openChatAction = conversation.actions?.find(
       (action) => action.actionType === "open_friend_chat"
@@ -34,6 +40,7 @@ export const MessengerNotificationCard: React.FC = () => {
     return (
     <div
       className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-pixel"
+      style={{ zIndex: DESKTOP_LAYER.notification }}
       onClick={handleOpenNotification}
     >
       <div
@@ -81,10 +88,10 @@ export const MessengerNotificationCard: React.FC = () => {
                 />
               ) : (
                 <img
-                  src="/pixel_messanger_icon.svg"
+                  src={resolveMessengerFallbackAvatar(preview.senderId, preview.senderName)}
                   alt={preview.senderName}
-                  className="h-6 w-6 object-contain"
-                  style={{ imageRendering: "pixelated" }}
+                  className="h-full w-full object-contain p-1"
+                  style={{ imageRendering: "auto" }}
                 />
               )}
             </div>

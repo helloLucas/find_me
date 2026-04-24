@@ -3,6 +3,7 @@ import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
 import { useStoryRuntimeStore } from '../story-runtime/storyRuntime.store';
 import { canSubmitStoryAction } from '../story-runtime/storyActionGuards';
+import { DESKTOP_LAYER } from '../../shared/config/desktopWindows';
 import './Lucas.css';
 
 export const Lucas: React.FC = () => {
@@ -97,7 +98,10 @@ export const Lucas: React.FC = () => {
   if (!isVisible && !isDialogueActive && !isHintMode) return null;
 
   return (
-    <div className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${isHintMode ? 'hint-mode' : ''}`}>
+    <div
+      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${isHintMode ? 'hint-mode' : ''}`}
+      style={{ zIndex: DESKTOP_LAYER.assistant }}
+    >
       {/* Dialogue Bubble */}
       {isDialogueActive && currentMessage && (
         <div className="lucas-bubble-container" onClick={handleBubbleClick}>
