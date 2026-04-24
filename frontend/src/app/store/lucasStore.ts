@@ -42,6 +42,7 @@ interface LucasState {
   setGlitchLevel: (level: number) => void;
   toggleHintMode: (active: boolean) => void;
   addChatMessage: (speaker: 'LUCAS' | 'PLAYER', text: string) => void;
+  resetLucas: () => void;
 }
 
 export const useLucasStore = create<LucasState>((set) => ({
@@ -124,4 +125,15 @@ export const useLucasStore = create<LucasState>((set) => ({
       { id: Date.now().toString(), speaker, text, timestamp: Date.now() }
     ]
   })),
+
+  resetLucas: () =>
+    set({
+      isVisible: false,
+      currentScene: null,
+      currentMessageIndex: 0,
+      isDialogueActive: false,
+      glitchLevel: 0,
+      isHintMode: false,
+      chatHistory: [],
+    }),
 }));

@@ -18,7 +18,11 @@ export interface WindowState {
 interface WindowStore {
   windows: WindowState[];
   activeWindowId: DesktopWindowId | null;
-  openWindow: (id: DesktopWindowId) => void;
+  openWindow: (
+    idOrType: DesktopWindowId | string,
+    title?: string,
+    legacyId?: string
+  ) => void;
   closeWindow: (id: DesktopWindowId) => void;
   minimizeWindow: (id: DesktopWindowId) => void;
   maximizeWindow: (id: DesktopWindowId) => void;
@@ -29,6 +33,24 @@ interface WindowStore {
 }
 
 let nextZIndex: number = DESKTOP_LAYER.windowBase;
+
+function isDesktopWindowId(value: unknown): value is DesktopWindowId {
+  return typeof value === "string" && value in DESKTOP_WINDOW_DEFINITIONS;
+}
+
+function resolveWindowId(
+  idOrType: DesktopWindowId | string,
+  legacyId?: string
+): DesktopWindowId | null {
+  if (isDesktopWindowId(idOrType)) return idOrType;
+  if (isDesktopWindowId(legacyId)) return legacyId;
+
+  if (idOrType === "browser") return "chrome";
+  if (idOrType === "terminal") return "terminal";
+  if (idOrType === "messenger") return "messenger";
+
+  return null;
+}
 
 function getTopVisibleWindowId(
   windows: WindowState[],
@@ -87,24 +109,29 @@ export const useWindowStore = create<WindowStore>((set) => ({
   windows: [],
   activeWindowId: null,
 
-  openWindow: (id) =>
+  openWindow: (idOrType, title, legacyId) =>
     set((state) => {
-      const existingWindow = state.windows.find((windowState) => windowState.id === id);
+      const resolvedId = resolveWindowId(idOrType, legacyId);
+      if (!resolvedId) return state;
+
+      const existingWindow = state.windows.find(
+        (windowState) => windowState.id === resolvedId
+      );
       if (existingWindow) {
         return {
-          windows: bringWindowToFront(state.windows, id),
-          activeWindowId: id,
+          windows: bringWindowToFront(state.windows, resolvedId),
+          activeWindowId: resolvedId,
         };
       }
 
-      const definition = DESKTOP_WINDOW_DEFINITIONS[id];
+      const definition = DESKTOP_WINDOW_DEFINITIONS[resolvedId];
       const preparedWindows = prepareWindowsForFront(state.windows);
       nextZIndex += DESKTOP_LAYER.windowStep;
 
       const newWindow: WindowState = {
         id: definition.id,
         type: definition.type,
-        title: definition.title,
+        title: title ?? definition.title,
         isMinimized: false,
         isMaximized: false,
         zIndex: nextZIndex,
@@ -112,7 +139,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
       return {
         windows: [...preparedWindows, newWindow],
-        activeWindowId: id,
+        activeWindowId: resolvedId,
       };
     }),
 

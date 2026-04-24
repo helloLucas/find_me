@@ -37,9 +37,12 @@ export default function PlayPage() {
   }, []);
 
   useEffect(() => {
+    audioManager.enableGlobalClickSfx("mouse_click_v1.mp3");
     initializeStory(chapterCode ?? "week01");
     processedNodeIdRef.current = null;
     return () => {
+      audioManager.disableGlobalClickSfx();
+      audioManager.setStoryVideoPlaying(false);
       audioManager.stopBgm();
     };
   }, [chapterCode, initializeStory]);
@@ -49,15 +52,19 @@ export default function PlayPage() {
       processedNodeIdRef.current = currentNode.id;
       const output = normalizeStoryOutputBundle(currentNode.outputBundle);
       if (output.scene.preVideo) {
+        audioManager.stopBgm();
+        audioManager.setStoryVideoPlaying(true);
         setIsPlayingVideo(true);
         setCurrentPreVideoUrl(output.scene.preVideo);
       } else {
+        audioManager.setStoryVideoPlaying(false);
         audioManager.playBgm(output.scene.bgm);
       }
     }
   }, [currentNode, isFullscreen]);
 
   const handleVideoFinish = () => {
+    audioManager.setStoryVideoPlaying(false);
     setIsPlayingVideo(false);
     setCurrentPreVideoUrl(null);
     if (currentNode) {
