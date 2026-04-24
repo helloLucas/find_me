@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useInitGuest } from './useInitGuest';
 import { useAuthStore } from '../../app/store/authStore';
 import { tokenManager } from '../../shared/utils/tokenManager';
+import { env } from '../../shared/config/env';
 
 /**
  * 인증 관련 사용자 액션을 처리하는 커스텀 훅
@@ -10,13 +11,13 @@ export const useAuthActions = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
   /**
    * OAuth 로그인 실행 핸들러 (Provider별 분기)
    * 전체화면 유지를 위해 팝업창 도구를 통해 소셜 로그인을 시도합니다.
    */
   const handleLoginWithProvider = (provider: 'google' | 'ssafy') => {
-    const authUrl = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+    const authUrl = `${env.apiBaseUrl}/oauth2/authorization/${provider}`;
 
     const width = 500;
     const height = 600;
