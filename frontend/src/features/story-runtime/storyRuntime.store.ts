@@ -159,7 +159,14 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     if (get().isLoading) return;
     set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
+
+    // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     useBrowserContentStore.getState().resetContent();
+    useClientStore.getState().resetClientStore();
+    useMessengerStore.getState().resetMessenger();
+    useLucasStore.getState().resetLucas();
+    useWindowStore.getState().resetWindows();
+
     await syncAuthenticatedUserProfile();
 
     try {

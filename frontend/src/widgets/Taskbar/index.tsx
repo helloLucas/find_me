@@ -4,6 +4,9 @@ import { Clock } from "../../shared/ui/Clock";
 import { useClientStore } from "../../app/store/clientStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
+import { useLucasStore } from "../../app/store/lucasStore";
+import { useBrowserContentStore } from "../../app/store/browserContentStore";
+import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
 import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
@@ -22,6 +25,15 @@ export const Taskbar: React.FC = () => {
 
   const handleExitConfirm = () => {
     setShowExitOverlay(false);
+
+    // 게임 관련 전역 상태 모두 초기화 (처음부터 다시 시작하기 위해)
+    useClientStore.getState().resetClientStore();
+    useStoryRuntimeStore.getState().resetStoryRuntime();
+    useMessengerStore.getState().resetMessenger();
+    useLucasStore.getState().resetLucas();
+    useBrowserContentStore.getState().resetContent();
+    useWindowStore.getState().resetWindows();
+
     navigate("/lobby", { replace: true });
   };
 
