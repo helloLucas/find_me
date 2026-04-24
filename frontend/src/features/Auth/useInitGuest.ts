@@ -33,10 +33,18 @@ export const useInitGuest = () => {
     return useMutation({
         // 401 Interceptor에 영향을 받지 않기 위해 기본 axios 인스턴스 사용
         mutationFn: async () => {
+            // [수정] env.apiBaseUrl을 제거하고 상대 경로를 사용하여 Vite Proxy를 타게 함
             const response = await axios.get<BaseResponse<{ tempKey: string }>>(
-                `${env.apiBaseUrl}/api/v1/auth/guest-init`,
+                `/api/v1/auth/guest-init`,
                 { withCredentials: true }
             );
+
+            // [추가] 응답이 비정상이거나 HTML(Nginx 에러 페이지 등)일 경우에 대한 방어 로직
+            if (!response.data || typeof response.data === 'string') {
+                console.error('>> INVALID API RESPONSE:', response.data);
+                throw new Error('API Response is not JSON. Check Proxy/Network settings.');
+            }
+
             return response.data.data;
         },
         onSuccess: (data) => {
