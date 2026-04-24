@@ -37,7 +37,7 @@ export const MessengerNotificationCard: React.FC = () => {
     }
   };
 
-    return (
+  return (
     <div
       className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-pixel"
       style={{ zIndex: DESKTOP_LAYER.notification }}
@@ -98,7 +98,7 @@ export const MessengerNotificationCard: React.FC = () => {
 
             <div className="flex-1 min-w-0 pt-0.5">
               <p className="text-cyan-200 text-sm font-bold leading-snug break-words">
-                {previewText}
+                새로운 메시지가 도착했습니다.
               </p>
               {preview.timestampLabel && (
                 <p className="text-gray-400 text-xs mt-1.5">{preview.timestampLabel}</p>
