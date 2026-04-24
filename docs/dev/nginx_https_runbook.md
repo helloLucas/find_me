@@ -10,7 +10,7 @@
 
 - Internet -> Nginx (80, 443)
 - Nginx가 / 경로를 프론트엔드(localhost:3667)로 프록시
-- Nginx가 /api 경로만 백엔드(localhost:8081)로 프록시
+- Nginx가 /api 경로만 백엔드(localhost:8888)로 프록시
 - 백엔드 포트는 외부에 공개하지 않음
 
 ## 3. 사전 조건
@@ -19,7 +19,7 @@
 - EC2 보안 그룹 인바운드는 아래만 허용한다.
   - 80/tcp from 0.0.0.0/0
   - 443/tcp from 0.0.0.0/0
-- 프론트엔드 포트(3667)와 백엔드 포트(8081)는 보안 그룹에서 열지 않는다.
+- 프론트엔드 포트(3667)와 백엔드 포트(8888)는 보안 그룹에서 열지 않는다.
 - 프론트엔드/백엔드 컨테이너는 127.0.0.1로만 바인딩한다.
 
 ## 4. Nginx와 Certbot 설치 (Ubuntu 예시)
@@ -102,7 +102,25 @@
        }
 
        location /api/ {
-         proxy_pass http://127.0.0.1:8081/;
+           proxy_pass http://127.0.0.1:8888;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+
+       location /oauth2/ {
+           proxy_pass http://127.0.0.1:8888;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+
+       location /login/ {
+           proxy_pass http://127.0.0.1:8888;
            proxy_http_version 1.1;
            proxy_set_header Host $host;
            proxy_set_header X-Real-IP $remote_addr;
@@ -146,8 +164,8 @@
 
 - http://your-domain -> 301으로 https://your-domain 리다이렉트
 - https://your-domain -> 프론트엔드(localhost:3667) 프록시
-- https://your-domain/api/... -> 백엔드 localhost:8081으로 프록시
-- 인터넷에서 your-domain:3667 및 your-domain:8081 직접 접근 -> 차단
+- https://your-domain/api/... -> 백엔드 localhost:8888으로 프록시
+- 인터넷에서 your-domain:3667 및 your-domain:8888 직접 접근 -> 차단
 
 ## 9. 검증 체크리스트
 
@@ -174,11 +192,11 @@
 6. 외부에서 직접 접근 차단 확인
 
    curl -I http://your-domain:3667
-   curl -I http://your-domain:8081
+   curl -I http://your-domain:8888
 
 7. 로컬 바인딩 확인
 
-   sudo ss -ltnp | grep -E ':80 |:443 |:3667|:8081'
+   sudo ss -ltnp | grep -E ':80 |:443 |:3667|:8888'
 
 ## 10. 트러블슈팅
 
@@ -196,8 +214,13 @@
    - location / 의 proxy_pass가 http://127.0.0.1:3667 인지 확인한다.
 
 - API 접속 불가:
-   - backend-server가 127.0.0.1:8081으로 떠 있는지 확인한다.
-   - location /api/ 의 proxy_pass가 http://127.0.0.1:8081/ 인지 확인한다.
+   - backend-server가 127.0.0.1:8888으로 떠 있는지 확인한다.
+   - location /api/ 의 proxy_pass가 http://127.0.0.1:8888 인지 확인한다.
+   - proxy_pass 끝에 / 를 붙이면 /api/ 접두사가 제거되어 백엔드가 경로를 못 찾는다.
+
+- OAuth 로그인 불가:
+   - location /oauth2/ 와 location /login/ 블록이 nginx에 있는지 확인한다.
+   - proxy_pass는 http://127.0.0.1:8888 (끝에 / 없이) 이어야 한다.
 
 - 브라우저 mixed content 경고:
   - 프론트 API base URL이 상대 경로(/api) 또는 https URL인지 확인한다.
@@ -220,6 +243,6 @@
 ## 12. 보안 베이스라인
 
 - 외부 공개 포트는 80, 443만 유지한다.
-- 프론트엔드(3667)와 백엔드(8081)는 반드시 127.0.0.1로만 바인딩한다.
+- 프론트엔드(3667)와 백엔드(8888)는 반드시 127.0.0.1로만 바인딩한다.
 - 파일 시스템 권한은 최소 권한 원칙을 적용한다.
 - certbot 자동 갱신 상태를 유지한다(월 1회 dry-run 점검 권장).
