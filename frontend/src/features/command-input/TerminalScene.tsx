@@ -9,6 +9,34 @@ interface TerminalSceneProps {
   windowId: DesktopWindowId;
 }
 
+const SSH_AUTH_PROMPT_NODE_CODE = "CH1_SSH_AUTH_PROMPT";
+const SSH_AUTH_QUESTION = "Are you sure you want to continue connecting (yes/no)?";
+const INLINE_PROMPT_INPUT_PREFIX = "__inline_prompt_input__:";
+
+function isSshAuthQuestion(text: string) {
+  return text.trim() === SSH_AUTH_QUESTION;
+}
+
+function toInlinePromptInput(command: string) {
+  return `${INLINE_PROMPT_INPUT_PREFIX}${command}`;
+}
+
+function getInlinePromptInput(text: string) {
+  return text.startsWith(INLINE_PROMPT_INPUT_PREFIX)
+    ? text.slice(INLINE_PROMPT_INPUT_PREFIX.length)
+    : undefined;
+}
+
+function splitPromptInput(text: string) {
+  const match = text.match(/^([^@\s]+@[^:\s]+:[^\r\n$]+\$)\s*(.*)$/);
+  if (!match) return undefined;
+
+  return {
+    prompt: match[1],
+    command: match[2],
+  };
+}
+
 export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const { terminalOutput, appendTerminalOutput, terminalUser, terminalHost, terminalPath } = useClientStore();
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
@@ -19,6 +47,11 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const promptString = `${terminalUser}@${terminalHost}:${terminalPath}$`;
+  const lastTerminalOutput = terminalOutput[terminalOutput.length - 1];
+  const isSshAuthPromptActive =
+    currentNode?.code === SSH_AUTH_PROMPT_NODE_CODE &&
+    lastTerminalOutput?.type === "system" &&
+    isSshAuthQuestion(lastTerminalOutput.text);
   const endOfOutputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,14 +76,17 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     const rawCommand = inputValue.trim();
     const normalizedWhitespaceCommand = rawCommand.replace(/\s+/g, " ").trim();
     const command =
-      currentNode?.code === "CH1_SSH_AUTH_PROMPT" && rawCommand.toLowerCase() === "yes"
+      isSshAuthPromptActive && rawCommand.toLowerCase() === "yes"
         ? "YES"
         : currentNode?.code === "CH1_TERMINAL_SSH_READY" &&
           /^ssh\s+guest@172\.22\.4\.19$/.test(normalizedWhitespaceCommand)
           ? "ssh guest@172.22.4.19"
           : rawCommand;
 
-    appendTerminalOutput("input", `${promptString} ${rawCommand}`);
+    appendTerminalOutput(
+      "input",
+      isSshAuthPromptActive ? toInlinePromptInput(rawCommand) : `${promptString} ${rawCommand}`
+    );
     setInputValue("");
     setIsProcessing(true);
 
@@ -106,7 +142,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       defaultPosition={{ x: window.innerWidth / 2 - 350, y: availableHeight / 2 - 225 }}
     >
       <div
-        className="w-full h-full overflow-y-auto p-4 text-gray-200 font-mono text-sm terminal-scrollbar"
+        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-mono text-sm terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
           if (window.getSelection()?.toString() === "") {
@@ -114,16 +150,56 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           }
         }}
       >
-        {terminalOutput.map((output) => {
-          if (output.type === "input" && output.text.startsWith(promptString)) {
-            const commandText = output.text.slice(promptString.length);
+        {terminalOutput.map((output, index) => {
+          const inlineInput = output.type === "input" ? getInlinePromptInput(output.text) : undefined;
+          if (inlineInput !== undefined) {
+            return null;
+          }
+
+          const nextOutput = terminalOutput[index + 1];
+          const inlineAnswer =
+            nextOutput?.type === "input" ? getInlinePromptInput(nextOutput.text) : undefined;
+
+          if (output.type === "system" && isSshAuthQuestion(output.text)) {
+            if (inlineAnswer !== undefined) {
+              return (
+                <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
+                  {output.text} {inlineAnswer}
+                </div>
+              );
+            }
+
+            if (isSshAuthPromptActive && index === terminalOutput.length - 1) {
+              return (
+                <div key={output.id} className="mb-1 flex flex-wrap items-baseline text-gray-400">
+                  <span className="whitespace-pre-wrap">{output.text}</span>
+                  <form onSubmit={handleCommandSubmit} className="ml-1 inline-flex min-w-20 flex-1 items-center">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={inputValue}
+                      onChange={(event) => setInputValue(event.target.value)}
+                      autoFocus
+                      className="min-w-20 flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
+                      autoComplete="off"
+                      spellCheck="false"
+                      style={{ textShadow: "none" }}
+                    />
+                  </form>
+                </div>
+              );
+            }
+          }
+
+          const promptInput = output.type === "input" ? splitPromptInput(output.text) : undefined;
+          if (promptInput) {
             return (
               <div key={output.id} className="mb-1 whitespace-pre-wrap">
                 <span className="text-green-500 mr-2" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
-                  {promptString}
+                  {promptInput.prompt}
                 </span>
-                <span className="text-gray-200" style={{ textShadow: "none" }}>
-                  {commandText.trimStart()}
+                <span className="text-gray-400" style={{ textShadow: "none" }}>
+                  {promptInput.command}
                 </span>
               </div>
             );
@@ -132,18 +208,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           return (
             <div
               key={output.id}
-              className={`mb-1 whitespace-pre-wrap ${
-                output.type === "system"
-                  ? "text-gray-400"
-                  : "text-gray-200"
-              }`}
+              className="mb-1 whitespace-pre-wrap text-gray-400"
             >
               {output.text}
             </div>
           );
         })}
 
-        {!isProcessing ? (
+        {!isSshAuthPromptActive && !isProcessing ? (
           <div className="flex items-center mt-2">
             <span className="text-green-500 mr-2" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
               {promptString}
@@ -155,20 +227,20 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
                 autoFocus
-                className="flex-1 bg-transparent border-none outline-none text-gray-200 focus:ring-0 p-0"
+                className="flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
                 autoComplete="off"
                 spellCheck="false"
                 style={{ textShadow: "none" }}
               />
             </form>
           </div>
-        ) : (
-          <div className="flex items-center mt-2 text-gray-200">
+        ) : !isSshAuthPromptActive ? (
+          <div className="flex items-center mt-2 text-gray-400">
             <span className="animate-pulse animate-duration-1000" style={{ textShadow: "none" }}>
               _
             </span>
           </div>
-        )}
+        ) : null}
         <div ref={endOfOutputRef} />
       </div>
     </WindowFrame>

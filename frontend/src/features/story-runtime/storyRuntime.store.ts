@@ -27,6 +27,19 @@ type SetCurrentNodeOptions = {
   sourceActionType?: TransitionRequest["actionType"];
 };
 
+type ApplyStoryNodeOutputOptions = {
+  transitionSound?: string;
+  sourceActionType?: TransitionRequest["actionType"];
+  terminalLinesOverride?: string[];
+};
+
+type TerminalPromptContext = {
+  sourceLine: string;
+  user: string;
+  host: string;
+  path: string;
+};
+
 type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
@@ -136,17 +149,32 @@ function resolveMessageSfx(
   return undefined;
 }
 
+function parseTerminalPromptContext(line: string): TerminalPromptContext | undefined {
+  const match = line.match(/^([^@\s]+)@([^:\s]+):([^\r\n$]+)\$$/);
+  if (!match) return undefined;
+
+  return {
+    sourceLine: line,
+    user: match[1],
+    host: match[2],
+    path: match[3],
+  };
+}
+
 function applyStoryNodeOutputBundle(
   node: StoryNode,
-  transitionSound?: string,
-  sourceActionType?: TransitionRequest["actionType"]
+  options: ApplyStoryNodeOutputOptions = {}
 ) {
   const outputBundle = node.outputBundle;
   if (!outputBundle) return;
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
 
-  const entrySfx = resolveNodeEntrySfx(normalizedOutput, transitionSound, sourceActionType);
+  const entrySfx = resolveNodeEntrySfx(
+    normalizedOutput,
+    options.transitionSound,
+    options.sourceActionType
+  );
   if (entrySfx) {
     audioManager.playSfx(entrySfx);
   }
@@ -213,26 +241,41 @@ function applyStoryNodeOutputBundle(
   const consoleLogs = normalizedOutput.content.consoleLogs;
   const completionTitle = normalizedOutput.content.completionTitle;
   const completionText = normalizedOutput.content.completionText;
-  const terminalLines = [
+  const terminalOutputLines = Array.isArray(terminalOutput) ? terminalOutput.map(String) : [];
+  const connectedPromptContext =
+    node.code === "CH1_SSH_CONNECTED"
+      ? terminalOutputLines.map(parseTerminalPromptContext).find(Boolean)
+      : undefined;
+  const visibleTerminalOutputLines = connectedPromptContext
+    ? terminalOutputLines.filter((line) => line !== connectedPromptContext.sourceLine)
+    : terminalOutputLines;
+  const terminalLines = options.terminalLinesOverride ?? [
     ...(typeof completionTitle === "string" ? [completionTitle] : []),
-    ...(Array.isArray(terminalOutput) ? terminalOutput.map(String) : []),
+    ...visibleTerminalOutputLines,
     ...(Array.isArray(consoleLogs) ? consoleLogs.map(String) : []),
     ...(Array.isArray(completionText) ? completionText.map(String) : []),
   ];
 
+  const clientStore = useClientStore.getState();
+  if (connectedPromptContext) {
+    clientStore.setTerminalContext(
+      connectedPromptContext.user,
+      connectedPromptContext.host,
+      connectedPromptContext.path
+    );
+  }
+
   if (terminalLines.length > 0) {
-    const clientStore = useClientStore.getState();
     terminalLines.forEach((line) => clientStore.appendTerminalOutput("system", line));
   }
 }
 
 function safelyApplyStoryNodeOutputBundle(
   node: StoryNode,
-  transitionSound?: string,
-  sourceActionType?: TransitionRequest["actionType"]
+  options: ApplyStoryNodeOutputOptions = {}
 ) {
   try {
-    applyStoryNodeOutputBundle(node, transitionSound, sourceActionType);
+    applyStoryNodeOutputBundle(node, options);
   } catch (error) {
     // Prevent stale runtime state when output bundle rendering fails.
     console.error("[StoryRuntime] Failed to apply node output bundle", {
@@ -251,6 +294,31 @@ function safelyApplyStoryNodeOutputBundle(
 
 function getAutoSystemInputValue(node: StoryNode) {
   return AUTO_SYSTEM_TRANSITIONS[node.code];
+}
+
+function getCommandNotFoundLine(inputValue: string | undefined) {
+  const commandName = inputValue?.trim().split(/\s+/)[0];
+  return `${commandName || "command"}: command not found`;
+}
+
+function getRetryTerminalLinesOverride(
+  actionType: TransitionRequest["actionType"],
+  inputValue: string | undefined,
+  fromNodeCode: string | undefined,
+  nodeCode: string
+) {
+  if (actionType !== "command" || nodeCode !== "CH1_FAIL_UNRELATED") {
+    return undefined;
+  }
+
+  if (
+    fromNodeCode === "CH1_SSH_AUTH_PROMPT" &&
+    inputValue?.trim().toLowerCase() === "no"
+  ) {
+    return [];
+  }
+
+  return [getCommandNotFoundLine(inputValue)];
 }
 
 export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
@@ -298,8 +366,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     set({ currentNode: node, error: null });
     const applyError = safelyApplyStoryNodeOutputBundle(
       node,
-      options?.transitionSound,
-      options?.sourceActionType
+      {
+        transitionSound: options?.transitionSound,
+        sourceActionType: options?.sourceActionType,
+      }
     );
     if (applyError) {
       set({ error: applyError });
@@ -338,8 +408,16 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         // Keep current progress node and only reflect fail node output on UI.
         const applyError = safelyApplyStoryNodeOutputBundle(
           normalizedNextNode,
-          transitionPlaySound,
-          actionType
+          {
+            transitionSound: transitionPlaySound,
+            sourceActionType: actionType,
+            terminalLinesOverride: getRetryTerminalLinesOverride(
+              actionType,
+              inputValue,
+              currentNode.code,
+              normalizedNextNode.code
+            ),
+          }
         );
         if (applyError) {
           set({ error: applyError });
