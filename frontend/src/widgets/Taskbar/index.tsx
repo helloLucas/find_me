@@ -7,6 +7,7 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
 import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
@@ -16,12 +17,22 @@ export const Taskbar: React.FC = () => {
   const { terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId, openWindow } = useWindowStore();
   const { conversations } = useMessengerStore();
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const hasConversations = Object.keys(conversations).length > 0;
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
   const terminalWindow = windows.find((windowState) => windowState.id === "terminal");
   const messengerWindow = windows.find((windowState) => windowState.id === "messenger");
   const browserWindows = windows.filter((windowState) => windowState.type === "browser");
+  const pendingOpenChatAction = Object.values(conversations)
+    .flatMap((conversation) => conversation.actions ?? [])
+    .find((action) => action.actionType === "open_friend_chat");
+
+  const consumePendingOpenChatAction = () => {
+    if (!pendingOpenChatAction) return;
+    if (!canSubmitStoryAction(currentNode, "click", pendingOpenChatAction.actionType)) return;
+    void submitStoryClick(pendingOpenChatAction.actionType);
+  };
 
   const handleExitConfirm = () => {
     setShowExitOverlay(false);
@@ -57,12 +68,14 @@ export const Taskbar: React.FC = () => {
 
     if (!messengerWindow) {
       openWindow("messenger");
+      consumePendingOpenChatAction();
       return;
     }
 
     const isActive = !messengerWindow.isMinimized && activeWindowId === messengerWindow.id;
     if (messengerWindow.isMinimized || !isActive) {
       focusWindow(messengerWindow.id);
+      consumePendingOpenChatAction();
       return;
     }
 
