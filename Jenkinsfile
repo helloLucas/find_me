@@ -65,39 +65,23 @@ pipeline {
                     def frontendSecretId = "frontend-env-${ENV_TAG}"
 
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
-                        def getEnvValue = { key ->
-                            sh(
-                                script: "grep -E '^${key}=' \"${FRONT_ENV_FILE}\" | tail -n 1 | cut -d '=' -f2-",
-                                returnStdout: true
-                            ).trim()
-                        }
+                        // Credentials 파일을 .env로 복사하여 Docker 빌드 시 주입
+                        sh "cp ${FRONT_ENV_FILE} frontend/.env"
 
-                        def apiUrl = getEnvValue('VITE_API_BASE_URL')
-                        def cdnUrl = getEnvValue('VITE_CDN_URL')
-                        def hmrHost = getEnvValue('VITE_HMR_HOST')
-                        def hmrProtocol = getEnvValue('VITE_HMR_PROTOCOL')
-                        def hmrClientPort = getEnvValue('VITE_HMR_CLIENT_PORT')
-                        def appPort = getEnvValue('VITE_APP_PORT')
+                        try {
+                            dir('frontend') {
+                                sh "docker build --target ${ENV_TAG} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
+                                sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
 
-                        dir('frontend') {
-                            sh """
-                                docker build --target ${ENV_TAG} \
-                                --build-arg VITE_API_BASE_URL='${apiUrl}' \
-                                --build-arg VITE_CDN_URL='${cdnUrl}' \
-                                --build-arg VITE_HMR_HOST='${hmrHost}' \
-                                --build-arg VITE_HMR_PROTOCOL='${hmrProtocol}' \
-                                --build-arg VITE_HMR_CLIENT_PORT='${hmrClientPort}' \
-                                --build-arg VITE_APP_PORT='${appPort}' \
-                                -t ${FRONT_IMAGE}:${env.IMAGE_TAG} .
-                            """
-
-                            sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
-
-                            withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                                sh "docker login -u $USER -p $PASS"
-                                sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
-                                sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
+                                withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                                    sh "docker login -u $USER -p $PASS"
+                                    sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
+                                    sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
+                                }
                             }
+                        } finally {
+                            // 보안을 위해 빌드 완료 후 임시 .env 파일 삭제
+                            sh "rm -f frontend/.env"
                         }
                     }
                 }
