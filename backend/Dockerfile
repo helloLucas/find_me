@@ -38,3 +38,4 @@ ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]
 
 # 백엔드 기본 포트 노출
 EXPOSE 8080
+EXPOSE 18081
