@@ -125,12 +125,14 @@ pipeline {
 
                     // 4. SSAFY GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                        sh "git config user.email 'jenkins@ssafy.com'"
-                        sh "git config user.name 'Jenkins-CI'"
-                        sh "git add k8s/*.yaml"
+                        sh 'git config user.email "jenkins@ssafy.com"'
+                        sh 'git config user.name "Jenkins-CI"'
+                        sh 'git add k8s/*.yaml'
                         
                         // 커밋 메시지에 [skip ci]를 넣어 무한 루프 방지
                         sh "git commit -m 'chore(deploy): update image tag to ${env.IMAGE_TAG} [skip ci]'"
+
+                        sh "git pull origin ${targetBranch} --rebase"
                         
                         // HEAD:${env.BRANCH_NAME} 대신 HEAD:${targetBranch} 사용
                         sh "git push https://${GIT_USER}:${GIT_PASS}@${env.GITLAB_URL} HEAD:${targetBranch}"
