@@ -11,9 +11,9 @@ export default defineConfig(({ mode }): UserConfig => {
     ? Number(env.VITE_HMR_CLIENT_PORT)
     : 443;
 
-  // Docker: VITE_PROXY_TARGET=http://backend-server:8080 으로 설정
-  // 로컬 개발: VITE_PROXY_TARGET 미설정 시 localhost:8080 사용
-  const proxyTarget = env.VITE_PROXY_TARGET || "http://localhost:8080";
+  // 로컬 개발: VITE_DEV_PROXY_TARGET 미설정 시 localhost:8080 사용
+  // Docker 내부: VITE_DEV_PROXY_TARGET=http://backend-server:8080 으로 설정
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET?.trim() || "http://localhost:8080";
 
   // 공통 프록시 설정 함수
   const configureProxy = (proxy: any) => {
