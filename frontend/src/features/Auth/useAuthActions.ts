@@ -30,16 +30,21 @@ export const useAuthActions = () => {
   const handleLoginWithProvider = (provider: 'google' | 'ssafy') => {
     const authUrl = `${env.apiBaseUrl}/oauth2/authorization/${provider}`;
 
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
+    // SSAFY 로그인 폼의 우측 내용이 잘리지 않는 최적의 사이즈
+    const width = 650;
+    const height = 700;
 
-    window.open(
-      authUrl,
-      `${provider}Login`,
-      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
-    );
+    const screenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX;
+    const screenTop = window.screenTop !== undefined ? window.screenTop : window.screenY;
+
+    const left = screenLeft + (window.outerWidth - width) / 2;
+    const top = screenTop + (window.outerHeight - height) / 2;
+
+    const features = `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no,resizable=yes,scrollbars=yes`;
+
+    const popup = window.open(authUrl, `${provider}Login`, features);
+
+    if (popup) popup.focus();
   };
 
   const { mutate: initGuest, isPending: isGuestInitializing } = useInitGuest();
