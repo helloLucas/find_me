@@ -132,7 +132,7 @@ pipeline {
                         // 커밋 메시지에 [skip ci]를 넣어 무한 루프 방지
                         sh "git commit -m 'chore(deploy): update image tag to ${env.IMAGE_TAG} [skip ci]'"
 
-                        sh "git pull origin ${targetBranch} --rebase"
+                        sh "git pull https://${GIT_USER}:${GIT_PASS}@${GITLAB_URL} ${targetBranch} --rebase"
                         
                         // HEAD:${env.BRANCH_NAME} 대신 HEAD:${targetBranch} 사용
                         sh "git push https://${GIT_USER}:${GIT_PASS}@${env.GITLAB_URL} HEAD:${targetBranch}"
