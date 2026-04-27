@@ -59,21 +59,25 @@ pipeline {
         stage('Frontend Build & Push') {
             when { 
                 expression { return isTargetBranch() }
-                // anyOf { branch 'main'; branch 'develop' }
-                // changeset "frontend/**" 
             }
             steps {
                 script {
                     def frontendSecretId = "frontend-env-${ENV_TAG}"
-                    withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
-                        def props = readProperties file: FRONT_ENV_FILE
 
-                        def apiUrl = props['VITE_API_BASE_URL']
-                        def cdnUrl = props['VITE_CDN_URL']
-                        def hmrHost = props['VITE_HMR_HOST']
-                        def hmrProtocol = props['VITE_HMR_PROTOCOL']
-                        def hmrClientPort = props['VITE_HMR_CLIENT_PORT']
-                        def appPort = props['VITE_APP_PORT']
+                    withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
+                        def getEnvValue = { key ->
+                            sh(
+                                script: "grep -E '^${key}=' \"${FRONT_ENV_FILE}\" | tail -n 1 | cut -d '=' -f2-",
+                                returnStdout: true
+                            ).trim()
+                        }
+
+                        def apiUrl = getEnvValue('VITE_API_BASE_URL')
+                        def cdnUrl = getEnvValue('VITE_CDN_URL')
+                        def hmrHost = getEnvValue('VITE_HMR_HOST')
+                        def hmrProtocol = getEnvValue('VITE_HMR_PROTOCOL')
+                        def hmrClientPort = getEnvValue('VITE_HMR_CLIENT_PORT')
+                        def appPort = getEnvValue('VITE_APP_PORT')
 
                         dir('frontend') {
                             sh """
@@ -86,11 +90,20 @@ pipeline {
                                 --build-arg VITE_APP_PORT='${appPort}' \
                                 -t ${FRONT_IMAGE}:${env.IMAGE_TAG} .
                             """
+
+                            sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
+
+                            withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                                sh "docker login -u $USER -p $PASS"
+                                sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
+                                sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
+                            }
                         }
                     }
                 }
             }
-        }
+        }   
+
 
         stage('Backend Build & Push') {
             when { 
