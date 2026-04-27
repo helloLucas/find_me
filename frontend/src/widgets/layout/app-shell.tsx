@@ -90,7 +90,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   // 우클릭 방지 (보안 및 몰입감 향상) - 운영 환경에서만 활성화
   useEffect(() => {
-    if (!import.meta.env.PROD) return;
+    if (import.meta.env.VITE_DEV_MODE === "true") return;
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -103,7 +103,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   // 개발자 도구 차단 (키보드 단축키 및 디버거 루프) - 운영 환경에서만 활성화
   useEffect(() => {
-    if (!import.meta.env.PROD) return;
+    if (import.meta.env.VITE_DEV_MODE === "true") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // F12, Ctrl+Shift+I/J/C, Ctrl+U 차단

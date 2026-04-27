@@ -12,7 +12,7 @@ COPY . .
 
 # 3단계-A: 개발용 빌드
 FROM build-stage AS dev-build
-RUN npm run build -- --mode development
+RUN npm run build -- --sourcemap
 
 # 3단계-B: 운영용 빌드
 FROM build-stage AS prod-build
