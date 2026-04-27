@@ -59,27 +59,35 @@ pipeline {
         stage('Frontend Build & Push') {
             when { 
                 expression { return isTargetBranch() }
-                // anyOf { branch 'main'; branch 'develop' }
-                // changeset "frontend/**" 
             }
             steps {
                 script {
                     def frontendSecretId = "frontend-env-${ENV_TAG}"
+
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
-                        def apiUrl = sh(script: "grep VITE_API_BASE_URL ${FRONT_ENV_FILE} | cut -d '=' -f2", returnStdout: true).trim()
-                        dir('frontend') {
-                            sh "docker build --target ${ENV_TAG} --build-arg VITE_API_BASE_URL=${apiUrl} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
-                            sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
-                            withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                                sh "docker login -u $USER -p $PASS"
-                                sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
-                                sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
+                        // Credentials 파일을 .env로 복사하여 Docker 빌드 시 주입
+                        sh "cp ${FRONT_ENV_FILE} frontend/.env"
+
+                        try {
+                            dir('frontend') {
+                                sh "docker build --target ${ENV_TAG} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
+                                sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
+
+                                withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                                    sh "docker login -u $USER -p $PASS"
+                                    sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
+                                    sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
+                                }
                             }
+                        } finally {
+                            // 보안을 위해 빌드 완료 후 임시 .env 파일 삭제
+                            sh "rm -f frontend/.env"
                         }
                     }
                 }
             }
-        }
+        }   
+
 
         stage('Backend Build & Push') {
             when { 
