@@ -66,15 +66,26 @@ pipeline {
                 script {
                     def frontendSecretId = "frontend-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
-                        def apiUrl = sh(script: "grep VITE_API_BASE_URL ${FRONT_ENV_FILE} | cut -d '=' -f2", returnStdout: true).trim()
+                        def props = readProperties file: FRONT_ENV_FILE
+
+                        def apiUrl = props['VITE_API_BASE_URL']
+                        def cdnUrl = props['VITE_CDN_URL']
+                        def hmrHost = props['VITE_HMR_HOST']
+                        def hmrProtocol = props['VITE_HMR_PROTOCOL']
+                        def hmrClientPort = props['VITE_HMR_CLIENT_PORT']
+                        def appPort = props['VITE_APP_PORT']
+
                         dir('frontend') {
-                            sh "docker build --target ${ENV_TAG} --build-arg VITE_API_BASE_URL=${apiUrl} -t ${FRONT_IMAGE}:${env.IMAGE_TAG} ."
-                            sh "docker tag ${FRONT_IMAGE}:${env.IMAGE_TAG} ${FRONT_IMAGE}:${ENV_TAG}-latest"
-                            withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                                sh "docker login -u $USER -p $PASS"
-                                sh "docker push ${FRONT_IMAGE}:${env.IMAGE_TAG}"
-                                sh "docker push ${FRONT_IMAGE}:${ENV_TAG}-latest"
-                            }
+                            sh """
+                                docker build --target ${ENV_TAG} \
+                                --build-arg VITE_API_BASE_URL='${apiUrl}' \
+                                --build-arg VITE_CDN_URL='${cdnUrl}' \
+                                --build-arg VITE_HMR_HOST='${hmrHost}' \
+                                --build-arg VITE_HMR_PROTOCOL='${hmrProtocol}' \
+                                --build-arg VITE_HMR_CLIENT_PORT='${hmrClientPort}' \
+                                --build-arg VITE_APP_PORT='${appPort}' \
+                                -t ${FRONT_IMAGE}:${env.IMAGE_TAG} .
+                            """
                         }
                     }
                 }
