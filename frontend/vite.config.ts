@@ -12,7 +12,7 @@ export default defineConfig(({ mode }): UserConfig => {
     : 443;
 
   // Docker 내부 통신을 위해 프록시 대상 주소를 컨테이너 이름으로 설정
-  const proxyTarget = "http://backend-server:8080";
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET?.trim() || "http://backend-server:8080";
 
   return {
     plugins: [react(), tailwindcss()],
@@ -20,7 +20,7 @@ export default defineConfig(({ mode }): UserConfig => {
       host: "0.0.0.0",
       port: frontendPort,
       strictPort: true,
-      allowedHosts: ["find.me.kr", "www.find.me.kr"],
+      allowedHosts: ["find.me.kr", "www.find.me.kr", "find.find.me.kr"],
       hmr: hmrHost
         ? {
           host: hmrHost,
