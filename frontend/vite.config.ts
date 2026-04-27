@@ -46,7 +46,7 @@ export default defineConfig(({ mode }): UserConfig => {
       host: "0.0.0.0",
       port: frontendPort,
       strictPort: true,
-      allowedHosts: ["find.me.kr", "www.find.me.kr"],
+      allowedHosts: ["find.me.kr", "www.find.me.kr", "find.find.me.kr"],
       hmr: hmrHost
         ? {
           host: hmrHost,
