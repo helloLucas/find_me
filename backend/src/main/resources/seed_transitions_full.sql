@@ -431,6 +431,17 @@ VALUES
 ),
 (
     (SELECT id FROM story_nodes WHERE code = 'CH1_SSH_AUTH_PROMPT'),
+    (SELECT id FROM story_nodes WHERE code = 'CH1_SSH_AUTH_PROMPT'),
+    'command',
+    'ssh guest@172.22.4.19',
+    'exact',
+    '{"trim": true, "caseSensitive": true}'::jsonb,
+    NULL,
+    '{}'::jsonb,
+    280
+),
+(
+    (SELECT id FROM story_nodes WHERE code = 'CH1_SSH_AUTH_PROMPT'),
     (SELECT id FROM story_nodes WHERE code = 'CH1_FAIL_UNRELATED'),
     'command',
     '^.*$',

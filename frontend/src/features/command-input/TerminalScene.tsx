@@ -14,7 +14,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
   const activeWindowId = useWindowStore((state) => state.activeWindowId);
   const { closeWindow, minimizeWindow, focusWindow, toggleMaximizeWindow } = useWindowStore();
-  const { currentNode, submitStoryCommand } = useStoryRuntimeStore();
+  const { currentNode, submitStoryCommand, submitStoryClick } = useStoryRuntimeStore();
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -46,7 +46,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       currentNode?.code === "CH1_SSH_AUTH_PROMPT" && rawCommand.toLowerCase() === "yes"
         ? "YES"
         : currentNode?.code === "CH1_TERMINAL_SSH_READY" &&
-            /^ssh\s+guest@172\.22\.4\.19$/.test(normalizedWhitespaceCommand)
+          /^ssh\s+guest@172\.22\.4\.19$/.test(normalizedWhitespaceCommand)
           ? "ssh guest@172.22.4.19"
           : rawCommand;
 
@@ -73,6 +73,20 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   };
+
+  // CH1_FAIL_* 노드에 도달하면 1초 후 자동으로 dismiss 전송 → CH1_TERMINAL_SSH_READY 복귀
+  const FAIL_NODE_CODES = ["CH1_FAIL_UNRELATED", "CH1_FAIL_DANGEROUS", "CH1_FAIL_SKIP"];
+  useEffect(() => {
+    if (!currentNode?.code || !FAIL_NODE_CODES.includes(currentNode.code)) return;
+    const nodeId = currentNode.id;
+    const timer = window.setTimeout(async () => {
+      if (useStoryRuntimeStore.getState().currentNode?.id !== nodeId) return;
+      await submitStoryClick("dismiss");
+      setTimeout(() => inputRef.current?.focus(), 10);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentNode?.id]);
 
   if (!windowState) return null;
 
