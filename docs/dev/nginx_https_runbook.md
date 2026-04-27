@@ -102,7 +102,25 @@
        }
 
        location /api/ {
-         proxy_pass http://127.0.0.1:8888/;
+           proxy_pass http://127.0.0.1:8888;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+
+       location /oauth2/ {
+           proxy_pass http://127.0.0.1:8888;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+
+       location /login/ {
+           proxy_pass http://127.0.0.1:8888;
            proxy_http_version 1.1;
            proxy_set_header Host $host;
            proxy_set_header X-Real-IP $remote_addr;
@@ -197,7 +215,12 @@
 
 - API 접속 불가:
    - backend-server가 127.0.0.1:8888으로 떠 있는지 확인한다.
-   - location /api/ 의 proxy_pass가 http://127.0.0.1:8888/ 인지 확인한다.
+   - location /api/ 의 proxy_pass가 http://127.0.0.1:8888 인지 확인한다.
+   - proxy_pass 끝에 / 를 붙이면 /api/ 접두사가 제거되어 백엔드가 경로를 못 찾는다.
+
+- OAuth 로그인 불가:
+   - location /oauth2/ 와 location /login/ 블록이 nginx에 있는지 확인한다.
+   - proxy_pass는 http://127.0.0.1:8888 (끝에 / 없이) 이어야 한다.
 
 - 브라우저 mixed content 경고:
   - 프론트 API base URL이 상대 경로(/api) 또는 https URL인지 확인한다.

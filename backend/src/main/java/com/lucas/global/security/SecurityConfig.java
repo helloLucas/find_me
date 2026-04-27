@@ -48,8 +48,6 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(
                         "/",
-                        "/login",
-                        "/api/v1/auth/login",
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/guest-init",
                         "/api/v1/users/register",
@@ -64,7 +62,7 @@ public class SecurityConfig {
         .oauth2Login(
             oauth2 ->
                 oauth2
-                    .loginPage("/login")
+                    .loginPage("/")
                     .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler));
 
