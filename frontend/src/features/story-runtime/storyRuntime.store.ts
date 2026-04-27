@@ -5,9 +5,11 @@ import { useClientStore } from "../../app/store/clientStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
-import { normalizeMessengerBundle } from "../messenger/messenger.adapters";
 import { storyApi } from "../../shared/api/storyApi";
-import type { StoryNode, TransitionRequest } from "../../shared/types/story";
+import { userApi } from "../../shared/api/userApi";
+import type { EffectBundle, StoryNode, TransitionRequest } from "../../shared/types/story";
+import { normalizeMessengerBundle } from "../messenger/messenger.adapters";
+import { audioManager } from "./audioManager";
 import {
   normalizeStoryOutputBundle,
   objectRecord,
@@ -19,14 +21,18 @@ import {
   normalizeStoryNodeResponse,
   normalizeTransitionNodeResponse,
 } from "./storyNode.adapters";
-import { userApi } from "../../shared/api/userApi";
+
+type SetCurrentNodeOptions = {
+  transitionSound?: string;
+  sourceActionType?: TransitionRequest["actionType"];
+};
 
 type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
   error: string | null;
   initializeStory: (chapterCode: string) => Promise<void>;
-  setCurrentNode: (node: StoryNode) => void;
+  setCurrentNode: (node: StoryNode, options?: SetCurrentNodeOptions) => void;
   submitStoryAction: (
     actionType: TransitionRequest["actionType"],
     inputValue: string,
@@ -42,6 +48,11 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_CONNECT_CORE_SUCCESS: "auto",
   CH1_SSH_CONNECTED: "auto",
 };
+
+const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
+const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
+const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
+
 
 function resolveChapterCode(chapterCode: string) {
   if (chapterCode === "ch1" || chapterCode === "stage1" || chapterCode === "week1") {
@@ -65,15 +76,84 @@ async function syncAuthenticatedUserProfile() {
       role: user.role,
     });
   } catch {
-    // Intentionally ignore profile sync failures during story boot.
+    // TODO: collect this failure in production logging pipeline.
   }
 }
 
-function applyStoryNodeOutputBundle(node: StoryNode) {
+function extractTransitionPlaySound(effects: EffectBundle[] | undefined) {
+  if (!effects || effects.length === 0) return undefined;
+
+  for (const effect of effects) {
+    if (effect.type !== "playSound") continue;
+    if (typeof effect.payload === "string") return effect.payload;
+
+    const payload = objectRecord(effect.payload);
+    if (!payload) continue;
+    const resolved = stringValue(payload.sound ?? payload.name ?? payload.value ?? payload.file);
+    if (resolved) return resolved;
+  }
+
+  return undefined;
+}
+
+function resolveNodeEntrySfx(
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>,
+  transitionSound: string | undefined,
+  sourceActionType?: TransitionRequest["actionType"]
+) {
+  if (sourceActionType === "click" && transitionSound === MOUSE_CLICK_SOUND) {
+    return undefined;
+  }
+  if (transitionSound) return transitionSound;
+
+  const effects = objectRecord(normalizedOutput.raw.effects) ?? {};
+  const entrySound = stringValue(effects.playSound);
+  if (sourceActionType === "click" && entrySound === MOUSE_CLICK_SOUND) {
+    return undefined;
+  }
+  return entrySound;
+}
+
+function resolveMessageSfx(
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>,
+  hasEntrySound: boolean
+) {
+  if (hasEntrySound) return undefined;
+  if (normalizedOutput.scene.preVideo) return undefined;
+
+  const hasLucasBubble = normalizedOutput.messages.some(
+    (message) =>
+      stringValue(message.channel) === "bubble" &&
+      stringValue(message.speaker)?.toUpperCase() === "LUCAS"
+  );
+  if (hasLucasBubble) return LUCAS_BUBBLE_SOUND;
+
+  const hasChat = normalizedOutput.messages.some(
+    (message) => stringValue(message.channel) === "chat"
+  );
+  if (hasChat) return CHAT_NOTIFICATION_SOUND;
+
+  return undefined;
+}
+
+function applyStoryNodeOutputBundle(
+  node: StoryNode,
+  transitionSound?: string,
+  sourceActionType?: TransitionRequest["actionType"]
+) {
   const outputBundle = node.outputBundle;
   if (!outputBundle) return;
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
+
+  const entrySfx = resolveNodeEntrySfx(normalizedOutput, transitionSound, sourceActionType);
+  if (entrySfx) {
+    audioManager.playSfx(entrySfx);
+  }
+  const messageSfx = resolveMessageSfx(normalizedOutput, Boolean(entrySfx));
+  if (messageSfx) {
+    audioManager.playSfx(messageSfx);
+  }
 
   const browserStore = useBrowserContentStore.getState();
   if (node.code === "CH1_RELAY_CLUE_REVISIT") {
@@ -92,7 +172,7 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("chrome");
+    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {
@@ -146,6 +226,29 @@ function applyStoryNodeOutputBundle(node: StoryNode) {
   }
 }
 
+function safelyApplyStoryNodeOutputBundle(
+  node: StoryNode,
+  transitionSound?: string,
+  sourceActionType?: TransitionRequest["actionType"]
+) {
+  try {
+    applyStoryNodeOutputBundle(node, transitionSound, sourceActionType);
+  } catch (error) {
+    // Prevent stale runtime state when output bundle rendering fails.
+    console.error("[StoryRuntime] Failed to apply node output bundle", {
+      nodeCode: node.code,
+      nodeId: node.id,
+      error,
+    });
+
+    return error instanceof Error
+      ? error.message
+      : "스토리 출력 반영에 실패했습니다.";
+  }
+
+  return null;
+}
+
 function getAutoSystemInputValue(node: StoryNode) {
   return AUTO_SYSTEM_TRANSITIONS[node.code];
 }
@@ -175,20 +278,32 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       );
       get().setCurrentNode(node);
     } catch (startError) {
-      set({
-        error:
-          startError instanceof Error
-            ? startError.message
-            : "스토리 초기화에 실패했습니다.",
-      });
+      try {
+        const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
+        get().setCurrentNode(fallbackNode);
+      } catch {
+        set({
+          error:
+            startError instanceof Error
+              ? startError.message
+              : "스토리 초기화에 실패했습니다.",
+        });
+      }
     } finally {
       set({ isLoading: false });
     }
   },
 
-  setCurrentNode: (node) => {
+  setCurrentNode: (node, options) => {
     set({ currentNode: node, error: null });
-    applyStoryNodeOutputBundle(node);
+    const applyError = safelyApplyStoryNodeOutputBundle(
+      node,
+      options?.transitionSound,
+      options?.sourceActionType
+    );
+    if (applyError) {
+      set({ error: applyError });
+    }
 
     const autoInputValue = getAutoSystemInputValue(node);
     if (autoInputValue) {
@@ -217,11 +332,23 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         meta,
       });
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
+      const transitionPlaySound = extractTransitionPlaySound(response.effects);
 
       if (response.result === "retry") {
-        applyStoryNodeOutputBundle(normalizedNextNode);
+        // Keep current progress node and only reflect fail node output on UI.
+        const applyError = safelyApplyStoryNodeOutputBundle(
+          normalizedNextNode,
+          transitionPlaySound,
+          actionType
+        );
+        if (applyError) {
+          set({ error: applyError });
+        }
       } else {
-        get().setCurrentNode(normalizedNextNode);
+        get().setCurrentNode(normalizedNextNode, {
+          transitionSound: transitionPlaySound,
+          sourceActionType: actionType,
+        });
       }
     } catch (error) {
       set({

@@ -2,6 +2,7 @@ import React from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { DESKTOP_LAYER } from "../../shared/config/desktopWindows";
 import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
@@ -9,7 +10,7 @@ export const MessengerNotificationCard: React.FC = () => {
   const { conversations, activeRoomId, isNotificationVisible, isUnread, markMessengerSeen } =
     useMessengerStore();
   const openWindow = useWindowStore((state) => state.openWindow);
-  const { submitStoryClick } = useStoryRuntimeStore();
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
 
   const conversation = activeRoomId ? conversations[activeRoomId] : null;
 
@@ -28,11 +29,13 @@ export const MessengerNotificationCard: React.FC = () => {
     openWindow("messenger");
     markMessengerSeen();
 
-    const openChatAction = conversation.actions?.find(
-      (action) => action.actionType === "open_friend_chat"
+    const validClickAction = conversation.actions?.find((action) =>
+      canSubmitStoryAction(currentNode, "click", action.actionType)
     );
+    const openChatAction = validClickAction ??
+      conversation.actions?.find((action) => action.actionType === "open_friend_chat");
 
-    if (openChatAction) {
+    if (openChatAction && canSubmitStoryAction(currentNode, "click", openChatAction.actionType)) {
       void submitStoryClick(openChatAction.actionType);
     }
   };

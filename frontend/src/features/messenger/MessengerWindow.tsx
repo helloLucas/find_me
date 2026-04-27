@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
 import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
@@ -20,7 +21,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   const { conversations, activeRoomId, setActiveRoom, markMessengerSeen } = useMessengerStore();
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
   const { closeWindow, focusWindow } = useWindowStore();
-  const { submitStoryClick } = useStoryRuntimeStore();
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const wasVisibleRef = useRef(false);
@@ -237,22 +238,35 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
               );
             })}
 
-            {conversation.actions?.map((action, idx) => (
-              <div key={`${action.actionType}-${idx}`} className="flex items-end gap-2">
-                <div className="flex-shrink-0 w-9" />
-                <button
-                  className="max-w-[205px] rounded-2xl rounded-bl-sm border border-pink-400/30 bg-[#2b173f] px-3 py-2 text-left shadow-[0_0_18px_rgba(255,62,207,0.12)] transition-colors hover:border-cyan-300/60 hover:bg-[#322050]"
-                  onClick={() => submitStoryClick(action.actionType)}
-                >
-                  <span className="block text-[10px] tracking-wide text-pink-300">{LINK_LABEL}</span>
-                  <span className="mt-1 block text-[13px] text-cyan-100">&lt;{action.label}&gt;</span>
-                  <span className="mt-2 inline-flex rounded-full border border-cyan-300/30 px-2 py-0.5 text-[10px] text-cyan-200">
-                    {OPEN_LABEL}
-                  </span>
-                  <span className="mt-1 block text-[10px] text-gray-500">{TIMESTAMP_LABEL}</span>
-                </button>
-              </div>
-            ))}
+            {conversation.actions?.map((action, idx) => {
+              const canClickAction = canSubmitStoryAction(
+                currentNode,
+                "click",
+                action.actionType
+              );
+
+              return (
+                <div key={`${action.actionType}-${idx}`} className="flex items-end gap-2">
+                  <div className="flex-shrink-0 w-9" />
+                  <button
+                    className="max-w-[205px] rounded-2xl rounded-bl-sm border border-pink-400/30 bg-[#2b173f] px-3 py-2 text-left shadow-[0_0_18px_rgba(255,62,207,0.12)] transition-colors hover:border-cyan-300/60 hover:bg-[#322050] disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => {
+                      if (canClickAction) {
+                        void submitStoryClick(action.actionType);
+                      }
+                    }}
+                    disabled={!canClickAction}
+                  >
+                    <span className="block text-[10px] tracking-wide text-pink-300">{LINK_LABEL}</span>
+                    <span className="mt-1 block text-[13px] text-cyan-100">&lt;{action.label}&gt;</span>
+                    <span className="mt-2 inline-flex rounded-full border border-cyan-300/30 px-2 py-0.5 text-[10px] text-cyan-200">
+                      {OPEN_LABEL}
+                    </span>
+                    <span className="mt-1 block text-[10px] text-gray-500">{TIMESTAMP_LABEL}</span>
+                  </button>
+                </div>
+              );
+            })}
 
             <div ref={messageEndRef} />
           </div>
