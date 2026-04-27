@@ -17,7 +17,7 @@ export const Taskbar: React.FC = () => {
   const { terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId, openWindow } = useWindowStore();
   const { conversations } = useMessengerStore();
-  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const { currentNode, submitStoryClick, isLoading } = useStoryRuntimeStore();
   const hasConversations = Object.keys(conversations).length > 0;
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
@@ -82,6 +82,19 @@ export const Taskbar: React.FC = () => {
     minimizeWindow(messengerWindow.id);
   };
 
+  const handleBrowserTaskbarClick = () => {
+    // CH1_FRIEND_CHAT_OPEN 구간에서는 브라우저 직접 오픈도 기사 보기 전이로 인정한다.
+    if (
+      !isLoading &&
+      canSubmitStoryAction(currentNode, "click", "friend_message_link")
+    ) {
+      void submitStoryClick("friend_message_link");
+      return;
+    }
+
+    openWindow("chrome");
+  };
+
   return (
     <>
       <footer
@@ -112,7 +125,7 @@ export const Taskbar: React.FC = () => {
 
           <button
             className="flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(34,211,238,0.2)]"
-            onClick={() => openWindow("chrome")}
+            onClick={handleBrowserTaskbarClick}
           >
             <img src="/pixel_chrome_icon.svg" alt="Chrome" className="h-5 w-5 object-contain" style={{ imageRendering: "pixelated" }} />
           </button>
