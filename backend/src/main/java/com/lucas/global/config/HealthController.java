@@ -12,4 +12,9 @@ public class HealthController {
   public ResponseEntity<BaseResponse<String>> health() {
     return ResponseEntity.ok(BaseResponse.success("조회 성공", "lucas backend is running"));
   }
+
+  @GetMapping("/")
+  public ResponseEntity<String> healthz() {
+    return ResponseEntity.ok("OK");
+  }
 }
