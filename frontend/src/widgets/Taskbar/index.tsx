@@ -49,6 +49,23 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleTerminalTaskbarClick = () => {
+    const canOpenTerminalTransition =
+      !isLoading && canSubmitStoryAction(currentNode, "click", "open_terminal");
+
+    if (canOpenTerminalTransition) {
+      void submitStoryClick("open_terminal");
+
+      if (!terminalWindow) {
+        openWindow("terminal");
+        return;
+      }
+
+      if (terminalWindow.isMinimized || activeWindowId !== terminalWindow.id) {
+        focusWindow(terminalWindow.id);
+      }
+      return;
+    }
+
     if (!terminalWindow) {
       openWindow("terminal");
       return;

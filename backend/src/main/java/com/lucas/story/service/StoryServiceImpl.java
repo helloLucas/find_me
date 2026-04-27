@@ -197,8 +197,13 @@ public class StoryServiceImpl implements StoryService {
     boolean isFailNode = nextNode.getCode().contains("_FAIL_");
 
     if (isFailNode) {
+      Chapter failChapter = nextNode.getChapter();
+      JsonNode failSnapshot = createEmptySnapshot(failChapter, nextNode);
+      progress.updateProgress(failChapter, nextNode, failSnapshot);
+      userStoryProgressRepository.save(progress);
+
       log.info(
-          "Fail node reached (progress NOT updated): User={}, FailNode={}",
+          "Fail node reached (progress updated): User={}, FailNode={}",
           user.getId(),
           nextNode.getCode());
       return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry");

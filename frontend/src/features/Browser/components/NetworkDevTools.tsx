@@ -145,8 +145,10 @@ export const NetworkDevTools: React.FC = () => {
   }, [currentNode, detailTab, inspectTarget, submitStoryInspect]);
 
   useEffect(() => {
+    if (!shouldApplyCurrentContent) return;
+
     const unseenConsoleEntries = consoleLogs.reduce<ConsoleEntry[]>((entries, text, index) => {
-      const key = `${currentNode?.id ?? "persisted"}:${index}:${text}`;
+      const key = `${index}:${text}`;
       if (seenConsoleLogKeysRef.current.has(key)) {
         return entries;
       }
@@ -163,7 +165,7 @@ export const NetworkDevTools: React.FC = () => {
     if (unseenConsoleEntries.length === 0) return;
 
     setConsoleEntries((prev) => [...prev, ...unseenConsoleEntries]);
-  }, [consoleLogs, currentNode?.id]);
+  }, [consoleLogs, shouldApplyCurrentContent]);
 
   useEffect(() => {
     if (activeTab !== "console") return;
@@ -312,14 +314,14 @@ export const NetworkDevTools: React.FC = () => {
         <div className="flex-1 flex flex-row overflow-hidden relative bg-[#1e1e1e]">
           <div className={`flex-1 overflow-x-auto overflow-y-auto ${selectedLog ? "border-r border-[#444] hidden md:block" : ""}`}>
             <table className="min-w-full text-left table-fixed whitespace-nowrap font-mono text-[11px]">
-              <thead className="sticky top-0 bg-[#2d2d2d] text-[#ccc] border-b border-[#444]">
+              <thead className="sticky top-0 z-10 bg-[#2d2d2d] text-[#ccc] border-b border-[#444]">
                 <tr>
-                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444]">Status</th>
-                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444]">Method</th>
-                  <th className="px-2 py-1 font-normal border-r border-[#444] w-28">Name</th>
-                  <th className="px-2 py-1 font-normal border-r border-[#444] w-32">Domain</th>
-                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444]">Time</th>
-                  <th className="w-12 px-2 py-1 font-normal">Size</th>
+                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444] bg-[#2d2d2d]">Status</th>
+                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444] bg-[#2d2d2d]">Method</th>
+                  <th className="px-2 py-1 font-normal border-r border-[#444] w-28 bg-[#2d2d2d]">Name</th>
+                  <th className="px-2 py-1 font-normal border-r border-[#444] w-32 bg-[#2d2d2d]">Domain</th>
+                  <th className="w-12 px-2 py-1 font-normal border-r border-[#444] bg-[#2d2d2d]">Time</th>
+                  <th className="w-12 px-2 py-1 font-normal bg-[#2d2d2d]">Size</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,7 +337,7 @@ export const NetworkDevTools: React.FC = () => {
                     </td>
                     <td className="px-2 py-0.5">{log.method}</td>
                     <td className="px-2 py-0.5 truncate" title={log.name}>{log.name}</td>
-                    <td className="px-2 py-0.5 opacity-60 truncate" title={log.domain}>{log.domain}</td>
+                    <td className="px-2 py-0.5 text-[#a8a8a8] truncate" title={log.domain}>{log.domain}</td>
                     <td className="px-2 py-0.5">{log.timeMs} ms</td>
                     <td className="px-2 py-0.5">{log.size}</td>
                   </tr>

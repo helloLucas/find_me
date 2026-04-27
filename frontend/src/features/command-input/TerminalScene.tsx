@@ -2,8 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useClientStore } from "../../app/store/clientStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
-import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
+import {
+  DESKTOP_TASKBAR_HEIGHT,
+  type DesktopWindowId,
+} from "../../shared/config/desktopWindows";
 
 interface TerminalSceneProps {
   windowId: DesktopWindowId;
@@ -38,11 +42,20 @@ function splitPromptInput(text: string) {
 }
 
 export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
-  const { terminalOutput, appendTerminalOutput, terminalUser, terminalHost, terminalPath } = useClientStore();
-  const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
+  const {
+    terminalOutput,
+    appendTerminalOutput,
+    terminalUser,
+    terminalHost,
+    terminalPath,
+  } = useClientStore();
+  const windowState = useWindowStore((state) =>
+    state.windows.find((window) => window.id === windowId)
+  );
   const activeWindowId = useWindowStore((state) => state.activeWindowId);
-  const { closeWindow, minimizeWindow, focusWindow, toggleMaximizeWindow } = useWindowStore();
-  const { currentNode, submitStoryCommand, submitStoryClick } = useStoryRuntimeStore();
+  const { closeWindow, minimizeWindow, focusWindow, toggleMaximizeWindow } =
+    useWindowStore();
+  const { currentNode, submitStoryCommand } = useStoryRuntimeStore();
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -74,12 +87,23 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     if (!inputValue.trim() || isProcessing) return;
 
     const rawCommand = inputValue.trim();
+    let activeNode = useStoryRuntimeStore.getState().currentNode ?? currentNode;
+
+    if (canSubmitStoryAction(activeNode, "click", "open_terminal")) {
+      await useStoryRuntimeStore.getState().submitStoryClick("open_terminal");
+      activeNode = useStoryRuntimeStore.getState().currentNode ?? activeNode;
+    }
+
     const normalizedWhitespaceCommand = rawCommand.replace(/\s+/g, " ").trim();
+    const normalizedLowerCommand = normalizedWhitespaceCommand.toLowerCase();
+    const isReconnectSshCommand =
+      /^ssh\s+guest@172\.22\.4\.19(?::22)?$/i.test(normalizedWhitespaceCommand);
+    const isSshAuthNode = activeNode?.code === SSH_AUTH_PROMPT_NODE_CODE;
+    const isSshAuthYes = isSshAuthNode && normalizedLowerCommand === "yes";
     const command =
-      isSshAuthPromptActive && rawCommand.toLowerCase() === "yes"
+      isSshAuthYes
         ? "YES"
-        : currentNode?.code === "CH1_TERMINAL_SSH_READY" &&
-          /^ssh\s+guest@172\.22\.4\.19$/.test(normalizedWhitespaceCommand)
+        : activeNode?.code === "CH1_TERMINAL_SSH_READY" && isReconnectSshCommand
           ? "ssh guest@172.22.4.19"
           : rawCommand;
 
@@ -88,9 +112,16 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       isSshAuthPromptActive ? toInlinePromptInput(rawCommand) : `${promptString} ${rawCommand}`
     );
     setInputValue("");
+
     setIsProcessing(true);
 
     try {
+      if (!canSubmitStoryAction(activeNode, "command", command)) {
+        const firstWord = rawCommand.split(" ")[0];
+        appendTerminalOutput("error", `${firstWord}: command not found`);
+        return;
+      }
+
       await submitStoryCommand(command, { directory: terminalPath });
 
       const runtimeError = useStoryRuntimeStore.getState().error;
@@ -109,20 +140,6 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   };
-
-  // CH1_FAIL_* 노드에 도달하면 1초 후 자동으로 dismiss 전송 → CH1_TERMINAL_SSH_READY 복귀
-  const FAIL_NODE_CODES = ["CH1_FAIL_UNRELATED", "CH1_FAIL_DANGEROUS", "CH1_FAIL_SKIP"];
-  useEffect(() => {
-    if (!currentNode?.code || !FAIL_NODE_CODES.includes(currentNode.code)) return;
-    const nodeId = currentNode.id;
-    const timer = window.setTimeout(async () => {
-      if (useStoryRuntimeStore.getState().currentNode?.id !== nodeId) return;
-      await submitStoryClick("dismiss");
-      setTimeout(() => inputRef.current?.focus(), 10);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentNode?.id]);
 
   if (!windowState) return null;
 
@@ -151,7 +168,8 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
         }}
       >
         {terminalOutput.map((output, index) => {
-          const inlineInput = output.type === "input" ? getInlinePromptInput(output.text) : undefined;
+          const inlineInput =
+            output.type === "input" ? getInlinePromptInput(output.text) : undefined;
           if (inlineInput !== undefined) {
             return null;
           }
@@ -173,7 +191,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
               return (
                 <div key={output.id} className="mb-1 flex flex-wrap items-baseline text-gray-400">
                   <span className="whitespace-pre-wrap">{output.text}</span>
-                  <form onSubmit={handleCommandSubmit} className="ml-1 inline-flex min-w-20 flex-1 items-center">
+                  <form
+                    onSubmit={handleCommandSubmit}
+                    className="ml-1 inline-flex min-w-20 flex-1 items-center"
+                  >
                     <input
                       ref={inputRef}
                       type="text"
@@ -195,7 +216,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           if (promptInput) {
             return (
               <div key={output.id} className="mb-1 whitespace-pre-wrap">
-                <span className="text-green-500 mr-2" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
+                <span
+                  className="text-green-500 mr-2"
+                  style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+                >
                   {promptInput.prompt}
                 </span>
                 <span className="text-gray-400" style={{ textShadow: "none" }}>
@@ -206,10 +230,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           }
 
           return (
-            <div
-              key={output.id}
-              className="mb-1 whitespace-pre-wrap text-gray-400"
-            >
+            <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
               {output.text}
             </div>
           );
@@ -217,7 +238,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
         {!isSshAuthPromptActive && !isProcessing ? (
           <div className="flex items-center mt-2">
-            <span className="text-green-500 mr-2" style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}>
+            <span
+              className="text-green-500 mr-2"
+              style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+            >
               {promptString}
             </span>
             <form onSubmit={handleCommandSubmit} className="flex-1 flex items-center">
