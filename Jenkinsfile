@@ -43,10 +43,16 @@ pipeline {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                             sh '''
-                                unset CI_MERGE_REQUEST_IID
-                                unset CI_MERGE_REQUEST_ID
-                                unset gitlabMergeRequestIid
-                                unset CHANGE_ID
+                                # PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
+                                export CI_MERGE_REQUEST_IID=""
+                                export CI_MERGE_REQUEST_ID=""
+                                export CI_EXTERNAL_PULL_REQUEST_IID=""
+                                export CI_EXTERNAL_PULL_REQUEST_ID=""
+                                export gitlabMergeRequestIid=""
+                                export gitlabMergeRequestId=""
+                                export CHANGE_ID=""
+                                export PULL_REQUEST="false"
+                                
                                 export GL_TOKEN=${GIT_TOKEN}
                                 npm install
                                 npx semantic-release --debug
