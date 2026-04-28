@@ -1,0 +1,89 @@
+global:
+  scrape_interval: 15s # 15초마다 데이터 수집
+  evaluation_interval: 15s # 규칙 평가 주기
+
+scrape_configs:
+  # 1. 인프라 모니터링 (OS 지표)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['3.35.17.97:9100']
+        labels:
+          server: 'main-prod-default' # 기본 지급 서버
+          env: 'prod'
+      - targets: ['172.31.52.126:9100']
+        labels:
+          server: 'main-prod-standby'
+          env: 'prod'
+      - targets: ['13.125.132.196:9100']
+        labels:
+          server: 'redis-prod'
+          env: 'prod'
+      - targets: ['node-exporter:9100']
+        labels:
+          server: 'logging-server'
+          env: 'mgmt'
+
+  # 2. 컨테이너 모니터링 (Docker 지표)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['3.35.17.97:9080']
+        labels:
+          server: 'main-prod-default'
+      - targets: ['172.31.52.126:9080']
+        labels:
+          server: 'main-prod-standby'
+      - targets: ['13.125.132.196:9080']
+        labels:
+          server: 'redis-prod'
+      - targets: ['cadvisor:8080']
+        labels:
+          server: 'logging-server'
+
+  # 3. Spring Boot 애플리케이션 모니터링
+  - job_name: 'spring-boot'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['3.35.17.97:18081']
+        labels:
+          server: 'main-prod-default'
+          app: 'lucas-backend' 
+      - targets: ['172.31.52.126:18081']
+        labels:
+          server: 'main-prod-standby'
+          app: 'lucas-backend'
+
+  # 4. Redis 모니터링
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['13.125.132.196:9121']
+        labels:
+          server: 'redis-prod'
+
+  # 5. PostgreSQL (RDS) 모니터링
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+        labels:
+          server: 'rds-postgres'
+
+  # 6. 외부 API 및 도메인 상태 체크
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: 
+        - 'https://find.me.kr'
+        labels:
+          site: 'dns'
+      # - targets:
+      #   - 'https://api.find.me.kr/health' # 예시 API 주소
+      #   labels:
+      #     site: 'backend-api-health'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'blackbox_exporter:9115' # 컨테이너 이름 사용

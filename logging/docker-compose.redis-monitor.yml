@@ -1,0 +1,66 @@
+# docker-compose.redis-monitor.yml
+version: '3.8'
+
+services:
+  # (이곳에 기존 redis 서비스가 있다고 가정합니다)
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-server
+    # 호스트의 모든 인터페이스(0.0.0.0) 6379 포트를 컨테이너로 매핑
+    ports:
+      - "6379:6379"
+    command:
+      - "redis-server"
+      - "--requirepass"
+      - "lucas_redis_1234"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "1536mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+    volumes:
+      - redis_data:/data
+    restart: always
+  # 위 3-1의 node-exporter, cadvisor 추가...
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    ports:
+      - "9080:8080" # 포트 충돌 방지를 위해 9080 사용
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis_exporter
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+    environment:
+      # 같은 docker-compose 네트워크에 있는 redis 컨테이너를 가리킴
+      - REDIS_ADDR=redis:6379 
+      - REDIS_PASSWORD=your_redis_password # 비밀번호가 있을 경우
+volumes:
+  redis_data:

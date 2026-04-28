@@ -1,11 +1,11 @@
 import { createBrowserRouter } from "react-router-dom";
 import type { ReactNode } from "react";
-import HomePage from "../../pages/home";
-import LoginPage from "../../pages/auth/login-page";
-import SignupPage from "../../pages/auth/signup-page";
+import HomePage from "../../pages/Home";
 import LobbyPage from "../../pages/lobby";
 import PlayPage from "../../pages/play";
 import EndingPage from "../../pages/ending";
+import OAuthCallbackPage from "../../pages/auth/oauth-callback";
+import SetupNicknamePage from "../../pages/auth/setup-nickname";
 import AppShell from "../../widgets/layout/app-shell";
 
 function withShell(element: ReactNode) {
@@ -17,14 +17,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: withShell(<HomePage />),
   },
-  {
-    path: "/login",
-    element: withShell(<LoginPage />),
-  },
-  {
-    path: "/signup",
-    element: withShell(<SignupPage />),
-  },
+
   {
     path: "/lobby",
     element: withShell(<LobbyPage />),
@@ -36,5 +29,13 @@ export const router = createBrowserRouter([
   {
     path: "/ending",
     element: withShell(<EndingPage />),
+  },
+  {
+    path: "/oauth/callback",
+    element: <OAuthCallbackPage />,
+  },
+  {
+    path: "/setup-nickname",
+    element: withShell(<SetupNicknamePage />),
   },
 ]);

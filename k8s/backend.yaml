@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: shyunnnn/find-me-backend:88-dev
+        ports:
+        - containerPort: 8080
+        - containerPort: 18081
+        envFrom:
+        - secretRef:
+            name: backend-secrets
+      nodeSelector:
+        env: dev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: monitoring
+      protocol: TCP
+      port: 18081       # 외부에서 접속할 포트
+      targetPort: 18081 # 컨테이너 내부로 전달할 포트
+  type: NodePort

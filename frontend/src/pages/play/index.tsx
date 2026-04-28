@@ -1,22 +1,102 @@
 import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Desktop } from "../../widgets/Desktop";
+import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
+import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputBundle.adapters";
+import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
+import { audioManager } from "../../features/story-runtime/audioManager";
+import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
+
+function getIsFullscreen() {
+  return !!document.fullscreenElement || (window.innerHeight === screen.height);
+}
 
 export default function PlayPage() {
   const { chapterCode } = useParams();
+  const { error, initializeStory, currentNode } = useStoryRuntimeStore();
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const processedNodeIdRef = useRef<number | string | null>(null);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(getIsFullscreen());
+    };
+
+    syncFullscreenState();
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    window.addEventListener("resize", syncFullscreenState);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      window.removeEventListener("resize", syncFullscreenState);
+    };
+  }, []);
+
+  useEffect(() => {
+    audioManager.enableGlobalClickSfx("mouse_click_v1.mp3");
+    initializeStory(chapterCode ?? "week01");
+    processedNodeIdRef.current = null;
+    return () => {
+      audioManager.disableGlobalClickSfx();
+      audioManager.setStoryVideoPlaying(false);
+      audioManager.stopBgm();
+    };
+  }, [chapterCode, initializeStory]);
+
+  useEffect(() => {
+    if (currentNode && isFullscreen && processedNodeIdRef.current !== currentNode.id) {
+      processedNodeIdRef.current = currentNode.id;
+      const output = normalizeStoryOutputBundle(currentNode.outputBundle);
+      if (output.scene.preVideo) {
+        audioManager.stopBgm();
+        audioManager.setStoryVideoPlaying(true);
+        setIsPlayingVideo(true);
+        setCurrentPreVideoUrl(output.scene.preVideo);
+      } else {
+        audioManager.setStoryVideoPlaying(false);
+        audioManager.playBgm(output.scene.bgm);
+      }
+    }
+  }, [currentNode, isFullscreen]);
+
+  const handleVideoFinish = () => {
+    audioManager.setStoryVideoPlaying(false);
+    setIsPlayingVideo(false);
+    setCurrentPreVideoUrl(null);
+    if (currentNode) {
+      const output = normalizeStoryOutputBundle(currentNode.outputBundle);
+      audioManager.playBgm(output.scene.bgm);
+    }
+  };
 
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-white/10 p-6">
-        <h1 className="text-2xl font-semibold">Play Runtime</h1>
-        <p className="mt-2 text-sm text-white/70">
-          chapterCode: {chapterCode}
-        </p>
+    <main className="h-screen w-screen overflow-hidden">
+      {!isFullscreen ? (
+        <FullscreenEnforcer />
+      ) : (
+        <>
+          {isPlayingVideo && currentPreVideoUrl ? (
+            <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
+          ) : (
+            <Desktop />
+          )}
+        </>
+      )}
 
-        <section className="mt-6 rounded-xl border border-white/10 p-4">
-          <p className="text-sm text-white/80">
-            여기에 브라우저/개발자도구/터미널 장면이 들어갈 예정입니다.
-          </p>
-        </section>
-      </div>
+
+
+      {currentNode?.isTerminal && (
+        <ChapterCompletionModal />
+      )}
+
+      {/* Hidden info for development/debugging */}
+      {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
+        CODE: {chapterCode}
+      </div> */}
     </main>
   );
 }
