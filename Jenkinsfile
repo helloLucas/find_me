@@ -45,6 +45,10 @@ pipeline {
                             sh '''
                                 # 1. 현재 브랜치 이름을 'main'으로 강제 고정
                                 git checkout -B main
+                                
+                                # semantic-release가 'origin/main'이 아닌 'main'으로 인식하도록 환경 변수 강제 설정
+                                export GIT_BRANCH=main
+                                export BRANCH_NAME=main
 
                                 # 2. Git 인증 정보가 포함되도록 원격 URL 재설정
                                 git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL}
