@@ -206,10 +206,7 @@ pipeline {
         success {
             script {
                 def message = """
-                    ### :white_check_mark: Success!
-                    - **No.**: #${env.BUILD_NUMBER}
-                    - **Version**: ${env.IMAGE_TAG}
-                    - **Env**: ${env.ENV_TAG}
+                    :white_check_mark: Build SUCCESS! #${env.BUILD_NUMBER} (${env.IMAGE_TAG}//${env.ENV_TAG})
                 """.stripIndent()
                 mattermostSend(color: 'good', message: message)
             }
@@ -217,10 +214,7 @@ pipeline {
         failure {
             script {
                 def message = """
-                    ### :x: Failed...
-                    - **No.**: #${env.BUILD_NUMBER}
-                    - **Version**: ${env.IMAGE_TAG}
-                    - **Env**: ${env.ENV_TAG}
+                    :x: Build FAILED... #${env.BUILD_NUMBER} (${env.IMAGE_TAG}//${env.ENV_TAG})
                 """.stripIndent()
                 mattermostSend(color: 'danger', message: message)
             }
