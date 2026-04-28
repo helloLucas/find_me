@@ -43,6 +43,9 @@ pipeline {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                             sh '''
+                                # Git 인증 정보가 포함되도록 원격 URL 재설정
+                                git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL}
+
                                 # PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
                                 export CI_MERGE_REQUEST_IID=""
                                 export CI_MERGE_REQUEST_ID=""
@@ -54,11 +57,14 @@ pipeline {
                                 export PULL_REQUEST="false"
                                 
                                 export GL_TOKEN=${GIT_TOKEN}
+                                
                                 npm install
                                 npx semantic-release --debug
+                                
+                                # 태그 페치도 인증이 필요하므로 블록 안에서 실행
+                                git fetch --tags || true
                             '''
                         }
-                        sh 'git fetch --tags || true'
                         env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0 || echo 'v1.0.0'", returnStdout: true).trim()
                     } else {
                         echo "--- 개발 환경 ---"
