@@ -67,8 +67,8 @@ pipeline {
                                 
                                 npm install
                                 
-                                # 4. 인증 정보가 포함된 URL을 직접 전달하여 실행
-                                npx semantic-release --repository-url https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL} --debug
+                                # 4. 인증 정보가 포함된 URL을 직접 전달하는 대신, 설정된 origin과 GL_TOKEN을 사용
+                                npx semantic-release
                                 
                                 # 태그 페치도 인증이 필요하므로 블록 안에서 실행
                                 git fetch --tags || true
