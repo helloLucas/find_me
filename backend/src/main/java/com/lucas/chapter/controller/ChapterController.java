@@ -1,5 +1,7 @@
 package com.lucas.chapter.controller;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.chapter.dto.response.ChapterProgressResponse;
 import com.lucas.chapter.service.ChapterService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>사용자별 챕터 접근 및 진행 상태 조회 기능을 제공합니다.
  */
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/chapters")
@@ -35,6 +38,8 @@ public class ChapterController {
       @AuthenticationPrincipal CustomUserPrincipal principal) {
 
     Long userId = principal.getUserId();
+    log.info("User ID: {} accessed chapter progress list.", userId);
+    
     List<ChapterProgressResponse> response = chapterService.getChapterProgressList(userId);
 
     return ResponseEntity.ok(BaseResponse.success("챕터 목록 조회가 완료되었습니다.", response));
