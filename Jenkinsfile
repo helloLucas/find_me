@@ -43,10 +43,13 @@ pipeline {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                             sh '''
-                                # Git 인증 정보가 포함되도록 원격 URL 재설정
+                                # 1. 현재 브랜치 이름을 'main'으로 강제 고정
+                                git checkout -B main
+
+                                # 2. Git 인증 정보가 포함되도록 원격 URL 재설정
                                 git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL}
 
-                                # PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
+                                # 3. PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
                                 export CI_MERGE_REQUEST_IID=""
                                 export CI_MERGE_REQUEST_ID=""
                                 export CI_EXTERNAL_PULL_REQUEST_IID=""
@@ -59,7 +62,9 @@ pipeline {
                                 export GL_TOKEN=${GIT_TOKEN}
                                 
                                 npm install
-                                npx semantic-release --debug
+                                
+                                # 4. 인증 정보가 포함된 URL을 직접 전달하여 실행
+                                npx semantic-release --repository-url https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL} --debug
                                 
                                 # 태그 페치도 인증이 필요하므로 블록 안에서 실행
                                 git fetch --tags || true
