@@ -14,11 +14,11 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: shyunnnn/find-me-frontend:96-dev
+        image: shyunnnn/find-me-frontend:v1.0.0
         ports:
         - containerPort: 80
       nodeSelector:
-        env: dev
+        env: prod
 ---
 apiVersion: v1
 kind: Service

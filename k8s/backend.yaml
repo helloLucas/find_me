@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: shyunnnn/find-me-backend:96-dev
+        image: shyunnnn/find-me-backend:v1.0.0
         ports:
         - containerPort: 8080
         - containerPort: 18081
@@ -22,7 +22,7 @@ spec:
         - secretRef:
             name: backend-secrets
       nodeSelector:
-        env: dev
+        env: prod
 ---
 apiVersion: v1
 kind: Service
