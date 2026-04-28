@@ -30,8 +30,6 @@
 `[logstash.conf](/home/ubuntu/lucas-elk/logstash/logstash.conf)` 기준으로 다음을 반영했다.
 
 - input: `beats` 5044 수신
-- `elapsed_time_ms`를 integer로 변환
-- `input_value`를 lowercase + trim 정규화
 - Elasticsearch 출력 인덱스를 `game-logs-%{+YYYY.MM.dd}`로 변경
 
 현재 설정:
@@ -40,16 +38,6 @@
 input {
   beats {
     port => 5044
-  }
-}
-
-filter {
-  mutate {
-    convert => {
-      "elapsed_time_ms" => "integer"
-    }
-    lowercase => [ "input_value" ]
-    strip => [ "input_value" ]
   }
 }
 
@@ -248,7 +236,7 @@ Elasticsearch에서 `game-logs-*` 인덱스가 실제로 생성되고 문서가 
 이유:
 
 - 현재 들어오는 로그는 "게임 이벤트용 구조화 로그"가 아니라 컨테이너 stdout 로그 위주
-- Spring 백엔드가 `session_id`, `node_id`, `action_type`, `result`, `elapsed_time_ms` 같은 게임 분석용 JSON 로그를 아직 명시적으로 남기지 않음
+- Spring 백엔드가 `session_id`, `node_id`, `action_type`, `result` 같은 게임 분석용 JSON 로그를 아직 명시적으로 남기지 않음
 - Filebeat 앱 필터는 현재 실제 prod backend 라벨(`app=backend`)에 맞춰 수정 완료됨
 
 즉 지금 상태는:
@@ -279,7 +267,6 @@ Elasticsearch에서 `game-logs-*` 인덱스가 실제로 생성되고 문서가 
 - `action_type`
 - `input_value`
 - `result`
-- `elapsed_time_ms`
 - `from_node_id`
 - `to_node_id`
 

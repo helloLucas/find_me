@@ -119,7 +119,7 @@
   "input_value": "ssh 172.22.4.19",
   "input_value_norm": "ssh 172.22.4.19",
   "result": "FAIL",
-  "elapsed_time_ms": 91,
+  "fail_count_after_action": 3,
   "hint_requested": false,
   "state_version": 18
 }
@@ -187,7 +187,7 @@
 ### 8.4 노드 난이도
 
 - 노드별 실패 문서 수
-- 평균 `elapsed_time_ms`
+- 세션당 평균 실패 횟수
 - 힌트 요청률
 
 이걸 기반으로 "이 노드가 원래 어려운 편인가"를 본다.
@@ -230,7 +230,7 @@
 - `input_value`
 - `input_value_norm`
 - `result`
-- `elapsed_time_ms`
+- `fail_count_after_action`
 - `hint_requested`
 - `state_version`
 
@@ -249,6 +249,7 @@
 - `number_of_replicas = 0`
 - 주요 필드 타입
 - `input_value`의 `text + keyword` 구조
+- `fail_count_after_action`의 `integer` 타입
 
 ## 12. 적용 순서
 
