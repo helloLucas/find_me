@@ -133,20 +133,19 @@ pipeline {
 
                     // 3. 푸시할 브랜치명 확정
                     def targetBranch = (env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: "develop").replace('origin/', '')
+                    env.TARGET_BRANCH = targetBranch
 
                     // 4. SSAFY GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh 'git config user.email "jenkins@ssafy.com"'
                         sh 'git config user.name "Jenkins-CI"'
-                        sh 'git add k8s/*.yaml'
+                        sh 'git add .'
                         
                         // 커밋 메시지에 [skip ci]를 넣어 무한 루프 방지
-                        sh "git commit -m 'chore(deploy): update image tag to ${env.IMAGE_TAG} [skip ci]'"
+                        sh "git commit -m 'chore(deploy): update image tag to ${env.IMAGE_TAG} [skip ci]' || echo 'nothing to commit'"
 
-                        sh "git pull https://${GIT_USER}:${GIT_PASS}@${GITLAB_URL} ${targetBranch} --rebase"
-                        
-                        // HEAD:${env.BRANCH_NAME} 대신 HEAD:${targetBranch} 사용
-                        sh "git push https://${GIT_USER}:${GIT_PASS}@${env.GITLAB_URL} HEAD:${targetBranch}"
+                        sh 'git pull https://${GIT_USER}:${GIT_PASS}@${GITLAB_URL} ${TARGET_BRANCH} --rebase'
+                        sh 'git push https://${GIT_USER}:${GIT_PASS}@${GITLAB_URL} HEAD:${TARGET_BRANCH}'
                     }
                 }
             }
