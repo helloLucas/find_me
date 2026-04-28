@@ -1,0 +1,36 @@
+{
+  "index_patterns": ["game-logs-*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "timestamp": { "type": "date" },
+        "session_id": { "type": "keyword" },
+        "user_id": { "type": "long" },
+        "chapter_id": { "type": "keyword" },
+        "from_node_id": { "type": "keyword" },
+        "to_node_id": { "type": "keyword" },
+        "action_type": { "type": "keyword" },
+        "input_value": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "input_value_norm": { "type": "keyword" },
+        "result": { "type": "keyword" },
+        "elapsed_time_ms": { "type": "integer" },
+        "hint_requested": { "type": "boolean" },
+        "state_version": { "type": "integer" }
+      }
+    }
+  }
+}

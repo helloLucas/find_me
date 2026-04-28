@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipeline
+  namespace: lucas-elk
+  labels:
+    app: logstash
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      mutate {
+        convert => {
+          "elapsed_time_ms" => "integer"
+        }
+        lowercase => [ "input_value" ]
+        strip => [ "input_value" ]
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch.lucas-elk.svc.cluster.local:9200"]
+        index => "game-logs-%{+YYYY.MM.dd}"
+      }
+    }
