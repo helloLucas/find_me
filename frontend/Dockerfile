@@ -10,7 +10,7 @@ RUN npm install
 FROM base AS build-stage
 COPY . .
 
-# 3단계-A: 개발용 빌드 (소스 맵 포함으로 디버깅 용이)
+# 3단계-A: 개발용 빌드
 FROM build-stage AS dev-build
 RUN npm run build -- --sourcemap
 
