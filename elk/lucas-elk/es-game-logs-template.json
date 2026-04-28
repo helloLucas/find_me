@@ -27,7 +27,6 @@
         },
         "input_value_norm": { "type": "keyword" },
         "result": { "type": "keyword" },
-        "elapsed_time_ms": { "type": "integer" },
         "hint_requested": { "type": "boolean" },
         "state_version": { "type": "integer" }
       }

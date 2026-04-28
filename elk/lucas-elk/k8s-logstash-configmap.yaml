@@ -13,16 +13,6 @@ data:
       }
     }
 
-    filter {
-      mutate {
-        convert => {
-          "elapsed_time_ms" => "integer"
-        }
-        lowercase => [ "input_value" ]
-        strip => [ "input_value" ]
-      }
-    }
-
     output {
       elasticsearch {
         hosts => ["http://elasticsearch.lucas-elk.svc.cluster.local:9200"]
