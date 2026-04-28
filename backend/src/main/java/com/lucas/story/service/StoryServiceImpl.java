@@ -477,11 +477,7 @@ public class StoryServiceImpl implements StoryService {
       String rawInput = request.getInputValue() == null ? "" : request.getInputValue();
       String normInput = storyActionLogService.normalizeInputValue(rawInput);
       
-      // 세션 ID 추출 (meta가 있으면 sessionId 가져오기, 없으면 user_id 기반 값)
-      String sessionId = "sess_user_" + user.getId();
-      if (request.getMeta() != null && request.getMeta().containsKey("sessionId")) {
-          sessionId = String.valueOf(request.getMeta().get("sessionId"));
-      }
+      String sessionId = resolveSessionId(user, request);
 
       // Redis fail_count 조회/갱신
       boolean shouldResetFailCountOnSuccess =
@@ -504,24 +500,51 @@ public class StoryServiceImpl implements StoryService {
           } catch (NumberFormatException ignored) {}
       }
 
+      String timestamp = storyActionLogService.generateTimestamp();
+      String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
+      String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
+      String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
+      String result = isFail ? "FAIL" : "SUCCESS";
+
       StoryActionLogEvent event = StoryActionLogEvent.builder()
-          .timestamp(storyActionLogService.generateTimestamp())
+          .timestamp(timestamp)
           .sessionId(sessionId)
           .userId(user.getId())
-          .chapterId(chapter != null ? chapter.getCode() : "UNKNOWN")
-          .fromNodeId(currentNode != null ? currentNode.getCode() : "UNKNOWN")
-          .toNodeId(nextNode != null ? nextNode.getCode() : "UNKNOWN")
+          .chapterId(chapterId)
+          .fromNodeId(fromNodeId)
+          .toNodeId(toNodeId)
           .actionType(actionType)
           .inputValue(rawInput)
           .inputValueNorm(normInput)
-          .result(isFail ? "FAIL" : "SUCCESS")
+          .result(result)
           .failCountAfterAction(failCountAfterAction)
           .hintRequested(hintRequested)
           .stateVersion(stateVersion)
           .build();
+
+      storySessionRedisService.recordAction(
+          sessionId,
+          new StorySessionState(user.getId(), chapterId, toNodeId, stateVersion),
+          new StoryRecentEvent(
+              timestamp,
+              actionType,
+              rawInput,
+              normInput,
+              result,
+              fromNodeId,
+              toNodeId,
+              hintRequested));
           
       // 한 줄 JSON 형태로 로거에 쏨
       storyActionLogService.logAction(event);
+  }
+
+  private String resolveSessionId(User user, TransitionRequestDto request) {
+    String sessionId = "sess_user_" + user.getId();
+    if (request.getMeta() != null && request.getMeta().containsKey("sessionId")) {
+      sessionId = String.valueOf(request.getMeta().get("sessionId"));
+    }
+    return sessionId;
   }
 
   /**
