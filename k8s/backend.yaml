@@ -22,7 +22,7 @@ spec:
         - secretRef:
             name: backend-secrets
       nodeSelector:
-        kubernetes.io/hostname: worker1
+        env: prod
 ---
 apiVersion: v1
 kind: Service

@@ -127,6 +127,8 @@ pipeline {
                     // 2. YAML 이미지 태그 업데이트
                     sh "sed -i 's|${FRONT_IMAGE}:.*|${FRONT_IMAGE}:${env.IMAGE_TAG}|g' k8s/frontend.yaml"
                     sh "sed -i 's|${BACK_IMAGE}:.*|${BACK_IMAGE}:${env.IMAGE_TAG}|g' k8s/backend.yaml"
+                    sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/frontend.yaml"
+                    sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/backend.yaml"
 
                     // 3. 푸시할 브랜치명 확정
                     def targetBranch = (env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: "develop").replace('origin/', '')
