@@ -7,6 +7,7 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
 import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
@@ -16,12 +17,22 @@ export const Taskbar: React.FC = () => {
   const { terminalUser, terminalHost, terminalPath } = useClientStore();
   const { windows, focusWindow, minimizeWindow, activeWindowId, openWindow } = useWindowStore();
   const { conversations } = useMessengerStore();
+  const { currentNode, submitStoryClick, isLoading } = useStoryRuntimeStore();
   const hasConversations = Object.keys(conversations).length > 0;
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
   const terminalWindow = windows.find((windowState) => windowState.id === "terminal");
   const messengerWindow = windows.find((windowState) => windowState.id === "messenger");
   const browserWindows = windows.filter((windowState) => windowState.type === "browser");
+  const pendingOpenChatAction = Object.values(conversations)
+    .flatMap((conversation) => conversation.actions ?? [])
+    .find((action) => action.actionType === "open_friend_chat");
+
+  const consumePendingOpenChatAction = () => {
+    if (!pendingOpenChatAction) return;
+    if (!canSubmitStoryAction(currentNode, "click", pendingOpenChatAction.actionType)) return;
+    void submitStoryClick(pendingOpenChatAction.actionType);
+  };
 
   const handleExitConfirm = () => {
     setShowExitOverlay(false);
@@ -38,6 +49,23 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleTerminalTaskbarClick = () => {
+    const canOpenTerminalTransition =
+      !isLoading && canSubmitStoryAction(currentNode, "click", "open_terminal");
+
+    if (canOpenTerminalTransition) {
+      void submitStoryClick("open_terminal");
+
+      if (!terminalWindow) {
+        openWindow("terminal");
+        return;
+      }
+
+      if (terminalWindow.isMinimized || activeWindowId !== terminalWindow.id) {
+        focusWindow(terminalWindow.id);
+      }
+      return;
+    }
+
     if (!terminalWindow) {
       openWindow("terminal");
       return;
@@ -57,16 +85,31 @@ export const Taskbar: React.FC = () => {
 
     if (!messengerWindow) {
       openWindow("messenger");
+      consumePendingOpenChatAction();
       return;
     }
 
     const isActive = !messengerWindow.isMinimized && activeWindowId === messengerWindow.id;
     if (messengerWindow.isMinimized || !isActive) {
       focusWindow(messengerWindow.id);
+      consumePendingOpenChatAction();
       return;
     }
 
     minimizeWindow(messengerWindow.id);
+  };
+
+  const handleBrowserTaskbarClick = () => {
+    // CH1_FRIEND_CHAT_OPEN 구간에서는 브라우저 직접 오픈도 기사 보기 전이로 인정한다.
+    if (
+      !isLoading &&
+      canSubmitStoryAction(currentNode, "click", "friend_message_link")
+    ) {
+      void submitStoryClick("friend_message_link");
+      return;
+    }
+
+    openWindow("chrome");
   };
 
   return (
@@ -99,7 +142,7 @@ export const Taskbar: React.FC = () => {
 
           <button
             className="flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(34,211,238,0.2)]"
-            onClick={() => openWindow("chrome")}
+            onClick={handleBrowserTaskbarClick}
           >
             <img src="/pixel_chrome_icon.svg" alt="Chrome" className="h-5 w-5 object-contain" style={{ imageRendering: "pixelated" }} />
           </button>

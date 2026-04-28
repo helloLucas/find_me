@@ -25,6 +25,7 @@ import {
 type SetCurrentNodeOptions = {
   transitionSound?: string;
   sourceActionType?: TransitionRequest["actionType"];
+  terminalLinesOverride?: string[];
 };
 
 type ApplyStoryNodeOutputOptions = {
@@ -266,7 +267,17 @@ function applyStoryNodeOutputBundle(
   }
 
   if (terminalLines.length > 0) {
-    terminalLines.forEach((line) => clientStore.appendTerminalOutput("system", line));
+    const existingSystemLines = new Set(
+      clientStore.terminalOutput
+        .filter((line) => line.type === "system")
+        .map((line) => line.text)
+    );
+    const filteredTerminalLines = terminalLines.filter((line) => {
+      if (!line.startsWith("terminal://")) return true;
+      return !existingSystemLines.has(line);
+    });
+
+    filteredTerminalLines.forEach((line) => clientStore.appendTerminalOutput("system", line));
   }
 }
 
@@ -311,14 +322,53 @@ function getRetryTerminalLinesOverride(
     return undefined;
   }
 
+  const normalizedInput = inputValue?.trim().replace(/\s+/g, " ").toLowerCase();
+
   if (
     fromNodeCode === "CH1_SSH_AUTH_PROMPT" &&
-    inputValue?.trim().toLowerCase() === "no"
+    (
+      normalizedInput === "no" ||
+      normalizedInput === "ssh guest@172.22.4.19" ||
+      normalizedInput === "ssh guest@172.22.4.19:22"
+    )
   ) {
     return [];
   }
 
   return [getCommandNotFoundLine(inputValue)];
+}
+
+function hasClickTarget(node: StoryNode, target: string) {
+  if (node.promptType !== "click") return false;
+
+  const meta = objectRecord(node.promptMeta) ?? {};
+  const clickTargets = Array.isArray(meta.clickTargets) ? meta.clickTargets.map(String) : [];
+
+  return clickTargets.includes(target);
+}
+
+function shouldAutoDismissRetryNode(
+  actionType: TransitionRequest["actionType"],
+  node: StoryNode
+) {
+  return actionType === "command" && node.code.includes("_FAIL_") && hasClickTarget(node, "dismiss");
+}
+
+function isTransitionNotAllowedError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.includes("409") || error.message.includes("A1001");
+  }
+
+  return false;
+}
+
+function getAutoDismissTerminalLinesOverride(node: StoryNode) {
+  // Avoid repeatedly printing terminal://lucas-relay on every fail -> dismiss recovery.
+  if (node.code === "CH1_TERMINAL_SSH_READY") {
+    return [] as string[];
+  }
+
+  return undefined;
 }
 
 export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
@@ -369,6 +419,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       {
         transitionSound: options?.transitionSound,
         sourceActionType: options?.sourceActionType,
+        terminalLinesOverride: options?.terminalLinesOverride,
       }
     );
     if (applyError) {
@@ -405,7 +456,8 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
 
       if (response.result === "retry") {
-        // Keep current progress node and only reflect fail node output on UI.
+        // Reflect fail node as current runtime context first.
+        set({ currentNode: normalizedNextNode, error: null });
         const applyError = safelyApplyStoryNodeOutputBundle(
           normalizedNextNode,
           {
@@ -421,6 +473,46 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         );
         if (applyError) {
           set({ error: applyError });
+        }
+
+        if (shouldAutoDismissRetryNode(actionType, normalizedNextNode)) {
+          try {
+            const dismissResponse = await storyApi.submitTransition({
+              nodeId: normalizedNextNode.id,
+              actionType: "click",
+              inputValue: "dismiss",
+            });
+            const normalizedDismissNode = normalizeTransitionNodeResponse(dismissResponse.nextNode);
+            const dismissTransitionSound = extractTransitionPlaySound(dismissResponse.effects);
+
+            if (dismissResponse.result === "retry") {
+              set({ currentNode: normalizedDismissNode, error: null });
+              const dismissApplyError = safelyApplyStoryNodeOutputBundle(
+                normalizedDismissNode,
+                {
+                  transitionSound: dismissTransitionSound,
+                  sourceActionType: "click",
+                  terminalLinesOverride: getAutoDismissTerminalLinesOverride(normalizedDismissNode),
+                }
+              );
+              if (dismissApplyError) {
+                set({ error: dismissApplyError });
+              }
+            } else {
+              get().setCurrentNode(normalizedDismissNode, {
+                transitionSound: dismissTransitionSound,
+                sourceActionType: "click",
+                terminalLinesOverride: getAutoDismissTerminalLinesOverride(normalizedDismissNode),
+              });
+            }
+          } catch (dismissError) {
+            if (isTransitionNotAllowedError(dismissError)) {
+              // Keep runtime playable when backend still keeps progress node on retry.
+              set({ currentNode, error: null });
+            } else {
+              throw dismissError;
+            }
+          }
         }
       } else {
         get().setCurrentNode(normalizedNextNode, {

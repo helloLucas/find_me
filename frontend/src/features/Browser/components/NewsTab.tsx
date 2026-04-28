@@ -17,6 +17,13 @@ type NewsCard = {
   thumbnail?: string;
 };
 
+type NewsViewMode = "auto" | "list" | "article";
+
+interface NewsTabProps {
+  viewMode?: NewsViewMode;
+  onFallbackOpenArticle?: (card: NewsCard) => void;
+}
+
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -39,7 +46,10 @@ function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   };
 }
 
-export const NewsTab: React.FC = () => {
+export const NewsTab: React.FC<NewsTabProps> = ({
+  viewMode = "auto",
+  onFallbackOpenArticle,
+}) => {
   const { currentNode, submitStoryAction, submitStoryClick, submitStoryInspect } =
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
@@ -47,6 +57,8 @@ export const NewsTab: React.FC = () => {
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const newsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const articleTitle = typeof content.articleTitle === "string" ? content.articleTitle : null;
+  const hasArticle = Boolean(articleTitle);
+  const showArticle = viewMode === "list" ? false : viewMode === "article" ? hasArticle : hasArticle;
   const articleBody: string[] = Array.isArray(content.articleBody) ? content.articleBody.map(String) : [];
   const articleCorruption = normalizeArticleCorruption(content.articleCorruption);
   const corruptedParagraphIndexes = new Set(articleCorruption?.paragraphIndexes ?? []);
@@ -81,7 +93,7 @@ export const NewsTab: React.FC = () => {
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
-      if (!isScrollTriggeredArticleNode) return;
+      if (!isScrollTriggeredArticleNode || !showArticle) return;
 
       const element = event.currentTarget;
       const scrollThreshold = Math.max(16, element.clientHeight * 0.1);
@@ -92,7 +104,7 @@ export const NewsTab: React.FC = () => {
         triggerArticleScrollTransition();
       }
     },
-    [isScrollTriggeredArticleNode, triggerArticleScrollTransition]
+    [isScrollTriggeredArticleNode, showArticle, triggerArticleScrollTransition]
   );
 
   return (
@@ -109,7 +121,7 @@ export const NewsTab: React.FC = () => {
           Void City News
         </h1>
 
-        {articleTitle ? (
+        {showArticle ? (
           <article className="mt-6">
             <h2 className="text-[#ff9d76] text-2xl mb-4 drop-shadow-[0_0_5px_#ff9d76]">
               {articleTitle}
@@ -171,7 +183,10 @@ export const NewsTab: React.FC = () => {
                     onClick={() => {
                       if (canSubmitStoryAction(currentNode, "click", card.id)) {
                         void submitStoryClick(card.id);
+                        return;
                       }
+
+                      onFallbackOpenArticle?.(card);
                     }}
                   >
                     <p className="text-[11px] uppercase tracking-[0.25em] text-[#a48cff] mb-2">
