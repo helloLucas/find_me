@@ -10,7 +10,7 @@ import {
   type DesktopWindowId,
 } from "../../shared/config/desktopWindows";
 import {
-  isUnavailableTerminalCommand,
+  shouldBlockUnavailableTerminalCommand,
   UNAVAILABLE_COMMAND_TOAST_MESSAGE,
 } from "./terminalCommandFeedback";
 
@@ -102,8 +102,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
     const normalizedWhitespaceCommand = rawCommand.replace(/\s+/g, " ").trim();
     if (
-      activeNode?.code === "CH1_TERMINAL_SSH_READY" &&
-      isUnavailableTerminalCommand(rawCommand)
+      shouldBlockUnavailableTerminalCommand(activeNode?.code, rawCommand)
     ) {
       showToast(UNAVAILABLE_COMMAND_TOAST_MESSAGE);
       setInputValue("");

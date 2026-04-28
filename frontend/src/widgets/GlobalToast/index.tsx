@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useToastStore } from '../../app/store/toastStore';
 
+const TOAST_DURATION_MS = 2200;
+
 export const GlobalToast = () => {
   const toast = useToastStore((state) => state.toast);
   const hideToast = useToastStore((state) => state.hideToast);
@@ -8,7 +10,7 @@ export const GlobalToast = () => {
   useEffect(() => {
     if (!toast) return;
 
-    const timer = window.setTimeout(hideToast, 2200);
+    const timer = window.setTimeout(hideToast, TOAST_DURATION_MS);
     return () => window.clearTimeout(timer);
   }, [toast, hideToast]);
 
@@ -39,7 +41,7 @@ export const GlobalToast = () => {
         }
 
         .lucas-toast {
-          animation: lucas-toast-fade 2200ms ease-in-out forwards;
+          animation: lucas-toast-fade ${TOAST_DURATION_MS}ms ease-in-out forwards;
         }
       `}</style>
     </div>

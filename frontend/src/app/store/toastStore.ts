@@ -11,12 +11,23 @@ interface ToastStore {
   hideToast: () => void;
 }
 
+let fallbackToastId = 0;
+
+function createToastId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  fallbackToastId += 1;
+  return `toast-${Date.now()}-${fallbackToastId}`;
+}
+
 export const useToastStore = create<ToastStore>((set) => ({
   toast: null,
   showToast: (message) =>
     set({
       toast: {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: createToastId(),
         message,
       },
     }),

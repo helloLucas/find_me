@@ -11,7 +11,7 @@ import { userApi } from "../../shared/api/userApi";
 import type { EffectBundle, StoryNode, TransitionRequest } from "../../shared/types/story";
 import {
   isSshCommand,
-  isUnavailableTerminalCommand,
+  shouldShowUnavailableCommandToast,
   SSH_USAGE_TEXT,
   UNAVAILABLE_COMMAND_TOAST_MESSAGE,
 } from "../command-input/terminalCommandFeedback";
@@ -317,20 +317,6 @@ function getAutoSystemInputValue(node: StoryNode) {
 function getCommandNotFoundLine(inputValue: string | undefined) {
   const commandName = inputValue?.trim().split(/\s+/)[0];
   return `${commandName || "command"}: command not found`;
-}
-
-function shouldShowUnavailableCommandToast(
-  actionType: TransitionRequest["actionType"],
-  inputValue: string | undefined,
-  fromNodeCode: string | undefined,
-  nodeCode: string
-) {
-  return (
-    actionType === "command" &&
-    fromNodeCode === "CH1_TERMINAL_SSH_READY" &&
-    nodeCode === "CH1_FAIL_SKIP" &&
-    isUnavailableTerminalCommand(inputValue)
-  );
 }
 
 function showUnavailableCommandToast() {

@@ -31,3 +31,24 @@ export function isSshCommand(inputValue: string | undefined) {
 export function isUnavailableTerminalCommand(inputValue: string | undefined) {
   return UNAVAILABLE_TERMINAL_COMMANDS.has(getCommandName(inputValue));
 }
+
+export function shouldBlockUnavailableTerminalCommand(
+  nodeCode: string | undefined,
+  inputValue: string | undefined
+) {
+  return nodeCode === "CH1_TERMINAL_SSH_READY" && isUnavailableTerminalCommand(inputValue);
+}
+
+export function shouldShowUnavailableCommandToast(
+  actionType: string,
+  inputValue: string | undefined,
+  fromNodeCode: string | undefined,
+  nodeCode: string
+) {
+  return (
+    actionType === "command" &&
+    fromNodeCode === "CH1_TERMINAL_SSH_READY" &&
+    nodeCode === "CH1_FAIL_SKIP" &&
+    isUnavailableTerminalCommand(inputValue)
+  );
+}
