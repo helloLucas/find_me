@@ -50,7 +50,17 @@ services:
     restart: unless-stopped
     ports:
       - "9115:9115"
-
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/tmp/loki
+    command: -config.file=/etc/loki/loki-config.yml
   node-exporter:
     image: prom/node-exporter:latest
     container_name: logging-node-exporter
@@ -81,3 +91,4 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:  
