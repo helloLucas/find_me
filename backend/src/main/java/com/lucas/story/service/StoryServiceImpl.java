@@ -462,6 +462,69 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
+   * ELK에 보낼 행동 로깅(command/inspect/click) 처리를 별도 묶음 메서드로 분리.
+   */
+  private void logStoryAction(User user, Chapter chapter, StoryNode currentNode, StoryNode nextNode, 
+                              TransitionRequestDto request, boolean isFail) {
+      
+      String actionType = request.getActionType();
+      // command, inspect, click 외의 액션은 필요시 필터링 가능 (일단 모든 액션을 고려해 적용)
+      if (actionType == null || actionType.isBlank()) {
+          log.warn("ActionType is empty, skipping StoryAction log.");
+          return;
+      }
+      
+      String rawInput = request.getInputValue() == null ? "" : request.getInputValue();
+      String normInput = storyActionLogService.normalizeInputValue(rawInput);
+      
+      // 세션 ID 추출 (meta가 있으면 sessionId 가져오기, 없으면 user_id 기반 값)
+      String sessionId = "sess_user_" + user.getId();
+      if (request.getMeta() != null && request.getMeta().containsKey("sessionId")) {
+          sessionId = String.valueOf(request.getMeta().get("sessionId"));
+      }
+
+      // Redis fail_count 조회/갱신
+      boolean shouldResetFailCountOnSuccess =
+          isFail || !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+      int failCountAfterAction =
+          storyActionLogService.updateAndGetFailCount(
+              sessionId, isFail, shouldResetFailCountOnSuccess);
+
+      // hint_requested 여부 추출
+      boolean hintRequested = false;
+      if (request.getMeta() != null && request.getMeta().containsKey("hintRequested")) {
+          hintRequested = Boolean.parseBoolean(String.valueOf(request.getMeta().get("hintRequested")));
+      }
+
+      // state_version 추출
+      int stateVersion = 1;
+      if (request.getMeta() != null && request.getMeta().containsKey("stateVersion")) {
+          try {
+              stateVersion = Integer.parseInt(String.valueOf(request.getMeta().get("stateVersion")));
+          } catch (NumberFormatException ignored) {}
+      }
+
+      StoryActionLogEvent event = StoryActionLogEvent.builder()
+          .timestamp(storyActionLogService.generateTimestamp())
+          .sessionId(sessionId)
+          .userId(user.getId())
+          .chapterId(chapter != null ? chapter.getCode() : "UNKNOWN")
+          .fromNodeId(currentNode != null ? currentNode.getCode() : "UNKNOWN")
+          .toNodeId(nextNode != null ? nextNode.getCode() : "UNKNOWN")
+          .actionType(actionType)
+          .inputValue(rawInput)
+          .inputValueNorm(normInput)
+          .result(isFail ? "FAIL" : "SUCCESS")
+          .failCountAfterAction(failCountAfterAction)
+          .hintRequested(hintRequested)
+          .stateVersion(stateVersion)
+          .build();
+          
+      // 한 줄 JSON 형태로 로거에 쏨
+      storyActionLogService.logAction(event);
+  }
+
+  /**
    * 현재 유저의 최근 명령어 입력 이력을 Redis에서 조회하여 반환한다.
    *
    * @return 최근 입력 명령어 문자열 리스트
