@@ -27,7 +27,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-svc
+  name: backend
 spec:
   selector:
     app: backend
@@ -40,4 +40,4 @@ spec:
       protocol: TCP
       port: 18081       # 외부에서 접속할 포트
       targetPort: 18081 # 컨테이너 내부로 전달할 포트
-  type: ClusterIP
+  type: NodePort
