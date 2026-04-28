@@ -2,12 +2,19 @@ import { create } from "zustand";
 import { useAuthStore } from "../../app/store/authStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useClientStore } from "../../app/store/clientStore";
+import { useToastStore } from "../../app/store/toastStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
 import type { EffectBundle, StoryNode, TransitionRequest } from "../../shared/types/story";
+import {
+  isSshCommand,
+  isUnavailableTerminalCommand,
+  SSH_USAGE_TEXT,
+  UNAVAILABLE_COMMAND_TOAST_MESSAGE,
+} from "../command-input/terminalCommandFeedback";
 import { normalizeMessengerBundle } from "../messenger/messenger.adapters";
 import { audioManager } from "./audioManager";
 import {
@@ -312,13 +319,31 @@ function getCommandNotFoundLine(inputValue: string | undefined) {
   return `${commandName || "command"}: command not found`;
 }
 
+function shouldShowUnavailableCommandToast(
+  actionType: TransitionRequest["actionType"],
+  inputValue: string | undefined,
+  fromNodeCode: string | undefined,
+  nodeCode: string
+) {
+  return (
+    actionType === "command" &&
+    fromNodeCode === "CH1_TERMINAL_SSH_READY" &&
+    nodeCode === "CH1_FAIL_SKIP" &&
+    isUnavailableTerminalCommand(inputValue)
+  );
+}
+
+function showUnavailableCommandToast() {
+  useToastStore.getState().showToast(UNAVAILABLE_COMMAND_TOAST_MESSAGE);
+}
+
 function getRetryTerminalLinesOverride(
   actionType: TransitionRequest["actionType"],
   inputValue: string | undefined,
   fromNodeCode: string | undefined,
   nodeCode: string
 ) {
-  if (actionType !== "command" || nodeCode !== "CH1_FAIL_UNRELATED") {
+  if (actionType !== "command") {
     return undefined;
   }
 
@@ -333,6 +358,18 @@ function getRetryTerminalLinesOverride(
     )
   ) {
     return [];
+  }
+
+  if (shouldShowUnavailableCommandToast(actionType, inputValue, fromNodeCode, nodeCode)) {
+    return [];
+  }
+
+  if (nodeCode === "CH1_FAIL_UNRELATED" && isSshCommand(inputValue)) {
+    return [SSH_USAGE_TEXT];
+  }
+
+  if (nodeCode !== "CH1_FAIL_UNRELATED") {
+    return undefined;
   }
 
   return [getCommandNotFoundLine(inputValue)];
@@ -458,19 +495,30 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       if (response.result === "retry") {
         // Reflect fail node as current runtime context first.
         set({ currentNode: normalizedNextNode, error: null });
+        const terminalLinesOverride = getRetryTerminalLinesOverride(
+          actionType,
+          inputValue,
+          currentNode.code,
+          normalizedNextNode.code
+        );
         const applyError = safelyApplyStoryNodeOutputBundle(
           normalizedNextNode,
           {
             transitionSound: transitionPlaySound,
             sourceActionType: actionType,
-            terminalLinesOverride: getRetryTerminalLinesOverride(
-              actionType,
-              inputValue,
-              currentNode.code,
-              normalizedNextNode.code
-            ),
+            terminalLinesOverride,
           }
         );
+        if (
+          shouldShowUnavailableCommandToast(
+            actionType,
+            inputValue,
+            currentNode.code,
+            normalizedNextNode.code
+          )
+        ) {
+          showUnavailableCommandToast();
+        }
         if (applyError) {
           set({ error: applyError });
         }
