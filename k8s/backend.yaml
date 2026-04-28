@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: shyunnnn/find-me-backend:75-dev
+        image: shyunnnn/find-me-backend:76-dev
         ports:
         - containerPort: 8080
         - containerPort: 18081
