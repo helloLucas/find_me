@@ -6,6 +6,7 @@ import { useClientStore } from "../../app/store/clientStore";
 import { tokenManager } from "../../shared/utils/tokenManager";
 import { useModalStore } from "../../app/store/modalStore";
 import { GlobalModal } from "../GlobalModal";
+import { GlobalToast } from "../GlobalToast";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -152,6 +153,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       )}
 
       {children}
+      <GlobalToast />
       <GlobalModal />
     </div>
   );

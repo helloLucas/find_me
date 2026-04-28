@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useClientStore } from "../../app/store/clientStore";
+import { useToastStore } from "../../app/store/toastStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
@@ -8,6 +9,10 @@ import {
   DESKTOP_TASKBAR_HEIGHT,
   type DesktopWindowId,
 } from "../../shared/config/desktopWindows";
+import {
+  shouldBlockUnavailableTerminalCommand,
+  UNAVAILABLE_COMMAND_TOAST_MESSAGE,
+} from "./terminalCommandFeedback";
 
 interface TerminalSceneProps {
   windowId: DesktopWindowId;
@@ -56,6 +61,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const { closeWindow, minimizeWindow, focusWindow, toggleMaximizeWindow } =
     useWindowStore();
   const { currentNode, submitStoryCommand } = useStoryRuntimeStore();
+  const showToast = useToastStore((state) => state.showToast);
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -95,6 +101,15 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
 
     const normalizedWhitespaceCommand = rawCommand.replace(/\s+/g, " ").trim();
+    if (
+      shouldBlockUnavailableTerminalCommand(activeNode?.code, rawCommand)
+    ) {
+      showToast(UNAVAILABLE_COMMAND_TOAST_MESSAGE);
+      setInputValue("");
+      setTimeout(() => inputRef.current?.focus(), 10);
+      return;
+    }
+
     const normalizedLowerCommand = normalizedWhitespaceCommand.toLowerCase();
     const isReconnectSshCommand =
       /^ssh\s+guest@172\.22\.4\.19(?::22)?$/i.test(normalizedWhitespaceCommand);
