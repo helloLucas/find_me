@@ -41,7 +41,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_FILE_LIST'
-WHERE from_node.code = 'CH2_SERVER_HOME';
+WHERE from_node.code = 'CH2_SERVER_HOME'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -76,7 +82,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_WORLD_MAP_VIEW'
-WHERE from_node.code = 'CH2_FILE_LIST';
+WHERE from_node.code = 'CH2_FILE_LIST'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -111,7 +123,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_OBSERVER_STATUS_VIEW'
-WHERE from_node.code = 'CH2_FILE_LIST';
+WHERE from_node.code = 'CH2_FILE_LIST'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -146,7 +164,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
-WHERE from_node.code = 'CH2_FILE_LIST';
+WHERE from_node.code = 'CH2_FILE_LIST'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -181,7 +205,13 @@ SELECT
     80
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
-WHERE from_node.code = 'CH2_FILE_LIST';
+WHERE from_node.code = 'CH2_FILE_LIST'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -216,7 +246,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_WORLD_MAP_VIEW'
-WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW';
+WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -251,7 +287,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_OBSERVER_STATUS_VIEW'
-WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW';
+WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -286,7 +328,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
-WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW';
+WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -321,7 +369,13 @@ SELECT
     80
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
-WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW';
+WHERE from_node.code = 'CH2_OBSERVER_STATUS_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -356,7 +410,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_WORLD_MAP_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -391,7 +451,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_OBSERVER_STATUS_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -426,7 +492,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -461,7 +533,13 @@ SELECT
     80
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -496,7 +574,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_WORLD_MAP_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -531,7 +615,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_OBSERVER_STATUS_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -566,7 +656,13 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_VIEW'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -601,7 +697,13 @@ SELECT
     80
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
-WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED';
+WHERE from_node.code = 'CH2_LUCAS_FRAGMENT_EXEC_FAILED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -632,7 +734,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_GC_SCAN_ALERT'
-WHERE from_node.code = 'CH2_WORLD_MAP_VIEW';
+WHERE from_node.code = 'CH2_WORLD_MAP_VIEW'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -671,7 +779,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LAPLACE_MISSION_READY'
-WHERE from_node.code = 'CH2_GC_SCAN_ALERT';
+WHERE from_node.code = 'CH2_GC_SCAN_ALERT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -711,7 +825,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_TMP_SEARCH_RESULT'
-WHERE from_node.code = 'CH2_LAPLACE_MISSION_READY';
+WHERE from_node.code = 'CH2_LAPLACE_MISSION_READY'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -755,7 +875,13 @@ SELECT
     110
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_PROTECTED_CORE_DENIED'
-WHERE from_node.code = 'CH2_TMP_SEARCH_RESULT';
+WHERE from_node.code = 'CH2_TMP_SEARCH_RESULT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -812,7 +938,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_DECOY_CREATED'
-WHERE from_node.code = 'CH2_TMP_SEARCH_RESULT';
+WHERE from_node.code = 'CH2_TMP_SEARCH_RESULT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -856,7 +988,13 @@ SELECT
     110
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_PROTECTED_CORE_DENIED'
-WHERE from_node.code = 'CH2_PROTECTED_CORE_DENIED';
+WHERE from_node.code = 'CH2_PROTECTED_CORE_DENIED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -913,7 +1051,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_DECOY_CREATED'
-WHERE from_node.code = 'CH2_PROTECTED_CORE_DENIED';
+WHERE from_node.code = 'CH2_PROTECTED_CORE_DENIED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -954,7 +1098,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_DECOY_SENT'
-WHERE from_node.code = 'CH2_DECOY_CREATED';
+WHERE from_node.code = 'CH2_DECOY_CREATED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -1010,7 +1160,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_TRACE_CLEANED'
-WHERE from_node.code = 'CH2_DECOY_SENT';
+WHERE from_node.code = 'CH2_DECOY_SENT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -1042,7 +1198,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_RECOVERED_DOCUMENT'
-WHERE from_node.code = 'CH2_TRACE_CLEANED';
+WHERE from_node.code = 'CH2_TRACE_CLEANED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -1075,7 +1237,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_COMPLETE'
-WHERE from_node.code = 'CH2_RECOVERED_DOCUMENT';
+WHERE from_node.code = 'CH2_RECOVERED_DOCUMENT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 INSERT INTO story_transitions (
     from_node_id,
@@ -1110,7 +1278,13 @@ SELECT
     100
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH2_LAPLACE_MISSION_READY'
-WHERE from_node.code = 'CH2_FAIL_GC_TRACE_COMPLETE';
+WHERE from_node.code = 'CH2_FAIL_GC_TRACE_COMPLETE'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
 
 
 COMMIT;
