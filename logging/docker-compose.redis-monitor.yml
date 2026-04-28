@@ -62,5 +62,14 @@ services:
       # 같은 docker-compose 네트워크에 있는 redis 컨테이너를 가리킴
       - REDIS_ADDR=redis:6379 
       - REDIS_PASSWORD=your_redis_password # 비밀번호가 있을 경우
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
 volumes:
   redis_data:

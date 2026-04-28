@@ -1,5 +1,7 @@
 package com.lucas.auth.controller;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.lucas.auth.dto.response.RefreshTokenResponse;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.auth.service.AuthService;
@@ -18,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /** 인증 및 권한 관련 API를 처리하는 컨트롤러 클래스입니다. OAuth2 로그인, 토큰 재발급, 로그아웃, 게스트 초기화 등의 기능을 제공합니다. */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -70,6 +73,7 @@ public class AuthController {
             throw new CustomException(ErrorCode.E1000);
         }
 
+        log.info("User ID: {} logged out.", principal.getUserId());
         authService.logout(principal.getUserId());
 
         // 브라우저 쿠키 즉시 삭제 (Max-Age 0)
@@ -86,6 +90,7 @@ public class AuthController {
     @GetMapping("/guest-init")
     public ResponseEntity<BaseResponse<Map<String, String>>> initGuest() {
         String tempKey = authService.initGuest();
+        log.info("Guest session created with tempKey: {}", tempKey);
 
         Map<String, String> data = new HashMap<>();
         data.put("tempKey", tempKey);
