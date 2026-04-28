@@ -1,6 +1,6 @@
-# 종합 모니터링 인프라 구축 가이드 (Prometheus + Grafana)
+# 종합 모니터링 인프라 구축 가이드 (Prometheus + Grafana + Loki)
 
-본 문서는 운영, 예비, Redis, 로깅 서버 및 외부 서비스(RDS)를 모두 포함하는 포괄적인 모니터링 시스템 구축 가이드입니다.
+본 문서는 운영, 예비, Redis, 로깅 서버 및 외부 서비스(RDS)를 모두 포함하는 포괄적인 모니터링(메트릭 및 로그) 시스템 구축 가이드입니다.
 
 ---
 
@@ -8,10 +8,10 @@
 
 | 서버 명칭 | 역할 | 설치 대상 (Exporter 및 툴) | 수집 대상 / 포트 |
 | :--- | :--- | :--- | :--- |
-| **운영 서버** | 메인 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(18081) |
-| **예비 서버** | 스탠바이 Spring Boot 서비스 | `node-exporter`, `cadvisor` | 인프라(9100), 컨테이너(9080), Spring(18081) |
-| **Redis 서버** | Redis (Docker) 실행 | `node-exporter`, `cadvisor`, `redis_exporter` | 인프라(9100), 컨테이너(9080), Redis(9121) |
-| **로깅 서버** | 모니터링 중앙 관리 | **Prometheus, Grafana, Pushgateway**, <br> `blackbox_exporter`, `postgres_exporter`, `node-exporter`, `cadvisor` | 외부 API(9115), RDS(9187), 인프라(9100), 컨테이너(9080) |
+| **운영 서버** | 메인 Spring Boot 서비스 | `node-exporter`, `cadvisor`, `promtail` | 인프라(9100), 컨테이너(9080), Spring(18081), 로그전송 |
+| **예비 서버** | 스탠바이 Spring Boot 서비스 | `node-exporter`, `cadvisor`, `promtail` | 인프라(9100), 컨테이너(9080), Spring(18081), 로그전송 |
+| **Redis 서버** | Redis (Docker) 실행 | `node-exporter`, `cadvisor`, `redis_exporter`, `promtail` | 인프라(9100), 컨테이너(9080), Redis(9121), 로그전송 |
+| **로깅 서버** | 모니터링 중앙 관리 | **Prometheus, Grafana, Loki, Pushgateway**, <br> `blackbox_exporter`, `postgres_exporter`, `node-exporter`, `cadvisor` | 외부 API(9115), RDS(9187), 인프라(9100), 컨테이너(9080), 로그수신(3100) |
 | **RDS (PostgreSQL)** | 메인 데이터베이스 | (설치 불필요, 로깅 서버에서 원격 수집) | 5432 (PostgreSQL 기본 포트) |
 
 ---
@@ -89,6 +89,11 @@ aws ec2 authorize-security-group-ingress --group-id $STANDBY_SG_ID --protocol tc
 
 # 2. RDS (PostgreSQL) 전용
 aws ec2 authorize-security-group-ingress --group-id $RDS_SG_ID --protocol tcp --port 5432 --cidr $LOGGING_SERVER_PRIVATE_IP/32
+
+# [계정 2] 로깅 서버 - 타겟 서버들로부터의 로그 수집 (Loki)
+aws ec2 authorize-security-group-ingress --group-id $LOGGING_SG_ID --protocol tcp --port 3100 --cidr $PROD_SERVER_IP/32
+aws ec2 authorize-security-group-ingress --group-id $LOGGING_SG_ID --protocol tcp --port 3100 --cidr $REDIS_SERVER_IP/32
+aws ec2 authorize-security-group-ingress --group-id $LOGGING_SG_ID --protocol tcp --port 3100 --cidr $STANDBY_SERVER_PRIVATE_IP/32
 ```
 
 ---
@@ -104,12 +109,17 @@ sudo ufw allow from [로깅_서버_IP] to any port 9080 proto tcp
 sudo ufw allow from [로깅_서버_IP] to any port 18081 proto tcp # 운영/예비 전용
 sudo ufw allow from [로깅_서버_IP] to any port 9121 proto tcp # Redis 전용
 
-# 2. 기존 서비스 포트(SSH, HTTP 등)가 막히지 않도록 확인 필수!
+# 2. 로깅 서버 내부에서 실행 (타겟 서버들의 Promtail 로그 수집 허용)
+sudo ufw allow from [운영_서버_IP] to any port 3100 proto tcp
+sudo ufw allow from [예비_서버_IP] to any port 3100 proto tcp
+sudo ufw allow from [Redis_서버_IP] to any port 3100 proto tcp
+
+# 3. 기존 서비스 포트(SSH, HTTP 등)가 막히지 않도록 확인 필수!
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# 3. 방화벽 활성화 및 적용
+# 4. 방화벽 활성화 및 적용
 sudo ufw enable
 sudo ufw reload
 ```
@@ -157,6 +167,50 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+```
+
+**`promtail-config.yml` (같은 디렉토리에 생성):**
+```yaml
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://로깅서버_Public_IP:3100/loki/api/v1/push # 같은 VPC면 Private IP 사용
+
+scrape_configs:
+  - job_name: system
+    static_configs:
+    - targets:
+        - localhost
+      labels:
+        job: varlogs
+        __path__: /var/log/*log
+
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - source_labels: ['__meta_docker_container_id']
+        target_label: '__path__'
+        replacement: '/var/lib/docker/containers/$1/$1-json.log'
 ```
 
 **실행 커맨드:**
@@ -214,6 +268,22 @@ services:
       # 같은 docker-compose 네트워크에 있는 redis 컨테이너를 가리킴
       - REDIS_ADDR=redis:6379 
       - REDIS_PASSWORD=your_redis_password # 비밀번호가 있을 경우
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+```
+*(주의: `promtail-config.yml` 파일은 3-1과 동일하게 생성해야 합니다)*
+
+**실행 커맨드:**
+```bash
+docker compose -f docker-compose.redis-monitor.yml up -d
 ```
 
 ---
@@ -348,11 +418,65 @@ services:
     ports:
       - "9115:9115"
 
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/tmp/loki
+    command: -config.file=/etc/loki/loki-config.yml
+
   # 로깅 서버 자체 모니터링을 위한 node-exporter와 cadvisor 생략 (3-1과 동일하게 추가 권장)
 
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
+```
+
+**`loki-config.yml` (같은 디렉토리에 생성):**
+```yaml
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 720h # 30일 보관
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+
+compactor:
+  working_directory: /tmp/loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
 ```
 
 **실행 커맨드:**
@@ -418,16 +542,22 @@ curl http://Redis서버_Public_IP:9121/metrics
 
 ---
 
-### 6-3. 3단계: Grafana 대시보드 구성
-데이터를 시각화하기 위해 대시보드를 임포트합니다.
+### 6-3. 3단계: Grafana 대시보드 및 로그(Loki) 구성
+데이터를 시각화하기 위해 데이터소스 및 대시보드를 추가합니다.
 
-1.  주소창에 `http://로깅서버_Public_IP:3030` 접속 (초기 ID/PW: `admin` / `admin`)
-2.  **Connections -> Data Sources**에서 Prometheus를 추가합니다. (URL: `http://prometheus:9090`)
-3.  **Dashboards -> New -> Import**에서 아래 추천 ID를 입력하여 불러옵니다.
+1.  주소창에 `http://로깅서버_Public_IP:3000` 접속 (초기 ID/PW: `admin` / `admin`)
+2.  **Connections -> Data Sources**에서 2가지를 추가합니다:
+    *   **Prometheus**: URL 란에 `http://prometheus:9090` 입력 후 Save & Test.
+    *   **Loki**: URL 란에 `http://loki:3100` 입력 후 Save & Test.
+3.  **Dashboards -> New -> Import**에서 아래 추천 ID를 입력하여 메트릭 대시보드를 불러옵니다.
     *   **Node Exporter (인프라):** `1860`
     *   **Docker 컨테이너 (cAdvisor):** `14282`
-    *   **JVM/Spring Boot:** `11378`
+    *   **JVM (Micrometer):** `4701`
     *   **Redis:** `11835`
+4.  **로그 수집 확인 (Explore)**:
+    *   좌측 메뉴의 **Explore** 클릭 후 상단 데이터소스를 `Loki`로 선택.
+    *   Label filter에서 `job`을 `docker` 또는 `varlogs`로 선택하고 쿼리 실행.
+    *   타겟 서버들의 로그가 실시간 스트리밍되는지 확인합니다.
 
 ---
 

@@ -1,5 +1,7 @@
 package com.lucas.story.controller;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.story.dto.request.StartStoryRequestDto;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/story")
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class StoryController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody StartStoryRequestDto request) {
     StoryNodeResponseDto response = storyService.startStory(principal.getUserId(), request);
+    log.info("User ID: {} started story (Chapter: {}). Reached NodeCode: {}", principal.getUserId(), request.getChapterCode(), response.getNodeCode());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("스토리 시작 성공", response));
   }
@@ -50,6 +54,7 @@ public class StoryController {
   public ResponseEntity<BaseResponse<StoryNodeResponseDto>> findCurrentNode(
       @AuthenticationPrincipal CustomUserPrincipal principal) {
     StoryNodeResponseDto response = storyService.findCurrentNode(principal.getUserId());
+    log.info("User ID: {} is currently at NodeCode: {}", principal.getUserId(), response.getNodeCode());
     return ResponseEntity.ok(BaseResponse.success("현재 노드 조회 성공", response));
   }
 
@@ -64,6 +69,7 @@ public class StoryController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody TransitionRequestDto request) {
     TransitionResponseDto response = storyService.processTransition(principal.getUserId(), request);
+    log.info("User ID: {} processed transition (Action: {}). Reached Next NodeCode: {}", principal.getUserId(), request.getActionType(), response.getNextNode().getCode());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("상태 전이 성공", response));
   }
