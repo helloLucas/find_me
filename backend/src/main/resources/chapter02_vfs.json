@@ -1,0 +1,181 @@
+{
+  "vfsVersion": "chapter02-v1",
+  "chapterCode": "CHAPTER_02",
+  "rootPath": "/home/guest",
+  "defaultCwd": "/home/guest",
+  "prompt": {
+    "user": "guest",
+    "host": "lucas-server"
+  },
+  "policies": {
+    "allowAbsolutePath": true,
+    "allowRelativePath": true,
+    "allowParentPath": true,
+    "denyOutsideRoot": true,
+    "defaultListSort": "alphabetical",
+    "showHiddenFiles": false
+  },
+  "nodes": {
+    "/home/guest": {
+      "type": "directory",
+      "name": "guest",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home/guest/world_map.map": {
+      "type": "file",
+      "name": "world_map.map",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "WORLD_MAP",
+      "contentKey": "WORLD_MAP"
+    },
+    "/home/guest/observer_status.log": {
+      "type": "file",
+      "name": "observer_status.log",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "OBSERVER_STATUS",
+      "contentKey": "OBSERVER_STATUS"
+    },
+    "/home/guest/lucas_fragment_01.sh": {
+      "type": "file",
+      "name": "lucas_fragment_01.sh",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "LUCAS_FRAGMENT",
+      "contentKey": "LUCAS_FRAGMENT_01"
+    },
+    "/home/guest/laplace_fragment_01.sh": {
+      "type": "file",
+      "name": "laplace_fragment_01.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "LAPLACE_FRAGMENT",
+      "contentKey": "LAPLACE_FRAGMENT_01"
+    },
+    "/home/guest/trash": {
+      "type": "directory",
+      "name": "trash",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "TRASH_DIRECTORY"
+    },
+    "/home/guest/sys": {
+      "type": "directory",
+      "name": "sys",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": true
+    },
+    "/home/guest/sys/temp": {
+      "type": "directory",
+      "name": "temp",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home/guest/sys/temp/Memory_Dump_082.tmp": {
+      "type": "file",
+      "name": "Memory_Dump_082.tmp",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "TMP_MEMORY_DUMP",
+      "contentKey": "TMP_MEMORY_DUMP",
+      "metadata": {
+        "size": "1.2MB",
+        "decoyCandidate": true
+      }
+    },
+    "/home/guest/cache": {
+      "type": "directory",
+      "name": "cache",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": true
+    },
+    "/home/guest/cache/User_Behavior_88.tmp": {
+      "type": "file",
+      "name": "User_Behavior_88.tmp",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "TMP_USER_BEHAVIOR",
+      "contentKey": "TMP_USER_BEHAVIOR",
+      "metadata": {
+        "size": "0.8MB",
+        "decoyCandidate": true
+      }
+    },
+    "/home/guest/tmp": {
+      "type": "directory",
+      "name": "tmp",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": true
+    },
+    "/home/guest/tmp/System_Temp_File.tmp": {
+      "type": "file",
+      "name": "System_Temp_File.tmp",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "TMP_SYSTEM_TEMP",
+      "contentKey": "TMP_SYSTEM_TEMP",
+      "metadata": {
+        "size": "4.5MB",
+        "decoyCandidate": true
+      }
+    },
+    "/home/guest/root": {
+      "type": "directory",
+      "name": "root",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": true
+    },
+    "/home/guest/root/hidden": {
+      "type": "directory",
+      "name": "hidden",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": true
+    },
+    "/home/guest/root/hidden/L_fragment_core.tmp": {
+      "type": "file",
+      "name": "L_fragment_core.tmp",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": true,
+      "storyKey": "PROTECTED_CORE_FRAGMENT",
+      "contentKey": "PROTECTED_CORE_FRAGMENT",
+      "metadata": {
+        "protectedCore": true,
+        "decoyCandidate": false
+      }
+    }
+  }
+}
