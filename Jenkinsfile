@@ -42,7 +42,7 @@ pipeline {
                     if (currentBranch == 'main') {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                            sh 'export GL_TOKEN=${GIT_TOKEN} && npm install && npx semantic-release'
+                            sh 'export GL_TOKEN=${GIT_TOKEN} && npm install && npx semantic-release --debug'
                         }
                         sh 'git fetch --tags || true'
                         env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0 || echo 'v1.0.0'", returnStdout: true).trim()
