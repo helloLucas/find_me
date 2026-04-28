@@ -201,6 +201,31 @@ pipeline {
             }
         }
     }
+
+    post {
+        success {
+            script {
+                def message = """
+                    ### :white_check_mark: Success!
+                    - **No.**: #${env.BUILD_NUMBER}
+                    - **Version**: ${env.IMAGE_TAG}
+                    - **Env**: ${env.ENV_TAG}
+                """.stripIndent()
+                mattermostSend(color: 'good', message: message)
+            }
+        }
+        failure {
+            script {
+                def message = """
+                    ### :x: Failed...
+                    - **No.**: #${env.BUILD_NUMBER}
+                    - **Version**: ${env.IMAGE_TAG}
+                    - **Env**: ${env.ENV_TAG}
+                """.stripIndent()
+                mattermostSend(color: 'danger', message: message)
+            }
+        }
+    }
 }
 
 def isTargetBranch() {
