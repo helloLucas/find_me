@@ -18,7 +18,7 @@ spec:
         ports:
         - containerPort: 80
       nodeSelector:
-        env: prod
+        env: dev
 ---
 apiVersion: v1
 kind: Service
