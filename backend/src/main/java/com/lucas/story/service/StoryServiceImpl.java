@@ -24,6 +24,11 @@ import com.lucas.story.entity.StoryNode;
 import com.lucas.story.entity.StoryTransition;
 import com.lucas.story.repository.StoryNodeRepository;
 import com.lucas.story.repository.StoryTransitionRepository;
+import com.lucas.story.service.logging.StoryActionLogEvent;
+import com.lucas.story.service.logging.StoryActionLogService;
+import com.lucas.story.service.redis.StoryRecentEvent;
+import com.lucas.story.service.redis.StorySessionRedisService;
+import com.lucas.story.service.redis.StorySessionState;
 import com.lucas.story.service.terminal.*;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
@@ -58,6 +63,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class StoryServiceImpl implements StoryService {
 
   private static final String ACTION_TYPE_COMMAND = "command";
+  private static final String ACTION_TYPE_CLICK = "click";
+  private static final String DISMISS_INPUT = "dismiss";
   private static final String RULE_AUTO_SYSTEM = "AUTO_SYSTEM";
   private static final String RULE_NORMALIZED_COMMAND = "NORMALIZED_COMMAND";
   private static final String RULE_VIRTUAL_FS_COMMAND = "VIRTUAL_FS_COMMAND";
@@ -78,6 +85,8 @@ public class StoryServiceImpl implements StoryService {
   private final UserChapterProgressRepository userChapterProgressRepository;
   private final RecentActionService recentActionService;
   private final TerminalCommandService terminalCommandService;
+  private final StoryActionLogService storyActionLogService;
+  private final StorySessionRedisService storySessionRedisService;
   private final ObjectMapper objectMapper;
   private final PathResolver pathResolver = new PathResolver();
 
@@ -277,6 +286,10 @@ public class StoryServiceImpl implements StoryService {
           "Fail node reached (progress updated): User={}, FailNode={}",
           user.getId(),
           nextNode.getCode());
+
+      // ELK/RAG 행동 로깅 (incoming)
+      logStoryAction(user, failChapter, currentNode, nextNode, request, true);
+
       // 실패 노드 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
       recordRecentActionAfterCommit(
           buildRecentActionEvent(
@@ -309,6 +322,7 @@ public class StoryServiceImpl implements StoryService {
       handleChapterCompletion(user, chapter);
     }
 
+    logStoryAction(user, chapter, currentNode, nextNode, request, false);
     // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
     // 정상 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
     recordRecentActionAfterCommit(
@@ -316,6 +330,115 @@ public class StoryServiceImpl implements StoryService {
             user, chapter, request, matched, currentNode, nextNode, snapshot, "SUCCESS_MOVE"));
 
     return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success", snapshot);
+  }
+
+  // ──────────────────────────────────────────────
+  // 명령어 이력 조회
+  // ──────────────────────────────────────────────
+
+  /** ELK에 보낼 행동 로깅(command/inspect/click) 처리를 별도 묶음 메서드로 분리. */
+  private void logStoryAction(
+      User user,
+      Chapter chapter,
+      StoryNode currentNode,
+      StoryNode nextNode,
+      TransitionRequestDto request,
+      boolean isFail) {
+
+    String actionType = request.getActionType();
+    // command, inspect, click 외의 액션은 필요시 필터링 가능 (일단 모든 액션을 고려해 적용)
+    if (actionType == null || actionType.isBlank()) {
+      log.warn("ActionType is empty, skipping StoryAction log.");
+      return;
+    }
+
+    String rawInput = request.getInputValue() == null ? "" : request.getInputValue();
+    String normInput = storyActionLogService.normalizeInputValue(rawInput);
+
+    String sessionId = resolveSessionId(user, request);
+
+    // Redis fail_count 조회/갱신
+    boolean shouldResetFailCountOnSuccess =
+        isFail || !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+    int failCountAfterAction =
+        storyActionLogService.updateAndGetFailCount(
+            sessionId, isFail, shouldResetFailCountOnSuccess);
+
+    // hint_requested 여부 추출
+    boolean hintRequested = false;
+    if (request.getMeta() != null && request.getMeta().containsKey("hintRequested")) {
+      hintRequested = Boolean.parseBoolean(String.valueOf(request.getMeta().get("hintRequested")));
+    }
+
+    // state_version 추출
+    int stateVersion = 1;
+    if (request.getMeta() != null && request.getMeta().containsKey("stateVersion")) {
+      try {
+        stateVersion = Integer.parseInt(String.valueOf(request.getMeta().get("stateVersion")));
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
+    String timestamp = storyActionLogService.generateTimestamp();
+    String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
+    String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
+    String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
+    String result = isFail ? "FAIL" : "SUCCESS";
+
+    StoryActionLogEvent event =
+        StoryActionLogEvent.builder()
+            .timestamp(timestamp)
+            .sessionId(sessionId)
+            .userId(user.getId())
+            .chapterId(chapterId)
+            .fromNodeId(fromNodeId)
+            .toNodeId(toNodeId)
+            .actionType(actionType)
+            .inputValue(rawInput)
+            .inputValueNorm(normInput)
+            .result(result)
+            .failCountAfterAction(failCountAfterAction)
+            .hintRequested(hintRequested)
+            .stateVersion(stateVersion)
+            .build();
+
+    storySessionRedisService.recordAction(
+        sessionId,
+        new StorySessionState(user.getId(), chapterId, toNodeId, stateVersion),
+        new StoryRecentEvent(
+            timestamp,
+            actionType,
+            rawInput,
+            normInput,
+            result,
+            fromNodeId,
+            toNodeId,
+            hintRequested));
+
+    // 한 줄 JSON 형태로 로거에 쏨
+    storyActionLogService.logAction(event);
+  }
+
+  private String resolveSessionId(User user, TransitionRequestDto request) {
+    String sessionId = "sess_user_" + user.getId();
+    if (request.getMeta() != null && request.getMeta().containsKey("sessionId")) {
+      sessionId = String.valueOf(request.getMeta().get("sessionId"));
+    }
+    return sessionId;
+  }
+
+  /**
+   * 현재 유저의 최근 명령어 입력 이력을 Redis에서 조회하여 반환한다.
+   *
+   * @return 최근 입력 명령어 문자열 리스트
+   */
+  @Transactional
+  public List<String> getRecentCommands(Long userId) {
+    // 유저 조회
+    User user = getAuthenticatedUser(userId);
+    // Redis에서 해당 유저의 최근 명령어 리스트 조회 (세션 아이디 기반)
+    String sessionId = "sess_user_" + user.getId();
+    return storySessionRedisService.getRecentCommands(sessionId);
   }
 
   // ══════════════════════════════════════════════
