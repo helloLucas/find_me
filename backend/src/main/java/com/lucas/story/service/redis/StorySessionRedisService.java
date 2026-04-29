@@ -2,6 +2,9 @@ package com.lucas.story.service.redis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ public class StorySessionRedisService {
   private static final String STATE_SUFFIX = "state";
   private static final String RECENT_EVENTS_SUFFIX = "recent_events";
   private static final String RECENT_COMMANDS_SUFFIX = "recent_commands";
+  private static final String FAIL_COUNT_SUFFIX = "fail_count";
   private static final int RECENT_EVENTS_LIMIT = 20;
   private static final int RECENT_COMMANDS_LIMIT = 10;
   private static final long SESSION_TTL_HOURS = 24;
@@ -70,6 +74,78 @@ public class StorySessionRedisService {
   public java.util.List<String> getRecentCommands(String sessionId) {
     String recentCommandsKey = resolveSessionKey(sessionId, RECENT_COMMANDS_SUFFIX);
     return redisTemplate.opsForList().range(recentCommandsKey, 0, RECENT_COMMANDS_LIMIT - 1);
+  }
+
+  /**
+   * 세션 state hash를 조회합니다.
+   *
+   * @param sessionId 세션 ID
+   * @return Redis hash의 문자열 맵 (없으면 빈 맵)
+   */
+  public Map<Object, Object> getSessionState(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) {
+      return Collections.emptyMap();
+    }
+    String stateKey = resolveSessionKey(sessionId, STATE_SUFFIX);
+    Map<Object, Object> state = redisTemplate.opsForHash().entries(stateKey);
+    return state != null ? state : Collections.emptyMap();
+  }
+
+  /**
+   * 세션 최근 이벤트를 조회합니다.
+   *
+   * @param sessionId 세션 ID
+   * @param limit 조회 개수
+   * @return 최신순 StoryRecentEvent 목록
+   */
+  public List<StoryRecentEvent> getRecentEvents(String sessionId, int limit) {
+    if (sessionId == null || sessionId.isBlank() || limit <= 0) {
+      return List.of();
+    }
+
+    String key = resolveSessionKey(sessionId, RECENT_EVENTS_SUFFIX);
+    List<String> rows = redisTemplate.opsForList().range(key, 0, limit - 1);
+    if (rows == null || rows.isEmpty()) {
+      return List.of();
+    }
+
+    List<StoryRecentEvent> events = new ArrayList<>();
+    for (String row : rows) {
+      if (row == null || row.isBlank()) {
+        continue;
+      }
+      try {
+        StoryRecentEvent event = objectMapper.readValue(row, StoryRecentEvent.class);
+        events.add(event);
+      } catch (Exception e) {
+        log.warn("StorySessionRedisService: failed to parse recent event row: {}", e.getMessage());
+      }
+    }
+    return events;
+  }
+
+  /**
+   * 세션 fail_count 값을 조회합니다.
+   *
+   * @param sessionId 세션 ID
+   * @return fail_count 정수값 (없거나 파싱 실패 시 0)
+   */
+  public int getFailCount(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) {
+      return 0;
+    }
+
+    String key = resolveSessionKey(sessionId, FAIL_COUNT_SUFFIX);
+    String value = redisTemplate.opsForValue().get(key);
+    if (value == null || value.isBlank()) {
+      return 0;
+    }
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+      log.warn("StorySessionRedisService: invalid fail_count value: {}", value);
+      return 0;
+    }
   }
 
   private String resolveSessionKey(String sessionId, String suffix) {
