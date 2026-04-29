@@ -22,7 +22,6 @@ public class TransitionResponseDto {
 
   /** 전이 결과 타입 (예: "move", "stay", "end") */
   private String result;
-  private TerminalResultDto terminalResult;
 
   /** 터미널 명령어 실행 결과 (Chapter 2 자유 이동 시 사용) */
   private TerminalResultDto terminalResult;
