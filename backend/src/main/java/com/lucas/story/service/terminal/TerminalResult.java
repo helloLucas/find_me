@@ -5,9 +5,4 @@ import lombok.Builder;
 
 @Builder
 public record TerminalResult(
-    List<String> stdout,
-    List<String> stderr,
-    String cwd,
-    String prompt,
-    String resultCode
-) {}
+    List<String> stdout, List<String> stderr, String cwd, String prompt, String resultCode) {}

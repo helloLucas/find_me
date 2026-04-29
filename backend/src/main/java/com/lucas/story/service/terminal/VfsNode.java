@@ -12,13 +12,12 @@ public record VfsNode(
     boolean hidden,
     String storyKey,
     String contentKey,
-    Map<String, Object> metadata
-) {
-    public boolean isDirectory() {
-        return "directory".equals(type);
-    }
+    Map<String, Object> metadata) {
+  public boolean isDirectory() {
+    return "directory".equals(type);
+  }
 
-    public boolean isFile() {
-        return "file".equals(type);
-    }
+  public boolean isFile() {
+    return "file".equals(type);
+  }
 }

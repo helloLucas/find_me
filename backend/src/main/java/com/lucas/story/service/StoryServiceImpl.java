@@ -23,20 +23,20 @@ import com.lucas.story.entity.StoryNode;
 import com.lucas.story.entity.StoryTransition;
 import com.lucas.story.repository.StoryNodeRepository;
 import com.lucas.story.repository.StoryTransitionRepository;
+import com.lucas.story.service.terminal.*;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.lucas.story.service.terminal.*;
-import jakarta.annotation.PostConstruct;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -210,10 +210,8 @@ public class StoryServiceImpl implements StoryService {
         storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
     // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-    StoryTransition matched = transitions.stream()
-        .filter(t -> matchesTransition(t, request))
-        .findFirst()
-        .orElse(null);
+    StoryTransition matched =
+        transitions.stream().filter(t -> matchesTransition(t, request)).findFirst().orElse(null);
 
     if (matched == null) {
       // ── Step 2: Chapter 2 터미널 Fallback ──
