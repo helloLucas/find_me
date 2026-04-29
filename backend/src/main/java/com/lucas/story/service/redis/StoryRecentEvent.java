@@ -9,4 +9,3 @@ public record StoryRecentEvent(
     String fromNodeId,
     String toNodeId,
     boolean hintRequested) {}
-

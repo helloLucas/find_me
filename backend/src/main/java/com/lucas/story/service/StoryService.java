@@ -4,7 +4,6 @@ import com.lucas.story.dto.request.StartStoryRequestDto;
 import com.lucas.story.dto.request.TransitionRequestDto;
 import com.lucas.story.dto.response.StoryNodeResponseDto;
 import com.lucas.story.dto.response.TransitionResponseDto;
-import java.util.List;
 
 public interface StoryService {
 
@@ -30,11 +29,4 @@ public interface StoryService {
    * @return 전이된 이후의 새로운 노드 정보
    */
   TransitionResponseDto processTransition(Long userId, TransitionRequestDto request);
-
-  /**
-   * 현재 사용자의 최근 CLI 명령어 로그 10개를 조회합니다.
-   *
-   * @return 최근 명령어 리스트
-   */
-  List<String> getRecentCommands(Long userId);
 }

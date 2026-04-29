@@ -1,7 +1,5 @@
 package com.lucas.story.controller;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.story.dto.request.StartStoryRequestDto;
@@ -10,8 +8,8 @@ import com.lucas.story.dto.response.StoryNodeResponseDto;
 import com.lucas.story.dto.response.TransitionResponseDto;
 import com.lucas.story.service.StoryService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,7 +38,11 @@ public class StoryController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody StartStoryRequestDto request) {
     StoryNodeResponseDto response = storyService.startStory(principal.getUserId(), request);
-    log.info("User ID: {} started story (Chapter: {}). Reached NodeCode: {}", principal.getUserId(), request.getChapterCode(), response.getNodeCode());
+    log.info(
+        "User ID: {} started story (Chapter: {}). Reached NodeCode: {}",
+        principal.getUserId(),
+        request.getChapterCode(),
+        response.getNodeCode());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("스토리 시작 성공", response));
   }
@@ -54,7 +56,8 @@ public class StoryController {
   public ResponseEntity<BaseResponse<StoryNodeResponseDto>> findCurrentNode(
       @AuthenticationPrincipal CustomUserPrincipal principal) {
     StoryNodeResponseDto response = storyService.findCurrentNode(principal.getUserId());
-    log.info("User ID: {} is currently at NodeCode: {}", principal.getUserId(), response.getNodeCode());
+    log.info(
+        "User ID: {} is currently at NodeCode: {}", principal.getUserId(), response.getNodeCode());
     return ResponseEntity.ok(BaseResponse.success("현재 노드 조회 성공", response));
   }
 
@@ -69,20 +72,12 @@ public class StoryController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody TransitionRequestDto request) {
     TransitionResponseDto response = storyService.processTransition(principal.getUserId(), request);
-    log.info("User ID: {} processed transition (Action: {}). Reached Next NodeCode: {}", principal.getUserId(), request.getActionType(), response.getNextNode().getCode());
+    log.info(
+        "User ID: {} processed transition (Action: {}). Reached Next NodeCode: {}",
+        principal.getUserId(),
+        request.getActionType(),
+        response.getNextNode() != null ? response.getNextNode().getCode() : "STAY");
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("상태 전이 성공", response));
-  }
-
-  /**
-   * 현재 사용자의 최근 CLI 명령어 로그 10개를 조회합니다.
-   *
-   * @return 최근 명령어 리스트
-   */
-  @GetMapping("/commands")
-  public ResponseEntity<BaseResponse<List<String>>> getRecentCommands(
-      @AuthenticationPrincipal CustomUserPrincipal principal) {
-    List<String> response = storyService.getRecentCommands(principal.getUserId());
-    return ResponseEntity.ok(BaseResponse.success("최근 명령어 조회 성공", response));
   }
 }
