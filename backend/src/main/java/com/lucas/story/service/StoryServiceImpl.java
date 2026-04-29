@@ -1445,56 +1445,64 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어를 처리한다.
+   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다. DB 전이 검색에 실패한 경우 호출되며, VFS 로직을
+   * 통해 결과를 생성합니다.
    *
-   * @param user 요청 유저
-   * @param progress 진행 상태
-   * @param currentNode 현재 노드
-   * @param request 전이 요청
-   * @return STAY 결과 응답 또는 처리 불가 시 null
+   * @param user 요청을 보낸 인증 유저 객체
+   * @param progress 유저의 현재 스토리 진행 상태 기록
+   * @param currentNode 유저가 현재 위치한 스토리 노드
+   * @param request 전이 요청 데이터 (입력된 명령어 포함)
+   * @return STAY 타입의 전이 결과 응답 (터미널 출력값 포함) 또는 처리 불가 시 null
    */
   private TransitionResponseDto handleChapter2TerminalFallback(
       User user, UserStoryProgress progress, StoryNode currentNode, TransitionRequestDto request) {
 
-    // 1. 터미널 프로필 확인
+    // 1. 현재 노드의 메타데이터를 확인하여 Chapter 2 터미널 프로필인지 검증합니다.
     JsonNode promptMeta = currentNode.getPromptMeta();
+    // 프로필 정보가 없거나 chapter2가 아니면 폴백 처리를 하지 않습니다.
     if (promptMeta == null || !"chapter2".equals(promptMeta.path("terminalProfile").asText())) {
       return null;
     }
 
-    // command 액션만 처리
+    // 2. 액션 타입이 command이고 실제 입력값이 존재하는지 확인합니다.
     if (!ACTION_TYPE_COMMAND.equals(request.getActionType()) || request.getInputValue() == null) {
       return null;
     }
 
-    // 2. 명령어 파싱
+    // 3. 입력된 문자열을 명령어와 인자 리스트로 파싱합니다.
     ParsedCommand command = parseCommand(request.getInputValue());
+    // 파싱 결과가 유효하지 않으면(공백 등) 처리를 중단합니다.
     if (command == null) {
       return null;
     }
 
-    // 3. VFS 및 Snapshot 로드
+    // 4. 유저 진행 상태에서 최신 스냅샷을 꺼내고, 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
     JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+    // 정적 VFS 구조와 스냅샷 내의 동적 변경사항(vfsOverlay)을 병합합니다.
     VfsContext vfs = VfsContext.of(chapter02Vfs, latestSnapshot.path("vfsOverlay"));
 
-    // 4. 명령어 실행
+    // 5. TerminalCommandService를 통해 명령어를 실행하고 결과를 받아옵니다.
+    // 스냅샷 내의 terminal 섹션 데이터(현재 CWD 등)를 함께 전달합니다.
     TerminalResult result =
         terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
 
-    // 5. 스냅샷 업데이트 (CWD 변경 반영 및 버전 증가)
+    // 6. 실행 결과를 반영하여 새로운 스냅샷 데이터를 생성합니다.
     ObjectNode updatedSnapshot = (ObjectNode) latestSnapshot.deepCopy();
+    // 스냅샷 버전을 1 증가시켜 상태 변화를 추적 가능하게 합니다.
     int version = updatedSnapshot.path("snapshotVersion").asInt(0);
     updatedSnapshot.put("snapshotVersion", version + 1);
 
+    // 7. 터미널 세션 정보를 업데이트합니다. (변경된 CWD, 마지막 실행 명령어 등)
     ObjectNode terminalNode = (ObjectNode) updatedSnapshot.path("terminal");
-    terminalNode.put("cwd", result.cwd());
-    terminalNode.put("lastCommand", request.getInputValue());
+    terminalNode.put("cwd", result.cwd()); // 명령어 실행 후의 현재 경로 반영
+    terminalNode.put("lastCommand", request.getInputValue()); // 실행한 원문 명령어 기록
 
-    // 진행 상태 저장
+    // 8. 갱신된 진행 상태(노드 유지, 스냅샷 업데이트)를 DB에 영속화합니다.
     progress.updateProgress(currentNode.getChapter(), currentNode, updatedSnapshot);
     userStoryProgressRepository.save(progress);
 
-    // 6. Redis 기록 (STAY 결과 기록)
+    // 9. 명령어 실행 결과를 Redis 최근 행동 이력(recent-actions)에 기록합니다.
+    // 결과 코드에 따라 성공(SUCCESS_STAY) 또는 실패(FAIL_STAY)로 구분합니다.
     recordRecentActionAfterCommit(
         buildRecentActionEvent(
             user,
@@ -1506,31 +1514,46 @@ public class StoryServiceImpl implements StoryService {
             updatedSnapshot,
             "SUCCESS".equals(result.resultCode()) ? "SUCCESS_STAY" : "FAIL_STAY"));
 
-    // 7. 응답 빌드 (stay 결과)
+    // 10. 프론트엔드에 전달할 최종 응답 DTO를 빌드하여 반환합니다.
     return TransitionResponseDto.builder()
-        .result("stay")
+        .result("stay") // 노드 이동 없이 현재 위치를 유지함을 명시합니다.
         .terminalResult(
             TransitionResponseDto.TerminalResultDto.builder()
-                .stdout(result.stdout())
-                .stderr(result.stderr())
-                .cwd(result.cwd())
-                .prompt(result.prompt())
-                .resultCode(result.resultCode())
+                .stdout(result.stdout()) // 표준 출력 내용
+                .stderr(result.stderr()) // 표준 에러 내용
+                .cwd(result.cwd()) // 결과 경로
+                .prompt(result.prompt()) // 다음에 표시될 프롬프트
+                .resultCode(result.resultCode()) // 실행 성공 여부 코드
                 .build())
-        .snapshot(objectMapper.convertValue(updatedSnapshot, Map.class))
+        .snapshot(
+            objectMapper.convertValue(
+                updatedSnapshot,
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
         .build();
   }
 
+  /**
+   * 유저가 입력한 원문 문자열을 명령어 토큰으로 분리합니다.
+   *
+   * @param input 유저 입력 문자열
+   * @return 파싱된 ParsedCommand 객체 (비어있을 경우 null)
+   */
   private ParsedCommand parseCommand(String input) {
+    // 앞뒤 공백을 제거합니다.
     String trimmed = input.trim();
+    // 빈 입력이면 null을 반환합니다.
     if (trimmed.isEmpty()) {
       return null;
     }
 
+    // 공백을 기준으로 문자열을 분할합니다.
     String[] parts = trimmed.split("\\s+");
+    // 첫 번째 토큰을 명령어로 설정합니다.
     String cmd = parts[0];
+    // 두 번째 토큰부터는 인자 리스트로 수집합니다.
     List<String> args = Arrays.stream(parts).skip(1).collect(Collectors.toList());
 
+    // 분석된 결과를 객체에 담아 반환합니다.
     return new ParsedCommand(cmd, args, input);
   }
 }

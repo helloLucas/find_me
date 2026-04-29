@@ -378,9 +378,9 @@ VALUES
     (SELECT id FROM story_nodes WHERE code = 'CH1_TERMINAL_SSH_READY'),
     (SELECT id FROM story_nodes WHERE code = 'CH1_FAIL_SKIP'),
     'command',
-    '^(ls|pwd|cd(\s+.+)?|cat\s+world_map\.map|cat\s+observer_status\.log|cat\s+lukas_fragment_01\.sh|sh\s+lukas_fragment_01\.sh|sh\s+laplace_fragment_01\.sh|find\s+\.\s+-name\s+"?\*\.tmp"?|tar\s+-cvf\s+decoy\.tar.*|nc\s+-w\s+3\s+127\.0\.0\.1\s+8080\s+<\s+decoy\.tar|rm\s+decoy\.tar(\s*&&\s*history\s+-c)?|override\s+--force)$',
+    '^(ls|pwd|cd(\s+.+)?|cat\s+world_map\.map|cat\s+observer_status\.log|cat\s+lucas_fragment_01\.sh|sh\s+lucas_fragment_01\.sh|sh\s+laplace_fragment_01\.sh|find\s+\.\s+-name\s+"?\*\.tmp"?|tar\s+-cvf\s+decoy\.tar.*|nc\s+-w\s+3\s+127\.0\.0\.1\s+8080\s+<\s+decoy\.tar|rm\s+decoy\.tar(\s*&&\s*history\s+-c)?|override\s+--force)$',
     'regex',
-    '{"pattern": "^(ls|pwd|cd(\\s+.+)?|cat\\s+world_map\\.map|cat\\s+observer_status\\.log|cat\\s+lukas_fragment_01\\.sh|sh\\s+lukas_fragment_01\\.sh|sh\\s+laplace_fragment_01\\.sh|find\\s+\\.\\s+-name\\s+\"?\\*\\.tmp\"?|tar\\s+-cvf\\s+decoy\\.tar.*|nc\\s+-w\\s+3\\s+127\\.0\\.0\\.1\\s+8080\\s+<\\s+decoy\\.tar|rm\\s+decoy\\.tar(\\s*&&\\s*history\\s+-c)?|override\\s+--force)$", "trim": true, "caseInsensitive": false}'::jsonb,
+    '{"pattern": "^(ls|pwd|cd(\\s+.+)?|cat\\s+world_map\\.map|cat\\s+observer_status\\.log|cat\\s+lucas_fragment_01\\.sh|sh\\s+lucas_fragment_01\\.sh|sh\\s+laplace_fragment_01\\.sh|find\\s+\\.\\s+-name\\s+\"?\\*\\.tmp\"?|tar\\s+-cvf\\s+decoy\\.tar.*|nc\\s+-w\\s+3\\s+127\\.0\\.0\\.1\\s+8080\\s+<\\s+decoy\\.tar|rm\\s+decoy\\.tar(\\s*&&\\s*history\\s+-c)?|override\\s+--force)$", "trim": true, "caseInsensitive": false}'::jsonb,
     NULL,
     '{"setFlags": ["skip_attempted"], "glitchLevel": 1}'::jsonb,
     180
