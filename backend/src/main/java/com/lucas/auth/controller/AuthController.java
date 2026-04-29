@@ -12,7 +12,13 @@ import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.CookieUtil;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -41,57 +47,56 @@ public class AuthController {
         @CookieValue(value = "refresh_token", required = false) String refreshToken,
         HttpServletResponse response) {
 
-        if (refreshToken == null || refreshToken.isBlank()) {
-            throw new CustomException(ErrorCode.E1000);
-        }
+    if (refreshToken == null || refreshToken.isBlank()) {
+      throw new CustomException(ErrorCode.E1000);
+    }
 
-        RefreshTokenResponse result = authService.refresh(refreshToken);
+    RefreshTokenResponse result = authService.refresh(refreshToken);
 
         // 새로운 리프레시 토큰을 쿠키에 설정
         cookieUtil.setRefreshTokenCookie(response, result.getRefreshToken());
 
-        return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", result));
+    return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", result));
+  }
+
+  /**
+   * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제하고 쿠키를 무효화합니다.
+   *
+   * @param principal 인증된 사용자의 정보를 담고 있는 객체
+   * @param response HTTP 응답 객체
+   * @return 로그아웃 성공 메시지
+   */
+  @PostMapping("/logout")
+  public ResponseEntity<BaseResponse<Void>> logout(
+      @AuthenticationPrincipal CustomUserPrincipal principal, HttpServletResponse response) {
+
+    if (principal == null) {
+      throw new CustomException(ErrorCode.E1000);
     }
 
-    /**
-     * 현재 로그인한 사용자의 로그아웃을 처리합니다. Redis에 저장된 Refresh Token을 삭제하고 쿠키를 무효화합니다.
-     *
-     * @param principal 인증된 사용자의 정보를 담고 있는 객체
-     * @param response HTTP 응답 객체
-     * @return 로그아웃 성공 메시지
-     */
-    @PostMapping("/logout")
-    public ResponseEntity<BaseResponse<Void>> logout(
-            @AuthenticationPrincipal CustomUserPrincipal principal,
-            HttpServletResponse response) {
-
-        if (principal == null) {
-            throw new CustomException(ErrorCode.E1000);
-        }
-
-        log.info("User ID: {} logged out.", principal.getUserId());
-        authService.logout(principal.getUserId());
+    log.info("User ID: {} logged out.", principal.getUserId());
+    authService.logout(principal.getUserId());
 
         // 브라우저 쿠키 즉시 삭제 (Max-Age 0)
         cookieUtil.setRefreshTokenCookie(response, "");
 
-        return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
-    }
+    return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
+  }
 
-    /**
-     * 게스트 사용자의 정보를 임시 보관하고 식별용 임시 키를 발급합니다.
-     *
-     * @return 발급된 임시 식별 키(tempKey) 정보를 포함한 응답 객체
-     */
-    @GetMapping("/guest-init")
-    public ResponseEntity<BaseResponse<Map<String, String>>> initGuest() {
-        String tempKey = authService.initGuest();
-        log.info("Guest session created with tempKey: {}", tempKey);
+  /**
+   * 게스트 사용자의 정보를 임시 보관하고 식별용 임시 키를 발급합니다.
+   *
+   * @return 발급된 임시 식별 키(tempKey) 정보를 포함한 응답 객체
+   */
+  @GetMapping("/guest-init")
+  public ResponseEntity<BaseResponse<Map<String, String>>> initGuest() {
+    String tempKey = authService.initGuest();
+    log.info("Guest session created with tempKey: {}", tempKey);
 
-        Map<String, String> data = new HashMap<>();
-        data.put("tempKey", tempKey);
+    Map<String, String> data = new HashMap<>();
+    data.put("tempKey", tempKey);
 
-        return ResponseEntity.ok(BaseResponse.success("게스트 세션이 임시 생성되었습니다.", data));
-    }
+    return ResponseEntity.ok(BaseResponse.success("게스트 세션이 임시 생성되었습니다.", data));
+  }
 
 }

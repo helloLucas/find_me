@@ -6,13 +6,13 @@ BEGIN;
 
 
 INSERT INTO chapters (code, title, sort_order)
-VALUES ('CHAPTER_02', 'Chapter 2 - Null Point Server', 2)
+VALUES ('week02', 'Chapter 2 - Null Point Server', 2)
 ON CONFLICT (code) DO UPDATE
 SET title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order;
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -40,8 +40,7 @@ SELECT
   "content": {
     "terminalOutput": [
       "[SSH] connection established.",
-      "[SESSION] lucas-server safe shell opened.",
-      "guest@lucas-server:~$"
+      "[SESSION] lucas-server safe shell opened."
     ]
   },
   "messages": [
@@ -75,7 +74,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -93,7 +92,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -124,8 +123,7 @@ SELECT
       "observer_status.log",
       "lucas_fragment_01.sh",
       "laplace_fragment_01.sh",
-      "trash/",
-      "guest@lucas-server:~$"
+      "trash/"
     ]
   },
   "messages": [
@@ -147,7 +145,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -165,7 +163,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -203,8 +201,7 @@ SELECT
       "Notes:",
       "- External world stability linked to observer focus",
       "- Unauthorized inspection detected",
-      "- Cleanup priority under review",
-      "guest@lucas-server:~$"
+      "- Cleanup priority under review"
     ]
   },
   "messages": [
@@ -232,7 +229,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -250,7 +247,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -291,8 +288,7 @@ SELECT
       "# waiting for observer action",
       "",
       "echo \"나는 신호를 보낼 수는 있지만,\"",
-      "echo \"문을 여는 건 이 바깥의 입력뿐이다.\"",
-      "guest@lucas-server:~$"
+      "echo \"문을 여는 건 이 바깥의 입력뿐이다.\""
     ]
   },
   "messages": [],
@@ -307,7 +303,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -325,7 +321,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -353,8 +349,7 @@ SELECT
   "content": {
     "terminalOutput": [
       "[FAILED] 이 파편은 독립적으로 실행되지 않습니다.",
-      "[TRACE] 외부 관측자 입력이 필요한 상태입니다.",
-      "guest@lucas-server:~$"
+      "[TRACE] 외부 관측자 입력이 필요한 상태입니다."
     ]
   },
   "messages": [
@@ -376,7 +371,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -394,7 +389,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -486,7 +481,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -515,8 +510,7 @@ SELECT
     "terminalOutput": [
       "[SYSTEM_ALERT] 비정상적인 프로세스 점유 감지",
       "[SYSTEM_ALERT] 가비지 컬렉터 스캔 시작... 0.1% 완료",
-      "[SYSTEM] GC Scanning... [|---------] 01%",
-      "guest@lucas-server:~$"
+      "[SYSTEM] GC Scanning... [|---------] 01%"
     ]
   },
   "messages": [
@@ -544,7 +538,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -562,7 +556,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -596,8 +590,7 @@ SELECT
       "Hint:",
       "- Collect disposable temporary data.",
       "- Avoid protected core fragments.",
-      "",
-      "guest@lucas-server:~$"
+      ""
     ]
   },
   "messages": [
@@ -619,7 +612,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -637,7 +630,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -675,8 +668,7 @@ SELECT
       "  1   | ./sys/temp/Memory_Dump_082.tmp  | 1.2MB",
       "  2   | ./cache/User_Behavior_88.tmp    | 0.8MB",
       "  3   | ./tmp/System_Temp_File.tmp      | 4.5MB",
-      "-------------------------------------------",
-      "guest@lucas-server:~$"
+      "-------------------------------------------"
     ]
   },
   "messages": [
@@ -704,7 +696,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -722,7 +714,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -756,8 +748,7 @@ SELECT
       "tar: Exiting with failure status due to previous errors",
       "",
       "[ERROR] 보호된 코어 조각에 접근할 수 없습니다.",
-      "[GC SCAN] 관심도 상승... 57%",
-      "guest@lucas-server:~$"
+      "[GC SCAN] 관심도 상승... 57%"
     ]
   },
   "messages": [
@@ -785,7 +776,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -803,7 +794,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -831,8 +822,7 @@ SELECT
   "content": {
     "terminalOutput": [
       "[WAITING] 데이터 결합 중... 30%... 70%... 완료.",
-      "[OUTPUT] decoy.tar 생성 완료",
-      "guest@lucas-server:~$"
+      "[OUTPUT] decoy.tar 생성 완료"
     ]
   },
   "messages": [
@@ -854,7 +844,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -872,7 +862,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -901,8 +891,7 @@ SELECT
     "terminalOutput": [
       "[WARNING] 비정상적인 패킷 유입 감지.",
       "[ROUTE] 감시 프로세스가 gate_04 구역으로 이동합니다.",
-      "[SYSTEM] GC Scanning... [||||||----] 63%",
-      "guest@lucas-server:~$"
+      "[SYSTEM] GC Scanning... [||||||----] 63%"
     ]
   },
   "messages": [
@@ -930,7 +919,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -948,7 +937,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1024,7 +1013,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1104,7 +1093,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1164,7 +1153,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1191,8 +1180,7 @@ SELECT
   },
   "content": {
     "terminalOutput": [
-      "[WAIT] 아직 이 명령을 실행할 조건이 맞춰지지 않았습니다.",
-      "guest@lucas-server:~$"
+      "[WAIT] 아직 이 명령을 실행할 조건이 맞춰지지 않았습니다."
     ]
   },
   "messages": [
@@ -1214,7 +1202,7 @@ SELECT
   "allowedActions": [
     "command"
   ],
-  "placeholder": "guest@lucas-server:~$",
+  "placeholder": "",
   "validationHint": "terminal_command",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter2"
@@ -1232,7 +1220,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,

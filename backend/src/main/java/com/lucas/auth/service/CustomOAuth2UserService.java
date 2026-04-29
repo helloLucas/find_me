@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/**
- * OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스
- * 클래스입니다.
- */
+/** OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스 클래스입니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,16 +48,19 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     String registrationId = userRequest.getClientRegistration().getRegistrationId();
     AuthProvider provider = getAuthProvider(registrationId);
-    String userNameAttributeName = userRequest
-        .getClientRegistration()
-        .getProviderDetails()
-        .getUserInfoEndpoint()
-        .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
+    String userNameAttributeName =
+        userRequest
+            .getClientRegistration()
+            .getProviderDetails()
+            .getUserInfoEndpoint()
+            .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
 
-    Map<String, Object> attributes = oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
+    Map<String, Object> attributes =
+        oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
 
     // provider에 따라 유저 정보를 통해 OAuthAttributes 객체 생성
-    OAuthAttributes extractAttributes = OAuthAttributes.of(provider, userNameAttributeName, attributes);
+    OAuthAttributes extractAttributes =
+        OAuthAttributes.of(provider, userNameAttributeName, attributes);
 
     UserContext context = getUser(extractAttributes, provider);
     User user = context.user();
@@ -107,12 +106,13 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    * 소셜 정보와 현재 게스트 세션을 조합하여 사용자 상태를 판별합니다.
    *
    * @param attributes 추출된 OAuth 사용자 속성
-   * @param provider   소셜 로그인 제공자
+   * @param provider 소셜 로그인 제공자
    * @return 조회되거나 가입 대기 중인 정보를 담은 UserContext
    */
   private UserContext getUser(OAuthAttributes attributes, AuthProvider provider) {
     String providerUserId = attributes.getOauth2UserInfo().getId();
-    Optional<User> socialUserOpt = userRepository.findByProviderAndProviderUserId(provider, providerUserId);
+    Optional<User> socialUserOpt =
+        userRepository.findByProviderAndProviderUserId(provider, providerUserId);
     Long guestId = getCurrentGuestId();
 
     // 소셜 계정이 이미 존재하는 경우
@@ -142,8 +142,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     return new UserContext(null, true, false, false);
   }
 
-  private record UserContext(User user, boolean isNewUser, boolean isGuest, boolean isConflict) {
-  }
+  private record UserContext(User user, boolean isNewUser, boolean isGuest, boolean isConflict) {}
 
   /**
    * 현재 HTTP 요청에서 게스트 토큰 정보를 파싱하여 게스트 ID를 반환합니다.
@@ -152,8 +151,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
    */
   private Long getCurrentGuestId() {
     try {
-      HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
-          .getRequest();
+      HttpServletRequest request =
+          ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
       if (request.getCookies() != null) {
         for (Cookie cookie : request.getCookies()) {
@@ -172,9 +171,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   /**
    * 기존 게스트 레코드를 소셜 정보를 포함한 회원(MEMBER) 레코드로 승격시킵니다.
    *
-   * @param guest      게스트 유저
+   * @param guest 게스트 유저
    * @param attributes 소셜 로그인 사용자 속성
-   * @param provider   소셜 로그인 제공자
+   * @param provider 소셜 로그인 제공자
    * @return 승격된 User 객체
    */
   private User upgradeGuestToMember(User guest, OAuthAttributes attributes, AuthProvider provider) {

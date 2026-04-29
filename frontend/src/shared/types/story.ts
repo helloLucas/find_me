@@ -66,6 +66,14 @@ export interface ProgressSnapshot {
   [key: string]: any;
 }
 
+export interface TerminalResult {
+  stdout?: string[];
+  stderr?: string[];
+  cwd?: string;
+  prompt?: string;
+  resultCode?: "SUCCESS" | "ERROR" | string;
+}
+
 export interface TransitionRequest {
   nodeId: number;
   actionType: "command" | "click" | "inspect" | "choice" | "system";
@@ -74,8 +82,9 @@ export interface TransitionRequest {
 }
 
 export interface TransitionResponse {
-  nextNode: TransitionNextNodeResponse;
-  snapshot: ProgressSnapshot;
+  nextNode?: TransitionNextNodeResponse;
+  snapshot?: ProgressSnapshot;
   effects?: EffectBundle[];
-  result: "success" | "fail" | "retry" | "game_over";
+  result: "success" | "fail" | "retry" | "game_over" | "stay";
+  terminalResult?: TerminalResult;
 }

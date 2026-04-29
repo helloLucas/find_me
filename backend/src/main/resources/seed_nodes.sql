@@ -1,27 +1,35 @@
 BEGIN;
 
-INSERT INTO chapters (code, title, sort_order)
+INSERT INTO
+    chapters (code, title, sort_order)
 VALUES ('week01', 'Week 01', 1)
-ON CONFLICT (code) DO UPDATE
-SET title = EXCLUDED.title,
+ON CONFLICT (code) DO
+UPDATE
+SET
+    title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order;
 
-INSERT INTO story_nodes (
-    chapter_id,
-    code,
-    node_type,
-    output_bundle,
-    prompt_type,
-    prompt_meta,
-    is_checkpoint,
-    is_terminal
-)
-VALUES
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_FRIEND_CHAT_PUSH',
-    'system',
-    $${
+INSERT INTO
+    story_nodes (
+        chapter_id,
+        code,
+        node_type,
+        output_bundle,
+        prompt_type,
+        prompt_meta,
+        is_checkpoint,
+        is_terminal
+    )
+VALUES (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_FRIEND_CHAT_PUSH',
+        'system',
+        $${
       "scene": {
         "id": "CH1_FRIEND_CHAT_PUSH",
         "mode": "desktop",
@@ -56,19 +64,24 @@ VALUES
         }
       }
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["open_friend_chat"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_FRIEND_CHAT_OPEN',
-    'narrative',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_FRIEND_CHAT_OPEN',
+        'narrative',
+        $${
       "scene": {
         "id": "CH1_FRIEND_CHAT_OPEN",
         "mode": "desktop",
@@ -90,19 +103,24 @@ VALUES
         }
       }
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["friend_message_link"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_NEWS_PORTAL',
-    'narrative',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_NEWS_PORTAL',
+        'narrative',
+        $${
       "scene": {
         "id": "CH1_NEWS_PORTAL",
         "mode": "browser",
@@ -137,19 +155,24 @@ VALUES
       "messages": [],
       "notifications": []
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["good_article", "missing_people_article", "dark_article"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_DARK_ARTICLE_OPEN',
-    'narrative',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_DARK_ARTICLE_OPEN',
+        'narrative',
+        $${
       "scene": {
         "id": "CH1_DARK_ARTICLE_OPEN",
         "mode": "browser",
@@ -185,18 +208,23 @@ VALUES
         "showDogAvatar": false
       }
     }$$::jsonb,
-    'none',
-    $${
+        'none',
+        $${
       "allowedActions": []
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_ARTICLE_SCROLL_CORRUPTION',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_ARTICLE_SCROLL_CORRUPTION',
+        'system',
+        $${
       "scene": {
         "id": "CH1_ARTICLE_SCROLL_CORRUPTION",
         "mode": "browser",
@@ -226,19 +254,24 @@ VALUES
         }
       }
     }$$::jsonb,
-    'inspect',
-    $${
+        'inspect',
+        $${
       "allowedActions": ["inspect"],
       "inspectTarget": "corrupted_article_region"
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_DEVTOOLS_CUE',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_DEVTOOLS_CUE',
+        'system',
+        $${
       "scene": {
         "id": "CH1_DEVTOOLS_CUE",
         "mode": "browser",
@@ -257,19 +290,24 @@ VALUES
         "articleFooter": "[render warning] blocked resources detected / article body partially unavailable"
       }
     }$$::jsonb,
-    'inspect',
-    $${
+        'inspect',
+        $${
       "allowedActions": ["inspect"],
       "inspectTarget": "devtools_open"
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_DEVTOOLS_FRAME',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_DEVTOOLS_FRAME',
+        'system',
+        $${
       "scene": {
         "id": "CH1_DEVTOOLS_FRAME",
         "mode": "devtools",
@@ -285,19 +323,24 @@ VALUES
         "showF12Hint": false
       }
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["network_tab"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_NETWORK_TAB',
-    'network',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_NETWORK_TAB',
+        'network',
+        $${
       "scene": {
         "id": "CH1_NETWORK_TAB",
         "mode": "network",
@@ -431,8 +474,8 @@ VALUES
       "messages": [],
       "notifications": []
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": [
         "req_029",
@@ -449,14 +492,19 @@ VALUES
         "req_040"
       ]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_SUCCESS_REQUEST_SELECTED',
-    'network',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_SUCCESS_REQUEST_SELECTED',
+        'network',
+        $${
       "scene": {
         "id": "CH1_SUCCESS_REQUEST_SELECTED",
         "mode": "network",
@@ -590,19 +638,24 @@ VALUES
         "detailTabs": ["Headers", "Response"]
       }
     }$$::jsonb,
-    'inspect',
-    $${
+        'inspect',
+        $${
       "allowedActions": ["inspect"],
       "inspectTarget": "headers_or_response"
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_PACKET_HEADERS_RESPONSE',
-    'network',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_PACKET_HEADERS_RESPONSE',
+        'network',
+        $${
       "scene": {
         "id": "CH1_PACKET_HEADERS_RESPONSE",
         "mode": "network",
@@ -756,19 +809,24 @@ VALUES
         ]
       }
     }$$::jsonb,
-    'inspect',
-    $${
+        'inspect',
+        $${
       "allowedActions": ["inspect"],
       "inspectTarget": "packet_message"
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_PACKET_MESSAGE',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_PACKET_MESSAGE',
+        'system',
+        $${
       "scene": {
         "id": "CH1_PACKET_MESSAGE",
         "mode": "network",
@@ -808,19 +866,24 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["go_to_console"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_CONSOLE_CONNECT_READY',
-    'console',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_CONSOLE_CONNECT_READY',
+        'console',
+        $${
       "scene": {
         "id": "CH1_CONSOLE_CONNECT_READY",
         "mode": "console",
@@ -835,19 +898,24 @@ VALUES
       },
       "messages": []
     }$$::jsonb,
-    'command',
-    $${
+        'command',
+        $${
       "allowedActions": ["command"],
       "placeholder": "Enter command..."
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_CONNECT_CORE_SUCCESS',
-    'console',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_CONNECT_CORE_SUCCESS',
+        'console',
+        $${
       "scene": {
         "id": "CH1_CONNECT_CORE_SUCCESS",
         "mode": "console",
@@ -876,18 +944,23 @@ VALUES
         "showDogAvatar": false
       }
     }$$::jsonb,
-    'none',
-    $${
+        'none',
+        $${
       "allowedActions": []
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_LUCAS_DOG_APPEAR',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_LUCAS_DOG_APPEAR',
+        'system',
+        $${
       "scene": {
         "id": "CH1_LUCAS_DOG_APPEAR",
         "mode": "system",
@@ -937,19 +1010,24 @@ VALUES
         "breakLayout": true
       }
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["open_terminal"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_RELAY_CLUE_REVISIT',
-    'network',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_RELAY_CLUE_REVISIT',
+        'network',
+        $${
       "scene": {
         "id": "CH1_RELAY_CLUE_REVISIT",
         "mode": "network",
@@ -979,19 +1057,24 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'inspect',
-    $${
+        'inspect',
+        $${
       "allowedActions": ["inspect"],
       "inspectTarget": "relay_clue_recheck"
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_TERMINAL_SSH_READY',
-    'console',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_TERMINAL_SSH_READY',
+        'console',
+        $${
       "scene": {
         "id": "CH1_TERMINAL_SSH_READY",
         "mode": "terminal",
@@ -1000,24 +1083,29 @@ VALUES
       },
       "content": {
         "terminalOutput": [
-          "terminal://lukas-relay"
+          "terminal://lucas-relay"
         ]
       },
       "messages": []
     }$$::jsonb,
-    'command',
-    $${
+        'command',
+        $${
       "allowedActions": ["command"],
       "placeholder": "Enter command..."
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_SSH_AUTH_PROMPT',
-    'console',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_SSH_AUTH_PROMPT',
+        'console',
+        $${
       "scene": {
         "id": "CH1_SSH_AUTH_PROMPT",
         "mode": "terminal",
@@ -1031,18 +1119,23 @@ VALUES
         ]
       }
     }$$::jsonb,
-    'command',
-    $${
+        'command',
+        $${
       "allowedActions": ["command"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_SSH_CONNECTED',
-    'console',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_SSH_CONNECTED',
+        'console',
+        $${
       "scene": {
         "id": "CH1_SSH_CONNECTED",
         "mode": "terminal",
@@ -1051,7 +1144,7 @@ VALUES
       },
       "content": {
         "terminalOutput": [
-          "guest@lukas-server:~$"
+          "guest@lucas-server:~$"
         ]
       },
       "messages": [
@@ -1063,18 +1156,23 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'none',
-    $${
+        'none',
+        $${
       "allowedActions": []
     }$$::jsonb,
-    true,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_COMPLETE',
-    'system',
-    $${
+        true,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_COMPLETE',
+        'system',
+        $${
       "scene": {
         "id": "CH1_COMPLETE",
         "mode": "system",
@@ -1084,18 +1182,23 @@ VALUES
       "content": {},
       "notifications": []
     }$$::jsonb,
-    'none',
-    $${
+        'none',
+        $${
       "allowedActions": []
     }$$::jsonb,
-    true,
-    true
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_FAIL_UNRELATED',
-    'system',
-    $${
+        true,
+        true
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_FAIL_UNRELATED',
+        'system',
+        $${
       "scene": {
         "id": "CH1_FAIL_UNRELATED",
         "mode": "system",
@@ -1116,19 +1219,24 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["dismiss"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_FAIL_DANGEROUS',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_FAIL_DANGEROUS',
+        'system',
+        $${
       "scene": {
         "id": "CH1_FAIL_DANGEROUS",
         "mode": "system",
@@ -1150,19 +1258,24 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["dismiss"]
     }$$::jsonb,
-    false,
-    false
-),
-(
-    (SELECT id FROM chapters WHERE code = 'week01'),
-    'CH1_FAIL_SKIP',
-    'system',
-    $${
+        false,
+        false
+    ),
+    (
+        (
+            SELECT id
+            FROM chapters
+            WHERE
+                code = 'week01'
+        ),
+        'CH1_FAIL_SKIP',
+        'system',
+        $${
       "scene": {
         "id": "CH1_FAIL_SKIP",
         "mode": "system",
@@ -1183,16 +1296,18 @@ VALUES
         }
       ]
     }$$::jsonb,
-    'click',
-    $${
+        'click',
+        $${
       "allowedActions": ["click"],
       "clickTargets": ["dismiss"]
     }$$::jsonb,
-    false,
-    false
-)
-ON CONFLICT (code) DO UPDATE
-SET node_type = EXCLUDED.node_type,
+        false,
+        false
+    )
+ON CONFLICT (code) DO
+UPDATE
+SET
+    node_type = EXCLUDED.node_type,
     output_bundle = EXCLUDED.output_bundle,
     prompt_type = EXCLUDED.prompt_type,
     prompt_meta = EXCLUDED.prompt_meta,

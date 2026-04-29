@@ -9,7 +9,7 @@ DELETE FROM story_transitions t
 USING story_nodes n, chapters c
 WHERE t.from_node_id = n.id
   AND n.chapter_id = c.id
-  AND c.code = 'CHAPTER_02';
+  AND c.code = 'week02';
 
 INSERT INTO story_transitions (
     from_node_id,

@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -43,8 +45,7 @@ public class UserController {
    */
   @PostMapping("/register")
   public ResponseEntity<BaseResponse<TokenResponse>> register(
-      @Valid @RequestBody UserRegisterRequest request,
-      HttpServletResponse response) {
+      @Valid @RequestBody UserRegisterRequest request, HttpServletResponse response) {
 
     TokenResponse tokenResponse = userService.register(request);
 

@@ -25,7 +25,8 @@ public class StorySessionRedisService {
   private final RedisTemplate<String, String> redisTemplate;
   private final ObjectMapper objectMapper;
 
-  public void recordAction(String sessionId, StorySessionState state, StoryRecentEvent recentEvent) {
+  public void recordAction(
+      String sessionId, StorySessionState state, StoryRecentEvent recentEvent) {
     if (sessionId == null || sessionId.isBlank()) {
       return;
     }
@@ -66,6 +67,11 @@ public class StorySessionRedisService {
     }
   }
 
+  public java.util.List<String> getRecentCommands(String sessionId) {
+    String recentCommandsKey = resolveSessionKey(sessionId, RECENT_COMMANDS_SUFFIX);
+    return redisTemplate.opsForList().range(recentCommandsKey, 0, RECENT_COMMANDS_LIMIT - 1);
+  }
+
   private String resolveSessionKey(String sessionId, String suffix) {
     return String.format(SESSION_KEY_PREFIX_FORMAT, sessionId) + suffix;
   }
@@ -74,4 +80,3 @@ public class StorySessionRedisService {
     return value == null ? "" : value;
   }
 }
-
