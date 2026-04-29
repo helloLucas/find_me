@@ -45,6 +45,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.lucas.story.service.terminal.*;
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -124,6 +129,24 @@ public class StoryServiceImpl implements StoryService {
       }
     } catch (Exception e) {
       // VFS 로딩 실패는 Chapter 2 터미널 기능에 영향을 주므로 error 로그로 기록합니다.
+      log.error("Failed to load Chapter 2 VFS", e);
+    }
+  }
+
+  private JsonNode chapter02Vfs;
+
+  @PostConstruct
+  public void init() {
+    loadVfsJson();
+  }
+
+  private void loadVfsJson() {
+    try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
+      if (is != null) {
+        this.chapter02Vfs = objectMapper.readTree(is);
+        log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
+      }
+    } catch (Exception e) {
       log.error("Failed to load Chapter 2 VFS", e);
     }
   }
