@@ -447,6 +447,9 @@ function getActionSource(meta: Record<string, unknown> | undefined): "terminal" 
 
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
+  
+  // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
+  if (source === "browser") return;
 
   // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
   if (source === "browser") return;
@@ -594,7 +597,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult);
+        applyTerminalResult(response.terminalResult, meta?.source as any);
         set({ currentNode, error: null });
         return;
       }
