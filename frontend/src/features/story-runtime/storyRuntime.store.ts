@@ -262,7 +262,7 @@ function applyStoryNodeOutputBundle(
   const completionText = normalizedOutput.content.completionText;
   const terminalOutputLines = Array.isArray(terminalOutput) ? terminalOutput.map(String) : [];
   const connectedPromptContext =
-    node.code === "CH1_SSH_CONNECTED"
+    node.code === "CH1_SSH_CONNECTED" || node.code === "CH2_SERVER_HOME"
       ? terminalOutputLines.map(parseTerminalPromptContext).find(Boolean)
       : undefined;
   const visibleTerminalOutputLines = connectedPromptContext
@@ -282,6 +282,9 @@ function applyStoryNodeOutputBundle(
       connectedPromptContext.host,
       connectedPromptContext.path
     );
+  } else if (node.code.startsWith("CH2_")) {
+    // Automatically switch to lucas-server context when in Chapter 2
+    clientStore.setTerminalContext("guest", "lucas-server", "~");
   }
 
   if (terminalLines.length > 0) {

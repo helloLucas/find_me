@@ -1,7 +1,6 @@
 package com.lucas.story.service.terminal;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -114,14 +113,14 @@ public class TerminalCommandService {
     List<VfsNode> children = vfs.listChildren(targetPath);
     // 숨김 속성이 아닌 노드들의 이름만 추출하여 공백으로 연결합니다.
     List<String> output =
-        children.stream().filter(n -> !n.hidden()).map(VfsNode::name).collect(Collectors.toList());
+        children.stream()
+            .filter(n -> !n.hidden())
+            .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
+            .collect(Collectors.toList());
 
     return TerminalResult.builder()
-        // 결과가 비어있으면 빈 리스트, 있으면 공백으로 구분된 문자열 한 줄을 반환합니다.
-        .stdout(
-            output.isEmpty()
-                ? new ArrayList<>()
-                : Collections.singletonList(String.join("  ", output)))
+        // 각 파일명을 별개의 라인으로 반환하여 세로로 출력되게 합니다.
+        .stdout(output)
         .cwd(cwd)
         .prompt(buildPrompt(cwd, vfs))
         .resultCode("SUCCESS")
