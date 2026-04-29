@@ -87,8 +87,13 @@ app:
     frontend:
         url: ${FRONTEND_URL:http://localhost:5173}
     hint:
-        embedding-service-url: ${HINT_EMBEDDING_SERVICE_URL}
+        orchestrator-service-url: ${HINT_ORCHESTRATOR_SERVICE_URL}
+        orchestrator-timeout-ms: ${HINT_ORCHESTRATOR_TIMEOUT_MS}
         search-top-k: ${HINT_SEARCH_TOP_K}
         evidence-limit: ${HINT_EVIDENCE_LIMIT}
         min-similarity: ${HINT_MIN_SIMILARITY}
         recent-action-limit: ${HINT_RECENT_ACTION_LIMIT}
+        es-enabled: ${HINT_ES_ENABLED}
+        es-base-url: ${HINT_ES_BASE_URL}
+        es-index-pattern: ${HINT_ES_INDEX_PATTERN}
+        es-timeout-ms: ${HINT_ES_TIMEOUT_MS}

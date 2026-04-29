@@ -70,9 +70,9 @@ public class LucasKnowledgeVectorSearchRepository {
         """
           AND lk.metadata->>'from_node_code' = :fromNodeCode
           AND (
-            :actionType IS NULL
-            OR :actionType = ''
-            OR lk.metadata->>'action_type' = :actionType
+            CAST(:actionType AS text) IS NULL
+            OR CAST(:actionType AS text) = ''
+            OR lk.metadata->>'action_type' = CAST(:actionType AS text)
           )
         """;
 
@@ -141,4 +141,3 @@ public class LucasKnowledgeVectorSearchRepository {
     }
   }
 }
-

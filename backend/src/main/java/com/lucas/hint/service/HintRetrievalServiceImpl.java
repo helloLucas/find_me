@@ -3,11 +3,7 @@ package com.lucas.hint.service;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.hint.dto.request.HintLiveRetrieveRequestDto;
-import com.lucas.hint.dto.response.HintEvidenceResponseDto;
 import com.lucas.hint.dto.response.HintLiveRetrieveResponseDto;
-import com.lucas.hint.model.HintSearchPhase;
-import com.lucas.hint.model.HintVectorCandidate;
-import com.lucas.hint.repository.LucasKnowledgeVectorSearchRepository;
 import com.lucas.progress.entity.UserStoryProgress;
 import com.lucas.progress.repository.UserStoryProgressRepository;
 import com.lucas.story.entity.StoryTransition;
@@ -15,25 +11,22 @@ import com.lucas.story.repository.StoryTransitionRepository;
 import com.lucas.story.service.redis.StoryRecentEvent;
 import com.lucas.story.service.redis.StorySessionRedisService;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 온디맨드 힌트 벡터 검색 오케스트레이션 구현체입니다.
+ * 온디맨드 힌트 검색 오케스트레이터입니다.
  *
- * <p>실서비스와 동일한 런타임 문맥(Progress + Redis 이벤트)을 이용해 query embedding을 만들고 strict/fallback
- * phase 규칙대로 evidence를 선택합니다.
+ * <p>백엔드는 런타임 컨텍스트만 수집하고, 실제 임베딩+벡터검색은 hint-orchestrator(`/v1/hints/retrieve`)에
+ * 위임합니다.
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional(readOnly = true)
 public class HintRetrievalServiceImpl implements HintRetrievalService {
 
@@ -43,8 +36,7 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final StoryTransitionRepository storyTransitionRepository;
   private final StorySessionRedisService storySessionRedisService;
-  private final HintEmbeddingClient hintEmbeddingClient;
-  private final LucasKnowledgeVectorSearchRepository vectorSearchRepository;
+  private final HintRetrieveOrchestratorClient hintRetrieveOrchestratorClient;
 
   @Value("${app.hint.search-top-k:10}")
   private int defaultSearchTopK;
@@ -82,32 +74,24 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
 
     TransitionExpectation expectation = resolveTransitionExpectation(progress.getLatestNode().getId());
 
-    HintEmbeddingClient.QueryEmbeddingRequest embeddingRequest =
-        new HintEmbeddingClient.QueryEmbeddingRequest(
-            chapterCode,
-            fromNodeCode,
-            actionType,
-            currentInput,
-            failCount,
-            expectation.expectedActionType(),
-            expectation.expectedInputHint(),
-            mapRecentActions(recentEvents),
-            buildExtraContext(sessionId, fromNodeCode),
-            REQUIRED_VECTOR_DIMENSION);
-
-    HintEmbeddingClient.QueryEmbeddingResult embeddingResult = hintEmbeddingClient.embedQuery(embeddingRequest);
-    validateVector(embeddingResult.vector());
-    String queryVector = vectorToLiteral(embeddingResult.vector());
-
-    PhaseSearchResult phaseResult =
-        runPhaseSearch(queryVector, chapterCode, fromNodeCode, actionType, searchTopK, minSimilarity);
-
-    List<HintVectorCandidate> selectedEvidence =
-        selectEvidenceWithinPhase(phaseResult.candidates(), evidenceLimit, minSimilarity);
-
-    boolean lowConfidence =
-        phaseResult.phase() == HintSearchPhase.FALLBACK_CHAPTER_ONLY
-            || selectedEvidence.stream().noneMatch(c -> c.getSimilarity() >= minSimilarity);
+    HintRetrieveOrchestratorClient.HintRetrieveResult result =
+        hintRetrieveOrchestratorClient.retrieve(
+            HintRetrieveOrchestratorClient.HintRetrieveRequest.builder()
+                .chapter_id(chapterCode)
+                .from_node_id(fromNodeCode)
+                .action_type(actionType)
+                .current_input(currentInput)
+                .fail_count_after_action(failCount)
+                .expected_action_type(expectation.expectedActionType())
+                .expected_input_hint(expectation.expectedInputHint())
+                .recent_actions(mapRecentActions(recentEvents))
+                .extra_context(buildExtraContext(sessionId, fromNodeCode))
+                .es_signal(null)
+                .search_top_k(searchTopK)
+                .evidence_limit(evidenceLimit)
+                .min_similarity(minSimilarity)
+                .output_dimensionality(REQUIRED_VECTOR_DIMENSION)
+                .build());
 
     return HintLiveRetrieveResponseDto.builder()
         .sessionId(sessionId)
@@ -116,15 +100,15 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
         .fromNodeCode(fromNodeCode)
         .actionType(actionType)
         .failCountAfterAction(failCount)
-        .queryVectorDimension(embeddingResult.vector().size())
-        .queryText(embeddingResult.text())
-        .selectedPhase(phaseResult.phase().value())
-        .lowConfidence(lowConfidence)
+        .queryVectorDimension(result.queryVectorDimension())
+        .queryText(result.queryText())
+        .selectedPhase(result.selectedPhase())
+        .lowConfidence(result.lowConfidence())
         .searchTopK(searchTopK)
         .evidenceLimit(evidenceLimit)
         .minSimilarity(minSimilarity)
-        .candidateCount(phaseResult.candidates().size())
-        .evidences(toEvidenceDtos(selectedEvidence))
+        .candidateCount(result.candidateCount())
+        .evidences(result.evidences())
         .build();
   }
 
@@ -164,120 +148,6 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
     return context;
   }
 
-  private PhaseSearchResult runPhaseSearch(
-      String queryVector,
-      String chapterCode,
-      String fromNodeCode,
-      String actionType,
-      int searchTopK,
-      double minSimilarity) {
-
-    List<HintVectorCandidate> strict =
-        vectorSearchRepository.searchStrict(
-            queryVector, chapterCode, fromNodeCode, actionType, searchTopK);
-    if (hasEnoughSimilarity(strict, minSimilarity)) {
-      return new PhaseSearchResult(HintSearchPhase.STRICT, strict);
-    }
-
-    List<HintVectorCandidate> actionRemoved =
-        vectorSearchRepository.searchFallbackActionRemoved(
-            queryVector, chapterCode, fromNodeCode, searchTopK);
-    if (hasEnoughSimilarity(actionRemoved, minSimilarity)) {
-      return new PhaseSearchResult(HintSearchPhase.FALLBACK_ACTION_REMOVED, actionRemoved);
-    }
-
-    List<HintVectorCandidate> chapterOnly =
-        vectorSearchRepository.searchFallbackChapterOnly(queryVector, chapterCode, searchTopK);
-    if (!chapterOnly.isEmpty()) {
-      return new PhaseSearchResult(HintSearchPhase.FALLBACK_CHAPTER_ONLY, chapterOnly);
-    }
-
-    return new PhaseSearchResult(HintSearchPhase.NONE, List.of());
-  }
-
-  private boolean hasEnoughSimilarity(List<HintVectorCandidate> candidates, double minSimilarity) {
-    return candidates.stream().anyMatch(candidate -> candidate.getSimilarity() >= minSimilarity);
-  }
-
-  private List<HintVectorCandidate> selectEvidenceWithinPhase(
-      List<HintVectorCandidate> candidates, int evidenceLimit, double minSimilarity) {
-
-    if (candidates.isEmpty()) {
-      return List.of();
-    }
-
-    List<HintVectorCandidate> enoughSimilarity =
-        candidates.stream().filter(c -> c.getSimilarity() >= minSimilarity).toList();
-    List<HintVectorCandidate> base = enoughSimilarity.isEmpty() ? candidates : enoughSimilarity;
-
-    return base.stream()
-        .sorted(
-            Comparator.comparingInt(HintVectorCandidate::getPriorityRank)
-                .thenComparingDouble(HintVectorCandidate::getCosineDistance)
-                .thenComparing(Comparator.comparingInt(HintVectorCandidate::getPriority).reversed())
-                .thenComparingLong(HintVectorCandidate::getId))
-        .limit(evidenceLimit)
-        .toList();
-  }
-
-  private List<HintEvidenceResponseDto> toEvidenceDtos(List<HintVectorCandidate> selectedEvidence) {
-    List<HintEvidenceResponseDto> result = new ArrayList<>();
-    for (HintVectorCandidate candidate : selectedEvidence) {
-      Map<String, Object> metadata = candidate.getMetadata();
-      Long transitionId = parseLong(metadata.get("transition_id"));
-      String toNodeCode = parseText(metadata.get("to_node_code"));
-      String actionType = parseText(metadata.get("action_type"));
-
-      result.add(
-          HintEvidenceResponseDto.builder()
-              .knowledgeId(candidate.getId())
-              .transitionId(transitionId)
-              .toNodeCode(toNodeCode)
-              .actionType(actionType)
-              .similarity(candidate.getSimilarity())
-              .cosineDistance(candidate.getCosineDistance())
-              .priorityRank(candidate.getPriorityRank())
-              .priority(candidate.getPriority())
-              .candidateCount(candidate.getCandidateCount())
-              .content(candidate.getContent())
-              .metadata(metadata)
-              .build());
-    }
-    return result;
-  }
-
-  private void validateVector(List<Double> vector) {
-    if (vector == null || vector.isEmpty()) {
-      throw new CustomException(ErrorCode.G1000);
-    }
-    if (vector.size() != REQUIRED_VECTOR_DIMENSION) {
-      log.error(
-          "Invalid query vector dimension. expected={}, actual={}",
-          REQUIRED_VECTOR_DIMENSION,
-          vector.size());
-      throw new CustomException(ErrorCode.G1000);
-    }
-    for (Double value : vector) {
-      if (value == null || value.isNaN() || value.isInfinite()) {
-        log.error("Invalid query vector value detected.");
-        throw new CustomException(ErrorCode.G1000);
-      }
-    }
-  }
-
-  private String vectorToLiteral(List<Double> vector) {
-    StringBuilder builder = new StringBuilder();
-    builder.append('[');
-    for (int i = 0; i < vector.size(); i++) {
-      if (i > 0) {
-        builder.append(',');
-      }
-      builder.append(vector.get(i));
-    }
-    builder.append(']');
-    return builder.toString();
-  }
-
   private String resolveSessionId(Long userId, String requestedSessionId) {
     if (requestedSessionId != null && !requestedSessionId.isBlank()) {
       return requestedSessionId;
@@ -302,25 +172,5 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
     return Math.max(1, recentActionLimit > 0 ? recentActionLimit : DEFAULT_RECENT_ACTION_LIMIT);
   }
 
-  private Long parseLong(Object value) {
-    if (value == null) {
-      return null;
-    }
-    if (value instanceof Number number) {
-      return number.longValue();
-    }
-    try {
-      return Long.parseLong(String.valueOf(value));
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
-
-  private String parseText(Object value) {
-    return value == null ? null : String.valueOf(value);
-  }
-
   private record TransitionExpectation(String expectedActionType, String expectedInputHint) {}
-
-  private record PhaseSearchResult(HintSearchPhase phase, List<HintVectorCandidate> candidates) {}
 }
