@@ -252,6 +252,13 @@ export const NetworkDevTools: React.FC = () => {
       return;
     }
 
+    // 챕터 2에서 connect_core() 시도 시 현재 연결 상태 안내 (이스터 에그/연속성)
+    const normalizedCommand = command.replace(/;$/, "").trim();
+    if (isChapter2Mode && (normalizedCommand === "connect_core()" || normalizedCommand === "connect_core")) {
+       appendConsoleEntry("success", "Core connection already established.");
+       return;
+    }
+
     // 챕터 1 전용 커맨드 예외 처리
     if (command === "connect_core()" && !isChapter2Mode && node?.code === "CH1_PACKET_MESSAGE") {
       if (canSubmitStoryAction(node, "click", "go_to_console")) {
@@ -261,7 +268,7 @@ export const NetworkDevTools: React.FC = () => {
     }
 
     if (canSubmitStoryAction(node, "command", command)) {
-      await submitStoryCommand(command);
+      await submitStoryCommand(command, { source: "browser" });
       
       // 챕터 2에서는 "Command executed." 메시지 출력 방지 (시스템 메시지 성격 배제)
       if (!isChapter2Mode) {
@@ -270,11 +277,6 @@ export const NetworkDevTools: React.FC = () => {
       return;
     }
 
-    // 챕터 2에서 connect_core() 시도 시 정의되지 않음 에러 출력
-    if (isChapter2Mode && command === "connect_core()") {
-       appendConsoleEntry("error", `Uncaught ReferenceError: ${command} is not defined`);
-       return;
-    }
 
     appendConsoleEntry("error", `Uncaught ReferenceError: ${command} is not defined`);
   };
