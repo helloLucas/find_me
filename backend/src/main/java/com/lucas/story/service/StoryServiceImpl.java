@@ -194,7 +194,14 @@ public class StoryServiceImpl implements StoryService {
         transitions.stream()
             .filter(t -> matchesTransition(t, request))
             .findFirst()
-            .orElseThrow(() -> new CustomException(ErrorCode.A1001));
+            .orElse(null);
+
+    // 매칭되는 전이가 없는 경우 (예상치 못한 오답)
+    if (matched == null) {
+        // ES에 '예상치 못한 오류(ERROR)' 로그를 먼저 남기고 예외를 던짐
+        logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, true);
+        throw new CustomException(ErrorCode.A1001);
+    }
 
     // 매칭된 전이의 도착 노드 추출
     StoryNode nextNode = matched.getToNode();
@@ -287,7 +294,9 @@ public class StoryServiceImpl implements StoryService {
       String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
       String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
       String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
-      String result = isFail ? "FAIL" : "SUCCESS";
+      
+      // result 세분화: 성공(SUCCESS), 설계된 오답(FAIL), 예상치 못한 오류/무효 입력(ERROR)
+      String result = isFail ? (nextNode == null ? "ERROR" : "FAIL") : "SUCCESS";
 
       StoryActionLogEvent event = StoryActionLogEvent.builder()
           .timestamp(timestamp)
