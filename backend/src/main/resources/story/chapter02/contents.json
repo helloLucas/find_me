@@ -1,0 +1,101 @@
+{
+  "WORLD_MAP": [
+    "             [Harbor]   [Null]   [Deleted]",
+    "        [Market]   [Null]   [Power Grid]",
+    "   [Old Town] [Deleted] [PLAYER_ZONE] [River] [Null]",
+    "        [School]   [Housing]   [Deleted]",
+    "             [Terminal] [Null]   [Outlands]",
+    "",
+    "Boundary Stability: 6%",
+    "External Region Integrity: collapsing...",
+    "",
+    "[SESSION MAP : NULL POINT / YEAR 2088]",
+    "",
+    "             [Deleted] [Deleted] [Deleted]",
+    "        [Deleted] [Null]    [Null]    [Deleted]",
+    "   [Deleted] [Null]   [PLAYER_ZONE]   [Null] [Deleted]",
+    "        [Deleted] [Null]    [Null]    [Deleted]",
+    "             [Deleted] [Deleted] [Deleted]",
+    "",
+    "Active Observer Region: PLAYER_ZONE",
+    "Boundary Stability: 12%",
+    "External Region Integrity: collapsing..."
+  ],
+  "OBSERVER_STATUS": [
+    "[OBSERVER STATUS LOG]",
+    "Observer ID        : UNKNOWN",
+    "Observer Class     : Abnormal",
+    "Session Link       : ACTIVE",
+    "Detection Risk     : RISING",
+    "GC Interest Level  : LOW -> MEDIUM",
+    "Privilege Level    : guest",
+    "",
+    "Notes:",
+    "- External world stability linked to observer focus",
+    "- Unauthorized inspection detected",
+    "- Cleanup priority under review"
+  ],
+  "LUCAS_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# lucas_fragment_01.sh",
+    "# observer relay attempt :: partial",
+    "",
+    "echo \"[TRACE FOUND]\"",
+    "echo \"[MEMORY STATE: FRAGMENTED]\"",
+    "echo \"[RELAY STATE: OPEN_PENDING]\"",
+    "echo \"[STATUS] 외부 입력 없이는 진행 불가\"",
+    "",
+    "# human-triggered execution only",
+    "# self-init denied",
+    "# waiting for observer action",
+    "",
+    "echo \"나는 신호를 보낼 수는 있지만,\"",
+    "echo \"문을 여는 건 이 바깥의 입력뿐이다.\""
+  ],
+  "LAPLACE_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# laplace_fragment_01.sh",
+    "# decoy packet routine :: active",
+    "",
+    "echo \"[LAPLACE FRAGMENT 01 :: DECOY PACKET]\"",
+    "echo \"Mission: 가짜 데이터 덩어리를 생성해 GC의 스캔 경로를 우회시켜라.\"",
+    "echo \"Status: ACTIVE\"",
+    "echo \"\"",
+    "echo \"Hint:\"",
+    "echo \"- 주변의 임시 데이터를 모아 하나의 패킷으로 묶어라.\"",
+    "echo \"- 무거운 흔적일수록 더 좋은 미끼가 된다.\"",
+    "echo \"- 보호된 코어 조각은 섞지 마라.\"",
+    "echo \"\"",
+    "echo \"[NOTE] 감시망은 진짜 흔적과 가짜 흔적을 구분하려 한다.\"",
+    "echo \"[NOTE] 잘못된 조각이 섞이면 오히려 위치를 노출할 수 있다.\""
+  ],
+  "TMP_MEMORY_DUMP": [
+    "MEMORY DUMP ADDR: 0x0042F001",
+    "-------------------------",
+    "0000: 4C 55 43 41 53 20 49 53 20 48 45 52 45 00 00 00",
+    "0010: 53 59 53 54 45 4D 20 45 52 52 4F 52 20 23 39 39",
+    "0020: 46 52 41 47 4D 45 4E 54 53 20 44 45 54 45 43 54",
+    "0030: 45 44 20 49 4E 20 43 41 43 48 45 00 00 00 00 00",
+    "[TRUNCATED]"
+  ],
+  "TMP_USER_BEHAVIOR": [
+    "USER_ID: 1002",
+    "LAST_COMMAND: ls -al",
+    "TIMESTAMP: 2026-04-28T23:59:59Z",
+    "LOCATION: Sector 4",
+    "STATUS: ANOMALY_SUSPECTED"
+  ],
+  "TMP_SYSTEM_TEMP": [
+    "SYSTEM TEMP FILE",
+    "DO NOT DELETE",
+    "-----------------",
+    "CACHE_ID: 99283",
+    "TTL: 3600",
+    "FLAG: DECOY_CANDIDATE"
+  ],
+  "PROTECTED_CORE_FRAGMENT": [
+    "[ACCESS DENIED]",
+    "This file is encrypted by SYSTEM_ROOT.",
+    "Attempting to read this file will trigger an immediate GC scan."
+  ]
+}

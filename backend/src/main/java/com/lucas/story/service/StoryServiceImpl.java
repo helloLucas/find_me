@@ -32,6 +32,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.lucas.story.service.terminal.*;
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -68,7 +73,26 @@ public class StoryServiceImpl implements StoryService {
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final UserChapterProgressRepository userChapterProgressRepository;
   private final RecentActionService recentActionService;
+  private final TerminalCommandService terminalCommandService;
   private final ObjectMapper objectMapper;
+
+  private JsonNode chapter02Vfs;
+
+  @PostConstruct
+  public void init() {
+    loadVfsJson();
+  }
+
+  private void loadVfsJson() {
+    try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
+      if (is != null) {
+        this.chapter02Vfs = objectMapper.readTree(is);
+        log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
+      }
+    } catch (Exception e) {
+      log.error("Failed to load Chapter 2 VFS", e);
+    }
+  }
 
   // ──────────────────────────────────────────────
   // 스토리 시작
@@ -186,16 +210,22 @@ public class StoryServiceImpl implements StoryService {
         storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
     // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-    StoryTransition matched;
-    try {
-      // 후보 transition 중 현재 요청과 처음 매칭되는 항목을 선택한다.
-      matched =
-          transitions.stream()
-              .filter(t -> matchesTransition(t, request))
-              .findFirst()
-              .orElseThrow(() -> new CustomException(ErrorCode.A1001));
-    } catch (CustomException e) {
+    StoryTransition matched = transitions.stream()
+        .filter(t -> matchesTransition(t, request))
+        .findFirst()
+        .orElse(null);
+
+    if (matched == null) {
+      // ── Step 2: Chapter 2 터미널 Fallback ──
+      // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
+      TransitionResponseDto terminalResponse =
+          handleChapter2TerminalFallback(user, progress, currentNode, request);
+      if (terminalResponse != null) {
+        return terminalResponse;
+      }
+
       // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
+      CustomException e = new CustomException(ErrorCode.A1001);
       recordRejectedTransitionAction(user, progress, currentNode, request, e);
       // 기존 API 에러 응답 흐름은 유지해야 하므로 원래 예외를 다시 던진다.
       throw e;
@@ -1414,5 +1444,95 @@ public class StoryServiceImpl implements StoryService {
 
     // Chapter 2 완료 여부는 아직 false다.
     flags.put("chapter2_completed", false);
+  }
+
+  /**
+   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어를 처리한다.
+   *
+   * @param user 요청 유저
+   * @param progress 진행 상태
+   * @param currentNode 현재 노드
+   * @param request 전이 요청
+   * @return STAY 결과 응답 또는 처리 불가 시 null
+   */
+  private TransitionResponseDto handleChapter2TerminalFallback(
+      User user, UserStoryProgress progress, StoryNode currentNode, TransitionRequestDto request) {
+
+    // 1. 터미널 프로필 확인
+    JsonNode promptMeta = currentNode.getPromptMeta();
+    if (promptMeta == null || !"chapter2".equals(promptMeta.path("terminalProfile").asText())) {
+      return null;
+    }
+
+    // command 액션만 처리
+    if (!ACTION_TYPE_COMMAND.equals(request.getActionType()) || request.getInputValue() == null) {
+      return null;
+    }
+
+    // 2. 명령어 파싱
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null) {
+      return null;
+    }
+
+    // 3. VFS 및 Snapshot 로드
+    JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+    VfsContext vfs = VfsContext.of(chapter02Vfs, latestSnapshot.path("vfsOverlay"));
+
+    // 4. 명령어 실행
+    TerminalResult result =
+        terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
+
+    // 5. 스냅샷 업데이트 (CWD 변경 반영 및 버전 증가)
+    ObjectNode updatedSnapshot = (ObjectNode) latestSnapshot.deepCopy();
+    int version = updatedSnapshot.path("snapshotVersion").asInt(0);
+    updatedSnapshot.put("snapshotVersion", version + 1);
+
+    ObjectNode terminalNode = (ObjectNode) updatedSnapshot.path("terminal");
+    terminalNode.put("cwd", result.cwd());
+    terminalNode.put("lastCommand", request.getInputValue());
+
+    // 진행 상태 저장
+    progress.updateProgress(currentNode.getChapter(), currentNode, updatedSnapshot);
+    userStoryProgressRepository.save(progress);
+
+    // 6. Redis 기록 (STAY 결과 기록)
+    recordRecentActionAfterCommit(
+        buildRecentActionEvent(
+            user,
+            currentNode.getChapter(),
+            request,
+            null,
+            currentNode,
+            currentNode,
+            updatedSnapshot,
+            "SUCCESS".equals(result.resultCode()) ? "SUCCESS_STAY" : "FAIL_STAY"));
+
+    // 7. 응답 빌드 (stay 결과)
+    return TransitionResponseDto.builder()
+        .result("stay")
+        .terminalResult(
+            TransitionResponseDto.TerminalResultDto.builder()
+                .stdout(result.stdout())
+                .stderr(result.stderr())
+                .cwd(result.cwd())
+                .prompt(result.prompt())
+                .resultCode(result.resultCode())
+                .build())
+        .snapshot(objectMapper.convertValue(updatedSnapshot, Map.class))
+        .build();
+  }
+
+  private ParsedCommand parseCommand(String input) {
+    String trimmed = input.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+
+    String[] parts = trimmed.split("\\s+");
+    String cmd = parts[0];
+    List<String> args = Arrays.stream(parts).skip(1).collect(Collectors.toList());
+
+    return new ParsedCommand(cmd, args, input);
   }
 }

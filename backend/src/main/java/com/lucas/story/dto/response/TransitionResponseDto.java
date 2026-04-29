@@ -14,6 +14,7 @@ public class TransitionResponseDto {
   private Map<String, Object> snapshot;
   private List<EffectDto> effects;
   private String result;
+  private TerminalResultDto terminalResult;
 
   @Getter
   @Builder
@@ -33,5 +34,15 @@ public class TransitionResponseDto {
   public static class EffectDto {
     private String type;
     private Object payload;
+  }
+
+  @Getter
+  @Builder
+  public static class TerminalResultDto {
+    private List<String> stdout;
+    private List<String> stderr;
+    private String cwd;
+    private String prompt;
+    private String resultCode;
   }
 }
