@@ -538,7 +538,9 @@ public class StoryServiceImpl implements StoryService {
       String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
       String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
       String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
-      String result = isFail ? "FAIL" : "SUCCESS";
+      
+      // result 세분화: 성공(SUCCESS), 설계된 오답(FAIL), 예상치 못한 오류/무효 입력(ERROR)
+      String result = isFail ? (nextNode == null ? "ERROR" : "FAIL") : "SUCCESS";
 
       StoryActionLogEvent event = StoryActionLogEvent.builder()
           .timestamp(timestamp)
