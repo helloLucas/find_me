@@ -45,11 +45,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.lucas.story.service.terminal.*;
-import jakarta.annotation.PostConstruct;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
