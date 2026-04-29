@@ -226,7 +226,6 @@ pipeline {
 
                     // 네임스페이스가 없으면 생성 (dev/prod)
                     sh "kubectl create namespace ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
-
                     // 1. 시크릿 업데이트
                     def backendSecretId = "backend-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
@@ -253,13 +252,11 @@ pipeline {
 
                     // 3. Hint Worker 시크릿 및 배포 (별도 네임스페이스 lucas-elk 사용)
                     sh "kubectl create namespace lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
-
                     def hintSecretId = "hint-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: hintSecretId, variable: 'HINT_ENV_FILE')]) {
                          sh "kubectl create secret generic hint-secrets --from-env-file=${HINT_ENV_FILE} -n lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
                     }
                     sh "kubectl apply -f hint-worker/k8s-hint-cronjob.yaml -n lucas-elk"
-
                     echo "--- 배포 완료! ---"
                 }
             }
