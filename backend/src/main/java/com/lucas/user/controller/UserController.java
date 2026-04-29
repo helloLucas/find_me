@@ -3,6 +3,7 @@ package com.lucas.user.controller;
 import com.lucas.auth.dto.response.TokenResponse;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
+import com.lucas.global.util.CookieUtil;
 import com.lucas.global.util.JwtUtil;
 import com.lucas.user.dto.request.NicknameRequest;
 import com.lucas.user.dto.request.UserRegisterRequest;
@@ -15,8 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +29,7 @@ public class UserController {
   private final UserRepository userRepository;
   private final JwtUtil jwtUtil;
   private final UserService userService;
+  private final CookieUtil cookieUtil;
 
   @Value("${spring.jwt.access-token-expiration}")
   private long accessTokenExpiration;
@@ -49,32 +49,9 @@ public class UserController {
     TokenResponse tokenResponse = userService.register(request);
 
     // Refresh Token을 HttpOnly 쿠키에 저장하여 XSS 방지
-    setRefreshTokenCookie(response, tokenResponse.getRefreshToken(), refreshTokenExpiration / 1000);
+    cookieUtil.setRefreshTokenCookie(response, tokenResponse.getRefreshToken());
 
     return ResponseEntity.ok(BaseResponse.success("회원 가입이 완료되었습니다.", tokenResponse));
-  }
-
-  @Value("${spring.jwt.refresh-token-expiration}")
-  private long refreshTokenExpiration;
-
-  /**
-   * 공통 쿠키 설정 로직을 담당하는 헬퍼 메서드입니다.
-   * 모든 인증 방식에서 동일한 쿠키 속성을 보장합니다.
-   *
-   * @param response HttpServletResponse 객체
-   * @param token    리프레시 토큰 값
-   * @param maxAge   쿠키 유효 기간 (초 단위)
-   */
-  private void setRefreshTokenCookie(HttpServletResponse response, String token, long maxAge) {
-    ResponseCookie cookie = ResponseCookie.from("refresh_token", token)
-        .httpOnly(true)
-        .secure(true) // SameSite=None을 위해 필수 (HTTPS 환경 권장)
-        .path("/")
-        .maxAge(maxAge)
-        .sameSite("None") // 프론트/백엔드 오리진 불일치 시 필수
-        .build();
-
-    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
   /**

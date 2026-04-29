@@ -10,11 +10,9 @@ import java.util.HashMap;
 import java.util.Map;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
+import com.lucas.global.util.CookieUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -27,10 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
   private final AuthService authService;
-
-  @Value("${spring.jwt.refresh-token-expiration}")
-  private long refreshTokenExpiration;
-
+  private final CookieUtil cookieUtil;
 
     /**
      * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다.
@@ -42,8 +37,9 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     public ResponseEntity<BaseResponse<RefreshTokenResponse>> refresh(
-            @CookieValue(value = "refresh_token", required = false) String refreshToken,
-            HttpServletResponse response) {
+
+        @CookieValue(value = "refresh_token", required = false) String refreshToken,
+        HttpServletResponse response) {
 
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new CustomException(ErrorCode.E1000);
@@ -52,7 +48,7 @@ public class AuthController {
         RefreshTokenResponse result = authService.refresh(refreshToken);
 
         // 새로운 리프레시 토큰을 쿠키에 설정
-        setRefreshTokenCookie(response, result.getRefreshToken(), refreshTokenExpiration / 1000);
+        cookieUtil.setRefreshTokenCookie(response, result.getRefreshToken());
 
         return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", result));
     }
@@ -77,7 +73,7 @@ public class AuthController {
         authService.logout(principal.getUserId());
 
         // 브라우저 쿠키 즉시 삭제 (Max-Age 0)
-        setRefreshTokenCookie(response, "", 0);
+        cookieUtil.setRefreshTokenCookie(response, "");
 
         return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
     }
@@ -98,23 +94,4 @@ public class AuthController {
         return ResponseEntity.ok(BaseResponse.success("게스트 세션이 임시 생성되었습니다.", data));
     }
 
-    /**
-     * 공통 쿠키 설정 로직을 담당하는 헬퍼 메서드입니다.
-     * 모든 인증 방식에서 동일한 쿠키 속성을 보장합니다.
-     *
-     * @param response HttpServletResponse 객체
-     * @param token 리프레시 토큰 값
-     * @param maxAge 쿠키 유효 기간 (초 단위)
-     */
-    private void setRefreshTokenCookie(HttpServletResponse response, String token, long maxAge) {
-        ResponseCookie cookie = ResponseCookie.from("refresh_token", token)
-                .httpOnly(true)
-                .secure(true) // SameSite=None을 위해 필수 (HTTPS 환경 권장)
-                .path("/")
-                .maxAge(maxAge)
-                .sameSite("None") // 프론트/백엔드 오리진 불일치 시 필수
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
 }
