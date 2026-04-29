@@ -218,6 +218,10 @@ function applyStoryNodeOutputBundle(
     useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
   }
 
+  if (node.code.startsWith("CH2_") || node.isTerminal) {
+    useWindowStore.getState().openWindow("terminal", "Terminal", "terminal");
+  }
+
   const conversation = normalizeMessengerBundle(outputBundle, node, {
     playerName: getAuthenticatedPlayerName(),
   });
