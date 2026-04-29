@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # 환경변수 로드
-ES_URL = os.getenv("ELASTICSEARCH_URL", "http://elasticsearch.lucas-elk.svc.cluster.local:9200")
+ES_URL = os.getenv("ELASTICSEARCH_URL")
 DB_URL = os.getenv("SPRING_DATASOURCE_URL")
 DB_USER = os.getenv("SPRING_DATASOURCE_USERNAME")
 DB_PASS = os.getenv("SPRING_DATASOURCE_PASSWORD")
@@ -24,7 +24,7 @@ if not all([ES_URL, DB_URL, DB_USER, DB_PASS, OPENAI_API_KEY, MATTERMOST_WEBHOOK
     logger.error("Missing required environment variables.")
     sys.exit(1)
 
-# PostgreSQL 연결 파싱 (jdbc:postgresql://host:port/db)
+# PostgreSQL 연결 파싱
 try:
     db_host_port_db = DB_URL.replace("jdbc:postgresql://", "").split("/")
     db_host_port = db_host_port_db[0].split(":")
@@ -45,37 +45,14 @@ def get_db_connection():
         password=DB_PASS
     )
 
-def init_db():
-    """힌트 발송 이력을 저장할 테이블을 생성합니다."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        # 힌트 발송 이력 테이블
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS hint_history (
-                id SERIAL PRIMARY KEY,
-                node_id VARCHAR(255) NOT NULL,
-                chapter_id VARCHAR(50),
-                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-        logger.info("Database initialized (hint_history table verified).")
-    except Exception as e:
-        logger.error(f"Failed to initialize DB: {e}")
-    finally:
-        cur.close()
-        conn.close()
-
 def get_active_chapter():
-    """기존 chapters 테이블에서 sort_order가 가장 높은(최신) 챕터 코드를 가져옵니다."""
+    """is_published가 true인 챕터들 중 sort_order가 가장 높은(최신) 챕터 코드를 가져옵니다."""
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        # chapters 테이블에서 정렬 순서가 가장 큰 데이터의 code 필드 조회
-        cur.execute("SELECT code FROM chapters ORDER BY sort_order DESC LIMIT 1")
-        row = cur.fetchone()
-        return row[0] if row else "week01"
+        cur.execute("SELECT code FROM chapters WHERE is_published = true ORDER BY sort_order DESC LIMIT 1")
+        result = cur.fetchone()
+        return result['code'] if result else "week01"
     except Exception as e:
         logger.error(f"Failed to fetch active chapter from chapters table: {e}")
         return "week01"
@@ -245,28 +222,46 @@ def get_node_guideline(node_id):
         logger.error(f"Database query failed: {e}")
         return "데이터베이스에서 정답 가이드를 불러오는 데 실패했습니다."
 
-def generate_hint(node_id, fail_count, wrong_answers, guide_content):
-    """GMS Gemini API를 사용하여 Mattermost 힌트 마크다운 메시지를 생성합니다."""
-    logger.info("Generating hint using GMS Gemini API...")
+def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content):
+    """GMS Gemini API를 사용하여 루카스 페르소나의 모호한 힌트 메시지를 생성합니다."""
+    logger.info("Generating persona-driven hint using GMS Gemini API...")
     
     # GMS 엔드포인트 설정
     GMS_ENDPOINT = "https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
     
-    system_prompt = """당신은 게임의 플레이어 조력자 역할을 하는 '루카스'입니다. 플레이어들이 게임에서 어려움을 겪는 구간의 데이터를 분석하여 힌트를 제공하는 역할을 합니다.
-말투는 항상 귀엽고 친절한 어투를 사용해야 합니다.
-Mattermost 채널에 전송될 메시지이므로 마크다운(Markdown) 포맷으로 예쁘고 가독성 좋게 작성해주세요.
-주의: 실제 정답을 직접적으로 알려주기보다는 생각할 수 있는 유도성 힌트를 제공하세요."""
+    system_prompt = """당신은 게임의 조력자 '루카스'입니다. 
+당신의 목표는 데이터 분석 결과를 바탕으로 플레이어들에게 '일간 팁'을 제공하는 것입니다.
+
+[반드시 지켜야 할 규칙]
+1. 페르소나: 너무 장난스럽지 않으면서도 따뜻하고 듬직한 조력자의 느낌을 유지하세요.
+2. 절대 금지: 실제 정답 명령어 전체나 정답 키워드를 직접적으로 언급하지 마세요. 
+3. 힌트 방식: 플레이어가 스스로 정답을 유추할 수 있도록 은유적이거나 상황적인 힌트만 제공하세요.
+4. 노드 ID 처리: 'CH1_...' 같은 시스템 아이디는 절대 노출하지 마세요. 대신 가이드라인을 읽고 "터미널 접속 구간", "보안 코드 입력 단계" 처럼 사람이 이해할 수 있는 말로 풀어서 설명하세요.
+5. 포맷: Mattermost에 어울리는 마크다운 형식을 사용하며, 사용자 제공 예시의 구조를 최대한 따르세요.
+6. 가독성: Mattermost에 전송될 메시지이므로, **각 섹션 사이에는 반드시 빈 줄(Double Newline)을 넣어** 가독성을 극대화하세요."""
 
     user_prompt = f"""
-최근 일주일 동안 플레이어들이 '{node_id}' 구간에서 가장 많이 막히고 있어요! (총 {fail_count}회 실패)
+데이터 분석 결과를 바탕으로 루카스의 '일간 팁' 메시지를 작성해주세요.
 
-플레이어들이 가장 많이 입력한 오답 3가지는 다음과 같습니다:
-{', '.join(wrong_answers)}
+[분석 데이터]
+- 구간 설명: {guide_content}
+- 이탈률: {churn_rate}%
+- 실패 횟수: {fail_count}회
+- 주요 오답: {', '.join(wrong_answers)}
 
-이 구간의 실제 정답 및 가이드라인은 다음과 같습니다:
-{guide_content}
+위 데이터를 바탕으로 루카스의 '일간 팁' 메시지를 작성해주세요.
+구조 예시:
+🐶 [루카스의 일간 팁] "제목"
 
-이 데이터를 바탕으로 플레이어들에게 도움이 될 만한 힌트 메시지를 강아지 루카스 페르소나에 맞춰 작성해주세요.
+**📊 이번 챕터에서 험난했던 구간**
+(풀어서 설명) (유저 {churn_rate}%가 여기서 멈춤!)
+
+**💡 최다 오답 리포트**
+1. {wrong_answers[0] if len(wrong_answers) > 0 else '없음'}
+2. {wrong_answers[1] if len(wrong_answers) > 1 else '없음'}
+
+**🐾 루카스의 한마디**
+(모호하고 도움이 되는 힌트 내용)
 """
 
     # Gemini API 요청 구조
@@ -327,9 +322,6 @@ def send_to_mattermost(markdown_message):
 def main():
     logger.info("Starting Daily Mattermost Hint Generation Job...")
     
-    # 0. DB 초기화 (테이블 생성 및 기본값 확인)
-    init_db()
-    
     # 1. 현재 활성화된 챕터 조회 (DB에서 관리)
     active_chapter = get_active_chapter()
     logger.info(f"Current Active Chapter: {active_chapter}")
@@ -367,8 +359,8 @@ def main():
     # 5. DB에서 정답 가이드 조회
     guide_content = get_node_guideline(node_id)
     
-    # 6. LLM 힌트 생성
-    hint_message = generate_hint(node_id, fail_count, wrong_answers, guide_content)
+    # 6. Gemini 힌트 생성
+    hint_message = generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
     if not hint_message:
         logger.error("Failed to generate hint message. Exiting.")
         return
