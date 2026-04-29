@@ -109,7 +109,7 @@ POST /api/v1/story/start
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-a"
 }
 ```
@@ -120,7 +120,7 @@ POST /api/v1/story/start
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_SERVER_HOME",
   "snapshotVersion": 1,
   "activeTab": {
@@ -151,7 +151,7 @@ POST /api/v1/story/start
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b"
 }
 ```
@@ -162,7 +162,7 @@ POST /api/v1/story/start
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_EXPLORATION_READY",
   "snapshotVersion": 7,
   "activeTab": {
@@ -200,7 +200,7 @@ POST /api/v1/story/active-tab/acquire
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b"
 }
 ```
@@ -208,7 +208,7 @@ POST /api/v1/story/active-tab/acquire
 서버는 Redis의 active tab 값을 B 탭으로 변경한다.
 
 ```text
-active-tab:story:{userId}:CHAPTER_02 = tab-b
+active-tab:story:{userId}:week02 = tab-b
 ```
 
 서버는 active tab 변경 결과와 함께 최신 snapshot 및 렌더링 상태를 반환한다.
@@ -222,7 +222,7 @@ active-tab:story:{userId}:CHAPTER_02 = tab-b
     "tabId": "tab-b",
     "ttlSeconds": 60
   },
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_EXPLORATION_READY",
   "snapshotVersion": 8,
   "snapshot": {
@@ -386,7 +386,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-a"
 }
 ```
@@ -395,7 +395,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_SERVER_HOME",
   "snapshotVersion": 1,
   "activeTab": {
@@ -414,7 +414,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_EXPLORATION_READY",
   "snapshotVersion": 7,
   "activeTab": {
@@ -445,7 +445,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b"
 }
 ```
@@ -459,7 +459,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
     "tabId": "tab-b",
     "ttlSeconds": 60
   },
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_EXPLORATION_READY",
   "snapshotVersion": 8,
   "snapshot": {
@@ -496,7 +496,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b"
 }
 ```
@@ -534,7 +534,7 @@ Active tab 전환 시 터미널 히스토리에 동기화 로그를 찍지 않�
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b"
 }
 ```
@@ -569,7 +569,7 @@ release 호출은 best effort로 본다.
 ### 요청 쿼리 예시
 
 ```text
-chapterCode=CHAPTER_02&tabId=tab-b
+chapterCode=week02&tabId=tab-b
 ```
 
 ### 응답
@@ -606,7 +606,7 @@ chapterCode=CHAPTER_02&tabId=tab-b
 
 ```json
 {
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "tabId": "tab-b",
   "snapshotVersion": 8,
   "actionType": "command",
@@ -661,7 +661,7 @@ active-tab:story:{userId}:{chapterCode}
 예시:
 
 ```text
-active-tab:story:42:CHAPTER_02
+active-tab:story:42:week02
 ```
 
 ## 9-2. Redis value
@@ -669,7 +669,7 @@ active-tab:story:42:CHAPTER_02
 ```json
 {
   "tabId": "tab-b",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "snapshotVersion": 8,
   "acquiredAt": "2026-04-28T12:00:00+09:00"
 }

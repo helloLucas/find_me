@@ -27,7 +27,7 @@ resources/story/chapter02/vfs.json
 ```json
 {
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "rootPath": "/home/guest",
   "defaultCwd": "/home/guest",
   "prompt": {
@@ -182,7 +182,7 @@ VFS JSON에는 파일 내용 전문을 넣지 않는다.
 ```json
 {
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "rootPath": "/home/guest",
   "defaultCwd": "/home/guest",
   "prompt": {

@@ -41,7 +41,7 @@ Snapshot JSON은 다음 상태를 복구할 수 있을 정도의 최소 동적 �
   "schemaVersion": 1,
   "snapshotVersion": 1,
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_SERVER_HOME",
   "terminal": {
     "cwd": "/home/guest",
@@ -523,7 +523,7 @@ Chapter 2 첫 진입 시 snapshot은 다음과 같다.
   "schemaVersion": 1,
   "snapshotVersion": 1,
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_SERVER_HOME",
   "terminal": {
     "cwd": "/home/guest",
@@ -567,7 +567,7 @@ Chapter 2 첫 진입 시 snapshot은 다음과 같다.
   "schemaVersion": 1,
   "snapshotVersion": 2,
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_EXPLORATION_READY",
   "terminal": {
     "cwd": "/home/guest/sys/temp",
@@ -617,7 +617,7 @@ Chapter 2 첫 진입 시 snapshot은 다음과 같다.
   "schemaVersion": 1,
   "snapshotVersion": 8,
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_DECOY_CREATED",
   "terminal": {
     "cwd": "/home/guest",
@@ -683,7 +683,7 @@ Chapter 2 첫 진입 시 snapshot은 다음과 같다.
   "schemaVersion": 1,
   "snapshotVersion": 10,
   "vfsVersion": "chapter02-v1",
-  "chapterCode": "CHAPTER_02",
+  "chapterCode": "week02",
   "nodeCode": "CH2_TRACE_CLEANED",
   "terminal": {
     "cwd": "/home/guest",

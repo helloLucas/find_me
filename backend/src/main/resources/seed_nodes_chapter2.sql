@@ -6,13 +6,13 @@ BEGIN;
 
 
 INSERT INTO chapters (code, title, sort_order)
-VALUES ('CHAPTER_02', 'Chapter 2 - Null Point Server', 2)
+VALUES ('week02', 'Chapter 2 - Null Point Server', 2)
 ON CONFLICT (code) DO UPDATE
 SET title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order;
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -93,7 +93,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -165,7 +165,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -250,7 +250,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -325,7 +325,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -394,7 +394,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -486,7 +486,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -562,7 +562,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -637,7 +637,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -722,7 +722,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -803,7 +803,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -872,7 +872,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -948,7 +948,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1024,7 +1024,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1104,7 +1104,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1164,7 +1164,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,
@@ -1232,7 +1232,7 @@ SET node_type = EXCLUDED.node_type,
     updated_at = NOW();
 
 WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'CHAPTER_02'
+    SELECT id FROM chapters WHERE code = 'week02'
 )
 INSERT INTO story_nodes (
     chapter_id,

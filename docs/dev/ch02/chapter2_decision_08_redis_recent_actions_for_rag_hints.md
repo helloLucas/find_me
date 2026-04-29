@@ -175,7 +175,7 @@ type: hash
 예시 key:
 
 ```text
-story:context:42:CHAPTER_02
+story:context:42:week02
 ```
 
 예시 value:
@@ -219,7 +219,7 @@ max length: 20~50개
 예시 key:
 
 ```text
-story:recent-actions:42:CHAPTER_02
+story:recent-actions:42:week02
 ```
 
 ### List 방식
