@@ -76,7 +76,7 @@ public class StoryController {
         "User ID: {} processed transition (Action: {}). Reached Next NodeCode: {}",
         principal.getUserId(),
         request.getActionType(),
-        response.getNextNode().getCode());
+        response.getNextNode() != null ? response.getNextNode().getCode() : "STAY");
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("상태 전이 성공", response));
   }
