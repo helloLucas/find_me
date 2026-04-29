@@ -8,7 +8,12 @@ import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
-import type { EffectBundle, StoryNode, TransitionRequest } from "../../shared/types/story";
+import type {
+  EffectBundle,
+  StoryNode,
+  TerminalResult,
+  TransitionRequest,
+} from "../../shared/types/story";
 import {
   isSshCommand,
   shouldShowUnavailableCommandToast,
@@ -68,11 +73,13 @@ type StoryRuntimeState = {
 const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_CONNECT_CORE_SUCCESS: "auto",
   CH1_SSH_CONNECTED: "auto",
+  CH2_WORLD_MAP_VIEW: "auto",
 };
 
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
 const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
+const CLEAR_TERMINAL_SIGNAL = "__CLEAR_TERMINAL__";
 
 
 function resolveChapterCode(chapterCode: string) {
@@ -394,6 +401,42 @@ function getAutoDismissTerminalLinesOverride(node: StoryNode) {
   return undefined;
 }
 
+function toTerminalDisplayPath(cwd: string | undefined) {
+  if (!cwd) return undefined;
+  if (cwd === "/home/guest") return "~";
+  if (cwd.startsWith("/home/guest/")) return `~${cwd.slice("/home/guest".length)}`;
+  return cwd;
+}
+
+function applyTerminalResult(terminalResult: TerminalResult | undefined) {
+  if (!terminalResult) return;
+
+  const clientStore = useClientStore.getState();
+  const promptContext =
+    typeof terminalResult.prompt === "string"
+      ? parseTerminalPromptContext(terminalResult.prompt)
+      : undefined;
+
+  if (promptContext) {
+    clientStore.setTerminalContext(promptContext.user, promptContext.host, promptContext.path);
+  } else {
+    clientStore.setTerminalContext(undefined, undefined, toTerminalDisplayPath(terminalResult.cwd));
+  }
+
+  for (const line of terminalResult.stdout ?? []) {
+    if (line === CLEAR_TERMINAL_SIGNAL) {
+      clientStore.clearTerminalOutput();
+      continue;
+    }
+
+    clientStore.appendTerminalOutput("output", String(line));
+  }
+
+  for (const line of terminalResult.stderr ?? []) {
+    clientStore.appendTerminalOutput("error", String(line));
+  }
+}
+
 export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   currentNode: null,
   isLoading: false,
@@ -475,8 +518,19 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         inputValue,
         meta,
       });
-      const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
+
+      if (response.result === "stay") {
+        applyTerminalResult(response.terminalResult);
+        set({ currentNode, error: null });
+        return;
+      }
+
+      if (!response.nextNode) {
+        throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+      }
+
+      const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "retry") {
         // Reflect fail node as current runtime context first.
@@ -516,6 +570,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
               actionType: "click",
               inputValue: "dismiss",
             });
+            if (!dismissResponse.nextNode) {
+              throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+            }
+
             const normalizedDismissNode = normalizeTransitionNodeResponse(dismissResponse.nextNode);
             const dismissTransitionSound = extractTransitionPlaySound(dismissResponse.effects);
 
