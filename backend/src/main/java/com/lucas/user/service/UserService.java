@@ -42,19 +42,20 @@ public class UserService {
     // 1. Redis에서 임시 사용자 정보 조회
     PendingUserInfo pendingInfo = authService.getPendingUserInfo(request.getTempKey());
 
-    // 닉네임 누락 (신규 회원 가입 or 게스트에서 새로운 소셜 계정으로 승격하는 상황일 때는 닉네임 입력 필수)
-    if (!request.isConfirmSwitch()
-        && (request.getNickname() == null || request.getNickname().isBlank())) {
+    // 닉네임 누락 (신규 회원 가입 or 순수 게스트 가입일 때는 닉네임 필수)
+    // 단, 기존 게스트에서 소셜로 승격하는 경우(guestId != null)는 DB의 기존 닉네임을 사용하므로 예외
+    boolean isUpgrade = request.getGuestId() != null;
+    if (!request.isConfirmSwitch() && !isUpgrade && (request.getNickname() == null || request.getNickname().isBlank())) {
       log.warn("닉네임 누락 - 가입 제한");
       throw new CustomException(ErrorCode.H1000);
     }
 
     // 소셜 정보가 있는 경우에만 DB 조회
     Optional<User> socialUserOpt = Optional.empty();
-    if (pendingInfo.getProvider() != null) { //
-      socialUserOpt =
-          userRepository.findByProviderAndProviderUserId(
-              pendingInfo.getProvider(), pendingInfo.getProviderUserId());
+    if (pendingInfo.getProvider() != null) {
+      socialUserOpt = userRepository.findByProviderAndProviderUserId(
+          pendingInfo.getProvider(),
+          pendingInfo.getProviderUserId());
     }
 
     User user;
@@ -90,22 +91,20 @@ public class UserService {
           pendingInfo.getProvider(),
           pendingInfo.getProviderUserId());
     } else if (pendingInfo.isGuest()) { // 닉네임만 있는 순수 게스트 가입 (닉네임 설정 완료 시점)
-      user =
-          User.builder()
-              .oauthName(pendingInfo.getOauthName())
-              .nickname(request.getNickname())
-              .role(UserRole.GUEST)
-              .build();
+      user = User.builder()
+          .oauthName(pendingInfo.getOauthName())
+          .nickname(request.getNickname())
+          .role(UserRole.GUEST)
+          .build();
     } else { // 아예 처음인 신규 소셜 회원 가입 (닉네임 설정 완료 시점)
-      user =
-          User.builder()
-              .email(pendingInfo.getEmail())
-              .oauthName(pendingInfo.getOauthName())
-              .nickname(request.getNickname())
-              .provider(pendingInfo.getProvider())
-              .providerUserId(pendingInfo.getProviderUserId())
-              .role(UserRole.MEMBER)
-              .build();
+      user = User.builder()
+          .email(pendingInfo.getEmail())
+          .oauthName(pendingInfo.getOauthName())
+          .nickname(request.getNickname())
+          .provider(pendingInfo.getProvider())
+          .providerUserId(pendingInfo.getProviderUserId())
+          .role(UserRole.MEMBER)
+          .build();
     }
 
     User savedUser = userRepository.save(user);
@@ -120,17 +119,15 @@ public class UserService {
 
   /** 유저를 위한 토큰 세트를 발급합니다. */
   private TokenResponse issueTokensForUser(User user) {
-    String accessToken =
-        jwtUtil.createAccessToken(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            user.getProvider(),
-            user.getRole().name(),
-            accessTokenExpiration);
+    String accessToken = jwtUtil.createAccessToken(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getProvider(),
+        user.getRole().name(),
+        accessTokenExpiration);
 
-    String refreshToken =
-        jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+    String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
     authService.replaceRefreshToken(user.getId(), refreshToken);
 
     return TokenResponse.builder()
@@ -161,8 +158,7 @@ public class UserService {
       throw new CustomException(ErrorCode.H1000);
     }
 
-    User user =
-        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     user.updateNickname(trimmedNickname);
     log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);

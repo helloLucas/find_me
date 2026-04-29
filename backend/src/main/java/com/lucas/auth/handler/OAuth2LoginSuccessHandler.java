@@ -73,7 +73,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .queryParam("isGuest", customOAuth2User.isGuest())
                     .queryParam("isConflict", customOAuth2User.isConflict())
                     .queryParam("guestId", (customOAuth2User.isGuest() && !customOAuth2User.isConflict()) ? targetId : "")
-                    .queryParam("nickname", customOAuth2User.isGuest() ? (customOAuth2User.getNickname() != null ? customOAuth2User.getNickname() : "") : "")
                     .encode(StandardCharsets.UTF_8)
                     .build().toUriString();
 

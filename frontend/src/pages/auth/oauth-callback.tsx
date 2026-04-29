@@ -22,7 +22,6 @@ const OAuthCallbackPage = () => {
         const isNewUser = searchParams.get('isNewUser') === 'true';
         const tempKey = searchParams.get('tempKey');
         const guestId = searchParams.get('guestId');
-        const nickname = searchParams.get('nickname');
         const isConflict = searchParams.get('isConflict') === 'true';
 
         // 1. 이미 가입된 회원이거나 게스트 승격 완료된 경우
@@ -92,11 +91,11 @@ const OAuthCallbackPage = () => {
             }
 
             // [자동 승격(Upgrade) 케이스]: 게스트 정보가 있으면 바로 register 호출
-            if (guestId && nickname) {
+            if (guestId) {
                 console.log('Detected guest session. Performing automatic linking...');
                 mutate({
                     tempKey,
-                    nickname,
+                    nickname: '',
                     guestId: parseInt(guestId, 10),
                     confirmSwitch: false
                 });
