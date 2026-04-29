@@ -589,6 +589,18 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
+      if (response.result === "stay") {
+        applyTerminalResult(response.terminalResult);
+        set({ currentNode, error: null });
+        return;
+      }
+
+      if (!response.nextNode) {
+        throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+      }
+
+      const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
+
       if (response.result === "retry") {
         // Reflect fail node as current runtime context first.
         set({ currentNode: normalizedNextNode, error: null });

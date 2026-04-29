@@ -130,18 +130,34 @@ public class StoryServiceImpl implements StoryService {
 
   private JsonNode chapter02Vfs;
 
+  /**
+   * Bean 초기화 시 Chapter 2 정적 VFS 리소스를 메모리에 로드합니다.
+   *
+   * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
+   */
   @PostConstruct
   public void init() {
+    // Chapter 2 VFS JSON을 classpath 리소스에서 읽어 필드에 캐싱합니다.
     loadVfsJson();
   }
 
+  /**
+   * classpath의 Chapter 2 VFS JSON 파일을 읽어 {@code chapter02Vfs}에 저장합니다.
+   *
+   * <p>리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이 적용됩니다.
+   */
   private void loadVfsJson() {
+    // try-with-resources로 리소스 스트림을 자동 해제합니다.
     try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
+      // 리소스가 존재하는 경우에만 JSON을 파싱합니다.
       if (is != null) {
+        // Jackson으로 정적 VFS JSON tree를 읽어 필드에 저장합니다.
         this.chapter02Vfs = objectMapper.readTree(is);
+        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남깁니다.
         log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
       }
     } catch (Exception e) {
+      // VFS 로딩 실패는 Chapter 2 터미널 기능에 영향을 주므로 error 로그로 기록합니다.
       log.error("Failed to load Chapter 2 VFS", e);
     }
   }
