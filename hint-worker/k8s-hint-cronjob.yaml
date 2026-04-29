@@ -4,7 +4,7 @@ metadata:
   name: lucas-hint-worker
   namespace: lucas-elk
 spec:
-  schedule: "0 9 * * 1" # 매주 월요일 오전 9시 (서버 시간(UTC) 기준이라면 크론식 조정 필요)
+  schedule: "0 9 * * 1"
   concurrencyPolicy: Forbid # 중복 실행 방지
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
@@ -14,15 +14,19 @@ spec:
         spec:
           containers:
           - name: hint-worker
-            image: your-docker-registry/lucas-hint-worker:latest # 빌드 후 실제 이미지 경로로 수정 필요
+            image: shyunnnn/find-me-hint:latest
             imagePullPolicy: Always
             env:
-            # Elasticsearch 통신 주소 (같은 K8S 클러스터 내)
             - name: ELASTICSEARCH_URL
-              value: "http://elasticsearch.lucas-elk.svc.cluster.local:9200"
-            # DB 정보 (실제 운영 환경에서는 Secret으로 주입 권장)
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: elasticsearch-url
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres-service:5432/lucas_db" 
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: datasource-url
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -33,7 +37,6 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: password
-            # 외부 API 연동 키 (Secret 사용 권장)
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:

@@ -13,6 +13,7 @@ pipeline {
         DOCKER_HUB_ID = 'shyunnnn' 
         FRONT_IMAGE = "${DOCKER_HUB_ID}/find-me-frontend"
         BACK_IMAGE = "${DOCKER_HUB_ID}/find-me-backend"
+        HINT_IMAGE = "${DOCKER_HUB_ID}/find-me-hint"
         
         ENV_TAG = "${(env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").contains('main') ? 'prod' : 'dev'}"
         
@@ -140,6 +141,26 @@ pipeline {
             }
         }
 
+        stage('Hint Worker Build & Push') {
+            when { 
+                expression { return isTargetBranch() }
+                changeset "hint-worker/**"
+            }
+            steps {
+                script {
+                    dir('hint-worker') {
+                        sh "docker build -t ${HINT_IMAGE}:${env.IMAGE_TAG} ."
+                        sh "docker tag ${HINT_IMAGE}:${env.IMAGE_TAG} ${HINT_IMAGE}:${ENV_TAG}-latest"
+                        withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                            sh "docker login -u $USER -p $PASS"
+                            sh "docker push ${HINT_IMAGE}:${env.IMAGE_TAG}"
+                            sh "docker push ${HINT_IMAGE}:${ENV_TAG}-latest"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('K8s Manifest Update & Push') {
             when { 
                 expression { return isTargetBranch() }
@@ -152,6 +173,7 @@ pipeline {
                     // 1. YAML 이미지 태그 업데이트
                     sh "sed -i 's|${FRONT_IMAGE}:.*|${FRONT_IMAGE}:${env.IMAGE_TAG}|g' k8s/frontend.yaml"
                     sh "sed -i 's|${BACK_IMAGE}:.*|${BACK_IMAGE}:${env.IMAGE_TAG}|g' k8s/backend.yaml"
+                    sh "sed -i 's|${HINT_IMAGE}:.*|${HINT_IMAGE}:${env.IMAGE_TAG}|g' hint-worker/k8s-hint-cronjob.yaml"
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/frontend.yaml"
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/backend.yaml"
 
@@ -184,17 +206,26 @@ pipeline {
                     // 네임스페이스가 없으면 생성 (dev/prod)
                     sh "kubectl create namespace ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
                     
-                    // 1. 시크릿 업데이트 (주석 해제 및 활용)
+                    // 1. 시크릿 업데이트
                     def backendSecretId = "backend-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
                          sh "kubectl create secret generic backend-secrets --from-env-file=${BACK_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
                     }
 
-                    // 2. 실제 배포 실행 (피어링된 사설 IP를 통해 마스터 노드에 명령 전달)
+                    // 2. 실제 서비스 배포 (Frontend, Backend)
                     dir('k8s') {
                         sh "kubectl apply -f frontend.yaml -n ${ENV_TAG}"
                         sh "kubectl apply -f backend.yaml -n ${ENV_TAG}"
                     }
+
+                    // 3. Hint Worker 시크릿 및 배포 (별도 네임스페이스 lucas-elk 사용)
+                    sh "kubectl create namespace lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
+                    
+                    def hintSecretId = "hint-env-${ENV_TAG}"
+                    withCredentials([file(credentialsId: hintSecretId, variable: 'HINT_ENV_FILE')]) {
+                         sh "kubectl create secret generic hint-secrets --from-env-file=${HINT_ENV_FILE} -n lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
+                    }
+                    sh "kubectl apply -f hint-worker/k8s-hint-cronjob.yaml -n lucas-elk"
                     
                     echo "--- 배포 완료! ---"
                 }
