@@ -8,11 +8,11 @@ Development traffic is routed directly on the `worker-ssafy` node through host N
 
 Current entrypoints:
 
-| URL | Target | Notes |
-| --- | --- | --- |
-| `https://dev.find.me.kr` | frontend | Main dev frontend |
-| `https://dev.find.me.kr/api` | backend | Path-based proxy to backend |
-| `https://dev.api.find.me.kr` | backend | Dedicated backend dev domain |
+| URL                          | Target   | Notes                        |
+| ---------------------------- | -------- | ---------------------------- |
+| `https://dev.find.me.kr`     | frontend | Main dev frontend            |
+| `https://dev.find.me.kr/api` | backend  | Path-based proxy to backend  |
+| `https://dev.api.find.me.kr` | backend  | Dedicated backend dev domain |
 
 This dev environment is intentionally reachable through Tailscale. A client machine must be connected to the same Tailscale tailnet to use these domains.
 
@@ -29,18 +29,18 @@ dev.api.find.me.kr  A 100.114.155.48
 
 What this means:
 
-| Client | Expected result |
-| --- | --- |
-| Team member with Tailscale connected to the same tailnet | Can access dev domains |
-| Team member with Tailscale disconnected | Cannot access dev domains |
-| Random public internet user | Cannot access dev domains |
+| Client                                                   | Expected result           |
+| -------------------------------------------------------- | ------------------------- |
+| Team member with Tailscale connected to the same tailnet | Can access dev domains    |
+| Team member with Tailscale disconnected                  | Cannot access dev domains |
+| Random public internet user                              | Cannot access dev domains |
 
 Current Tailscale details:
 
 ```text
 worker-ssafy Tailscale IP: 100.114.155.48
 MagicDNS name: worker-ssafy.tail4d2ec7.ts.net.
-Tailnet user/org: arin.kim0801@gmail.com
+Tailnet user/org: *********@gmail.com
 ```
 
 Kubernetes on `worker-ssafy` also uses the Tailscale IP as the node IP:
@@ -57,11 +57,11 @@ Namespace: `dev`
 
 Current Service NodePorts:
 
-| Service | Port | NodePort | Purpose |
-| --- | ---: | ---: | --- |
-| `frontend` | `80` | `30116` | frontend HTTP |
-| `backend` | `8080` | `32220` | backend HTTP API |
-| `backend` | `18081` | `31269` | monitoring |
+| Service    |    Port | NodePort | Purpose          |
+| ---------- | ------: | -------: | ---------------- |
+| `frontend` |    `80` |  `30116` | frontend HTTP    |
+| `backend`  |  `8080` |  `32220` | backend HTTP API |
+| `backend`  | `18081` |  `31269` | monitoring       |
 
 Useful check:
 

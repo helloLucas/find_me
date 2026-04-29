@@ -40,7 +40,7 @@ dev.api.find.me.kr  A 100.114.155.48
 ```text
 worker-ssafy Tailscale IP: 100.114.155.48
 MagicDNS 이름: worker-ssafy.tail4d2ec7.ts.net.
-Tailnet 계정/조직: arin.kim0801@gmail.com
+Tailnet 계정/조직: **********@gmail.com
 ```
 
 `worker-ssafy`의 Kubernetes kubelet도 Tailscale IP를 노드 IP로 사용하고 있다.
