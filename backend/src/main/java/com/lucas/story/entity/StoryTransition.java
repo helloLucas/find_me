@@ -14,7 +14,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
-@Table(name = "story_transitions")
+@Table(
+    name = "story_transitions",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uk_story_transitions_natural_key",
+            columnNames = {"from_node_id", "action_type", "expected_input", "validator_type"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class StoryTransition {

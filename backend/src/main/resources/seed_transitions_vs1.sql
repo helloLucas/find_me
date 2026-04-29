@@ -1,5 +1,6 @@
 -- Vertical Slice 1 scope:
 -- CH1_FRIEND_CHAT_PUSH -> CH1_FRIEND_CHAT_OPEN -> CH1_NEWS_PORTAL -> CH1_DARK_ARTICLE_OPEN
+-- Run patch_story_transitions_natural_key.sql before this seed on existing databases.
 BEGIN;
 
 INSERT INTO story_transitions (
@@ -38,6 +39,10 @@ VALUES
     'exact',
     '{}'::jsonb,
     10
-);
+)
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    priority = EXCLUDED.priority;
 
 COMMIT;

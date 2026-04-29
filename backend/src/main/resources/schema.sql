@@ -60,7 +60,13 @@ CREATE TABLE story_transitions (
     fail_node_id BIGINT REFERENCES story_nodes(id) ON DELETE SET NULL,
     effect_bundle JSONB,
     priority INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_story_transitions_natural_key UNIQUE (
+        from_node_id,
+        action_type,
+        expected_input,
+        validator_type
+    )
 );
 
 CREATE TABLE unlocked_endings (
