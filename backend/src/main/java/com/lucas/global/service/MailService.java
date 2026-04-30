@@ -49,7 +49,7 @@ public class MailService {
 
                                 <!-- 헤더 영역 (검은색 두꺼운 밑줄로 강조 및 중앙 정렬) -->
                                 <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #111111; margin-bottom: 30px;">
-                                    <h2 style="margin: 0; color: #111111; font-size: 22px; font-weight: bold; letter-spacing: -0.5px;">FIND ME 시스템 에러 리포트</h2>
+                                    <h2 style="margin: 0; color: #111111; font-size: 22px; font-weight: bold; letter-spacing: -0.5px;">FIND ME 시스템 버그 리포트</h2>
                                 </div>
 
                                 <!-- 메타 정보 (배경색 없이 각 항목을 얇은 회색 밑줄로 구분) -->
