@@ -38,6 +38,7 @@ public class MailService {
             String subject = "[시스템 로그 접수] " + request.getTitle();
 
             // 1. 데이터 사전 가공 (null 처리 및 줄바꿈 변환을 미리 수행하여 가독성 향상)
+            String reportTitle = request.getTitle() != null ? request.getTitle() : "제목 없음"; // ✅ 제목 데이터 추가
             String nickname = request.getNickname() != null ? request.getNickname() : "알 수 없음";
             String currentChapter = request.getCurrentChapter() != null ? request.getCurrentChapter() : "N/A";
             String content = request.getContent() != null ? request.getContent().replace("\n", "<br/>") : "";
@@ -46,8 +47,8 @@ public class MailService {
             String text = String.format("""
                             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333;">
 
-                                <!-- 헤더 영역 (검은색 두꺼운 밑줄로 강조) -->
-                                <div style="padding-bottom: 20px; border-bottom: 2px solid #111111; margin-bottom: 30px;">
+                                <!-- 헤더 영역 (검은색 두꺼운 밑줄로 강조 및 중앙 정렬) -->
+                                <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #111111; margin-bottom: 30px;">
                                     <h2 style="margin: 0; color: #111111; font-size: 22px; font-weight: bold; letter-spacing: -0.5px;">FIND ME 시스템 에러 리포트</h2>
                                 </div>
 
@@ -63,6 +64,10 @@ public class MailService {
                                     </tr>
                                     <tr>
                                         <td style="padding: 14px 0; color: #666666; font-size: 14px; border-bottom: 1px solid #eeeeee;">현재 챕터</td>
+                                        <td style="padding: 14px 0; color: #111111; font-size: 15px; font-weight: bold; border-bottom: 1px solid #eeeeee;">%s</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 14px 0; color: #666666; font-size: 14px; border-bottom: 1px solid #eeeeee;">제목</td>
                                         <td style="padding: 14px 0; color: #111111; font-size: 15px; font-weight: bold; border-bottom: 1px solid #eeeeee;">%s</td>
                                     </tr>
                                 </table>
@@ -81,7 +86,7 @@ public class MailService {
                                 </div>
                             </div>
                             """,
-                    userId, nickname, currentChapter, content
+                    userId, nickname, currentChapter, reportTitle, content
             );
 
             helper.setTo(adminEmail);
