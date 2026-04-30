@@ -234,6 +234,21 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     }
     return normalized.substring(0, normalized.length() - 2) + "..";
   }
+  private String sanitizeInternalActionTokensInText(String text) {
+    if (isBlank(text)) {
+      return text;
+    }
+    String sanitized = text;
+    sanitized =
+        sanitized.replaceAll(
+            "(?i)\\b(?:open|go_to|reopen)_[a-z0-9_]+\\b", "관련 버튼");
+    sanitized = sanitized.replaceAll("(?i)\\bdismiss\\b", "닫기 버튼");
+    sanitized = sanitized.replaceAll("(?i)\\bauto\\b", "자동 트리거");
+    return sanitized;
+  }
+  private boolean looksLikeInternalActionToken(String text) {
+    return text.matches("(?i)[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
+  }
 
   private String sanitizeInternalActionTokensInText(String text) {
     if (isBlank(text)) {
