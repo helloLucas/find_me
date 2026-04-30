@@ -22,12 +22,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: hint-secrets
-                  key: elasticsearch-url
+                  key: ELASTICSEARCH_URL
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 secretKeyRef:
                   name: hint-secrets
-                  key: datasource-url
+                  key: SPRING_DATASOURCE_URL
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -42,15 +42,15 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: hint-secrets
-                  key: openai-api-key
+                  key: OPENAI_API_KEY
             - name: MATTERMOST_WEBHOOK_URL
               valueFrom:
                 secretKeyRef:
                   name: hint-secrets
-                  key: mattermost-webhook-url
+                  key: MATTERMOST_WEBHOOK_URL
             - name: GMS_ENDPOINT
               valueFrom:
                 secretKeyRef:
                   name: hint-secrets
-                  key: gms-endpoint
+                  key: GMS_ENDPOINT
           restartPolicy: OnFailure
