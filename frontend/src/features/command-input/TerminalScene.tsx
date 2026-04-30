@@ -98,7 +98,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     if (hasPart2) {
       const timer = setTimeout(() => {
         setShowPart2(true);
-      }, 1000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [terminalOutput, isMapAnimationPlayed, showPart2]);
