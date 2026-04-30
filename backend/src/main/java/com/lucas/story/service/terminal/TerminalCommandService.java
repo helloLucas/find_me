@@ -500,6 +500,19 @@ public class TerminalCommandService {
           cwd, vfs, "sh: " + command.args().get(0) + ": No such file or directory");
     }
 
+    if ("maple_story.sh".equals(node.name())) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "[MAPLE_STORY] timing module mounted.",
+                  "[MAPLE_STORY] launching client...",
+                  "terminal://maple-story"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
     // lucas_fragment_01.sh 전용 에러 메시지 (스토리 요구사항 반영)
     if ("LUCAS_FRAGMENT_01".equals(node.contentKey())) {
       return TerminalResult.builder()

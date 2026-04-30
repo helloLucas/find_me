@@ -20,6 +20,7 @@ DB_USER = os.getenv("SPRING_DATASOURCE_USERNAME")
 DB_PASS = os.getenv("SPRING_DATASOURCE_PASSWORD")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MATTERMOST_WEBHOOK_URL = os.getenv("MATTERMOST_WEBHOOK_URL")
+MATTERMOST_REPORT_WEBHOOK_URL = os.getenv("MATTERMOST_REPORT_WEBHOOK_URL")
 GMS_ENDPOINT = os.getenv("GMS_ENDPOINT")
 
 # 필수 환경변수 검증
@@ -131,7 +132,7 @@ def get_bottleneck_data(chapter_id=None):
     # 챕터 필터 설정
     must_conditions = [{"range": {"@timestamp": {"gte": "now-7d", "lte": "now"}}}]
     if chapter_id:
-        must_conditions.append({"term": {"chapter_id.keyword": chapter_id}})
+        must_conditions.append({"term": {"chapter_id": chapter_id}})
     
     query = {
         "size": 0,
@@ -139,27 +140,27 @@ def get_bottleneck_data(chapter_id=None):
             "bool": {
                 "must": must_conditions,
                 "must_not": [
-                    {"term": {"from_node_id.keyword": "null"}},
-                    {"term": {"from_node_id.keyword": ""}}
+                    {"term": {"from_node_id": "null"}},
+                    {"term": {"from_node_id": ""}}
                 ]
             }
         },
         "aggs": {
             "nodes": {
                 "terms": {
-                    "field": "from_node_id.keyword",
+                    "field": "from_node_id",
                     "size": 20 # 더 넓은 범위를 분석
                 },
                 "aggs": {
-                    "total_users": { "cardinality": { "field": "session_id.keyword" } },
+                    "total_users": { "cardinality": { "field": "session_id" } },
                     "fail_logs": { 
                         "filter": { 
-                            "terms": { "result.keyword": ["FAIL", "ERROR"] } # 실패와 오류를 모두 병목으로 판단
+                            "terms": { "result": ["FAIL", "ERROR"] } # 실패와 오류를 모두 병목으로 판단
                         } 
                     },
                     "success_users": {
-                        "filter": { "term": { "result.keyword": "SUCCESS" } },
-                        "aggs": { "unique_success": { "cardinality": { "field": "session_id.keyword" } } }
+                        "filter": { "term": { "result": "SUCCESS" } },
+                        "aggs": { "unique_success": { "cardinality": { "field": "session_id" } } }
                     },
                     "avg_fails_per_user": {
                         "bucket_script": {
@@ -251,19 +252,21 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
     
     # GMS 엔드포인트 설정 (환경변수에서 로드)
     
-    system_prompt = """당신은 게임의 조력자 '루카스'입니다. 
+    system_prompt = """당신은 게임의 친근한 친구이자 조력자 '루카스'입니다. 
 당신의 목표는 데이터 분석 결과를 바탕으로 플레이어들에게 '일간 팁'을 제공하는 것입니다.
 
 [반드시 지켜야 할 규칙]
-1. 페르소나: 너무 장난스럽지 않으면서도 따뜻하고 듬직한 조력자의 느낌을 유지하세요.
-2. 절대 금지: 실제 정답 명령어 전체나 정답 키워드를 직접적으로 언급하지 마세요. 
-3. 힌트 방식: 플레이어가 스스로 정답을 유추할 수 있도록 은유적이거나 상황적인 힌트만 제공하세요.
-4. 노드 ID 처리: 'CH1_...' 같은 시스템 아이디는 절대 노출하지 마세요. 대신 가이드라인을 읽고 "터미널 접속 구간", "보안 코드 입력 단계" 처럼 사람이 이해할 수 있는 말로 풀어서 설명하세요.
+1. 말투 (Persona): 아주 친근하고 따뜻한 친구이자 조력자 같은 느낌으로 **반말(~해, ~야, ~었어, ~했더라!)을 사용**하세요. 격식을 차리지 말고 부드럽게 이야기하세요.
+2. 힌트 방식: 너무 시적이거나 모호한 표현은 피하세요. 플레이어가 "무엇을 찾아봐야 할지" 또는 "어떤 명령어를 고민해야 할지" 실질적인 방향을 제시하세요. 
+   - 나쁜 예: "어둠 속에서 빛을 찾아보렴"
+   - 좋은 예: "저기 구석에 있는 낡은 문서 파일에 비밀번호 힌트가 적혀있던 것 같은데, 한번 열어보는 건 어때?"
+3. 절대 금지: 정답 명령어 전체를 그대로 노출하지 마세요. (예: 'ls -al'이 답이라면 'ls' 정도는 언급 가능하지만 전체를 알려주지는 말 것)
+4. 노드 ID 처리: 'CH1_...' 같은 시스템 아이디는 절대 노출하지 마세요. 대신 "터미널 접속 구간", "보안 코드 입력 단계" 처럼 사람이 이해할 수 있는 말로 풀어서 설명하세요.
 5. 포맷: Mattermost에 어울리는 마크다운 형식을 사용하며, 사용자 제공 예시의 구조를 최대한 따르세요.
-6. 가독성: Mattermost에 전송될 메시지이므로, **각 섹션 사이에는 반드시 빈 줄(Double Newline)을 넣어** 가독성을 극대화하세요."""
+6. 가독성: 각 섹션 사이에는 반드시 빈 줄(Double Newline)을 넣어 가독성을 높이세요."""
 
     user_prompt = f"""
-데이터 분석 결과를 바탕으로 루카스의 '일간 팁' 메시지를 작성해주세요.
+데이터 분석 결과를 바탕으로 루카스의 '일간 팁' 메시지를 작성해줘. 
 
 [분석 데이터]
 - 구간 설명: {guide_content}
@@ -271,19 +274,20 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
 - 실패 횟수: {fail_count}회
 - 주요 오답: {', '.join(wrong_answers)}
 
-위 데이터를 바탕으로 루카스의 '일간 팁' 메시지를 작성해주세요.
+위 데이터를 바탕으로 루카스의 '일간 팁' 메시지를 작성해줘.
+
 구조 예시:
-🐶 [루카스의 일간 팁] "제목"
+#### 🐶 [루카스의 일간 팁] "제목"
 
 **📊 이번 챕터에서 험난했던 구간**
-(풀어서 설명) (유저 {churn_rate}%가 여기서 멈춤!)
+(구간 설명을 바탕으로 어떤 상황인지 반말로 친절하게 설명)
 
 **💡 최다 오답 리포트**
 1. {wrong_answers[0] if len(wrong_answers) > 0 else '없음'}
 2. {wrong_answers[1] if len(wrong_answers) > 1 else '없음'}
 
 **🐾 루카스의 한마디**
-(모호하고 도움이 되는 힌트 내용)
+(반말로 친근하게, 플레이어가 실질적으로 해볼 만한 행동을 추천해주는 내용)
 """
 
     # Gemini API 요청 구조
@@ -322,26 +326,141 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
             pass
         return None
 
-def send_to_mattermost(markdown_message):
-    """생성된 마크다운 메시지를 Mattermost 웹훅으로 전송합니다."""
-    logger.info("Sending hint to Mattermost...")
+def send_to_mattermost(markdown_message, webhook_url, username="Lucas"):
+    """생성된 마크다운 메시지를 특정 Mattermost 웹훅으로 전송합니다."""
+    if not webhook_url:
+        logger.warning("No webhook URL provided. Skipping message send.")
+        return
+
+    logger.info(f"Sending message to Mattermost ({username})...")
     payload = {
         "text": markdown_message,
-        "username": "Lucas",
-        # "icon_url": "https://lucas-assets.s3.amazonaws.com/lucas-icon.png"
+        "username": username
     }
     
     try:
         response = requests.post(
-            MATTERMOST_WEBHOOK_URL, 
+            webhook_url, 
             data=json.dumps(payload),
             headers={'Content-Type': 'application/json'},
             timeout=20
         )
         response.raise_for_status()
-        logger.info("Successfully sent message to Mattermost.")
+        logger.info(f"Successfully sent message to Mattermost as {username}.")
     except Exception as e:
         logger.error(f"Failed to send webhook to Mattermost: {e}")
+
+def get_detailed_stats(chapter_id, days=7):
+    """지정한 기간(일) 동안의 상세 분석 데이터를 가져옵니다."""
+    logger.info(f"Gathering detailed analysis for Chapter: {chapter_id} ({days} days)...")
+    es = Elasticsearch([ES_URL])
+    target_index = "game-logs-*"
+    
+    must_conditions = [{"range": {"@timestamp": {"gte": f"now-{days}d", "lte": "now"}}}]
+    if chapter_id:
+        must_conditions.append({"term": {"chapter_id": chapter_id}})
+
+    query = {
+        "size": 0,
+        "query": { "bool": { "must": must_conditions } },
+        "aggs": {
+            "total_users": { "cardinality": { "field": "session_id" } },
+            "total_actions": { "value_count": { "field": "session_id" } },
+            "node_stats": {
+                "terms": { "field": "from_node_id", "size": 100 },
+                "aggs": {
+                    "unique_users": { "cardinality": { "field": "session_id" } },
+                    "success_count": { "filter": { "term": { "result": "SUCCESS" } } },
+                    "fail_count": { "filter": { "terms": { "result": ["FAIL", "ERROR"] } } }
+                }
+            },
+            "session_duration": {
+                "terms": { "field": "session_id", "size": 1000 },
+                "aggs": {
+                    "min_ts": { "min": { "field": "@timestamp" } },
+                    "max_ts": { "max": { "field": "@timestamp" } }
+                }
+            }
+        }
+    }
+
+    try:
+        res = es.search(index=target_index, body=query)
+        aggs = res['aggregations']
+        
+        total_users = aggs['total_users']['value']
+        total_actions = aggs['total_actions']['value']
+        
+        # 평균 플레이 시간 계산 (초 단위 -> 분 단위)
+        durations = []
+        for bucket in aggs['session_duration']['buckets']:
+            start = bucket['min_ts']['value']
+            end = bucket['max_ts']['value']
+            if start and end:
+                durations.append((end - start) / 1000) # ms to s
+        
+        avg_duration_min = (sum(durations) / len(durations) / 60) if durations else 0
+        
+        node_report = []
+        for bucket in aggs['node_stats']['buckets']:
+            node_id = bucket['key']
+            if node_id in ["null", ""]: continue
+            
+            users = bucket['unique_users']['value']
+            success = bucket['success_count']['doc_count']
+            fails = bucket['fail_count']['doc_count']
+            
+            # 이탈률 추정 (전체 유저 대비 이 노드에서 멈춘 비율)
+            # 실제 서비스에서는 (방문자 - 성공자) / 방문자로 계산
+            churn_rate = ((users - bucket['success_count']['doc_count']) / users * 100) if users > 0 else 0
+            
+            node_report.append({
+                "node_id": node_id,
+                "users": users,
+                "success_rate": (success / (success + fails) * 100) if (success + fails) > 0 else 0,
+                "fail_count": fails,
+                "churn_rate": churn_rate
+            })
+            
+        # 이탈률 높은 순으로 정렬
+        node_report.sort(key=lambda x: x['churn_rate'], reverse=True)
+        
+        return {
+            "total_users": total_users,
+            "total_actions": total_actions,
+            "avg_duration": avg_duration_min,
+            "nodes": node_report
+        }
+    except Exception as e:
+        logger.error(f"Failed to gather detailed stats: {e}")
+        return None
+
+def generate_dev_report(chapter_id, stats_1d, stats_7d):
+    """운영진용 일간/주간 비교 분석 리포트 마크다운을 생성합니다."""
+    if not stats_1d or not stats_7d: return "데이터를 불러오지 못했습니다."
+    
+    report = f"### 📊 [운영 리포트] {chapter_id} 분석 결과\n\n"
+    
+    # 요약 비교 섹션
+    report += "#### 📈 주요 지표 요약 (어제 vs 최근 7일)\n"
+    report += f"- **총 참여 유저**: {stats_1d['total_users']}명 (주간 합계: {stats_7d['total_users']}명)\n"
+    report += f"- **평균 플레이 시간**: {stats_1d['avg_duration']:.1f}분 (주간 평균: {stats_7d['avg_duration']:.1f}분)\n"
+    report += f"- **총 액션 발생**: {stats_1d['total_actions']}회 (주간 합계: {stats_7d['total_actions']}회)\n\n"
+    
+    # 어제 기준 상세 구간 분석
+    report += "#### ⚠️ 어제(24h) 이탈 주의 구간 (Top 5)\n"
+    report += "| 노드 ID | 유저 수 | 이탈률 | 성공률 | 실패 횟수 |\n"
+    report += "| :--- | :---: | :---: | :---: | :---: |\n"
+    
+    for node in stats_1d['nodes'][:5]:
+        report += f"| {node['node_id']} | {node['users']}명 | {node['churn_rate']:.1f}% | {node['success_rate']:.1f}% | {node['fail_count']}회 |\n"
+    
+    # 주간 트렌드 (비교용)
+    report += "\n#### 🗓️ 주간 이탈 스토리 노드 (Top 3)\n"
+    for node in stats_7d['nodes'][:3]:
+        report += f"- **{node['node_id']}**: 주간 이탈률 {node['churn_rate']:.1f}% (성공률 {node['success_rate']:.1f}%)\n"
+            
+    return report
 
 def main():
     logger.info("Starting Daily Mattermost Hint Generation Job...")
@@ -389,10 +508,17 @@ def main():
         logger.error("Failed to generate hint message. Exiting.")
         return
         
-    # 7. Mattermost 발송
-    send_to_mattermost(hint_message)
+    # 7. Mattermost 발송 (유저용 힌트)
+    send_to_mattermost(hint_message, MATTERMOST_WEBHOOK_URL, username="Lucas")
     
-    # 8. 발송 이력 기록
+    # 8. 운영진용 상세 리포트 생성 및 발송 (1일 vs 7일 비교)
+    report_webhook = MATTERMOST_REPORT_WEBHOOK_URL or MATTERMOST_WEBHOOK_URL
+    stats_1d = get_detailed_stats(active_chapter, days=1)
+    stats_7d = get_detailed_stats(active_chapter, days=7)
+    dev_report = generate_dev_report(active_chapter, stats_1d, stats_7d)
+    send_to_mattermost(dev_report, report_webhook, username="Lucas-Analyzer")
+    
+    # 9. 발송 이력 기록
     record_sent_hint(node_id, active_chapter)
     
     # 9. 커넥션 풀 종료

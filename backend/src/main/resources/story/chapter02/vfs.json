@@ -64,6 +64,18 @@
       "storyKey": "LAPLACE_FRAGMENT",
       "contentKey": "LAPLACE_FRAGMENT_01"
     },
+    "/home/guest/maple_story.sh": {
+      "type": "file",
+      "name": "maple_story.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "MAPLE_STORY_LAUNCHER",
+      "metadata": {
+        "launcher": "maple_story"
+      }
+    },
     "/home/guest/trash": {
       "type": "directory",
       "name": "trash",

@@ -252,6 +252,7 @@ SELECT
       "cache/",
       "laplace_fragment_01.sh",
       "lucas_fragment_01.sh",
+      "maple_story.sh",
       "observer_status.log",
       "root/",
       "sys/",

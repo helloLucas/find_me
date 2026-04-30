@@ -78,6 +78,7 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH2_WORLD_MAP_VIEW: "auto",
   CH2_RECOVERED_DOCUMENT: "auto",
 };
+const MAPLE_STORY_TERMINAL_SIGNAL = "terminal://maple-story";
 
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
@@ -430,6 +431,10 @@ function toTerminalDisplayPath(cwd: string | undefined) {
   return cwd;
 }
 
+function getActionSource(meta: Record<string, unknown> | undefined): "terminal" | "browser" | undefined {
+  return meta?.source === "terminal" || meta?.source === "browser" ? meta.source : undefined;
+}
+
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
   
@@ -451,6 +456,11 @@ function applyTerminalResult(terminalResult: TerminalResult | undefined, source?
   for (const line of terminalResult.stdout ?? []) {
     if (line === CLEAR_TERMINAL_SIGNAL) {
       clientStore.clearTerminalOutput();
+      continue;
+    }
+
+    if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
+      useWindowStore.getState().openWindow("terminal2");
       continue;
     }
 
@@ -558,9 +568,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         meta,
       });
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
+      const actionSource = getActionSource(meta);
 
       if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult, meta?.source as any);
+        applyTerminalResult(response.terminalResult, actionSource);
         set({ currentNode, error: null });
         return;
       }
@@ -586,7 +597,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
             transitionSound: transitionPlaySound,
             sourceActionType: actionType,
             terminalLinesOverride,
-            source: meta?.source as any, // meta에서 source 정보를 가져옴
+            source: actionSource,
           }
         );
         if (
