@@ -207,6 +207,19 @@
   border-bottom-left-radius: 2px;
 }
 
+.chat-msg.lucas.pending .chat-text {
+  opacity: 0.82;
+  font-style: italic;
+}
+
+.chat-msg.lucas.pending .chat-text.pending-typing {
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 3ch;
+  text-align: left;
+  letter-spacing: 0.06em;
+}
+
 .hint-input-form {
   border-top: 1px solid rgba(84, 58, 183, 0.5);
   padding: 12px;
@@ -253,6 +266,18 @@
   transform: translateY(-1px);
   filter: brightness(1.2);
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.hint-input-form input:disabled,
+.hint-input-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: saturate(0.7);
+}
+
+.hint-input-form button:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Scoped Glitch Effect for Avatar */

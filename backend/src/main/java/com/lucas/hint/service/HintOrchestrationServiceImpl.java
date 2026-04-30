@@ -27,10 +27,10 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
 
   private static final List<String> BLOCKED_NON_HINT_MESSAGES =
       List.of(
-          "지금은 그 신호를 볼 시간이 없어. 먼저 눈앞 단서부터 정리하자.",
-          "그 얘기는 잠시 보류하자. 지금 단계 해결에 집중해줘.",
-          "채널이 간섭되고 있어. 현재 화면의 행동 단서를 다시 확인해보자.",
-          "지금은 우회할 때가 아니야. 당장 진행에 필요한 단서부터 잡자.");
+          "지금은 이러고 있을 시간이 없어. 먼저 눈앞의 일부터 정리하자.",
+          "그 얘기는 잠시 보류하자. 지금 문제 해결에 집중해줘. 상황이 나아지면 그때 다시 이야기 하자.",
+          "우리 채널이 간섭받고 있어. 이 상황부터 빨리 극복해야해. 단서 먼저 확인해보자.",
+          "지금은 다른 이야기를 할 때가 아니야. 시간이 없으니 필요한 단서부터 찾고 나중에 이야기하자.");
 
   private final HintRetrievalService hintRetrievalService;
   private final HintEsSignalService hintEsSignalService;
@@ -201,14 +201,17 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
   }
 
   private String sanitizeHintText(String rawHintText, String expectedInput) {
-    if (isBlank(rawHintText) || isBlank(expectedInput)) {
+    if (isBlank(rawHintText)) {
       return rawHintText;
     }
-    String masked = obfuscateExpectedInput(expectedInput);
-    if (isBlank(masked)) {
-      return rawHintText;
+    String sanitized = rawHintText;
+    if (!isBlank(expectedInput)) {
+      String masked = obfuscateExpectedInput(expectedInput);
+      if (!isBlank(masked)) {
+        sanitized = sanitized.replace(expectedInput, masked);
+      }
     }
-    return rawHintText.replace(expectedInput, masked);
+    return sanitizeInternalActionTokensInText(sanitized);
   }
 
   private String obfuscateExpectedInput(String expectedInput) {
@@ -216,6 +219,20 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
       return null;
     }
     String normalized = expectedInput.trim();
+    if (normalized.startsWith("open_")
+        || normalized.startsWith("go_to_")
+        || normalized.startsWith("reopen_")) {
+      return "관련 버튼";
+    }
+    if ("dismiss".equalsIgnoreCase(normalized)) {
+      return "닫기 버튼";
+    }
+    if ("auto".equalsIgnoreCase(normalized)) {
+      return "자동 트리거";
+    }
+    if (looksLikeInternalActionToken(normalized)) {
+      return "해당 UI 요소";
+    }
     int atIndex = normalized.indexOf('@');
     if (atIndex > 0) {
       return normalized.substring(0, atIndex + 1) + "서버ip";
@@ -236,6 +253,21 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
       return normalized.charAt(0) + "...";
     }
     return normalized.substring(0, normalized.length() - 2) + "..";
+  }
+  private String sanitizeInternalActionTokensInText(String text) {
+    if (isBlank(text)) {
+      return text;
+    }
+    String sanitized = text;
+    sanitized =
+        sanitized.replaceAll(
+            "(?i)\\b(?:open|go_to|reopen)_[a-z0-9_]+\\b", "관련 버튼");
+    sanitized = sanitized.replaceAll("(?i)\\bdismiss\\b", "닫기 버튼");
+    sanitized = sanitized.replaceAll("(?i)\\bauto\\b", "자동 트리거");
+    return sanitized;
+  }
+  private boolean looksLikeInternalActionToken(String text) {
+    return text.matches("(?i)[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
   }
 
   private String safeText(String value) {
@@ -325,3 +357,4 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
         .build();
   }
 }
+

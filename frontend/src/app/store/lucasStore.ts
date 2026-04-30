@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export interface LucasMessage {
   speaker: string;
@@ -42,10 +43,15 @@ interface LucasState {
   setGlitchLevel: (level: number) => void;
   toggleHintMode: (active: boolean) => void;
   addChatMessage: (speaker: 'LUCAS' | 'PLAYER', text: string) => void;
+  clearChatHistory: () => void;
   resetLucas: () => void;
 }
 
-export const useLucasStore = create<LucasState>((set) => ({
+const CHAT_HISTORY_MAX = 120;
+
+export const useLucasStore = create<LucasState>()(
+  persist(
+    (set, get) => ({
   isVisible: false,
   currentScene: null,
   currentMessageIndex: 0,
@@ -122,9 +128,11 @@ export const useLucasStore = create<LucasState>((set) => ({
   addChatMessage: (speaker, text) => set((state) => ({
     chatHistory: [
       ...state.chatHistory,
-      { id: Date.now().toString(), speaker, text, timestamp: Date.now() }
-    ]
+      { id: Date.now().toString(), speaker, text, timestamp: Date.now() },
+    ].slice(-CHAT_HISTORY_MAX)
   })),
+
+  clearChatHistory: () => set({ chatHistory: [] }),
 
   resetLucas: () => set({
     isVisible: false,
@@ -133,6 +141,13 @@ export const useLucasStore = create<LucasState>((set) => ({
     isDialogueActive: false,
     glitchLevel: 0,
     isHintMode: false,
-    chatHistory: [],
+    chatHistory: get().chatHistory,
   }),
-}));
+    }),
+    {
+      name: 'lucas-chat-history-v1',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ chatHistory: state.chatHistory }),
+    }
+  )
+);
