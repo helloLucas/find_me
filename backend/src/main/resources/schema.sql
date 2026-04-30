@@ -24,6 +24,7 @@ CREATE TABLE chapters (
     code VARCHAR(50) NOT NULL UNIQUE,
     title VARCHAR(255) NOT NULL,
     sort_order INT NOT NULL,
+    is_published BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

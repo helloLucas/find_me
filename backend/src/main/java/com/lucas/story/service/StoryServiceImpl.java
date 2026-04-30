@@ -48,9 +48,12 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * 스토리 진행 서비스 구현체.
  *
- * <p>플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리, 그리고 최근 행동 맥락 기록 기능을 제공한다.
+ * <p>
+ * 플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리, 그리고 최근 행동 맥락 기록 기능을 제공한다.
  *
- * <p>핵심 흐름: 1) DB의 story_transitions 테이블 기반으로 전이 매칭 2) 진행 상태와 스냅샷 갱신 3) 확정된 전이 결과를 Redis
+ * <p>
+ * 핵심 흐름: 1) DB의 story_transitions 테이블 기반으로 전이 매칭 2) 진행 상태와 스냅샷 갱신 3) 확정된 전이 결과를
+ * Redis
  * recent-actions/context에 기록
  *
  * @see StoryService
@@ -95,7 +98,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * Bean 초기화 시 Chapter 2 정적 VFS 리소스를 메모리에 로드합니다.
    *
-   * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
+   * <p>
+   * 전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
    */
   @PostConstruct
   public void init() {
@@ -106,7 +110,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * classpath의 Chapter 2 VFS JSON 파일을 읽어 {@code chapter02Vfs}에 저장합니다.
    *
-   * <p>리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이 적용됩니다.
+   * <p>
+   * 리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이
+   * 적용됩니다.
    */
   private void loadVfsJson() {
     // try-with-resources로 리소스 스트림을 자동 해제합니다.
@@ -139,16 +145,14 @@ public class StoryServiceImpl implements StoryService {
   @Transactional
   public StoryNodeResponseDto startStory(Long userId, StartStoryRequestDto request) {
     // 요청된 챕터 코드로 챕터 조회
-    Chapter chapter =
-        chapterRepository
-            .findByCode(request.getChapterCode())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3001));
+    Chapter chapter = chapterRepository
+        .findByCode(request.getChapterCode())
+        .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode =
-        storyNodeRepository
-            .findFirstByChapter_CodeOrderByIdAsc(request.getChapterCode())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3002));
+    StoryNode firstNode = storyNodeRepository
+        .findFirstByChapter_CodeOrderByIdAsc(request.getChapterCode())
+        .orElseThrow(() -> new CustomException(ErrorCode.E3002));
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
@@ -161,13 +165,12 @@ public class StoryServiceImpl implements StoryService {
 
     if (progress == null) {
       // 최초 플레이: 새 진행 레코드 생성
-      progress =
-          UserStoryProgress.builder()
-              .user(user)
-              .latestChapter(chapter)
-              .latestNode(firstNode)
-              .latestSnapshotJson(emptySnapshot)
-              .build();
+      progress = UserStoryProgress.builder()
+          .user(user)
+          .latestChapter(chapter)
+          .latestNode(firstNode)
+          .latestSnapshotJson(emptySnapshot)
+          .build();
     } else {
       // 재시작: 기존 진행 레코드를 신규 챕터/노드로 갱신
       progress.updateProgress(chapter, firstNode, emptySnapshot);
@@ -196,10 +199,9 @@ public class StoryServiceImpl implements StoryService {
     User user = getAuthenticatedUser(userId);
 
     // 유저의 진행 기록 조회 (없으면 에러)
-    UserStoryProgress progress =
-        userStoryProgressRepository
-            .findById(user.getId())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3003));
+    UserStoryProgress progress = userStoryProgressRepository
+        .findById(user.getId())
+        .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
     // 마지막으로 도달한 노드 정보를 DTO로 변환하여 반환
     return StoryNodeResponseDto.from(progress.getLatestNode());
@@ -212,7 +214,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 유저의 액션(명령어 입력, 클릭 등)을 받아 스토리 상태를 전이시킨다.
    *
-   * <p>처리 순서: 1) 현재 진행 상태 조회 2) story_transitions 테이블에서 매칭되는 전이 검색 3) 진행 상태 갱신 4) 확정된 결과를 Redis
+   * <p>
+   * 처리 순서: 1) 현재 진행 상태 조회 2) story_transitions 테이블에서 매칭되는 전이 검색 3) 진행 상태 갱신 4)
+   * 확정된 결과를 Redis
    * recent-actions/context에 기록
    *
    * @param request 유저 액션 정보 (nodeId, actionType, inputValue)
@@ -227,10 +231,9 @@ public class StoryServiceImpl implements StoryService {
     // ── Step 1: DB 기반 스토리 전이 ──
     // 현재 노드에서 출발하는 전이 목록을 우선순위 순으로 조회하고,
     // 유저의 액션과 매칭되는 전이를 찾아 다음 노드로 진행한다.
-    UserStoryProgress progress =
-        userStoryProgressRepository
-            .findById(user.getId())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3003));
+    UserStoryProgress progress = userStoryProgressRepository
+        .findById(user.getId())
+        .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
     // 현재 유저가 위치한 노드와 챕터 (에러 로그용으로 보관)
     StoryNode currentNode = progress.getLatestNode();
@@ -238,27 +241,28 @@ public class StoryServiceImpl implements StoryService {
 
     try {
       // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
-      List<StoryTransition> transitions =
-          storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+      List<StoryTransition> transitions = storyTransitionRepository
+          .findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
       // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
       JsonNode latestSnapshot = progress.getLatestSnapshotJson();
 
       // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-      StoryTransition matched =
-          transitions.stream()
-              .filter(t -> matchesTransition(t, request, latestSnapshot))
-              .findFirst()
-              .orElse(null);
+      StoryTransition matched = transitions.stream()
+          .filter(t -> matchesTransition(t, request, latestSnapshot))
+          .findFirst()
+          .orElse(null);
 
       if (matched == null) {
         // ── Step 2: Chapter 2 터미널 Fallback ──
         // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
-        TransitionResponseDto terminalResponse =
-            handleChapter2TerminalFallback(user, progress, currentNode, request);
+        TransitionResponseDto terminalResponse = handleChapter2TerminalFallback(user, progress, currentNode, request);
         if (terminalResponse != null) {
           return terminalResponse;
         }
+
+        // 예상치 못한 오류(ERROR)를 ES에 기록
+        logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, "ERROR");
 
         // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
         CustomException e = new CustomException(ErrorCode.A1001);
@@ -277,9 +281,8 @@ public class StoryServiceImpl implements StoryService {
 
       if (isFailNode) {
         Chapter failChapter = nextNode.getChapter();
-        JsonNode failSnapshot =
-            createTransitionSnapshot(
-                failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+        JsonNode failSnapshot = createTransitionSnapshot(
+            failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
         progress.updateProgress(failChapter, nextNode, failSnapshot);
         userStoryProgressRepository.save(progress);
 
@@ -309,9 +312,8 @@ public class StoryServiceImpl implements StoryService {
       // 도착 노드가 속한 챕터 정보
       Chapter chapter = nextNode.getChapter();
       // 현재 상태 스냅샷 생성
-      JsonNode snapshot =
-          createTransitionSnapshot(
-              chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+      JsonNode snapshot = createTransitionSnapshot(
+          chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
 
       // 유저 진행 상태를 다음 노드로 갱신 후 저장
       progress.updateProgress(chapter, nextNode, snapshot);
@@ -374,12 +376,11 @@ public class StoryServiceImpl implements StoryService {
     // FAIL 또는 ERROR일 때 카운트를 올리고, SUCCESS일 때만 리셋합니다.
     boolean isFail = "FAIL".equals(result) || "ERROR".equals(result);
     boolean isSuccess = "SUCCESS".equals(result);
-    boolean shouldResetFailCountOnSuccess =
-        isSuccess && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+    boolean shouldResetFailCountOnSuccess = isSuccess
+        && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
 
-    int failCountAfterAction =
-        storyActionLogService.updateAndGetFailCount(
-            sessionId, isFail, shouldResetFailCountOnSuccess);
+    int failCountAfterAction = storyActionLogService.updateAndGetFailCount(
+        sessionId, isFail, shouldResetFailCountOnSuccess);
 
     // hint_requested 여부 추출
     boolean hintRequested = false;
@@ -401,22 +402,21 @@ public class StoryServiceImpl implements StoryService {
     String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
     String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
 
-    StoryActionLogEvent event =
-        StoryActionLogEvent.builder()
-            .timestamp(timestamp)
-            .sessionId(sessionId)
-            .userId(user.getId())
-            .chapterId(chapterId)
-            .fromNodeId(fromNodeId)
-            .toNodeId(toNodeId)
-            .actionType(actionType)
-            .inputValue(rawInput)
-            .inputValueNorm(normInput)
-            .result(result)
-            .failCountAfterAction(failCountAfterAction)
-            .hintRequested(hintRequested)
-            .stateVersion(stateVersion)
-            .build();
+    StoryActionLogEvent event = StoryActionLogEvent.builder()
+        .timestamp(timestamp)
+        .sessionId(sessionId)
+        .userId(user.getId())
+        .chapterId(chapterId)
+        .fromNodeId(fromNodeId)
+        .toNodeId(toNodeId)
+        .actionType(actionType)
+        .inputValue(rawInput)
+        .inputValueNorm(normInput)
+        .result(result)
+        .failCountAfterAction(failCountAfterAction)
+        .hintRequested(hintRequested)
+        .stateVersion(stateVersion)
+        .build();
 
     storySessionRedisService.recordAction(
         sessionId,
@@ -458,17 +458,17 @@ public class StoryServiceImpl implements StoryService {
   }
 
   // ══════════════════════════════════════════════
-  //  Private Helper Methods
+  // Private Helper Methods
   // ══════════════════════════════════════════════
 
   /**
    * 매칭되는 transition이 없어서 거절된 요청을 Redis recent-actions에 기록한다.
    *
-   * @param user 요청을 보낸 인증 유저
-   * @param progress 유저의 현재 스토리 진행 상태
+   * @param user        요청을 보낸 인증 유저
+   * @param progress    유저의 현재 스토리 진행 상태
    * @param currentNode 요청 당시 유저가 위치한 노드
-   * @param request 유저가 보낸 transition 요청
-   * @param exception transition 매칭 실패 예외
+   * @param request     유저가 보낸 transition 요청
+   * @param exception   transition 매칭 실패 예외
    */
   private void recordRejectedTransitionAction(
       User user,
@@ -486,18 +486,17 @@ public class StoryServiceImpl implements StoryService {
     String result = resolveRejectedResult(request, exception);
 
     // Redis에 저장할 최근 행동 이벤트를 현재 상태 기준으로 구성한다.
-    RecentActionEvent event =
-        RecentActionEvent.builder()
-            .userId(user.getId())
-            .chapterCode(chapterCode)
-            .actionType(request.getActionType())
-            .input(request.getInputValue())
-            .result(result)
-            .nodeCode(currentNode.getCode())
-            .cwd(resolveCwd(snapshot, request))
-            .snapshotVersion(extractInteger(snapshot, "/snapshotVersion"))
-            .scanPercent(extractInteger(snapshot, "/scanPercent"))
-            .build();
+    RecentActionEvent event = RecentActionEvent.builder()
+        .userId(user.getId())
+        .chapterCode(chapterCode)
+        .actionType(request.getActionType())
+        .input(request.getInputValue())
+        .result(result)
+        .nodeCode(currentNode.getCode())
+        .cwd(resolveCwd(snapshot, request))
+        .snapshotVersion(extractInteger(snapshot, "/snapshotVersion"))
+        .scanPercent(extractInteger(snapshot, "/scanPercent"))
+        .build();
 
     // DB 변경이 없는 거절 이벤트는 transaction commit을 기다리지 않고 즉시 Redis에 기록한다.
     recentActionService.recordAction(event);
@@ -506,13 +505,13 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 처리 결과를 Redis recent-actions에 남길 이벤트로 변환한다.
    *
-   * @param user 요청을 보낸 인증 유저
-   * @param chapter transition 이후 유저가 위치한 챕터
-   * @param request 유저가 보낸 transition 요청
-   * @param transition 매칭된 story transition
-   * @param fromNode transition 출발 노드
-   * @param toNode transition 도착 노드
-   * @param snapshot transition 이후 저장할 snapshot
+   * @param user           요청을 보낸 인증 유저
+   * @param chapter        transition 이후 유저가 위치한 챕터
+   * @param request        유저가 보낸 transition 요청
+   * @param transition     매칭된 story transition
+   * @param fromNode       transition 출발 노드
+   * @param toNode         transition 도착 노드
+   * @param snapshot       transition 이후 저장할 snapshot
    * @param fallbackResult effect_bundle에 recentResult가 없을 때 사용할 기본 result
    * @return Redis에 저장할 최근 행동 이벤트
    */
@@ -573,7 +572,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.recentResult를 우선 사용하고 없으면 기본 result를 반환한다.
    *
-   * @param transition 매칭된 story transition
+   * @param transition     매칭된 story transition
    * @param fallbackResult 기본 result 코드
    * @return recent-actions에 저장할 result 코드
    */
@@ -609,7 +608,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 매칭 실패 예외를 recent-actions result 코드로 변환한다.
    *
-   * @param request 유저가 보낸 transition 요청
+   * @param request   유저가 보낸 transition 요청
    * @param exception transition 처리 중 발생한 예외
    * @return recent-actions에 저장할 실패 result 코드
    */
@@ -637,7 +636,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot 또는 요청 meta에서 현재 가상 터미널 경로를 결정한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param request 유저가 보낸 transition 요청
+   * @param request  유저가 보낸 transition 요청
    * @return cwd 값이 있으면 해당 값, 없으면 null
    */
   private String resolveCwd(JsonNode snapshot, TransitionRequestDto request) {
@@ -682,7 +681,7 @@ public class StoryServiceImpl implements StoryService {
    * JsonNode에서 JSON Pointer 경로의 문자열 값을 추출한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param pointer JSON Pointer 경로
+   * @param pointer  JSON Pointer 경로
    * @return 문자열 값이 있으면 해당 값, 없으면 null
    */
   private String extractText(JsonNode snapshot, String pointer) {
@@ -715,7 +714,7 @@ public class StoryServiceImpl implements StoryService {
    * JsonNode에서 JSON Pointer 경로의 정수 값을 추출한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param pointer JSON Pointer 경로
+   * @param pointer  JSON Pointer 경로
    * @return 정수 값이 있으면 해당 값, 없으면 null
    */
   private Integer extractInteger(JsonNode snapshot, String pointer) {
@@ -752,8 +751,7 @@ public class StoryServiceImpl implements StoryService {
    * @throws CustomException E3000 - 유저 미존재
    */
   private User getAuthenticatedUser(Long userId) {
-    User user =
-        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     // 최초 플레이인 경우 진행 환경(1챕터 해금 및 최초 스토리 진행 레코드)을 조성해준다.
     if (!userChapterProgressRepository.existsByUserId(user.getId())) {
@@ -794,10 +792,11 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라 exact(완전 일치) 또는
+   * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라
+   * exact(완전 일치) 또는
    * regex(정규식) 비교
    *
-   * @param t DB에서 조회한 전이 후보
+   * @param t       DB에서 조회한 전이 후보
    * @param request 유저의 액션 요청
    * @return 매칭되면 true
    */
@@ -808,7 +807,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
     // 입력값이 없으면 매칭 불가
-    if (request.getInputValue() == null) return false;
+    if (request.getInputValue() == null)
+      return false;
 
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
@@ -822,8 +822,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * server_rule validator_config를 기준으로 transition 매칭 여부를 판단한다.
    *
-   * @param transition DB에서 조회한 server_rule transition
-   * @param request 유저의 transition 요청
+   * @param transition     DB에서 조회한 server_rule transition
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return server_rule이 통과하면 true
    */
@@ -899,8 +899,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * NORMALIZED_COMMAND server_rule을 기준으로 명령어와 인자를 비교한다.
    *
-   * @param config transition의 validator_config JSON
-   * @param request 유저의 transition 요청
+   * @param config         transition의 validator_config JSON
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return command와 args가 정규화 기준으로 일치하면 true
    */
@@ -982,8 +982,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * VIRTUAL_FS_COMMAND server_rule을 기준으로 파일 경로 기반 명령을 검증한다.
    *
-   * @param config transition의 validator_config JSON
-   * @param request 유저의 transition 요청
+   * @param config         transition의 validator_config JSON
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 명령어, resolvedPath, VFS 권한 조건이 모두 맞으면 true
    */
@@ -1072,8 +1072,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * PARSED_TAR_COMMAND server_rule을 기준으로 tar 아카이브 생성 명령을 검증한다.
    *
-   * @param config transition의 validator_config JSON
-   * @param request 유저의 transition 요청
+   * @param config         transition의 validator_config JSON
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return output file, 포함 파일, 금지/감지 파일 조건이 맞으면 true
    */
@@ -1132,8 +1132,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * NC_SEND_FILE server_rule을 기준으로 nc 전송 명령을 검증한다.
    *
-   * @param config transition의 validator_config JSON
-   * @param request 유저의 transition 요청
+   * @param config         transition의 validator_config JSON
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return host/port/timeout/stdinFile 조건이 맞으면 true
    */
@@ -1203,8 +1203,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * CHAINED_COMMAND server_rule을 기준으로 연결 명령의 순서와 인자를 검증한다.
    *
-   * @param config transition의 validator_config JSON
-   * @param request 유저의 transition 요청
+   * @param config         transition의 validator_config JSON
+   * @param request        유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return operator와 하위 command들이 모두 맞으면 true
    */
@@ -1226,10 +1226,9 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // raw input을 operator 기준으로 분리한다.
-    String[] rawCommands =
-        request
-            .getInputValue()
-            .split("\\s*" + java.util.regex.Pattern.quote(operator) + "\\s*", -1);
+    String[] rawCommands = request
+        .getInputValue()
+        .split("\\s*" + java.util.regex.Pattern.quote(operator) + "\\s*", -1);
 
     // validator_config.commands는 기대 command 목록이다.
     JsonNode expectedCommands = config.get("commands");
@@ -1277,7 +1276,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config에서 문자열 필드를 안전하게 읽는다.
    *
-   * @param node 값을 읽을 JSON node
+   * @param node      값을 읽을 JSON node
    * @param fieldName 읽을 필드명
    * @return 문자열 필드가 있으면 값, 없으면 null
    */
@@ -1310,7 +1309,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config에서 문자열 배열 필드를 안전하게 읽는다.
    *
-   * @param node 값을 읽을 JSON node
+   * @param node      값을 읽을 JSON node
    * @param fieldName 읽을 배열 필드명
    * @return 문자열 값만 포함한 배열, 필드가 없으면 빈 배열
    */
@@ -1460,15 +1459,17 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /** PARSED_TAR_COMMAND 검증에 필요한 tar 명령 구조입니다. */
-  private record ParsedTarCommand(String outputFile, List<String> inputFiles) {}
+  private record ParsedTarCommand(String outputFile, List<String> inputFiles) {
+  }
 
   /** NC_SEND_FILE 검증에 필요한 nc 명령 구조입니다. */
-  private record ParsedNcCommand(int timeoutSeconds, String host, int port, String stdinFile) {}
+  private record ParsedNcCommand(int timeoutSeconds, String host, int port, String stdinFile) {
+  }
 
   /**
    * server_rule 공통 선행 조건을 검사한다.
    *
-   * @param config transition의 validator_config JSON
+   * @param config         transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return required/forbidden flag와 created file 조건이 모두 맞으면 true
    */
@@ -1492,7 +1493,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config의 requiredFlags / forbiddenFlags 조건을 검사한다.
    *
-   * @param config transition의 validator_config JSON
+   * @param config         transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 플래그 조건을 만족하면 true
    */
@@ -1525,7 +1526,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config.requiredCreatedFiles 조건을 검사한다.
    *
-   * @param config transition의 validator_config JSON
+   * @param config         transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 필요한 동적 생성 파일이 현재 overlay에 남아 있으면 true
    */
@@ -1556,7 +1557,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot overlay에 특정 created path가 현재 유효하게 존재하는지 확인한다.
    *
    * @param snapshot 유저의 현재 진행 snapshot
-   * @param path 확인할 절대 경로
+   * @param path     확인할 절대 경로
    * @return createdNodes에 있고 removedPaths에 없으면 true
    */
   private boolean isActiveCreatedPath(JsonNode snapshot, String path) {
@@ -1567,8 +1568,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // createdNodes 배열을 가져온다.
-    JsonNode createdNodes =
-        snapshot == null ? null : snapshot.path("vfsOverlay").path("createdNodes");
+    JsonNode createdNodes = snapshot == null ? null : snapshot.path("vfsOverlay").path("createdNodes");
 
     // createdNodes가 배열이 아니면 동적 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
@@ -1593,13 +1593,12 @@ public class StoryServiceImpl implements StoryService {
    * snapshot overlay에서 path가 removedPaths에 포함되어 있는지 확인한다.
    *
    * @param snapshot 유저의 현재 진행 snapshot
-   * @param path 확인할 절대 경로
+   * @param path     확인할 절대 경로
    * @return removedPaths에 있으면 true
    */
   private boolean isRemovedPath(JsonNode snapshot, String path) {
     // removedPaths 배열을 가져온다.
-    JsonNode removedPaths =
-        snapshot == null ? null : snapshot.path("vfsOverlay").path("removedPaths");
+    JsonNode removedPaths = snapshot == null ? null : snapshot.path("vfsOverlay").path("removedPaths");
 
     // removedPaths가 배열이 아니면 삭제된 path가 없다.
     if (removedPaths == null || !removedPaths.isArray()) {
@@ -1643,7 +1642,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 입력 경로가 validator_config의 절대/상대 경로 허용 정책을 만족하는지 확인한다.
    *
-   * @param config transition의 validator_config JSON
+   * @param config  transition의 validator_config JSON
    * @param rawPath 유저가 입력한 원문 경로
    * @return 허용된 경로 표현이면 true
    */
@@ -1675,7 +1674,7 @@ public class StoryServiceImpl implements StoryService {
    * 현재 snapshot의 cwd 기준으로 입력 경로를 VFS 절대 경로로 정규화한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPath 유저가 입력한 경로
+   * @param rawPath        유저가 입력한 경로
    * @return 정규화된 VFS 절대 경로
    */
   private String resolveSnapshotPath(JsonNode latestSnapshot, String rawPath) {
@@ -1699,7 +1698,7 @@ public class StoryServiceImpl implements StoryService {
    * 여러 입력 경로를 현재 snapshot 기준 VFS 절대 경로로 정규화한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPaths 원문 경로 목록
+   * @param rawPaths       원문 경로 목록
    * @return 정규화된 절대 경로 목록
    */
   private List<String> resolvePaths(JsonNode latestSnapshot, List<String> rawPaths) {
@@ -1724,10 +1723,9 @@ public class StoryServiceImpl implements StoryService {
    */
   private VfsContext createVfsContext(JsonNode latestSnapshot) {
     // snapshot에 vfsOverlay가 있으면 해당 값을 사용한다.
-    JsonNode overlay =
-        latestSnapshot == null
-            ? objectMapper.createObjectNode()
-            : latestSnapshot.path("vfsOverlay");
+    JsonNode overlay = latestSnapshot == null
+        ? objectMapper.createObjectNode()
+        : latestSnapshot.path("vfsOverlay");
 
     // chapter02Vfs가 로드되지 않았을 때도 NPE가 나지 않도록 빈 객체를 fallback으로 둔다.
     JsonNode staticVfs = chapter02Vfs == null ? objectMapper.createObjectNode() : chapter02Vfs;
@@ -1739,7 +1737,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * resolved path 목록이 required path를 모두 포함하는지 검사한다.
    *
-   * @param actualPaths 실제 입력에서 정규화한 경로 목록
+   * @param actualPaths   실제 입력에서 정규화한 경로 목록
    * @param requiredPaths 반드시 포함되어야 하는 경로 목록
    * @return requiredPaths가 모두 포함되어 있으면 true
    */
@@ -1757,7 +1755,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * resolved path 목록이 금지 path를 하나라도 포함하는지 검사한다.
    *
-   * @param actualPaths 실제 입력에서 정규화한 경로 목록
+   * @param actualPaths    실제 입력에서 정규화한 경로 목록
    * @param forbiddenPaths 포함되면 안 되는 경로 목록
    * @return 금지 경로가 하나라도 있으면 true
    */
@@ -1778,9 +1776,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * tar 출력 파일명이 validator_config.outputFile 조건과 맞는지 검사한다.
    *
-   * @param rawOutputFile 유저가 입력한 tar 출력 파일 경로
+   * @param rawOutputFile      유저가 입력한 tar 출력 파일 경로
    * @param expectedOutputFile validator_config의 outputFile
-   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @param latestSnapshot     유저의 현재 진행 snapshot
    * @return 파일명이 맞으면 true
    */
   private boolean matchesOutputFile(
@@ -2018,8 +2016,8 @@ public class StoryServiceImpl implements StoryService {
    * CHAINED_COMMAND의 하위 command가 기대 config와 일치하는지 검사한다.
    *
    * @param expectedCommand 기대 하위 command 설정
-   * @param actualCommand 유저가 입력한 하위 command
-   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @param actualCommand   유저가 입력한 하위 command
+   * @param latestSnapshot  유저의 현재 진행 snapshot
    * @return command/args/resolvedPath 조건이 일치하면 true
    */
   private boolean matchesConfiguredSubCommand(
@@ -2073,33 +2071,34 @@ public class StoryServiceImpl implements StoryService {
   /**
    * story transition 결과를 프론트엔드 응답 DTO로 변환합니다.
    *
-   * <p>이동 대상 노드 정보, transition effect 목록, 갱신된 snapshot, result 코드를 한 응답에 묶습니다. Chapter 2에서는 프론트가
+   * <p>
+   * 이동 대상 노드 정보, transition effect 목록, 갱신된 snapshot, result 코드를 한 응답에 묶습니다.
+   * Chapter 2에서는 프론트가
    * snapshot과 effects를 함께 받아 터미널/브라우저/스토리 런타임 상태를 동기화합니다.
    *
-   * @param node 전이 후 도착한 스토리 노드
+   * @param node         전이 후 도착한 스토리 노드
    * @param effectBundle DB transition에 저장된 effect_bundle JSON
-   * @param result 프론트에 전달할 전이 결과 코드
-   * @param snapshot 전이 후 저장된 최신 진행 snapshot
+   * @param result       프론트에 전달할 전이 결과 코드
+   * @param snapshot     전이 후 저장된 최신 진행 snapshot
    * @return 프론트에 반환할 transition 응답 DTO
    */
   private TransitionResponseDto buildResponseFromNode(
       StoryNode node, JsonNode effectBundle, String result, JsonNode snapshot) {
     // 노드의 대사(outputBundle)와 메타데이터를 포함하여 응답 빌드
-    TransitionResponseDto.TransitionResponseDtoBuilder builder =
-        TransitionResponseDto.builder()
-            .nextNode(
-                NextNodeDto.builder()
-                    .id(node.getId())
-                    .code(node.getCode())
-                    .nodeType(node.getNodeType())
-                    .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
-                    .promptType(node.getPromptType())
-                    .promptMeta(node.getPromptMeta())
-                    .isCheckpoint(node.isCheckpoint())
-                    .isTerminal(node.isTerminal())
-                    .build())
-            .snapshot(convertSnapshotToMap(snapshot))
-            .result(result);
+    TransitionResponseDto.TransitionResponseDtoBuilder builder = TransitionResponseDto.builder()
+        .nextNode(
+            NextNodeDto.builder()
+                .id(node.getId())
+                .code(node.getCode())
+                .nodeType(node.getNodeType())
+                .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
+                .promptType(node.getPromptType())
+                .promptMeta(node.getPromptMeta())
+                .isCheckpoint(node.isCheckpoint())
+                .isTerminal(node.isTerminal())
+                .build())
+        .snapshot(convertSnapshotToMap(snapshot))
+        .result(result);
 
     // 효과(effectBundle)가 존재하면 DTO 리스트로 변환하여 추가
     if (effectBundle != null && !effectBundle.isEmpty()) {
@@ -2133,22 +2132,25 @@ public class StoryServiceImpl implements StoryService {
 
     // Jackson TypeReference를 사용해 JSON object를 Map으로 안전하게 변환한다.
     return objectMapper.convertValue(
-        snapshot, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        snapshot, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+        });
   }
 
   /**
    * 챕터 시작 전 해당 유저의 챕터 접근 권한(해금 여부)을 검증한다.
    *
-   * <p>현재 챕터에 대한 진행 데이터가 없더라도 직전 챕터가 완료(COMPLETED)된 상태라면, 동적으로 현재 챕터의 진행 상태를 해금(UNLOCKED)으로 생성하여
+   * <p>
+   * 현재 챕터에 대한 진행 데이터가 없더라도 직전 챕터가 완료(COMPLETED)된 상태라면, 동적으로 현재 챕터의 진행 상태를
+   * 해금(UNLOCKED)으로 생성하여
    * 진입을 허용한다.
    *
-   * @param user 검증 대상 유저 엔티티
+   * @param user    검증 대상 유저 엔티티
    * @param chapter 접근하려는 대상 챕터 엔티티
    * @throws CustomException A1002 - 챕터 접근 권한이 없거나 이전 챕터를 클리어하지 않은 경우
    */
   private void validateChapterUnlocked(User user, Chapter chapter) {
-    java.util.Optional<UserChapterProgress> progressOpt =
-        userChapterProgressRepository.findByUserIdAndChapterId(user.getId(), chapter.getId());
+    java.util.Optional<UserChapterProgress> progressOpt = userChapterProgressRepository
+        .findByUserIdAndChapterId(user.getId(), chapter.getId());
 
     if (progressOpt.isPresent()) {
       if (progressOpt.get().getStatus() == ChapterStatus.LOCKED) {
@@ -2159,27 +2161,24 @@ public class StoryServiceImpl implements StoryService {
 
     // 데이터가 없는 경우: 이전 챕터(sortOrder - 1) 클리어 여부 검사 후 동적 해금
     if (chapter.getSortOrder() > 1) {
-      Chapter prevChapter =
-          chapterRepository
-              .findBySortOrder(chapter.getSortOrder() - 1)
-              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+      Chapter prevChapter = chapterRepository
+          .findBySortOrder(chapter.getSortOrder() - 1)
+          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
 
-      UserChapterProgress prevProgress =
-          userChapterProgressRepository
-              .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
-              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+      UserChapterProgress prevProgress = userChapterProgressRepository
+          .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
+          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
 
       if (prevProgress.getStatus() != ChapterStatus.COMPLETED) {
         throw new CustomException(ErrorCode.A1002);
       }
 
       // 이전 챕터를 깼으므로 현재 챕터 UNLOCKED 레코드 동적 생성 및 진입 허용
-      UserChapterProgress newProgress =
-          UserChapterProgress.builder()
-              .user(user)
-              .chapter(chapter)
-              .status(ChapterStatus.UNLOCKED)
-              .build();
+      UserChapterProgress newProgress = UserChapterProgress.builder()
+          .user(user)
+          .chapter(chapter)
+          .status(ChapterStatus.UNLOCKED)
+          .build();
       userChapterProgressRepository.save(newProgress);
       log.info(
           "Dynamically unlocked chapter: User={}, Chapter={}", user.getId(), chapter.getCode());
@@ -2224,7 +2223,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 시작 또는 전이 시 사용할 빈 스냅샷(JSON)을 생성한다.
    *
-   * <p>Chapter 2는 결정 문서의 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
+   * <p>
+   * Chapter 2는 결정 문서의 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
    */
   private JsonNode createEmptySnapshot(Chapter chapter, StoryNode node) {
     // 빈 JSON 객체 생성
@@ -2251,11 +2251,11 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 이후 저장할 snapshot을 생성하고 이전 snapshot의 상태를 이어받는다.
    *
-   * @param chapter transition 이후 챕터 엔티티
-   * @param node transition 이후 노드 엔티티
+   * @param chapter          transition 이후 챕터 엔티티
+   * @param node             transition 이후 노드 엔티티
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param request 유저의 transition 요청
-   * @param effectBundle transition 성공 후 snapshot에 반영할 effect_bundle
+   * @param request          유저의 transition 요청
+   * @param effectBundle     transition 성공 후 snapshot에 반영할 effect_bundle
    * @return transition 이후 저장할 snapshot JSON
    */
   private JsonNode createTransitionSnapshot(
@@ -2318,9 +2318,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 terminal 상태를 새 Chapter 2 snapshot으로 이어받는다.
    *
-   * @param snapshot 값을 채울 새 snapshot JSON
+   * @param snapshot         값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param request 유저의 transition 요청
+   * @param request          유저의 transition 요청
    */
   private void carryChapter2Terminal(
       ObjectNode snapshot, JsonNode previousSnapshot, TransitionRequestDto request) {
@@ -2358,9 +2358,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 object 필드를 새 snapshot으로 복사한다.
    *
-   * @param snapshot 값을 채울 새 snapshot JSON
+   * @param snapshot         값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param fieldName 복사할 object 필드명
+   * @param fieldName        복사할 object 필드명
    */
   private void carryObjectField(ObjectNode snapshot, JsonNode previousSnapshot, String fieldName) {
     // 이전 snapshot이 없으면 복사할 값도 없다.
@@ -2385,9 +2385,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 정수 필드를 새 snapshot으로 복사한다.
    *
-   * @param snapshot 값을 채울 새 snapshot JSON
+   * @param snapshot         값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param fieldName 복사할 정수 필드명
+   * @param fieldName        복사할 정수 필드명
    */
   private void carryIntegerField(ObjectNode snapshot, JsonNode previousSnapshot, String fieldName) {
     // 이전 snapshot이 없으면 복사할 값도 없다.
@@ -2412,10 +2412,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 문자열 값을 대상 object field에 복사한다.
    *
-   * @param target 값을 쓸 대상 object
+   * @param target           값을 쓸 대상 object
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param sourcePointer 값을 읽을 JSON Pointer
-   * @param targetFieldName 값을 쓸 대상 필드명
+   * @param sourcePointer    값을 읽을 JSON Pointer
+   * @param targetFieldName  값을 쓸 대상 필드명
    */
   private void copyTextField(
       ObjectNode target, JsonNode previousSnapshot, String sourcePointer, String targetFieldName) {
@@ -2435,7 +2435,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition effect_bundle의 상태 변경 지시를 Chapter 2 snapshot에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot     값을 갱신할 Chapter 2 snapshot
    * @param effectBundle transition의 effect_bundle JSON
    */
   private void applyEffectBundleToSnapshot(ObjectNode snapshot, JsonNode effectBundle) {
@@ -2484,7 +2484,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.setScanPercent를 snapshot.scanPercent에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot       값을 갱신할 Chapter 2 snapshot
    * @param setScanPercent scanPercent JSON value
    */
   private void applySetScanPercent(ObjectNode snapshot, JsonNode setScanPercent) {
@@ -2501,7 +2501,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot      값을 갱신할 Chapter 2 snapshot
    * @param overlayEffect vfsOverlay effect JSON object
    */
   private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
@@ -2528,7 +2528,7 @@ public class StoryServiceImpl implements StoryService {
    * effect createdNodes를 snapshot.vfsOverlay.createdNodes에 path 기준으로 병합한다.
    *
    * @param targetOverlay snapshot의 vfsOverlay object
-   * @param createdNodes effect_bundle의 createdNodes array
+   * @param createdNodes  effect_bundle의 createdNodes array
    */
   private void mergeCreatedNodes(ObjectNode targetOverlay, JsonNode createdNodes) {
     // createdNodes가 배열이 아니면 병합할 생성 파일이 없다.
@@ -2566,7 +2566,7 @@ public class StoryServiceImpl implements StoryService {
    * effect removedPaths를 snapshot.vfsOverlay.removedPaths에 중복 없이 병합한다.
    *
    * @param targetOverlay snapshot의 vfsOverlay object
-   * @param removedPaths effect_bundle의 removedPaths array
+   * @param removedPaths  effect_bundle의 removedPaths array
    */
   private void mergeRemovedPaths(ObjectNode targetOverlay, JsonNode removedPaths) {
     // removedPaths가 배열이 아니면 병합할 삭제 경로가 없다.
@@ -2635,7 +2635,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * ObjectNode 하위 object field를 보장한다.
    *
-   * @param parent 부모 JSON object
+   * @param parent    부모 JSON object
    * @param fieldName 보장할 object field 이름
    * @return 존재하거나 새로 만든 ObjectNode
    */
@@ -2656,7 +2656,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * ObjectNode 하위 array field를 보장한다.
    *
-   * @param parent 부모 JSON object
+   * @param parent    부모 JSON object
    * @param fieldName 보장할 array field 이름
    * @return 존재하거나 새로 만든 ArrayNode
    */
@@ -2678,7 +2678,7 @@ public class StoryServiceImpl implements StoryService {
    * ArrayNode에서 path field가 일치하는 object를 제거한다.
    *
    * @param array 제거 대상 array
-   * @param path 제거할 path
+   * @param path  제거할 path
    */
   private void removeObjectWithPath(ArrayNode array, String path) {
     // 뒤에서 앞으로 순회해야 remove 시 index가 꼬이지 않는다.
@@ -2738,8 +2738,8 @@ public class StoryServiceImpl implements StoryService {
    * Chapter 2 결정 문서에 맞는 기본 snapshot 필드를 채운다.
    *
    * @param snapshot 값을 채울 빈 snapshot JSON
-   * @param chapter Chapter 2 챕터 엔티티
-   * @param node 현재 스토리 노드 엔티티
+   * @param chapter  Chapter 2 챕터 엔티티
+   * @param node     현재 스토리 노드 엔티티
    */
   private void populateChapter2Snapshot(ObjectNode snapshot, Chapter chapter, StoryNode node) {
     // snapshot 구조 자체의 버전을 저장한다.
@@ -2873,13 +2873,14 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다. DB 전이 검색에 실패한 경우 호출되며, VFS 로직을
+   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다. DB 전이 검색에 실패한
+   * 경우 호출되며, VFS 로직을
    * 통해 결과를 생성합니다.
    *
-   * @param user 요청을 보낸 인증 유저 객체
-   * @param progress 유저의 현재 스토리 진행 상태 기록
+   * @param user        요청을 보낸 인증 유저 객체
+   * @param progress    유저의 현재 스토리 진행 상태 기록
    * @param currentNode 유저가 현재 위치한 스토리 노드
-   * @param request 전이 요청 데이터 (입력된 명령어 포함)
+   * @param request     전이 요청 데이터 (입력된 명령어 포함)
    * @return STAY 타입의 전이 결과 응답 (터미널 출력값 포함) 또는 처리 불가 시 null
    */
   private TransitionResponseDto handleChapter2TerminalFallback(
@@ -2911,8 +2912,7 @@ public class StoryServiceImpl implements StoryService {
 
     // 5. TerminalCommandService를 통해 명령어를 실행하고 결과를 받아옵니다.
     // 스냅샷 내의 terminal 섹션 데이터(현재 CWD 등)를 함께 전달합니다.
-    TerminalResult result =
-        terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
+    TerminalResult result = terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
 
     // 6. 실행 결과를 반영하여 새로운 스냅샷 데이터를 생성합니다.
     ObjectNode updatedSnapshot = (ObjectNode) latestSnapshot.deepCopy();
@@ -2965,7 +2965,8 @@ public class StoryServiceImpl implements StoryService {
         .snapshot(
             objectMapper.convertValue(
                 updatedSnapshot,
-                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                }))
         .build();
   }
 

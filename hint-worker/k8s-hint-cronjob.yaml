@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lucas-hint-worker
+  namespace: lucas-elk
+spec:
+  schedule: "0 10 * * *" # 매일 오전 10시에 실행
+  timeZone: "Asia/Seoul"
+  concurrencyPolicy: Forbid # 중복 실행 방지
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hint-worker
+            image: shyunnnn/find-me-hint:latest
+            imagePullPolicy: Always
+            env:
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: elasticsearch-url
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: datasource-url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: openai-api-key
+            - name: MATTERMOST_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: mattermost-webhook-url
+            - name: GMS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: gms-endpoint
+          restartPolicy: OnFailure
