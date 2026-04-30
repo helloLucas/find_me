@@ -94,6 +94,12 @@ function resolveChapterCode(chapterCode: string) {
   return chapterCode || "week01";
 }
 
+function buildLucasChatScope(chapterCode: string) {
+  const auth = useAuthStore.getState();
+  const actor = auth.isLoggedIn ? auth.nickname || "member" : "guest";
+  return `lucas:${actor}:${chapterCode}`;
+}
+
 function getAuthenticatedPlayerName() {
   const nickname = useAuthStore.getState().nickname;
   if (!nickname || nickname === "ANONYMOUS" || nickname === "UNKNOWN_AGENT") return undefined;
@@ -437,7 +443,7 @@ function getActionSource(meta: Record<string, unknown> | undefined): "terminal" 
 
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
-  
+
   // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
   if (source === "browser") return;
 
@@ -476,10 +482,9 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   currentNode: null,
   isLoading: false,
   error: null,
-
   initializeStory: async (chapterCode) => {
     if (get().isLoading) return;
-    
+
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
     useBrowserContentStore.getState().resetContent();
@@ -534,7 +539,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     if (autoInputValue) {
       const scheduleAutoAction = () => {
         const lucasState = useLucasStore.getState();
-        
+
         // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
         if (lucasState.isDialogueActive) {
           window.setTimeout(scheduleAutoAction, 500);

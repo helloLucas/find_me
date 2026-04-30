@@ -193,17 +193,39 @@
 .hint-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 255, 0.55) rgba(20, 14, 45, 0.85);
+}
+
+.hint-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.hint-messages::-webkit-scrollbar-track {
+  background: rgba(20, 14, 45, 0.85);
+  border-left: 1px solid rgba(84, 58, 183, 0.35);
+}
+
+.hint-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 255, 255, 0.75), rgba(84, 58, 183, 0.75));
+  border: 2px solid rgba(20, 14, 45, 0.85);
+  border-radius: 999px;
+}
+
+.hint-messages::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0, 255, 255, 0.95), rgba(84, 58, 183, 0.95));
 }
 
 .chat-msg {
   display: flex;
   flex-direction: column;
   max-width: 85%;
+  min-width: 0;
 }
 
 .chat-speaker {
@@ -219,7 +241,9 @@
   padding: 10px 14px;
   border-radius: 12px;
   line-height: 1.5;
-  word-break: keep-all;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .chat-msg.player {
@@ -244,6 +268,19 @@
   border: 1px solid rgba(0, 255, 255, 0.4);
   color: #b3ffff;
   border-bottom-left-radius: 2px;
+}
+
+.chat-msg.lucas.pending .chat-text {
+  opacity: 0.82;
+  font-style: italic;
+}
+
+.chat-msg.lucas.pending .chat-text.pending-typing {
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 3ch;
+  text-align: left;
+  letter-spacing: 0.06em;
 }
 
 .hint-input-form {
@@ -292,6 +329,18 @@
   transform: translateY(-1px);
   filter: brightness(1.2);
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.hint-input-form input:disabled,
+.hint-input-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: saturate(0.7);
+}
+
+.hint-input-form button:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Scoped Glitch Effect for Avatar */

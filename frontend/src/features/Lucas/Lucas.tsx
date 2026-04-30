@@ -1,23 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
+import { DESKTOP_LAYER } from '../../shared/config/desktopWindows';
+import { hintApi } from '../../shared/api/hintApi';
 import { useStoryRuntimeStore } from '../story-runtime/storyRuntime.store';
 import { canSubmitStoryAction } from '../story-runtime/storyActionGuards';
-import { DESKTOP_LAYER } from '../../shared/config/desktopWindows';
 import './Lucas.css';
 
+const PENDING_FRAMES = ['.', '..', '...'];
+
 export const Lucas: React.FC = () => {
-    const { 
-    isVisible, 
-    currentScene, 
-    currentMessageIndex, 
-    isDialogueActive, 
+  const {
+    isVisible,
+    currentScene,
+    currentMessageIndex,
+    isDialogueActive,
     nextMessage,
     isHintMode,
     chatHistory,
     addChatMessage,
     toggleHintMode,
-    glitchLevel
+    glitchLevel,
   } = useLucasStore();
 
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
@@ -25,6 +28,9 @@ export const Lucas: React.FC = () => {
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [hintInput, setHintInput] = useState('');
+  const [isHintRequesting, setIsHintRequesting] = useState(false);
+  const [pendingFrame, setPendingFrame] = useState(0);
+  const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isLastMessage = currentScene
@@ -33,69 +39,95 @@ export const Lucas: React.FC = () => {
 
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
 
-  // Typewriter effect logic
   useEffect(() => {
-    if (isDialogueActive && currentMessage) {
-      setDisplayText('');
-      setIsTyping(true);
-      let i = 0;
-      const text = currentMessage.text;
-      const interval = setInterval(() => {
-        setDisplayText(() => text.slice(0, i + 1));
-        i++;
-        if (i >= text.length) {
-          clearInterval(interval);
-          setIsTyping(false);
-        }
-      }, 30);
-      return () => clearInterval(interval);
-    }
-  }, [isDialogueActive, currentMessageIndex, currentMessage]);
+    if (!isDialogueActive || !currentMessage) return;
 
-  // Scroll chat to bottom
+    setDisplayText('');
+    setIsTyping(true);
+
+    let cursor = 0;
+    const text = currentMessage.text;
+    const interval = window.setInterval(() => {
+      setDisplayText(text.slice(0, cursor + 1));
+      cursor += 1;
+      if (cursor >= text.length) {
+        window.clearInterval(interval);
+        setIsTyping(false);
+      }
+    }, 30);
+
+    return () => window.clearInterval(interval);
+  }, [isDialogueActive, currentMessage]);
+
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const container = hintMessagesRef.current;
+    if (!container || !isHintMode) return;
+
+    window.requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    });
+  }, [chatHistory, isHintMode, isHintRequesting]);
+
+  useEffect(() => {
+    if (!isHintRequesting) {
+      setPendingFrame(0);
+      return;
     }
-  }, [chatHistory, isHintMode]);
+    const interval = window.setInterval(() => {
+      setPendingFrame((prev) => (prev + 1) % PENDING_FRAMES.length);
+    }, 330);
+    return () => window.clearInterval(interval);
+  }, [isHintRequesting]);
 
   const handleBubbleClick = () => {
     if (isTyping) {
-      // Speed up or skip typing
-      setDisplayText(currentMessage?.text || '');
+      setDisplayText(currentMessage?.text ?? '');
       setIsTyping(false);
-    } else {
-      nextMessage();
+      return;
+    }
 
-      if (isLastMessage) {
-        const storyRuntime = useStoryRuntimeStore.getState();
-        const node = storyRuntime.currentNode;
-        if (canSubmitStoryAction(node, 'click', 'reopen_network_clue')) {
-          void storyRuntime.submitStoryClick('reopen_network_clue');
-        }
+    nextMessage();
+
+    if (isLastMessage) {
+      const storyRuntime = useStoryRuntimeStore.getState();
+      const node = storyRuntime.currentNode;
+      if (canSubmitStoryAction(node, 'click', 'reopen_network_clue')) {
+        void storyRuntime.submitStoryClick('reopen_network_clue');
       }
     }
   };
 
-  const handleHintSubmit = (e: React.FormEvent) => {
+  const handleHintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hintInput.trim()) return;
+    if (isHintRequesting) return;
 
     const userText = hintInput.trim();
+    if (!userText) return;
+
     addChatMessage('PLAYER', userText);
     setHintInput('');
+    setIsHintRequesting(true);
 
-    // Mock response logic
-    setTimeout(() => {
-      const responses = [
-        "분석 중... 시스템의 관측 기록에 의하면 해당 경로에는 암호화된 파일이 숨겨져 있어.",
-        "기록을 다시 봐. 너만 볼 수 있는 신호가 섞여 있을 거야.",
-        "연결 상태가 불안정해. 하지만 한 가지는 확실해, 관리자 권한이 필요할 거야.",
-        "이미 답은 네 눈앞에 있을지도 몰라. 터미널의 history를 확인해 봐."
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      addChatMessage('LUCAS', randomResponse);
-    }, 1000);
+    try {
+      const result = await hintApi.getLiveHint({ userMessage: userText });
+      const hintText = result.hint?.trim();
+      if (hintText) {
+        addChatMessage('LUCAS', hintText);
+      } else {
+        addChatMessage(
+          'LUCAS',
+          '연결 상태가 좋지 못해서 채팅을 읽지 못했어. 같은 질문을 한 번 더 보내줘.',
+        );
+      }
+    } catch (error) {
+      console.error('[Lucas] hint request failed', error);
+      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 말해줘.');
+    } finally {
+      setIsHintRequesting(false);
+    }
   };
 
   if (!isVisible && !isDialogueActive && !isHintMode) return null;
@@ -105,64 +137,74 @@ export const Lucas: React.FC = () => {
       className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${isHintMode ? 'hint-mode' : ''}`}
       style={{ zIndex: DESKTOP_LAYER.assistant }}
     >
-      {/* Dialogue Bubble */}
       {isDialogueActive && currentMessage && (
         <div className="lucas-bubble-container" onClick={handleBubbleClick}>
           <div className="lucas-speaker-label">{currentMessage.speaker}</div>
           <div className="lucas-bubble">
             <p>{displayText}</p>
-            {!isTyping && isLastMessage && currentNode?.promptType === 'click' && currentNode.promptMeta?.buttons && (
-              <div className="lucas-buttons-container">
-                {currentNode.promptMeta.buttons.map((btn: any) => (
-                  <button
-                    key={btn.value}
-                    className="lucas-action-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void submitStoryClick(btn.value);
-                    }}
-                  >
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {!isTyping && (currentMessage.blocking || (isLastMessage && currentNode?.promptType === 'command')) && !currentNode?.promptMeta?.buttons && (
-              <span className="bubble-arrow">▼</span>
-            )}
+            {!isTyping &&
+              isLastMessage &&
+              currentNode?.promptType === 'click' &&
+              currentNode.promptMeta?.buttons && (
+                <div className="lucas-buttons-container">
+                  {currentNode.promptMeta.buttons.map((btn: any) => (
+                    <button
+                      key={btn.value}
+                      className="lucas-action-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void submitStoryClick(btn.value);
+                      }}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            {!isTyping &&
+              (currentMessage.blocking ||
+                (isLastMessage && currentNode?.promptType === 'command')) &&
+              !currentNode?.promptMeta?.buttons && <span className="bubble-arrow">▼</span>}
           </div>
         </div>
       )}
 
-      {/* Hint Chat UI */}
       {isHintMode && !isDialogueActive && (
         <div className="lucas-hint-ui">
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
-          <div className="hint-messages">
+          <div className="hint-messages" ref={hintMessagesRef}>
             {chatHistory.map((chat) => (
               <div key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
                 <span className="chat-speaker">{chat.speaker}</span>
                 <div className="chat-text">{chat.text}</div>
               </div>
             ))}
+            {isHintRequesting && (
+              <div className="chat-msg lucas pending">
+                <span className="chat-speaker">LUCAS</span>
+                <div className="chat-text pending-typing">{PENDING_FRAMES[pendingFrame]}</div>
+              </div>
+            )}
             <div ref={chatEndRef} />
           </div>
           <form className="hint-input-form" onSubmit={handleHintSubmit}>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={hintInput}
-              onChange={(e) => setHintInput(e.target.value)}
-              placeholder="Query the core..."
+              onChange={(event) => setHintInput(event.target.value)}
+              placeholder={isHintRequesting ? '응답 생성 중...' : '루카스에게 메시지를 보내세요'}
               autoFocus
+              disabled={isHintRequesting}
             />
-            <button type="submit">QUERY</button>
+            <button type="submit" disabled={isHintRequesting || !hintInput.trim()}>
+              {isHintRequesting ? 'WAIT' : 'SEND'}
+            </button>
           </form>
         </div>
       )}
 
-      {/* Lucas Character Avatar */}
-      <div 
-        className="lucas-avatar-container" 
+      <div
+        className="lucas-avatar-container"
         onClick={() => {
           if (!isDialogueActive) {
             toggleHintMode(!isHintMode);
@@ -170,12 +212,7 @@ export const Lucas: React.FC = () => {
         }}
         style={{ cursor: isDialogueActive ? 'default' : 'pointer' }}
       >
-        <img 
-          src="/lucas.svg" 
-          alt="Lucas" 
-          className="lucas-avatar"
-        />
-        {/* Scoped Glitch Effect */}
+        <img src="/lucas.svg" alt="Lucas" className="lucas-avatar" />
         {glitchLevel > 0 && (
           <div className={`glitch-avatar-layer intensity-${Math.min(10, Math.max(0, glitchLevel))}`}>
             <img src="/lucas.svg" alt="" className="glitch-copy" />
