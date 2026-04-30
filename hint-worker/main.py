@@ -131,7 +131,7 @@ def get_bottleneck_data(chapter_id=None):
     # 챕터 필터 설정
     must_conditions = [{"range": {"@timestamp": {"gte": "now-7d", "lte": "now"}}}]
     if chapter_id:
-        must_conditions.append({"term": {"chapter_id.keyword": chapter_id}})
+        must_conditions.append({"term": {"chapter_id": chapter_id}})
     
     query = {
         "size": 0,
@@ -139,27 +139,27 @@ def get_bottleneck_data(chapter_id=None):
             "bool": {
                 "must": must_conditions,
                 "must_not": [
-                    {"term": {"from_node_id.keyword": "null"}},
-                    {"term": {"from_node_id.keyword": ""}}
+                    {"term": {"from_node_id": "null"}},
+                    {"term": {"from_node_id": ""}}
                 ]
             }
         },
         "aggs": {
             "nodes": {
                 "terms": {
-                    "field": "from_node_id.keyword",
+                    "field": "from_node_id",
                     "size": 20 # 더 넓은 범위를 분석
                 },
                 "aggs": {
-                    "total_users": { "cardinality": { "field": "session_id.keyword" } },
+                    "total_users": { "cardinality": { "field": "session_id" } },
                     "fail_logs": { 
                         "filter": { 
-                            "terms": { "result.keyword": ["FAIL", "ERROR"] } # 실패와 오류를 모두 병목으로 판단
+                            "terms": { "result": ["FAIL", "ERROR"] } # 실패와 오류를 모두 병목으로 판단
                         } 
                     },
                     "success_users": {
-                        "filter": { "term": { "result.keyword": "SUCCESS" } },
-                        "aggs": { "unique_success": { "cardinality": { "field": "session_id.keyword" } } }
+                        "filter": { "term": { "result": "SUCCESS" } },
+                        "aggs": { "unique_success": { "cardinality": { "field": "session_id" } } }
                     },
                     "avg_fails_per_user": {
                         "bucket_script": {
