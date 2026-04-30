@@ -244,7 +244,15 @@ function applyStoryNodeOutputBundle(
   }
 
   if (node.code.startsWith("CH2_") || node.isTerminal) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", "terminal");
+    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
+  }
+
+  if (node.code === "CH2_RECOVERED_DOCUMENT") {
+    useWindowStore.getState().openWindow(
+      "document_viewer",
+      "FRAGMENT_RECOVERED_082.PDF",
+      documentId
+    );
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {
@@ -546,7 +554,6 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     if (autoInputValue) {
       const scheduleAutoAction = () => {
         const lucasState = useLucasStore.getState();
-
         // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
         if (lucasState.isDialogueActive) {
           window.setTimeout(scheduleAutoAction, 500);

@@ -43,6 +43,10 @@ export const Lucas: React.FC = () => {
     ? currentMessageIndex >= currentScene.messages.length - 1
     : false;
 
+  const isLastMessage = currentScene
+    ? currentMessageIndex >= currentScene.messages.length - 1
+    : false;
+
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
 
   const persistHintScrollTop = () => {
