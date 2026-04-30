@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useBrowserContentStore } from "../../../app/store/browserContentStore";
+import { useToastStore } from "../../../app/store/toastStore";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
 import {
   canSubmitStoryAction,
@@ -59,7 +60,8 @@ export const NetworkDevTools: React.FC = () => {
     submitStoryInspect,
     submitStoryCommand,
   } = useStoryRuntimeStore();
-  const persistedContent = useBrowserContentStore((state) => state.content);
+  const showToast = useToastStore((state) => state.showToast);
+  const { content: persistedContent, isChapter2Mode, lastCopiedCommand } = useBrowserContentStore();
 
   const [activeTab, setActiveTab] = useState<DevToolsTab>("elements");
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
@@ -95,11 +97,21 @@ export const NetworkDevTools: React.FC = () => {
   const responseBody = rawResponseBody;
 
   const logs = useMemo(() => {
-    const requests = recordArray(content.networkRequests).map(normalizeNetworkLog);
+    let requests = recordArray(content.networkRequests).map(normalizeNetworkLog);
+    
+    // 챕터 2일 경우 모든 로그의 상태를 200으로 강제
+    if (isChapter2Mode) {
+      requests = (requests.length > 0 ? requests : FALLBACK_LOGS).map(log => ({
+        ...log,
+        status: 200
+      }));
+      return requests;
+    }
+
     if (requests.length > 0) return requests;
     if (Object.keys(headers).length > 0 || responseBody) return [CORE_ANCHOR_LOG];
     return FALLBACK_LOGS;
-  }, [content.networkRequests, headers, responseBody]);
+  }, [content.networkRequests, isChapter2Mode, headers, responseBody]);
 
   const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
   const consoleLogs = Array.isArray(content.consoleLogs) ? content.consoleLogs.map(String) : [];
@@ -232,7 +244,23 @@ export const NetworkDevTools: React.FC = () => {
 
     let node = useStoryRuntimeStore.getState().currentNode;
 
-    if (command === "connect_core()" && node?.code === "CH1_PACKET_MESSAGE") {
+    // 터미널용 명령어가 브라우저 콘솔에서 실행되어 스토리가 진행되는 것을 방지
+    const terminalCommands = ["ls", "cd", "tar", "nc", "cat", "pwd", "rm", "cp", "mv", "ssh", "mkdir"];
+    const firstWord = command.split(" ")[0].toLowerCase();
+    if (terminalCommands.includes(firstWord)) {
+      appendConsoleEntry("error", `Uncaught ReferenceError: ${firstWord} is not defined`);
+      return;
+    }
+
+    // 챕터 2에서 connect_core() 시도 시 현재 연결 상태 안내 (이스터 에그/연속성)
+    const normalizedCommand = command.replace(/;$/, "").trim();
+    if (isChapter2Mode && (normalizedCommand === "connect_core()" || normalizedCommand === "connect_core")) {
+       appendConsoleEntry("success", "Core connection already established.");
+       return;
+    }
+
+    // 챕터 1 전용 커맨드 예외 처리
+    if (command === "connect_core()" && !isChapter2Mode && node?.code === "CH1_PACKET_MESSAGE") {
       if (canSubmitStoryAction(node, "click", "go_to_console")) {
         await submitStoryClick("go_to_console");
         node = useStoryRuntimeStore.getState().currentNode;
@@ -240,12 +268,30 @@ export const NetworkDevTools: React.FC = () => {
     }
 
     if (canSubmitStoryAction(node, "command", command)) {
-      await submitStoryCommand(command);
-      appendConsoleEntry("success", "Command executed.");
+      await submitStoryCommand(command, { source: "browser" });
+      
+      // 챕터 2에서는 "Command executed." 메시지 출력 방지 (시스템 메시지 성격 배제)
+      if (!isChapter2Mode) {
+        appendConsoleEntry("success", "Command executed.");
+      }
       return;
     }
 
+
     appendConsoleEntry("error", `Uncaught ReferenceError: ${command} is not defined`);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // 챕터 2 모드에서만 붙여넣기 제한 적용
+    if (!isChapter2Mode) return;
+
+    const pastedText = e.clipboardData.getData("text");
+
+    // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
+    if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
+      e.preventDefault();
+      showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
+    }
   };
 
   return (
@@ -303,6 +349,7 @@ export const NetworkDevTools: React.FC = () => {
               value={consoleInput}
               onChange={(e) => setConsoleInput(e.target.value)}
               onKeyDown={handleConsoleSubmit}
+              onPaste={handlePaste}
               autoFocus
               spellCheck={false}
             />

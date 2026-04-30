@@ -38,12 +38,14 @@ type SetCurrentNodeOptions = {
   transitionSound?: string;
   sourceActionType?: TransitionRequest["actionType"];
   terminalLinesOverride?: string[];
+  source?: "terminal" | "browser";
 };
 
 type ApplyStoryNodeOutputOptions = {
   transitionSound?: string;
   sourceActionType?: TransitionRequest["actionType"];
   terminalLinesOverride?: string[];
+  source?: "terminal" | "browser"; // 명령어가 어디서 시작되었는지 구분
 };
 
 type TerminalPromptContext = {
@@ -287,6 +289,11 @@ function applyStoryNodeOutputBundle(
     clientStore.setTerminalContext("guest", "lucas-server", "~");
   }
 
+  // 브라우저에서 실행된 액션이라면 터미널 출력을 건너뜀
+  if (options.source === "browser") {
+    return;
+  }
+
   if (terminalLines.length > 0) {
     const existingSystemLines = new Set(
       clientStore.terminalOutput
@@ -415,8 +422,11 @@ function toTerminalDisplayPath(cwd: string | undefined) {
   return cwd;
 }
 
-function applyTerminalResult(terminalResult: TerminalResult | undefined) {
+function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
+  
+  // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
+  if (source === "browser") return;
 
   const clientStore = useClientStore.getState();
   const promptContext =
@@ -493,6 +503,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         transitionSound: options?.transitionSound,
         sourceActionType: options?.sourceActionType,
         terminalLinesOverride: options?.terminalLinesOverride,
+        source: options?.source ?? (options?.sourceActionType === "command" ? "terminal" : undefined),
       }
     );
     if (applyError) {
@@ -528,7 +539,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
 
       if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult);
+        applyTerminalResult(response.terminalResult, meta?.source as any);
         set({ currentNode, error: null });
         return;
       }
@@ -554,6 +565,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
             transitionSound: transitionPlaySound,
             sourceActionType: actionType,
             terminalLinesOverride,
+            source: meta?.source as any, // meta에서 source 정보를 가져옴
           }
         );
         if (
@@ -617,6 +629,9 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         get().setCurrentNode(normalizedNextNode, {
           transitionSound: transitionPlaySound,
           sourceActionType: actionType,
+          // 성공적인 노드 전이는 게임의 전역 상태 변경을 의미하므로,
+          // 어디서 명령어가 시작되었든 간에 해당 노드의 터미널 출력물을 정상적으로 표시해야 함.
+          // 따라서 source 속성을 명시적으로 브라우저로 넘기지 않음 (기본값 활용).
         });
       }
     } catch (error) {
