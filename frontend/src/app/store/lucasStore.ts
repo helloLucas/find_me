@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 export interface LucasMessage {
   speaker: string;
@@ -35,6 +34,8 @@ interface LucasState {
   glitchLevel: number;
   isHintMode: boolean;
   chatHistory: ChatMessage[];
+  chatScopeKey: string;
+  chatHistoryByScope: Record<string, ChatMessage[]>;
 
   // Actions
   startScene: (scene: LucasScene) => void;
@@ -44,13 +45,13 @@ interface LucasState {
   toggleHintMode: (active: boolean) => void;
   addChatMessage: (speaker: 'LUCAS' | 'PLAYER', text: string) => void;
   clearChatHistory: () => void;
+  setChatScope: (scopeKey: string, reset?: boolean) => void;
   resetLucas: () => void;
 }
 
 const CHAT_HISTORY_MAX = 120;
 
 export const useLucasStore = create<LucasState>()(
-  persist(
     (set, get) => ({
   isVisible: false,
   currentScene: null,
@@ -59,6 +60,8 @@ export const useLucasStore = create<LucasState>()(
   glitchLevel: 0,
   isHintMode: false,
   chatHistory: [],
+  chatScopeKey: 'global',
+  chatHistoryByScope: {},
 
   startScene: (scene) => set((state) => {
     // 씬이 시작되면, 현재 씬의 첫 번째 메시지를 기록에 추가합니다
@@ -74,13 +77,19 @@ export const useLucasStore = create<LucasState>()(
       });
     }
 
+    const scopedHistory = newChatHistory.slice(-CHAT_HISTORY_MAX);
+
     return {
       currentScene: scene,
       currentMessageIndex: 0,
       isDialogueActive: true,
       isVisible: true,
       glitchLevel: scene.glitchLevel ?? 0,
-      chatHistory: newChatHistory,
+      chatHistory: scopedHistory,
+      chatHistoryByScope: {
+        ...state.chatHistoryByScope,
+        [state.chatScopeKey]: scopedHistory,
+      },
     };
   }),
 
@@ -100,7 +109,19 @@ export const useLucasStore = create<LucasState>()(
             text: nextMsg.text,
             timestamp: Date.now()
           }
-        ]
+        ].slice(-CHAT_HISTORY_MAX),
+        chatHistoryByScope: {
+          ...state.chatHistoryByScope,
+          [state.chatScopeKey]: [
+            ...state.chatHistory,
+            {
+              id: Date.now().toString() + '-' + nextIndex,
+              speaker: nextMsg.speaker as 'LUCAS' | 'PLAYER',
+              text: nextMsg.text,
+              timestamp: Date.now(),
+            },
+          ].slice(-CHAT_HISTORY_MAX),
+        },
       };
     } else {
       // Scene finished - RESET GLITCH
@@ -129,10 +150,37 @@ export const useLucasStore = create<LucasState>()(
     chatHistory: [
       ...state.chatHistory,
       { id: Date.now().toString(), speaker, text, timestamp: Date.now() },
-    ].slice(-CHAT_HISTORY_MAX)
+    ].slice(-CHAT_HISTORY_MAX),
+    chatHistoryByScope: {
+      ...state.chatHistoryByScope,
+      [state.chatScopeKey]: [
+        ...state.chatHistory,
+        { id: Date.now().toString(), speaker, text, timestamp: Date.now() },
+      ].slice(-CHAT_HISTORY_MAX),
+    },
   })),
 
-  clearChatHistory: () => set({ chatHistory: [] }),
+  clearChatHistory: () => set((state) => ({
+    chatHistory: [],
+    chatHistoryByScope: {
+      ...state.chatHistoryByScope,
+      [state.chatScopeKey]: [],
+    },
+  })),
+
+  setChatScope: (scopeKey, reset = false) =>
+    set((state) => {
+      const nextScope = scopeKey?.trim() || 'global';
+      const scopeHistory = reset ? [] : (state.chatHistoryByScope[nextScope] ?? []);
+      return {
+        chatScopeKey: nextScope,
+        chatHistory: scopeHistory,
+        chatHistoryByScope: {
+          ...state.chatHistoryByScope,
+          [nextScope]: scopeHistory,
+        },
+      };
+    }),
 
   resetLucas: () => set({
     isVisible: false,
@@ -143,11 +191,5 @@ export const useLucasStore = create<LucasState>()(
     isHintMode: false,
     chatHistory: get().chatHistory,
   }),
-    }),
-    {
-      name: 'lucas-chat-history-v1',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ chatHistory: state.chatHistory }),
-    }
-  )
+    })
 );

@@ -94,6 +94,12 @@ function resolveChapterCode(chapterCode: string) {
   return chapterCode || "week01";
 }
 
+function buildLucasChatScope(chapterCode: string) {
+  const auth = useAuthStore.getState();
+  const actor = auth.isLoggedIn ? auth.nickname || "member" : "guest";
+  return `lucas:${actor}:${chapterCode}`;
+}
+
 function getAuthenticatedPlayerName() {
   const nickname = useAuthStore.getState().nickname;
   if (!nickname || nickname === "ANONYMOUS" || nickname === "UNKNOWN_AGENT") return undefined;
@@ -481,6 +487,8 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     if (get().isLoading) return;
     set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
+    const resolvedChapterCode = resolveChapterCode(chapterCode);
+    useLucasStore.getState().setChatScope(buildLucasChatScope(resolvedChapterCode), true);
 
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     useBrowserContentStore.getState().resetContent();
@@ -493,7 +501,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
     try {
       const node = normalizeStoryNodeResponse(
-        await storyApi.startStory(resolveChapterCode(chapterCode))
+        await storyApi.startStory(resolvedChapterCode)
       );
       get().setCurrentNode(node);
     } catch (startError) {

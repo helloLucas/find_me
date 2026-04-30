@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         default="api.openai.com/v1/chat/completions", alias="GMS_OPENAI_CHAT_PATH"
     )
     gms_timeout_seconds: float = Field(default=30.0, alias="GMS_TIMEOUT_SECONDS")
-    gms_max_output_tokens: int = Field(default=1536, alias="GMS_MAX_OUTPUT_TOKENS")
+    gms_max_output_tokens: int = Field(default=2048, alias="GMS_MAX_OUTPUT_TOKENS")
     gms_router_max_output_tokens: int = Field(default=384, alias="GMS_ROUTER_MAX_OUTPUT_TOKENS")
     gms_temperature: float = Field(default=0.2, alias="GMS_TEMPERATURE")
     gms_embedding_model: str = Field(default="gemini-embedding-001", alias="GMS_EMBEDDING_MODEL")
