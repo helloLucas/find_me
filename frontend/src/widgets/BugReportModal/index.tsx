@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import imageCompression from "browser-image-compression";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
 import { bugReportApi } from "../../shared/api/bugReportApi";
 import { useAuthStore } from "../../app/store/authStore";
@@ -16,6 +17,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -30,21 +32,52 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processFiles = async (newFiles: File[]) => {
+    setIsCompressing(true);
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      const processedFiles = await Promise.all(
+        newFiles.map(async (file) => {
+          if (file.type.startsWith("image/")) {
+            try {
+              const compressedFile = await imageCompression(file, options);
+              // 압축 과정에서 유실될 수 있는 원본 파일명을 유지
+              return new File([compressedFile], file.name, { type: file.type });
+            } catch (err) {
+              console.error("Compression error for file:", file.name, err);
+              return file;
+            }
+          }
+          return file;
+        })
+      );
+      return processedFiles;
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
+      const selectedFiles = Array.from(e.target.files);
+      const processedFiles = await processFiles(selectedFiles);
+      
       const currentTotalSize = files.reduce((acc, f) => acc + f.size, 0);
-      const newTotalSize = newFiles.reduce((acc, f) => acc + f.size, 0);
+      const newTotalSize = processedFiles.reduce((acc, f) => acc + f.size, 0);
       
       if (currentTotalSize + newTotalSize > MAX_FILE_SIZE) {
         setError("Total file size cannot exceed 10MB.");
-        // clear input
         e.target.value = '';
         return;
       }
       
       setError(null);
-      setFiles((prev) => [...prev, ...newFiles]);
+      setFiles((prev) => [...prev, ...processedFiles]);
     }
   };
 
@@ -58,13 +91,15 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      const processedFiles = await processFiles(droppedFiles);
+      
       const currentTotalSize = files.reduce((acc, f) => acc + f.size, 0);
-      const newTotalSize = newFiles.reduce((acc, f) => acc + f.size, 0);
+      const newTotalSize = processedFiles.reduce((acc, f) => acc + f.size, 0);
       
       if (currentTotalSize + newTotalSize > MAX_FILE_SIZE) {
         setError("Total file size cannot exceed 10MB.");
@@ -72,7 +107,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       }
       
       setError(null);
-      setFiles((prev) => [...prev, ...newFiles]);
+      setFiles((prev) => [...prev, ...processedFiles]);
     }
   };
 
@@ -142,7 +177,23 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       defaultSize={{ w: 500, h: 650 }}
       minSize={{ w: 400, h: 500 }}
     >
-      <div className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-mono overflow-y-auto terminal-scrollbar">
+      <div className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-mono overflow-y-auto terminal-scrollbar relative">
+        {/* Compression Overlay */}
+        {isCompressing && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] border border-[#00D4FF]/30">
+            <div className="absolute inset-0 crt-overlay opacity-30 pointer-events-none" />
+            <div className="relative flex flex-col items-center">
+              <div className="w-16 h-16 border-4 border-t-[#00D4FF] border-r-transparent border-b-[#00D4FF] border-l-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,212,255,0.5)]" />
+              <div className="text-[#00D4FF] font-bold text-xl tracking-[0.2em] animate-pulse drop-shadow-[0_0_8px_rgba(0,212,255,0.8)]">
+                OPTIMIZING...
+              </div>
+              <p className="text-[#0099CC] text-[10px] mt-2 uppercase tracking-widest">
+                Compressing high-res visual data
+              </p>
+            </div>
+          </div>
+        )}
+
         {success ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center animate-pulse drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">
@@ -196,10 +247,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                   multiple
                   onChange={handleFileChange}
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isCompressing}
                 />
                 <span className="font-bold uppercase text-sm transition-colors text-center pointer-events-none drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]" style={{ color: isDragging ? '#ffffff' : '#00D4FF' }}>
-                  {isDragging ? "DROP FILES HERE" : "CLICK TO CHOOSE OR DRAG & DROP"}
+                  {isCompressing ? "COMPRESSING IMAGES..." : isDragging ? "DROP FILES HERE" : "CLICK TO CHOOSE OR DRAG & DROP"}
                 </span>
                 <span className="text-xs text-[#0099CC] pointer-events-none">
                   (Max 10MB Total)
@@ -215,7 +266,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                         type="button" 
                         onClick={() => removeFile(i)}
                         className="text-red-500 hover:text-red-400 hover:bg-red-900/20 font-bold px-2 py-1 ml-2 transition-colors"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isCompressing}
                       >
                         X
                       </button>
@@ -239,9 +290,9 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
               <button
                 type="submit"
                 className="px-4 py-2 bg-[#00D4FF] border border-[#00D4FF] text-black hover:bg-[#0099CC] hover:shadow-[0_0_15px_rgba(0,212,255,0.8)] transition-all uppercase text-sm font-bold shadow-[0_0_8px_rgba(0,212,255,0.6)]"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isCompressing}
               >
-                {isSubmitting ? "TRANSMITTING..." : "TRANSMIT"}
+                {isSubmitting ? "TRANSMITTING..." : isCompressing ? "OPTIMIZING..." : "TRANSMIT"}
               </button>
             </div>
           </form>
