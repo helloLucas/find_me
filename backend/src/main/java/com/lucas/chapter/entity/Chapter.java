@@ -29,14 +29,18 @@ public class Chapter {
   @Column(name = "sort_order", nullable = false)
   private Integer sortOrder;
 
+  @Column(name = "is_published", nullable = false)
+  private Boolean isPublished;
+
   @CreatedDate
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
   @Builder
-  public Chapter(String code, String title, Integer sortOrder) {
+  public Chapter(String code, String title, Integer sortOrder, Boolean isPublished) {
     this.code = code;
     this.title = title;
     this.sortOrder = sortOrder;
+    this.isPublished = isPublished != null ? isPublished : true;
   }
 }
