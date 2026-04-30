@@ -1,3 +1,6 @@
+-- lucas_knowledge 에 있는 모든 데이터 지우고 새롭게 생성
+-- (기존에 들어가있던 노드에 변화가 생겼을 시)
+
 BEGIN;
 
 DELETE FROM lucas_knowledge
