@@ -25,4 +25,11 @@ export const storyApi = {
     );
     return response.data.data;
   },
+
+  getRecentCommands: async (): Promise<string[]> => {
+    const response = await axiosInstance.get<BaseResponse<string[]>>(
+      "/api/v1/story/recent-commands"
+    );
+    return response.data.data;
+  },
 };

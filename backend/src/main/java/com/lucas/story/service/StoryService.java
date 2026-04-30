@@ -29,4 +29,12 @@ public interface StoryService {
    * @return 전이된 이후의 새로운 노드 정보
    */
   TransitionResponseDto processTransition(Long userId, TransitionRequestDto request);
+
+  /**
+   * 사용자의 최근 터미널 명령어 입력 기록을 조회합니다.
+   *
+   * @param userId 사용자 식별자
+   * @return 최근 명령어 문자열 리스트
+   */
+  java.util.List<String> getRecentCommands(Long userId);
 }

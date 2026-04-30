@@ -80,4 +80,16 @@ public class StoryController {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("상태 전이 성공", response));
   }
+
+  /**
+   * 사용자의 최근 터미널 명령어 입력 기록을 조회합니다.
+   *
+   * @return 최근 명령어 문자열 리스트
+   */
+  @GetMapping("/recent-commands")
+  public ResponseEntity<BaseResponse<java.util.List<String>>> getRecentCommands(
+      @AuthenticationPrincipal CustomUserPrincipal principal) {
+    java.util.List<String> recentCommands = storyService.getRecentCommands(principal.getUserId());
+    return ResponseEntity.ok(BaseResponse.success("최근 명령어 조회 성공", recentCommands));
+  }
 }

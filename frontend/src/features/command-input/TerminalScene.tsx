@@ -6,6 +6,7 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
+import { storyApi } from "../../shared/api/storyApi";
 import {
   DESKTOP_TASKBAR_HEIGHT,
   type DesktopWindowId,
@@ -65,6 +66,19 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const showToast = useToastStore((state) => state.showToast);
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  useEffect(() => {
+    storyApi.getRecentCommands()
+      .then((commands) => {
+        setCommandHistory([...commands].reverse());
+        setHistoryIndex(-1);
+      })
+      .catch((e) => {
+        console.error("Failed to load command history", e);
+      });
+  }, []);
 
   const promptString = `${terminalUser}@${terminalHost}:${terminalPath}$`;
   const lastTerminalOutput = terminalOutput[terminalOutput.length - 1];
@@ -94,6 +108,11 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     if (!inputValue.trim() || isProcessing) return;
 
     const rawCommand = inputValue.trim();
+
+    // 명령어 히스토리에 추가 및 인덱스 초기화
+    setCommandHistory((prev) => [...prev, rawCommand]);
+    setHistoryIndex(-1);
+
     let activeNode = useStoryRuntimeStore.getState().currentNode ?? currentNode;
 
     if (canSubmitStoryAction(activeNode, "click", "open_terminal")) {
@@ -147,6 +166,32 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     } finally {
       setIsProcessing(false);
       setTimeout(() => inputRef.current?.focus(), 10);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (commandHistory.length === 0) return;
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHistoryIndex((prevIndex) => {
+        const nextIndex = prevIndex === -1 ? commandHistory.length - 1 : Math.max(0, prevIndex - 1);
+        setInputValue(commandHistory[nextIndex]);
+        return nextIndex;
+      });
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHistoryIndex((prevIndex) => {
+        if (prevIndex === -1) return -1;
+        const nextIndex = prevIndex + 1;
+        if (nextIndex >= commandHistory.length) {
+          setInputValue("");
+          return -1;
+        } else {
+          setInputValue(commandHistory[nextIndex]);
+          return nextIndex;
+        }
+      });
     }
   };
 
@@ -230,6 +275,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                       spellCheck="false"
                       style={{ textShadow: "none" }}
                       onPaste={handlePaste}
+                      onKeyDown={handleKeyDown}
                     />
                   </form>
                 </div>
@@ -281,6 +327,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                 spellCheck="false"
                 style={{ textShadow: "none" }}
                 onPaste={handlePaste}
+                onKeyDown={handleKeyDown}
               />
             </form>
           </div>
