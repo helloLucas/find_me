@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useClientStore } from "../../app/store/clientStore";
 import { useToastStore } from "../../app/store/toastStore";
 import { useWindowStore } from "../../app/store/windowStore";
+import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
@@ -156,6 +157,17 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
   };
 
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const pastedText = event.clipboardData.getData("text");
+    const lastCopiedCommand = useBrowserContentStore.getState().lastCopiedCommand;
+
+    // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
+    if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
+      event.preventDefault();
+      showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
+    }
+  };
+
   if (!windowState) return null;
 
   const availableHeight = Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT);
@@ -220,6 +232,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                       autoComplete="off"
                       spellCheck="false"
                       style={{ textShadow: "none" }}
+                      onPaste={handlePaste}
                     />
                   </form>
                 </div>
@@ -270,6 +283,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                 autoComplete="off"
                 spellCheck="false"
                 style={{ textShadow: "none" }}
+                onPaste={handlePaste}
               />
             </form>
           </div>
