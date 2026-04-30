@@ -132,7 +132,7 @@ const OAuthCallbackPage = () => {
     }, [searchParams, navigate, mutate]);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0c08] text-[#a3e635] font-pixel p-4">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0c08] text-[#a3e635] font-auth-flow p-4">
             <div className="relative">
                 {/* 메인 로딩 텍스트 */}
                 <div className="text-2xl md:text-3xl mb-12 animate-pulse tracking-[0.2em] text-center leading-relaxed">

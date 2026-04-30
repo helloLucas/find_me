@@ -385,7 +385,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col w-full h-full bg-[#0a0514] font-pixel outline-none"
+      className="flex flex-col w-full h-full bg-[#0a0514] font-browser-chrome outline-none"
       tabIndex={-1}
       onContextMenu={handleContextMenu}
       onClick={() => focusWindow(windowId)}

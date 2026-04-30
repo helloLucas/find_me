@@ -183,7 +183,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         onMouseDown={handleHeaderMouseDown}
         onDoubleClick={allowMaximize ? onToggleMaximize : undefined}
       >
-        <div className="flex items-center space-x-2 px-2 text-green-500 font-mono text-sm tracking-wide font-bold">
+        <div className="flex items-center space-x-2 px-2 text-green-500 font-terminal text-sm tracking-wide font-bold">
           <div className="w-3 h-3 bg-green-500 rounded-sm opacity-80" />
           <span>{title}</span>
         </div>

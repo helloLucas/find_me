@@ -186,7 +186,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       defaultPosition={{ x: window.innerWidth / 2 - 350, y: availableHeight / 2 - 225 }}
     >
       <div
-        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-mono text-sm terminal-scrollbar"
+        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-sm terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
           if (window.getSelection()?.toString() === "") {

@@ -42,7 +42,7 @@ export const MessengerNotificationCard: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-pixel"
+      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-messenger"
       style={{ zIndex: DESKTOP_LAYER.notification }}
       onClick={handleOpenNotification}
     >

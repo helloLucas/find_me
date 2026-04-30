@@ -64,7 +64,7 @@
 .lucas-speaker-label {
   background: linear-gradient(90deg, #543ab7, #3a2b7a);
   color: #0ff;
-  font-family: 'Pixel', 'Courier New', Courier, monospace;
+  font-family: var(--lucas-font-assistant);
   font-size: 11px;
   padding: 4px 12px;
   width: fit-content;
@@ -82,7 +82,7 @@
   border: 1px solid rgba(84, 58, 183, 0.6);
   padding: 16px;
   border-radius: 0 12px 12px 12px;
-  font-family: 'Pixel', 'Courier New', Courier, monospace;
+  font-family: var(--lucas-font-assistant);
   box-shadow: 
     0 10px 25px rgba(0, 0, 0, 0.6),
     inset 0 0 15px rgba(84, 58, 183, 0.2);
@@ -115,7 +115,7 @@
   bottom: 8px;
   right: 12px;
   color: #0ff;
-  font-family: 'Pixel', 'Courier New', Courier, monospace;
+  font-family: var(--lucas-font-assistant);
   font-size: 10px;
   animation: blink 1s infinite;
 }
@@ -131,7 +131,7 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 24px;
-  font-family: 'Pixel', 'Courier New', Courier, monospace;
+  font-family: var(--lucas-font-assistant);
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.9),
     0 0 20px rgba(84, 58, 183, 0.3);

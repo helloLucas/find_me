@@ -110,12 +110,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   return (
     <div
       ref={scrollContainerRef}
-      className="w-full h-full p-4 overflow-y-auto bg-[#0a0514] font-pixel selection:bg-[#a48cff] selection:text-[#0a0514]"
+      className="w-full h-full p-4 overflow-y-auto bg-[#0a0514] font-browser-article selection:bg-[#a48cff] selection:text-[#0a0514]"
       onScroll={handleScroll}
     >
       <div className="max-w-[680px] border-2 border-[#543ab7] p-6 rounded-sm bg-[#110a26] shadow-[inset_0_0_20px_rgba(84,58,183,0.3)]">
         <h1
-          className="text-4xl text-[#c7b3ff] drop-shadow-[0_0_8px_#c7b3ff] mb-4 border-b-2 border-[#543ab7] pb-2 font-serif font-bold tracking-wide"
+          className="text-4xl text-[#c7b3ff] drop-shadow-[0_0_8px_#c7b3ff] mb-4 border-b-2 border-[#543ab7] pb-2 font-news-title font-bold tracking-wide"
           style={{ textShadow: "0 0 10px #c7b3ff, 0 0 20px #8b5cf6" }}
         >
           Void City News

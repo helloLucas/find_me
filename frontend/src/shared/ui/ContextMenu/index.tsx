@@ -49,7 +49,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   return createPortal(
     <div 
       ref={menuRef}
-      className="fixed z-[9999] bg-[#1a1130] border-2 border-[#a48cff] min-w-[150px] shadow-[4px_4px_0_rgba(0,0,0,0.5)] pixel-font"
+      className="fixed z-[9999] bg-[#1a1130] border-2 border-[#a48cff] min-w-[150px] shadow-[4px_4px_0_rgba(0,0,0,0.5)] font-desktop-ui"
       style={{ top: y, left: x }}
     >
       <div className="flex flex-col py-1">

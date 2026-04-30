@@ -28,12 +28,12 @@ export const GlobalModal = () => {
                 <div className="absolute inset-0 border border-white/10 bg-white/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.5)] -z-10 rounded-sm" />
 
                 <div className="flex flex-col gap-6 w-full text-center">
-                    <div className="flex items-center justify-between opacity-20 text-[8px] font-pixel text-white tracking-[0.3em] mb-2 px-1">
+                    <div className="flex items-center justify-between opacity-20 text-[8px] font-system-overlay text-white tracking-[0.3em] mb-2 px-1">
                         <span>SYSTEM_PROMPT</span>
                         <span>{title}</span>
                     </div>
 
-                    <p className="font-pixel text-sm md:text-base text-white/90 leading-relaxed tracking-tight break-keep whitespace-pre-wrap">
+                    <p className="font-system-overlay text-sm md:text-base text-white/90 leading-relaxed tracking-tight break-keep whitespace-pre-wrap">
                         {message}
                     </p>
                 </div>
@@ -47,7 +47,7 @@ export const GlobalModal = () => {
                         >
                             <div className="absolute inset-0 border border-white/20 group-hover/btn:border-white/40 rounded-md" />
                              <div className="absolute inset-[6px] border border-white/10 group-hover/btn:border-white/30 bg-white/[0.01] flex items-center justify-center rounded-sm">
-                                <span className="font-pixel text-[10px] text-white/40 group-hover/btn:text-white/70">취소</span>
+                                <span className="font-system-overlay text-[10px] text-white/40 group-hover/btn:text-white/70">취소</span>
                             </div>
                             {/* Depth lines */}
                             <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-white/10 origin-top-left rotate-45" />
@@ -64,7 +64,7 @@ export const GlobalModal = () => {
                     >
                         <div className="absolute inset-0 border border-white/30 group-hover/btn:border-white/60 group-hover/btn:shadow-[0_0_15px_rgba(255,255,255,0.2)] rounded-md" />
                          <div className="absolute inset-[6px] border border-white/20 group-hover/btn:border-white/50 bg-white/[0.03] flex items-center justify-center rounded-sm">
-                            <span className="font-pixel text-[10px] text-white/80 group-hover/btn:text-white">확인</span>
+                            <span className="font-system-overlay text-[10px] text-white/80 group-hover/btn:text-white">확인</span>
                         </div>
                         {/* Depth lines */}
                         <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-white/20 origin-top-left rotate-45" />
