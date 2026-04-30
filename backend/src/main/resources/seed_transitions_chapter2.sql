@@ -63,6 +63,379 @@ SELECT
     from_node.id,
     to_node.id,
     'command',
+    'clean_trace_history_first',
+    'server_rule',
+    $json${
+  "rule": "CHAINED_COMMAND",
+  "operator": "&&",
+  "commands": [
+    {
+      "command": "history",
+      "args": [
+        "-c"
+      ]
+    },
+    {
+      "command": "rm",
+      "resolvedPath": "/home/guest/decoy.tar"
+    }
+  ],
+  "requiredFlags": [
+    "decoy_sent"
+  ],
+  "requiredCreatedFiles": [
+    "/home/guest/decoy.tar"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "trace_file_removed": true,
+    "history_cleared": true,
+    "trace_cleaned": true,
+    "decoy_created": false
+  },
+  "setScanPercent": 0,
+  "vfsOverlay": {
+    "removedPaths": [
+      "/home/guest/decoy.tar"
+    ]
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_TRACE_CLEANED'
+WHERE from_node.code = 'CH2_DECOY_SENT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'rm_decoy_partial',
+    'server_rule',
+    $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "rm",
+  "resolvedPath": "/home/guest/decoy.tar",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredFlags": [
+    "decoy_sent"
+  ],
+  "requiredCreatedFiles": [
+    "/home/guest/decoy.tar"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "trace_file_removed": true,
+    "decoy_created": false
+  },
+  "vfsOverlay": {
+    "removedPaths": [
+      "/home/guest/decoy.tar"
+    ]
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    80
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_TRACE_FILE_REMOVED'
+WHERE from_node.code = 'CH2_DECOY_SENT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'history_clear_partial',
+    'server_rule',
+    $json${
+  "rule": "NORMALIZED_COMMAND",
+  "command": "history",
+  "args": [
+    "-c"
+  ],
+  "requiredFlags": [
+    "decoy_sent"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "history_cleared": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    80
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_HISTORY_CLEARED'
+WHERE from_node.code = 'CH2_DECOY_SENT'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'history_clear_after_rm',
+    'server_rule',
+    $json${
+  "rule": "NORMALIZED_COMMAND",
+  "command": "history",
+  "args": [
+    "-c"
+  ],
+  "requiredFlags": [
+    "decoy_sent",
+    "trace_file_removed"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "history_cleared": true,
+    "trace_cleaned": true
+  },
+  "setScanPercent": 0,
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_TRACE_CLEANED'
+WHERE from_node.code = 'CH2_TRACE_FILE_REMOVED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'rm_decoy_after_history',
+    'server_rule',
+    $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "rm",
+  "resolvedPath": "/home/guest/decoy.tar",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredFlags": [
+    "decoy_sent",
+    "history_cleared"
+  ],
+  "requiredCreatedFiles": [
+    "/home/guest/decoy.tar"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "trace_file_removed": true,
+    "trace_cleaned": true,
+    "decoy_created": false
+  },
+  "setScanPercent": 0,
+  "vfsOverlay": {
+    "removedPaths": [
+      "/home/guest/decoy.tar"
+    ]
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_TRACE_CLEANED'
+WHERE from_node.code = 'CH2_HISTORY_CLEARED'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'tar_with_protected_core',
+    'server_rule',
+    $json${
+  "rule": "PARSED_TAR_COMMAND",
+  "outputFile": "decoy.tar",
+  "requiredFiles": [
+    "/home/guest/sys/temp/Memory_Dump_082.tmp",
+    "/home/guest/cache/User_Behavior_88.tmp",
+    "/home/guest/tmp/System_Temp_File.tmp"
+  ],
+  "detectedFiles": [
+    "/home/guest/root/hidden/L_fragment_core.tmp"
+  ],
+  "protectedFileIncluded": true,
+  "requiredFlags": [
+    "laplace_mission_started"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "protected_core_access_attempted": true
+  },
+  "setScanPercent": 57,
+  "recentResult": "FAIL_PROTECTED_CORE"
+}$json$::jsonb,
+    110
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_PROTECTED_CORE_DENIED'
+WHERE from_node.code = 'CH2_LAPLACE_MISSION_READY'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
+    'tar_normal_decoy',
+    'server_rule',
+    $json${
+  "rule": "PARSED_TAR_COMMAND",
+  "outputFile": "decoy.tar",
+  "requiredFiles": [
+    "/home/guest/sys/temp/Memory_Dump_082.tmp",
+    "/home/guest/cache/User_Behavior_88.tmp",
+    "/home/guest/tmp/System_Temp_File.tmp"
+  ],
+  "forbiddenFiles": [
+    "/home/guest/root/hidden/L_fragment_core.tmp"
+  ],
+  "requiredFlags": [
+    "laplace_mission_started"
+  ]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "decoy_created": true
+  },
+  "setScanPercent": 58,
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/home/guest/decoy.tar",
+        "type": "file",
+        "readable": true,
+        "executable": false,
+        "protected": false,
+        "virtual": true,
+        "createdBy": "tar_normal_decoy",
+        "contentKey": "DECOY_TAR"
+      }
+    ]
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH2_DECOY_CREATED'
+WHERE from_node.code = 'CH2_LAPLACE_MISSION_READY'
+ON CONFLICT (from_node_id, action_type, expected_input, validator_type) DO UPDATE
+SET to_node_id = EXCLUDED.to_node_id,
+    validator_config = EXCLUDED.validator_config,
+    fail_node_id = EXCLUDED.fail_node_id,
+    effect_bundle = EXCLUDED.effect_bundle,
+    priority = EXCLUDED.priority;
+
+INSERT INTO story_transitions (
+    from_node_id,
+    to_node_id,
+    action_type,
+    expected_input,
+    validator_type,
+    validator_config,
+    effect_bundle,
+    priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'command',
     'cat /home/guest/world_map.map',
     'server_rule',
     $json${
@@ -804,13 +1177,7 @@ SELECT
     'find . -name "*.tmp"',
     'server_rule',
     $json${
-  "rule": "NORMALIZED_COMMAND",
-  "command": "find",
-  "args": [
-    ".",
-    "-name",
-    "*.tmp"
-  ],
+  "rule": "FIND_TMP_COMMAND",
   "requiredFlags": [
     "laplace_mission_started"
   ]
@@ -862,7 +1229,7 @@ SELECT
   ],
   "protectedFileIncluded": true,
   "requiredFlags": [
-    "tmp_files_found"
+    "laplace_mission_started"
   ]
 }$json$::jsonb,
     $json${
@@ -911,7 +1278,7 @@ SELECT
     "/home/guest/root/hidden/L_fragment_core.tmp"
   ],
   "requiredFlags": [
-    "tmp_files_found"
+    "laplace_mission_started"
   ]
 }$json$::jsonb,
     $json${
@@ -975,7 +1342,7 @@ SELECT
   ],
   "protectedFileIncluded": true,
   "requiredFlags": [
-    "tmp_files_found"
+    "laplace_mission_started"
   ]
 }$json$::jsonb,
     $json${
@@ -1024,7 +1391,7 @@ SELECT
     "/home/guest/root/hidden/L_fragment_core.tmp"
   ],
   "requiredFlags": [
-    "tmp_files_found"
+    "laplace_mission_started"
   ]
 }$json$::jsonb,
     $json${
@@ -1146,6 +1513,8 @@ SELECT
 }$json$::jsonb,
     $json${
   "setFlags": {
+    "trace_file_removed": true,
+    "history_cleared": true,
     "trace_cleaned": true,
     "decoy_created": false
   },
@@ -1268,6 +1637,8 @@ SELECT
   "setFlags": {
     "decoy_created": false,
     "decoy_sent": false,
+    "trace_file_removed": false,
+    "history_cleared": false,
     "trace_cleaned": false
   },
   "setScanPercent": 18,

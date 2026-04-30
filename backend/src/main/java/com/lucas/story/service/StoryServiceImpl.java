@@ -36,8 +36,10 @@ import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +70,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String DISMISS_INPUT = "dismiss";
   private static final String RULE_AUTO_SYSTEM = "AUTO_SYSTEM";
   private static final String RULE_NORMALIZED_COMMAND = "NORMALIZED_COMMAND";
+  private static final String RULE_FIND_TMP_COMMAND = "FIND_TMP_COMMAND";
   private static final String RULE_VIRTUAL_FS_COMMAND = "VIRTUAL_FS_COMMAND";
   private static final String RULE_PARSED_TAR_COMMAND = "PARSED_TAR_COMMAND";
   private static final String RULE_NC_SEND_FILE = "NC_SEND_FILE";
@@ -885,6 +888,7 @@ public class StoryServiceImpl implements StoryService {
     return switch (rule) {
       case RULE_AUTO_SYSTEM -> matchesAutoSystemRule(request);
       case RULE_NORMALIZED_COMMAND -> matchesNormalizedCommandRule(config, request, latestSnapshot);
+      case RULE_FIND_TMP_COMMAND -> matchesFindTmpCommandRule(config, request, latestSnapshot);
       case RULE_VIRTUAL_FS_COMMAND -> matchesVirtualFsCommandRule(config, request, latestSnapshot);
       case RULE_PARSED_TAR_COMMAND -> matchesParsedTarCommandRule(config, request, latestSnapshot);
       case RULE_NC_SEND_FILE -> matchesNcSendFileRule(config, request, latestSnapshot);
@@ -1012,6 +1016,70 @@ public class StoryServiceImpl implements StoryService {
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 명령어, resolvedPath, VFS 권한 조건이 모두 맞으면 true
    */
+  private boolean matchesFindTmpCommandRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (request == null) {
+      return false;
+    }
+
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null || !"find".equals(command.command())) {
+      return false;
+    }
+
+    List<String> args = command.args();
+    if (args.size() != 3 && args.size() != 5) {
+      return false;
+    }
+
+    if (!isWorkspaceSearchRoot(args.get(0), latestSnapshot)) {
+      return false;
+    }
+
+    boolean nameSeen = false;
+    boolean typeFileSeen = false;
+    for (int i = 1; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-name".equals(arg) && i + 1 < args.size() && "*.tmp".equals(args.get(i + 1))) {
+        nameSeen = true;
+        i++;
+        continue;
+      }
+
+      if ("-type".equals(arg) && i + 1 < args.size() && "f".equals(args.get(i + 1))) {
+        typeFileSeen = true;
+        i++;
+        continue;
+      }
+
+      return false;
+    }
+
+    return nameSeen && (args.size() == 3 || typeFileSeen);
+  }
+
+  private boolean isWorkspaceSearchRoot(String rawRoot, JsonNode latestSnapshot) {
+    if (rawRoot == null || rawRoot.isBlank()) {
+      return false;
+    }
+
+    String normalized =
+        rawRoot.endsWith("/") && rawRoot.length() > 1
+            ? rawRoot.substring(0, rawRoot.length() - 1)
+            : rawRoot;
+    if (".".equals(normalized)) {
+      String cwd = extractText(latestSnapshot, "/terminal/cwd");
+      return cwd == null || cwd.isBlank() || CHAPTER_02_DEFAULT_CWD.equals(cwd);
+    }
+
+    String resolvedRoot = resolveSnapshotPath(latestSnapshot, rawRoot);
+    return createVfsContext(latestSnapshot).getRootPath().equals(resolvedRoot);
+  }
+
   private boolean matchesVirtualFsCommandRule(
       JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
     // flags 조건이 붙은 VFS 명령은 먼저 선행 상태를 확인한다.
@@ -1129,7 +1197,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 입력 파일 경로들을 현재 cwd 기준 절대 경로로 변환한다.
-    List<String> resolvedFiles = resolvePaths(latestSnapshot, tarCommand.inputFiles());
+    List<String> resolvedFiles = resolveTarInputPaths(latestSnapshot, tarCommand.inputFiles());
 
     // requiredFiles는 순서와 무관하게 모두 포함되어야 한다.
     if (!containsAllPaths(resolvedFiles, getTextArrayField(config, "requiredFiles"))) {
@@ -1189,7 +1257,8 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // timeoutSeconds가 seed와 일치해야 한다.
-    if (ncCommand.timeoutSeconds() != config.path("timeoutSeconds").asInt()) {
+    if (ncCommand.timeoutSeconds() != null
+        && ncCommand.timeoutSeconds() != config.path("timeoutSeconds").asInt()) {
       // timeout 값이 다르면 전송 command로 인정하지 않는다.
       return false;
     }
@@ -1488,7 +1557,7 @@ public class StoryServiceImpl implements StoryService {
   private record ParsedTarCommand(String outputFile, List<String> inputFiles) {}
 
   /** NC_SEND_FILE 검증에 필요한 nc 명령 구조입니다. */
-  private record ParsedNcCommand(int timeoutSeconds, String host, int port, String stdinFile) {}
+  private record ParsedNcCommand(Integer timeoutSeconds, String host, int port, String stdinFile) {}
 
   /**
    * server_rule 공통 선행 조건을 검사한다.
@@ -1727,6 +1796,75 @@ public class StoryServiceImpl implements StoryService {
    * @param rawPaths 원문 경로 목록
    * @return 정규화된 절대 경로 목록
    */
+  private List<String> resolveTarInputPaths(JsonNode latestSnapshot, List<String> rawPaths) {
+    VfsContext vfs = createVfsContext(latestSnapshot);
+    Set<String> resolvedPaths = new LinkedHashSet<>();
+
+    for (String rawPath : rawPaths) {
+      if (containsShellGlob(rawPath)) {
+        List<String> expandedPaths = expandVfsGlob(latestSnapshot, vfs, rawPath);
+        if (expandedPaths.isEmpty()) {
+          resolvedPaths.add(resolveSnapshotPath(latestSnapshot, rawPath));
+        } else {
+          resolvedPaths.addAll(expandedPaths);
+        }
+        continue;
+      }
+
+      String resolvedPath = resolveSnapshotPath(latestSnapshot, rawPath);
+      VfsNode node = vfs.resolve(resolvedPath);
+      if (node != null && node.isDirectory()) {
+        collectDescendantFilePaths(vfs, resolvedPath, resolvedPaths);
+        continue;
+      }
+
+      resolvedPaths.add(resolvedPath);
+    }
+
+    return new ArrayList<>(resolvedPaths);
+  }
+
+  private boolean containsShellGlob(String rawPath) {
+    return rawPath != null && (rawPath.contains("*") || rawPath.contains("?"));
+  }
+
+  private List<String> expandVfsGlob(JsonNode latestSnapshot, VfsContext vfs, String rawPattern) {
+    String resolvedPattern = resolveSnapshotPath(latestSnapshot, rawPattern);
+    String regex = toPathGlobRegex(resolvedPattern);
+    Set<String> allFiles = new LinkedHashSet<>();
+    collectDescendantFilePaths(vfs, vfs.getRootPath(), allFiles);
+    return allFiles.stream().filter(path -> path.matches(regex)).collect(Collectors.toList());
+  }
+
+  private String toPathGlobRegex(String pattern) {
+    StringBuilder regex = new StringBuilder("^");
+    for (int i = 0; i < pattern.length(); i++) {
+      char ch = pattern.charAt(i);
+      if (ch == '*') {
+        regex.append("[^/]*");
+      } else if (ch == '?') {
+        regex.append("[^/]");
+      } else {
+        if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
+          regex.append('\\');
+        }
+        regex.append(ch);
+      }
+    }
+    regex.append('$');
+    return regex.toString();
+  }
+
+  private void collectDescendantFilePaths(VfsContext vfs, String directoryPath, Set<String> paths) {
+    for (VfsNode child : vfs.listChildren(directoryPath)) {
+      if (child.isDirectory()) {
+        collectDescendantFilePaths(vfs, child.path(), paths);
+      } else {
+        paths.add(child.path());
+      }
+    }
+  }
+
   private List<String> resolvePaths(JsonNode latestSnapshot, List<String> rawPaths) {
     // 정규화 결과를 입력 순서대로 담는다.
     List<String> resolvedPaths = new ArrayList<>();
@@ -1868,22 +2006,28 @@ public class StoryServiceImpl implements StoryService {
     for (int i = 0; i < command.args().size(); i++) {
       // 현재 인자를 가져온다.
       String arg = command.args().get(i);
+      String optionText = null;
+      if (arg.startsWith("-")) {
+        optionText = arg.substring(1);
+      } else if (i == 0 && isTarOldStyleOptionToken(arg)) {
+        optionText = arg;
+      }
 
       // -cvf, -cf, -f처럼 f 옵션을 포함한 옵션 뒤의 값이 output file이다.
       // 옵션이 아닌 인자는 파일 목록 구간으로 보고 tar 옵션 해석에서 제외한다.
-      if (!arg.startsWith("-")) {
+      if (optionText == null) {
         // 다음 인자로 넘어간다.
         continue;
       }
 
       // c 옵션이 포함되어야 실제 archive 생성 명령으로 인정한다.
-      if (arg.contains("c")) {
+      if (optionText.contains("c")) {
         // 생성 옵션을 확인했다.
         createOptionSeen = true;
       }
 
       // f 옵션이 포함된 옵션 뒤의 값이 output archive 경로다.
-      if (arg.contains("f")) {
+      if (optionText.contains("f")) {
         // output file은 f 옵션 바로 다음 토큰이다.
         outputFileIndex = i + 1;
 
@@ -1926,6 +2070,22 @@ public class StoryServiceImpl implements StoryService {
    * @param args nc 명령 뒤의 인자 목록
    * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
    */
+  private boolean isTarOldStyleOptionToken(String arg) {
+    if (arg == null || arg.isBlank() || arg.startsWith("-")) {
+      return false;
+    }
+    if (!arg.contains("c") || !arg.contains("f")) {
+      return false;
+    }
+    for (int i = 0; i < arg.length(); i++) {
+      char option = arg.charAt(i);
+      if (option != 'c' && option != 'v' && option != 'f') {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private ParsedNcCommand parseNcCommand(List<String> args) {
     // -w 옵션 값을 저장한다.
     Integer timeoutSeconds = null;
@@ -1945,6 +2105,9 @@ public class StoryServiceImpl implements StoryService {
       if ("-w".equals(arg) && i + 1 < args.size()) {
         // timeout 값을 정수로 파싱한다.
         timeoutSeconds = parseInteger(args.get(++i));
+        if (timeoutSeconds == null) {
+          return null;
+        }
 
         // 다음 인자로 이동한다.
         continue;
@@ -1952,6 +2115,14 @@ public class StoryServiceImpl implements StoryService {
 
       // < 다음 토큰은 stdin redirection 파일이다.
       // Chapter 2 seed에서 허용하지 않은 nc 옵션은 매칭하지 않는다.
+      if (arg.startsWith("-w") && arg.length() > 2) {
+        timeoutSeconds = parseInteger(arg.substring(2));
+        if (timeoutSeconds == null) {
+          return null;
+        }
+        continue;
+      }
+
       if (arg.startsWith("-")) {
         // 알 수 없는 옵션이 섞이면 의도한 전송 명령이 아니다.
         return null;
@@ -2004,7 +2175,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // timeout, host, port, stdinFile이 모두 있어야 한다.
-    if (timeoutSeconds == null || positionals.size() != 2 || stdinFile == null) {
+    if (positionals.size() != 2 || stdinFile == null) {
       // nc 전송 명령 구조가 불완전하다.
       return null;
     }
@@ -2886,6 +3057,8 @@ public class StoryServiceImpl implements StoryService {
 
     // decoy.tar 전송 여부는 아직 false다.
     flags.put("decoy_sent", false);
+    flags.put("trace_file_removed", false);
+    flags.put("history_cleared", false);
 
     // 흔적 삭제 완료 여부는 아직 false다.
     flags.put("trace_cleaned", false);
