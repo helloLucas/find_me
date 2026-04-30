@@ -235,104 +235,116 @@ public class StoryServiceImpl implements StoryService {
         .findById(user.getId())
         .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
-    // 현재 유저가 위치한 노드
+    // 현재 유저가 위치한 노드와 챕터 (에러 로그용으로 보관)
     StoryNode currentNode = progress.getLatestNode();
+    Chapter currentChapter = currentNode.getChapter();
 
-    // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
-    List<StoryTransition> transitions = storyTransitionRepository
-        .findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+    try {
+      // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
+      List<StoryTransition> transitions = storyTransitionRepository
+          .findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
-    // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
-    JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+      // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
+      JsonNode latestSnapshot = progress.getLatestSnapshotJson();
 
-    // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-    StoryTransition matched = transitions.stream()
-        .filter(t -> matchesTransition(t, request, latestSnapshot))
-        .findFirst()
-        .orElse(null);
+      // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
+      StoryTransition matched = transitions.stream()
+          .filter(t -> matchesTransition(t, request, latestSnapshot))
+          .findFirst()
+          .orElse(null);
 
-    // 매칭되는 전이가 없는 경우 (예상치 못한 오답 또는 가상 터미널 명령어)
-    if (matched == null) {
-      // ── Step 2: Chapter 2 터미널 Fallback ──
-      // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
-      TransitionResponseDto terminalResponse = handleChapter2TerminalFallback(user, progress, currentNode, request);
-      if (terminalResponse != null) {
-        return terminalResponse;
+      if (matched == null) {
+        // ── Step 2: Chapter 2 터미널 Fallback ──
+        // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
+        TransitionResponseDto terminalResponse = handleChapter2TerminalFallback(user, progress, currentNode, request);
+        if (terminalResponse != null) {
+          return terminalResponse;
+        }
+
+        // 예상치 못한 오류(ERROR)를 ES에 기록
+        logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, "ERROR");
+
+        // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
+        CustomException e = new CustomException(ErrorCode.A1001);
+        recordRejectedTransitionAction(user, progress, currentNode, request, e);
+        // 기존 API 에러 응답 흐름은 유지해야 하므로 원래 예외를 다시 던진다.
+        throw e;
       }
 
-      // 예상치 못한 오류(ERROR)를 ES에 기록
-      logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, true);
+      // 매칭된 전이의 도착 노드 추출
+      StoryNode nextNode = matched.getToNode();
 
-      // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
-      CustomException e = new CustomException(ErrorCode.A1001);
-      recordRejectedTransitionAction(user, progress, currentNode, request, e);
-      // 기존 API 에러 응답 흐름은 유지해야 하므로 원래 예외를 다시 던진다.
-      throw e;
-    }
+      // ── FAIL 노드 판별 ──
+      // 코드에 "_FAIL_"이 포함된 노드는 일시적 피드백 전용 노드이다.
+      // FAIL 노드로 이동 시에는 유저 진행 상태를 갱신하지 않고, result=retry로 반환한다.
+      boolean isFailNode = nextNode.getCode().contains("_FAIL_");
 
-    // 매칭된 전이의 도착 노드 추출
-    StoryNode nextNode = matched.getToNode();
+      if (isFailNode) {
+        Chapter failChapter = nextNode.getChapter();
+        JsonNode failSnapshot = createTransitionSnapshot(
+            failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+        progress.updateProgress(failChapter, nextNode, failSnapshot);
+        userStoryProgressRepository.save(progress);
 
-    // ── FAIL 노드 판별 ──
-    // 코드에 "_FAIL_"이 포함된 노드는 일시적 피드백 전용 노드이다.
-    // FAIL 노드로 이동 시에는 유저 진행 상태를 갱신하지 않고, result=retry로 반환한다.
-    // 이렇게 해야 플레이어가 오답 입력 후 다시 정답을 입력했을 때 원래 노드 기준으로 전이가 판정된다.
-    boolean isFailNode = nextNode.getCode().contains("_FAIL_");
+        log.info(
+            "Fail node reached (progress updated): User={}, FailNode={}",
+            user.getId(),
+            nextNode.getCode());
 
-    if (isFailNode) {
-      Chapter failChapter = nextNode.getChapter();
-      JsonNode failSnapshot = createTransitionSnapshot(
-          failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
-      progress.updateProgress(failChapter, nextNode, failSnapshot);
+        // ELK/RAG 행동 로깅 (incoming)
+        logStoryAction(user, failChapter, currentNode, nextNode, request, "FAIL");
+
+        // 실패 노드 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
+        recordRecentActionAfterCommit(
+            buildRecentActionEvent(
+                user,
+                failChapter,
+                request,
+                matched,
+                currentNode,
+                nextNode,
+                failSnapshot,
+                "FAIL_RETRY"));
+        // 기존 프론트 응답 result는 retry를 유지한다.
+        return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry", failSnapshot);
+      }
+
+      // 도착 노드가 속한 챕터 정보
+      Chapter chapter = nextNode.getChapter();
+      // 현재 상태 스냅샷 생성
+      JsonNode snapshot = createTransitionSnapshot(
+          chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+
+      // 유저 진행 상태를 다음 노드로 갱신 후 저장
+      progress.updateProgress(chapter, nextNode, snapshot);
       userStoryProgressRepository.save(progress);
 
-      log.info(
-          "Fail node reached (progress updated): User={}, FailNode={}",
-          user.getId(),
-          nextNode.getCode());
+      // ── Step 4: 챕터 완료 및 다음 챕터 해금 처리 ──
+      // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
+      if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
+        handleChapterCompletion(user, chapter);
+      }
 
-      // ELK/RAG 행동 로깅 (incoming)
-      logStoryAction(user, failChapter, currentNode, nextNode, request, true);
-
-      // 실패 노드 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
+      logStoryAction(user, chapter, currentNode, nextNode, request, "SUCCESS");
+      // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
+      // 정상 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
       recordRecentActionAfterCommit(
           buildRecentActionEvent(
-              user,
-              failChapter,
-              request,
-              matched,
-              currentNode,
-              nextNode,
-              failSnapshot,
-              "FAIL_RETRY"));
-      // 기존 프론트 응답 result는 retry를 유지한다.
-      return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry", failSnapshot);
+              user, chapter, request, matched, currentNode, nextNode, snapshot, "SUCCESS_MOVE"));
+
+      return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success", snapshot);
+    } catch (Exception e) {
+      // 예상치 못한 시스템 에러 발생 시 ERROR 로그를 남기고 예외를 다시 던집니다.
+      if (!(e instanceof CustomException)) {
+        log.error(
+            "Critical error during processTransition: User={}, Action={}",
+            user.getId(),
+            request.getActionType(),
+            e);
+        logStoryAction(user, currentChapter, currentNode, null, request, "ERROR");
+      }
+      throw e;
     }
-
-    // 도착 노드가 속한 챕터 정보
-    Chapter chapter = nextNode.getChapter();
-    // 현재 상태 스냅샷 생성
-    JsonNode snapshot = createTransitionSnapshot(
-        chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
-
-    // 유저 진행 상태를 다음 노드로 갱신 후 저장
-    progress.updateProgress(chapter, nextNode, snapshot);
-    userStoryProgressRepository.save(progress);
-
-    // ── Step 4: 챕터 완료 및 다음 챕터 해금 처리 ──
-    // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
-    if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
-      handleChapterCompletion(user, chapter);
-    }
-
-    logStoryAction(user, chapter, currentNode, nextNode, request, false);
-    // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
-    // 정상 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
-    recordRecentActionAfterCommit(
-        buildRecentActionEvent(
-            user, chapter, request, matched, currentNode, nextNode, snapshot, "SUCCESS_MOVE"));
-
-    return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success", snapshot);
   }
 
   // ──────────────────────────────────────────────
@@ -346,7 +358,7 @@ public class StoryServiceImpl implements StoryService {
       StoryNode currentNode,
       StoryNode nextNode,
       TransitionRequestDto request,
-      boolean isFail) {
+      String result) {
 
     String actionType = request.getActionType();
     // command, inspect, click 외의 액션은 필요시 필터링 가능 (일단 모든 액션을 고려해 적용)
@@ -361,8 +373,12 @@ public class StoryServiceImpl implements StoryService {
     String sessionId = resolveSessionId(user, request);
 
     // Redis fail_count 조회/갱신
-    boolean shouldResetFailCountOnSuccess = isFail
-        || !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+    // FAIL 또는 ERROR일 때 카운트를 올리고, SUCCESS일 때만 리셋합니다.
+    boolean isFail = "FAIL".equals(result) || "ERROR".equals(result);
+    boolean isSuccess = "SUCCESS".equals(result);
+    boolean shouldResetFailCountOnSuccess = isSuccess
+        && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+
     int failCountAfterAction = storyActionLogService.updateAndGetFailCount(
         sessionId, isFail, shouldResetFailCountOnSuccess);
 
@@ -385,9 +401,6 @@ public class StoryServiceImpl implements StoryService {
     String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
     String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
     String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
-
-    // result 세분화: 성공(SUCCESS), 설계된 오답(FAIL), 예상치 못한 오류/무효 입력(ERROR)
-    String result = isFail ? (nextNode == null ? "ERROR" : "FAIL") : "SUCCESS";
 
     StoryActionLogEvent event = StoryActionLogEvent.builder()
         .timestamp(timestamp)
@@ -2915,6 +2928,15 @@ public class StoryServiceImpl implements StoryService {
     // 8. 갱신된 진행 상태(노드 유지, 스냅샷 업데이트)를 DB에 영속화합니다.
     progress.updateProgress(currentNode.getChapter(), currentNode, updatedSnapshot);
     userStoryProgressRepository.save(progress);
+
+    // ELK/RAG 행동 로깅 (incoming)
+    logStoryAction(
+        user,
+        currentNode.getChapter(),
+        currentNode,
+        currentNode,
+        request,
+        "SUCCESS".equals(result.resultCode()) ? "SUCCESS" : "FAIL");
 
     // 9. 명령어 실행 결과를 Redis 최근 행동 이력(recent-actions)에 기록합니다.
     // 결과 코드에 따라 성공(SUCCESS_STAY) 또는 실패(FAIL_STAY)로 구분합니다.
