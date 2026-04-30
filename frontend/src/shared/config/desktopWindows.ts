@@ -9,8 +9,8 @@ export const DESKTOP_LAYER = {
   overlay: 10000,
 } as const;
 
-export type DesktopWindowId = "chrome" | "terminal" | "messenger";
-export type DesktopWindowType = "browser" | "terminal" | "messenger";
+export type DesktopWindowId = "chrome" | "terminal" | "messenger" | "document_viewer";
+export type DesktopWindowType = "browser" | "terminal" | "messenger" | "document_viewer";
 
 export interface DesktopWindowDefinition {
   id: DesktopWindowId;
@@ -37,5 +37,11 @@ export const DESKTOP_WINDOW_DEFINITIONS: Record<DesktopWindowId, DesktopWindowDe
     type: "messenger",
     title: "Messenger",
     iconPath: "/pixel_messanger_icon.svg",
+  },
+  document_viewer: {
+    id: "document_viewer",
+    type: "document_viewer",
+    title: "Document Viewer",
+    iconPath: "/pixel_notepad_icon.svg",
   },
 };

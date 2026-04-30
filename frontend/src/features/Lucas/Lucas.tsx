@@ -20,10 +20,16 @@ export const Lucas: React.FC = () => {
     glitchLevel
   } = useLucasStore();
 
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [hintInput, setHintInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const isLastMessage = currentScene
+    ? currentMessageIndex >= currentScene.messages.length - 1
+    : false;
 
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
 
@@ -59,9 +65,6 @@ export const Lucas: React.FC = () => {
       setDisplayText(currentMessage?.text || '');
       setIsTyping(false);
     } else {
-      const isLastMessage = currentScene
-        ? currentMessageIndex >= currentScene.messages.length - 1
-        : false;
       nextMessage();
 
       if (isLastMessage) {
@@ -108,7 +111,23 @@ export const Lucas: React.FC = () => {
           <div className="lucas-speaker-label">{currentMessage.speaker}</div>
           <div className="lucas-bubble">
             <p>{displayText}</p>
-            {!isTyping && currentMessage.blocking && (
+            {!isTyping && isLastMessage && currentNode?.promptType === 'click' && currentNode.promptMeta?.buttons && (
+              <div className="lucas-buttons-container">
+                {currentNode.promptMeta.buttons.map((btn: any) => (
+                  <button
+                    key={btn.value}
+                    className="lucas-action-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void submitStoryClick(btn.value);
+                    }}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!isTyping && (currentMessage.blocking || (isLastMessage && currentNode?.promptType === 'command')) && !currentNode?.promptMeta?.buttons && (
               <span className="bubble-arrow">▼</span>
             )}
           </div>
