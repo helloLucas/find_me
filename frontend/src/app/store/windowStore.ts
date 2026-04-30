@@ -52,6 +52,7 @@ function resolveWindowId(
   if (idOrType === "terminal") return "terminal";
   if (idOrType === "terminal2") return "terminal2";
   if (idOrType === "messenger") return "messenger";
+  if (idOrType === "email") return "email";
 
   return null;
 }
