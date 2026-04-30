@@ -3297,40 +3297,41 @@ public class StoryServiceImpl implements StoryService {
     // 프론트엔드에서 "~"와 같이 넘겨준 cwd를 실제 절대 경로(/home/guest 등)로 정규화합니다.
     safeCwd = pathResolver.resolve(rootPath, safeCwd, rootPath);
 
-    // 타겟 문자열에서 마지막 디렉토리 구분자('/')의 위치를 찾습니다.
-    int lastSlash = target.lastIndexOf('/');
-    // 탐색할 대상 부모 디렉토리 경로를 저장할 변수입니다.
-    String parentDir;
-    // 부모 디렉토리 내에서 일치시켜야 할 파일/폴더명의 접두사입니다.
+    String searchDir;
     String prefix;
 
-    if (lastSlash == -1) {
-      // 입력에 '/'가 없으면 현재 경로(safeCwd) 안에서 자동완성을 수행합니다.
-      parentDir = safeCwd;
-      // 입력 전체를 접두사(prefix)로 간주합니다.
-      prefix = target;
+    if (input.isEmpty() || input.endsWith("/")) {
+      // 입력이 비어있거나 '/'로 끝나면, 해당 경로 자체를 부모 디렉토리로 간주하고 하위 모든 요소를 대상으로 합니다.
+      searchDir = pathResolver.resolve(safeCwd, input, rootPath);
+      prefix = "";
     } else {
-      // '/'가 존재하면 마지막 '/' 앞부분을 부모 경로 조각으로 분리합니다.
-      String rawParent = target.substring(0, lastSlash);
-      // 부모 경로 조각이 비어있으면(즉, 타겟이 '/'로 시작하면) 루트('/')로 간주합니다.
-      if (rawParent.isEmpty()) {
-        rawParent = "/";
+      // 입력의 마지막 '/' 위치를 기준으로 부모 디렉토리와 검색 접두사(prefix)를 분리합니다.
+      int inputLastSlash = input.lastIndexOf('/');
+      if (inputLastSlash == -1) {
+        // '/'가 없으면 현재 작업 디렉토리에서 입력을 접두사로 검색합니다.
+        searchDir = safeCwd;
+        prefix = input;
+      } else {
+        // '/'가 있으면 마지막 '/' 이전까지를 부모 경로로, 이후를 접두사로 처리합니다.
+        String parentPart = input.substring(0, inputLastSlash);
+        // 부모 경로 조각이 비어있으면(예: "/a") 루트('/')를 부모로 설정합니다.
+        if (parentPart.isEmpty()) {
+            parentPart = "/";
+        }
+        searchDir = pathResolver.resolve(safeCwd, parentPart, rootPath);
+        prefix = input.substring(inputLastSlash + 1);
       }
-      // 안전한 현재 경로(safeCwd)를 기준으로 추출한 부모 경로 조각을 절대 경로로 정규화합니다.
-      parentDir = pathResolver.resolve(safeCwd, rawParent, rootPath);
-      // 마지막 '/' 뒷부분을 자동완성할 대상 접두사(prefix)로 분리합니다.
-      prefix = target.substring(lastSlash + 1);
     }
 
-    // 최종적으로 도출된 부모 디렉토리의 VFS 노드를 조회합니다.
-    VfsNode parentNode = vfs.resolve(parentDir);
+    // 최종 도출된 부모 디렉토리의 VFS 노드를 조회합니다.
+    VfsNode parentNode = vfs.resolve(searchDir);
     // 해당 부모 노드가 존재하지 않거나 디렉토리가 아니라면, 자동완성 후보가 없으므로 빈 리스트를 반환합니다.
     if (parentNode == null || !parentNode.isDirectory()) {
       return Collections.emptyList();
     }
 
     // 부모 디렉토리의 하위 노드 목록을 가져와 스트림으로 처리합니다.
-    return vfs.listChildren(parentDir).stream()
+    return vfs.listChildren(searchDir).stream()
         // 숨김 처리(hidden)된 파일이나 디렉토리는 자동완성 목록에서 제외합니다.
         .filter(n -> !n.hidden())
         // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다.
