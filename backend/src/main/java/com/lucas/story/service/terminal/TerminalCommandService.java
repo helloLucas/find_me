@@ -1,9 +1,13 @@
 package com.lucas.story.service.terminal;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +54,7 @@ public class TerminalCommandService {
 
     // 명령어 종류에 따라 각 핸들러로 분기 처리합니다.
     return switch (cmd) {
+      case "find" -> handleFind(command, cwd, vfs);
       case "pwd" -> handlePwd(cwd, vfs); // 현재 경로 출력
       case "ls" -> handleLs(command, cwd, vfs); // 디렉토리 목록 조회
       case "cd" -> handleCd(command, cwd, vfs); // 경로 이동
@@ -85,6 +90,10 @@ public class TerminalCommandService {
    * @return 파일 목록 문자열을 포함한 결과
    */
   private TerminalResult handleLs(ParsedCommand command, String cwd, VfsContext vfs) {
+    if (requiresExtendedLs(command)) {
+      return handleExtendedLs(command, cwd, vfs);
+    }
+
     // 인자가 없으면 현재 디렉토리, 있으면 해당 경로를 대상으로 결정합니다.
     String targetPath =
         command.args().isEmpty()
@@ -110,6 +119,11 @@ public class TerminalCommandService {
     }
 
     // 대상이 디렉토리면 하위 노드 목록을 가져옵니다.
+    if (!node.readable() || node.isProtected()) {
+      String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
+      return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
+    }
+
     List<VfsNode> children = vfs.listChildren(targetPath);
     // 숨김 속성이 아닌 노드들의 이름만 추출하여 공백으로 연결합니다.
     List<String> output =
@@ -135,6 +149,245 @@ public class TerminalCommandService {
    * @param vfs VFS 컨텍스트
    * @return 변경된 경로가 적용된 결과
    */
+  private boolean requiresExtendedLs(ParsedCommand command) {
+    return command.args().size() > 1
+        || command.args().stream().anyMatch(arg -> arg.startsWith("-"));
+  }
+
+  private TerminalResult handleExtendedLs(ParsedCommand command, String cwd, VfsContext vfs) {
+    boolean recursive = false;
+    List<String> rawTargets = new ArrayList<>();
+
+    for (String arg : command.args()) {
+      if (arg.startsWith("-")) {
+        if (!isSupportedLsOption(arg)) {
+          return buildErrorResult(cwd, vfs, "ls: invalid option -- '" + arg + "'");
+        }
+        recursive = recursive || arg.substring(1).contains("R");
+        continue;
+      }
+
+      rawTargets.add(arg);
+    }
+
+    if (rawTargets.isEmpty()) {
+      rawTargets.add(".");
+    }
+
+    List<String> output = new ArrayList<>();
+    boolean multipleTargets = rawTargets.size() > 1;
+    for (String rawTarget : rawTargets) {
+      String targetPath = pathResolver.resolve(cwd, rawTarget, vfs.getRootPath());
+      VfsNode node = vfs.resolve(targetPath);
+      if (node == null) {
+        return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
+      }
+
+      if (!node.readable() || node.isProtected()) {
+        return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
+      }
+
+      if (node.isFile()) {
+        output.add(node.name());
+        continue;
+      }
+
+      if (recursive) {
+        appendRecursiveLsOutput(output, rawTarget, targetPath, vfs);
+      } else {
+        if (multipleTargets) {
+          if (!output.isEmpty()) {
+            output.add("");
+          }
+          output.add(rawTarget + ":");
+        }
+        output.addAll(listDirectoryNames(targetPath, vfs));
+      }
+    }
+
+    return TerminalResult.builder()
+        .stdout(output)
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private void appendRecursiveLsOutput(
+      List<String> output, String displayPath, String targetPath, VfsContext vfs) {
+    if (!output.isEmpty()) {
+      output.add("");
+    }
+    output.add(displayPath + ":");
+    output.addAll(listDirectoryNames(targetPath, vfs));
+
+    for (VfsNode child :
+        vfs.listChildren(targetPath).stream()
+            .filter(n -> !n.hidden())
+            .filter(VfsNode::isDirectory)
+            .collect(Collectors.toList())) {
+      if (!child.readable() || child.isProtected()) {
+        continue;
+      }
+      String childDisplayPath =
+          ".".equals(displayPath)
+              ? "./" + child.name()
+              : displayPath.replaceAll("/$", "") + "/" + child.name();
+      appendRecursiveLsOutput(output, childDisplayPath, child.path(), vfs);
+    }
+  }
+
+  private List<String> listDirectoryNames(String targetPath, VfsContext vfs) {
+    return vfs.listChildren(targetPath).stream()
+        .filter(n -> !n.hidden())
+        .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
+        .collect(Collectors.toList());
+  }
+
+  private boolean isSupportedLsOption(String arg) {
+    if (arg == null || arg.length() < 2 || !arg.startsWith("-")) {
+      return false;
+    }
+
+    for (int i = 1; i < arg.length(); i++) {
+      char option = arg.charAt(i);
+      if (option != 'a' && option != 'l' && option != 'R') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private TerminalResult handleFind(ParsedCommand command, String cwd, VfsContext vfs) {
+    FindQuery query = parseFindQuery(command.args());
+    if (query == null) {
+      return buildErrorResult(cwd, vfs, "find: invalid expression");
+    }
+
+    Pattern namePattern = Pattern.compile(toNameGlobRegex(query.namePattern()));
+    Set<String> matches = new LinkedHashSet<>();
+
+    for (String rawRoot : query.roots()) {
+      String targetPath = pathResolver.resolve(cwd, rawRoot, vfs.getRootPath());
+      VfsNode node = vfs.resolve(targetPath);
+      if (node == null) {
+        return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
+      }
+      if (!node.readable() || node.isProtected()) {
+        return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': Permission denied");
+      }
+      collectFindMatches(vfs, node, query.typeFileOnly(), namePattern, matches);
+    }
+
+    List<String> output =
+        matches.stream().map(path -> toDisplayFindPath(path, cwd)).collect(Collectors.toList());
+    return TerminalResult.builder()
+        .stdout(output)
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private FindQuery parseFindQuery(List<String> args) {
+    List<String> roots = new ArrayList<>();
+    boolean typeFileOnly = false;
+    boolean predicateStarted = false;
+    String namePattern = null;
+
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-type".equals(arg)) {
+        if (i + 1 >= args.size() || !"f".equals(args.get(i + 1))) {
+          return null;
+        }
+        typeFileOnly = true;
+        predicateStarted = true;
+        i++;
+        continue;
+      }
+
+      if ("-name".equals(arg)) {
+        if (i + 1 >= args.size()) {
+          return null;
+        }
+        namePattern = args.get(++i);
+        predicateStarted = true;
+        continue;
+      }
+
+      if (arg.startsWith("-") || predicateStarted) {
+        return null;
+      }
+
+      roots.add(arg);
+    }
+
+    if (roots.isEmpty()) {
+      roots.add(".");
+    }
+    if (namePattern == null || namePattern.isBlank()) {
+      return null;
+    }
+    return new FindQuery(roots, typeFileOnly, namePattern);
+  }
+
+  private void collectFindMatches(
+      VfsContext vfs,
+      VfsNode node,
+      boolean typeFileOnly,
+      Pattern namePattern,
+      Set<String> matches) {
+    if (node.hidden()) {
+      return;
+    }
+
+    if ((!typeFileOnly || node.isFile()) && namePattern.matcher(node.name()).matches()) {
+      matches.add(node.path());
+    }
+
+    if (!node.isDirectory() || !node.readable() || node.isProtected()) {
+      return;
+    }
+
+    for (VfsNode child : vfs.listChildren(node.path())) {
+      collectFindMatches(vfs, child, typeFileOnly, namePattern, matches);
+    }
+  }
+
+  private String toNameGlobRegex(String pattern) {
+    StringBuilder regex = new StringBuilder("^");
+    for (int i = 0; i < pattern.length(); i++) {
+      char ch = pattern.charAt(i);
+      if (ch == '*') {
+        regex.append(".*");
+      } else if (ch == '?') {
+        regex.append('.');
+      } else {
+        if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
+          regex.append('\\');
+        }
+        regex.append(ch);
+      }
+    }
+    regex.append('$');
+    return regex.toString();
+  }
+
+  private String toDisplayFindPath(String path, String cwd) {
+    if (path.equals(cwd)) {
+      return ".";
+    }
+
+    String cwdPrefix = cwd.endsWith("/") ? cwd : cwd + "/";
+    if (path.startsWith(cwdPrefix)) {
+      return "./" + path.substring(cwdPrefix.length());
+    }
+    return path;
+  }
+
+  private record FindQuery(List<String> roots, boolean typeFileOnly, String namePattern) {}
+
   private TerminalResult handleCd(ParsedCommand command, String cwd, VfsContext vfs) {
     // 인자가 없으면 루트 디렉토리로 이동합니다.
     if (command.args().isEmpty()) {

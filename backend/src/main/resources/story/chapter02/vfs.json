@@ -91,7 +91,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/sys/temp": {
       "type": "directory",
@@ -121,7 +121,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/cache/User_Behavior_88.tmp": {
       "type": "file",
@@ -143,7 +143,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/tmp/System_Temp_File.tmp": {
       "type": "file",
@@ -165,7 +165,7 @@
       "readable": false,
       "executable": false,
       "protected": true,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/root/hidden": {
       "type": "directory",
