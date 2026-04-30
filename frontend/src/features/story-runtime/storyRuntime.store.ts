@@ -604,7 +604,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult, meta?.source as any);
+        applyTerminalResult(response.terminalResult, actionSource);
         set({ currentNode, error: null });
         return;
       }
