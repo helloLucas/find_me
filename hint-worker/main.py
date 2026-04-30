@@ -231,7 +231,7 @@ def get_node_guideline(node_id):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        query = "SELECT content FROM lucas_knowledge WHERE metadata->>'puzzle_id' = %s LIMIT 1"
+        query = "SELECT content FROM lucas_knowledge WHERE puzzle_id = %s LIMIT 1"
         cur.execute(query, (node_id,))
         result = cur.fetchone()
         
