@@ -41,6 +41,13 @@ public class Chapter {
     this.code = code;
     this.title = title;
     this.sortOrder = sortOrder;
-    this.isPublished = isPublished != null ? isPublished : true;
+    this.isPublished = isPublished;
+  }
+
+  @PrePersist
+  public void prePersist() {
+    if (this.isPublished == null) {
+      this.isPublished = false;
+    }
   }
 }
