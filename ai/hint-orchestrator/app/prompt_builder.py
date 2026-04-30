@@ -64,7 +64,7 @@ def _instruction_tone(hint_level: str) -> str:
     if hint_level == "LOW_CONFIDENCE":
         return "정답을 직접 말하지 말고, 탐색 방향만 짧게 제시"
     if hint_level == "LIGHT":
-        return "부드럽고 간단한 방향 힌트"
+        return "정답을 직접 말하지 말고, 부드럽고 간단한 방향 힌트"
     if hint_level == "MEDIUM":
-        return "핵심 단서를 한 단계 더 구체화"
-    return "필요 시 구체 입력 패턴까지 제시"
+        return "정답을 직접 말하지 말고 핵심 단서를 한 단계 더 구체화"
+    return "필요 시 구체 입력 패턴을 말하듯이 자연스럽게 제시"

@@ -14,6 +14,9 @@ class EvidenceItem(BaseModel):
     cosine_distance: float | None = Field(default=None, validation_alias=AliasChoices("cosine_distance", "cosineDistance"))
     priority_rank: int | None = Field(default=None, validation_alias=AliasChoices("priority_rank", "priorityRank"))
     priority: int | None = None
+    candidate_count: int | None = Field(
+        default=None, validation_alias=AliasChoices("candidate_count", "candidateCount")
+    )
     content: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 

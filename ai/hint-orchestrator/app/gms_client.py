@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
@@ -77,9 +77,6 @@ class GmsLlmClient:
         path = self._settings.gms_openai_chat_path.lstrip("/")
         url = f"{base}/{path}"
 
-        if not self._is_gpt5_family(model_name):
-            payload["temperature"] = self._settings.gms_temperature
-
         response = await self._http.post(
             url,
             headers={
@@ -90,7 +87,45 @@ class GmsLlmClient:
         )
         response.raise_for_status()
         body = response.json()
-        return _extract_chat_text(body)
+        return _extract_openai_chat_text(body)
+
+    async def _chat_gemini(
+        self,
+        *,
+        model_name: str,
+        developer_prompt: str,
+        user_prompt: str,
+        max_output_tokens: int,
+        force_json: bool,
+    ) -> str:
+        normalized_model = model_name.removeprefix("models/")
+        base = self._settings.gms_base_url.rstrip("/")
+        url = f"{base}/generativelanguage.googleapis.com/v1beta/models/{normalized_model}:generateContent"
+
+        generation_config: dict[str, Any] = {
+            "maxOutputTokens": max_output_tokens,
+            "temperature": self._settings.gms_temperature,
+        }
+        if force_json:
+            generation_config["responseMimeType"] = "application/json"
+
+        payload: dict[str, Any] = {
+            "systemInstruction": {"parts": [{"text": developer_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": generation_config,
+        }
+
+        response = await self._http.post(
+            url,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self._settings.gms_key,
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        body = response.json()
+        return _extract_gemini_text(body)
 
     async def embed_text(self, text: str, output_dimensionality: int | None = None) -> list[float]:
         model = self._settings.gms_embedding_model.removeprefix("models/")
@@ -132,7 +167,21 @@ class GmsLlmClient:
         return model.strip().lower().startswith("gpt-5")
 
 
-def _extract_chat_text(body: dict[str, Any]) -> str:
+def _normalize_provider(raw: str | None) -> str:
+    value = (raw or "").strip().lower()
+    if value in {"gemini", "google"}:
+        return "gemini"
+    return "openai"
+
+
+def _normalize_reasoning_effort(raw: str | None) -> str | None:
+    value = (raw or "").strip().lower()
+    if value in {"low", "medium", "high"}:
+        return value
+    return None
+
+
+def _extract_openai_chat_text(body: dict[str, Any]) -> str:
     choices = body.get("choices") or []
     if not choices:
         return ""
@@ -150,3 +199,23 @@ def _extract_chat_text(body: dict[str, Any]) -> str:
                     parts.append(text)
         return "\n".join(parts).strip()
     return ""
+
+
+def _extract_gemini_text(body: dict[str, Any]) -> str:
+    candidates = body.get("candidates") or []
+    if not candidates:
+        return ""
+
+    content = (candidates[0] or {}).get("content") or {}
+    parts = content.get("parts") or []
+    if not isinstance(parts, list):
+        return ""
+
+    text_parts: list[str] = []
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        text = part.get("text")
+        if isinstance(text, str) and text.strip():
+            text_parts.append(text)
+    return "\n".join(text_parts).strip()
