@@ -1009,12 +1009,13 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * VIRTUAL_FS_COMMAND server_rule을 기준으로 파일 경로 기반 명령을 검증한다.
+   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다.
+   * Chapter 2에서 사용자가 임시 파일들을 찾는 과정을 유연하게 허용하기 위해 도입되었다.
    *
    * @param config transition의 validator_config JSON
    * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @return 명령어, resolvedPath, VFS 권한 조건이 모두 맞으면 true
+   * @return 명령어 구조와 검색 대상(루트, 파일 패턴)이 조건에 맞으면 true
    */
   private boolean matchesFindTmpCommandRule(
       JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
@@ -1022,60 +1023,83 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
+    // 선행 플래그나 필수 생성 파일 조건 확인
     if (!matchesRulePrerequisites(config, latestSnapshot)) {
       return false;
     }
 
+    // 입력된 명령어를 파싱하여 'find' 명령어인지 확인
     ParsedCommand command = parseCommand(request.getInputValue());
     if (command == null || !"find".equals(command.command())) {
       return false;
     }
 
     List<String> args = command.args();
+    // 'find . -name *.tmp' (3개) 또는 'find . -type f -name *.tmp' (5개) 형태 지원
     if (args.size() != 3 && args.size() != 5) {
       return false;
     }
 
+    // 검색 시작 위치가 현재 워크스페이스의 루트(또는 현재 디렉토리)인지 확인
     if (!isWorkspaceSearchRoot(args.get(0), latestSnapshot)) {
       return false;
     }
 
     boolean nameSeen = false;
     boolean typeFileSeen = false;
+
+    // 인자들을 순회하며 필수 옵션(-name *.tmp)과 선택 옵션(-type f) 확인
     for (int i = 1; i < args.size(); i++) {
       String arg = args.get(i);
+
+      // 파일명 패턴 옵션 확인
       if ("-name".equals(arg) && i + 1 < args.size() && "*.tmp".equals(args.get(i + 1))) {
         nameSeen = true;
-        i++;
+        i++; // 옵션 값 건너뜀
         continue;
       }
 
+      // 파일 타입 옵션 확인 (선택 사항)
       if ("-type".equals(arg) && i + 1 < args.size() && "f".equals(args.get(i + 1))) {
         typeFileSeen = true;
-        i++;
+        i++; // 옵션 값 건너뜀
         continue;
       }
 
+      // 허용되지 않은 인자가 섞여 있으면 실패
       return false;
     }
 
+    // 최소한 -name *.tmp는 포함되어야 하며, 인자 개수가 5개라면 -type f도 확인되어야 함
     return nameSeen && (args.size() == 3 || typeFileSeen);
   }
 
+  /**
+   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다.
+   * '.' 또는 워크스페이스의 절대 경로(/home/guest)를 허용한다.
+   *
+   * @param rawRoot 사용자가 입력한 경로 문자열
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 유효한 루트 경로면 true
+   */
   private boolean isWorkspaceSearchRoot(String rawRoot, JsonNode latestSnapshot) {
     if (rawRoot == null || rawRoot.isBlank()) {
       return false;
     }
 
+    // 경로 끝의 '/' 제거 및 정규화
     String normalized =
         rawRoot.endsWith("/") && rawRoot.length() > 1
             ? rawRoot.substring(0, rawRoot.length() - 1)
             : rawRoot;
+
+    // '.'인 경우 현재 작업 디렉토리가 루트인지 확인
     if (".".equals(normalized)) {
       String cwd = extractText(latestSnapshot, "/terminal/cwd");
       return cwd == null || cwd.isBlank() || CHAPTER_02_DEFAULT_CWD.equals(cwd);
     }
 
+    // 절대/상대 경로를 해소하여 VFS의 루트 경로와 일치하는지 확인
     String resolvedRoot = resolveSnapshotPath(latestSnapshot, rawRoot);
     return createVfsContext(latestSnapshot).getRootPath().equals(resolvedRoot);
   }
@@ -1790,20 +1814,24 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 여러 입력 경로를 현재 snapshot 기준 VFS 절대 경로로 정규화한다.
+   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다.
+   * 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고, 디렉토리는 하위 파일 전체 목록으로 확장한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPaths 원문 경로 목록
-   * @return 정규화된 절대 경로 목록
+   * @param rawPaths 유저가 입력한 원본 경로 목록 (예: sys/, *.tmp)
+   * @return 해소된 VFS 절대 경로들의 리스트 (중복 제거)
    */
   private List<String> resolveTarInputPaths(JsonNode latestSnapshot, List<String> rawPaths) {
     VfsContext vfs = createVfsContext(latestSnapshot);
+    // 순서를 유지하면서 중복을 제거하기 위해 LinkedHashSet 사용
     Set<String> resolvedPaths = new LinkedHashSet<>();
 
     for (String rawPath : rawPaths) {
+      // 1. 와일드카드(*, ?) 패턴인 경우
       if (containsShellGlob(rawPath)) {
         List<String> expandedPaths = expandVfsGlob(latestSnapshot, vfs, rawPath);
         if (expandedPaths.isEmpty()) {
+          // 매칭되는 파일이 없더라도 유효성 검사를 위해 일단 해소된 경로 추가
           resolvedPaths.add(resolveSnapshotPath(latestSnapshot, rawPath));
         } else {
           resolvedPaths.addAll(expandedPaths);
@@ -1811,40 +1839,61 @@ public class StoryServiceImpl implements StoryService {
         continue;
       }
 
+      // 2. 일반 경로인 경우 (상대/절대 경로 해소)
       String resolvedPath = resolveSnapshotPath(latestSnapshot, rawPath);
       VfsNode node = vfs.resolve(resolvedPath);
+
+      // 디렉토리인 경우 하위의 모든 파일 경로를 수집 (tar의 디렉토리 아카이빙 특성 반영)
       if (node != null && node.isDirectory()) {
         collectDescendantFilePaths(vfs, resolvedPath, resolvedPaths);
         continue;
       }
 
+      // 일반 파일인 경우 그대로 추가
       resolvedPaths.add(resolvedPath);
     }
 
     return new ArrayList<>(resolvedPaths);
   }
 
+  /**
+   * 경로 문자열에 쉘 와일드카드 문자(*, ?)가 포함되어 있는지 확인한다.
+   */
   private boolean containsShellGlob(String rawPath) {
     return rawPath != null && (rawPath.contains("*") || rawPath.contains("?"));
   }
 
+  /**
+   * VFS 내에서 Glob 패턴에 매칭되는 모든 파일 경로를 찾는다.
+   */
   private List<String> expandVfsGlob(JsonNode latestSnapshot, VfsContext vfs, String rawPattern) {
+    // 입력 패턴을 절대 경로 패턴으로 변환
     String resolvedPattern = resolveSnapshotPath(latestSnapshot, rawPattern);
+    // Glob 패턴을 정규표현식으로 변환
     String regex = toPathGlobRegex(resolvedPattern);
+
+    // VFS의 모든 파일 경로를 수집하여 정규식과 매칭
     Set<String> allFiles = new LinkedHashSet<>();
     collectDescendantFilePaths(vfs, vfs.getRootPath(), allFiles);
-    return allFiles.stream().filter(path -> path.matches(regex)).collect(Collectors.toList());
+
+    return allFiles.stream()
+        .filter(path -> path.matches(regex))
+        .collect(Collectors.toList());
   }
 
+  /**
+   * Glob 패턴(*, ?)을 Java 정규표현식(Regex)으로 변환한다.
+   */
   private String toPathGlobRegex(String pattern) {
     StringBuilder regex = new StringBuilder("^");
     for (int i = 0; i < pattern.length(); i++) {
       char ch = pattern.charAt(i);
       if (ch == '*') {
-        regex.append("[^/]*");
+        regex.append("[^/]*"); // 디렉토리 경계(/)를 넘지 않는 와일드카드
       } else if (ch == '?') {
-        regex.append("[^/]");
+        regex.append("[^/]");  // 단일 문자 와일드카드
       } else {
+        // 특수 문자 이스케이프 처리
         if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
           regex.append('\\');
         }
@@ -1855,11 +1904,16 @@ public class StoryServiceImpl implements StoryService {
     return regex.toString();
   }
 
+  /**
+   * 특정 디렉토리 하위의 모든 파일 경로를 재귀적으로 수집한다.
+   */
   private void collectDescendantFilePaths(VfsContext vfs, String directoryPath, Set<String> paths) {
     for (VfsNode child : vfs.listChildren(directoryPath)) {
       if (child.isDirectory()) {
+        // 디렉토리면 재귀 호출
         collectDescendantFilePaths(vfs, child.path(), paths);
       } else {
+        // 파일이면 경로 추가
         paths.add(child.path());
       }
     }
@@ -2065,18 +2119,21 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * nc 인자 목록을 전송 검증 구조로 파싱한다.
+   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다.
+   * Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
    *
-   * @param args nc 명령 뒤의 인자 목록
-   * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
+   * @param arg 옵션 토큰
+   * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
    */
   private boolean isTarOldStyleOptionToken(String arg) {
     if (arg == null || arg.isBlank() || arg.startsWith("-")) {
       return false;
     }
+    // 생성(c)과 파일지정(f) 옵션이 반드시 포함되어야 함
     if (!arg.contains("c") || !arg.contains("f")) {
       return false;
     }
+    // 허용된 문자(c, v, f) 이외의 문자가 섞여 있으면 실패
     for (int i = 0; i < arg.length(); i++) {
       char option = arg.charAt(i);
       if (option != 'c' && option != 'v' && option != 'f') {
@@ -2086,6 +2143,13 @@ public class StoryServiceImpl implements StoryService {
     return true;
   }
 
+  /**
+   * nc 인자 목록을 전송 검증 구조로 파싱한다.
+   * 다양한 타임아웃 옵션 형식을 지원한다.
+   *
+   * @param args nc 명령 뒤의 인자 목록
+   * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
+   */
   private ParsedNcCommand parseNcCommand(List<String> args) {
     // -w 옵션 값을 저장한다.
     Integer timeoutSeconds = null;
@@ -2101,20 +2165,16 @@ public class StoryServiceImpl implements StoryService {
       // 현재 토큰을 가져온다.
       String arg = args.get(i);
 
-      // -w 다음 토큰은 timeout seconds다.
+      // 1. 공백 분리형 타임아웃 옵션 확인 (예: -w 3)
       if ("-w".equals(arg) && i + 1 < args.size()) {
-        // timeout 값을 정수로 파싱한다.
         timeoutSeconds = parseInteger(args.get(++i));
         if (timeoutSeconds == null) {
           return null;
         }
-
-        // 다음 인자로 이동한다.
         continue;
       }
 
-      // < 다음 토큰은 stdin redirection 파일이다.
-      // Chapter 2 seed에서 허용하지 않은 nc 옵션은 매칭하지 않는다.
+      // 2. 붙임형 타임아웃 옵션 확인 (예: -w3)
       if (arg.startsWith("-w") && arg.length() > 2) {
         timeoutSeconds = parseInteger(arg.substring(2));
         if (timeoutSeconds == null) {
@@ -2123,11 +2183,12 @@ public class StoryServiceImpl implements StoryService {
         continue;
       }
 
+      // 3. 기타 옵션 처리 (알 수 없는 옵션은 거부)
       if (arg.startsWith("-")) {
-        // 알 수 없는 옵션이 섞이면 의도한 전송 명령이 아니다.
         return null;
       }
 
+      // 4. 입력 리다이렉션 확인 (예: < decoy.tar)
       if ("<".equals(arg) && i + 1 < args.size()) {
         // stdin 파일 경로를 저장한다.
         stdinFile = args.get(++i);
