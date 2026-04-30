@@ -68,6 +68,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     storyApi.getRecentCommands()
@@ -91,7 +92,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
   useEffect(() => {
     endOfOutputRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [terminalOutput]);
+  }, [terminalOutput, autocompleteSuggestions]);
 
   useEffect(() => {
     if (!windowState || windowState.isMinimized || activeWindowId !== windowId) return;
@@ -105,6 +106,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
   const handleCommandSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setAutocompleteSuggestions([]);
     if (!inputValue.trim() || isProcessing) return;
 
     const rawCommand = inputValue.trim();
@@ -169,7 +171,57 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Tab") {
+      setAutocompleteSuggestions([]);
+    }
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (!inputValue.trim()) return;
+
+      const words = inputValue.split(" ");
+      const lastWord = words[words.length - 1];
+
+      try {
+        const suggestions = await storyApi.getAutocomplete(terminalPath, lastWord);
+        
+        if (suggestions.length === 1) {
+          const match = suggestions[0];
+          const isDir = match.endsWith("/");
+          const suffix = isDir ? "" : " ";
+          const newLastWord = lastWord.substring(0, lastWord.lastIndexOf("/") + 1) + match + suffix;
+          words[words.length - 1] = newLastWord;
+          setInputValue(words.join(" "));
+          setAutocompleteSuggestions([]);
+        } else if (suggestions.length > 1) {
+          let commonPrefix = suggestions[0];
+          for (let i = 1; i < suggestions.length; i++) {
+            let j = 0;
+            while (j < commonPrefix.length && j < suggestions[i].length && commonPrefix[j] === suggestions[i][j]) {
+              j++;
+            }
+            commonPrefix = commonPrefix.substring(0, j);
+          }
+
+          const currentPrefix = lastWord.substring(lastWord.lastIndexOf("/") + 1);
+          if (commonPrefix.length > currentPrefix.length) {
+            const newLastWord = lastWord.substring(0, lastWord.lastIndexOf("/") + 1) + commonPrefix;
+            words[words.length - 1] = newLastWord;
+            setInputValue(words.join(" "));
+            setAutocompleteSuggestions([]);
+          } else {
+            setAutocompleteSuggestions(suggestions);
+          }
+        } else {
+          setAutocompleteSuggestions([]);
+        }
+      } catch (e) {
+        console.error("Autocomplete failed:", e);
+      }
+      return;
+    }
+
     if (commandHistory.length === 0) return;
 
     if (event.key === "ArrowUp") {
@@ -308,28 +360,38 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
         })}
 
         {!isSshAuthPromptActive && !isProcessing ? (
-          <div className="flex items-center mt-2">
-            <span
-              className="text-green-500 mr-2"
-              style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
-            >
-              {promptString}
-            </span>
-            <form onSubmit={handleCommandSubmit} className="flex-1 flex items-center">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                autoFocus
-                className="flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
-                autoComplete="off"
-                spellCheck="false"
-                style={{ textShadow: "none" }}
-                onPaste={handlePaste}
-                onKeyDown={handleKeyDown}
-              />
-            </form>
+          <div className="flex flex-col mt-2">
+            <div className="flex items-center">
+              <span
+                className="text-green-500 mr-2"
+                style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+              >
+                {promptString}
+              </span>
+              <form onSubmit={handleCommandSubmit} className="flex-1 flex items-center">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(event) => {
+                    setInputValue(event.target.value);
+                    setAutocompleteSuggestions([]);
+                  }}
+                  autoFocus
+                  className="flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
+                  autoComplete="off"
+                  spellCheck="false"
+                  style={{ textShadow: "none" }}
+                  onPaste={handlePaste}
+                  onKeyDown={handleKeyDown}
+                />
+              </form>
+            </div>
+            {autocompleteSuggestions.length > 0 && (
+              <div className="text-gray-400 whitespace-pre-wrap mt-1">
+                {autocompleteSuggestions.join("  ")}
+              </div>
+            )}
           </div>
         ) : !isSshAuthPromptActive ? (
           <div className="flex items-center mt-2 text-gray-400">

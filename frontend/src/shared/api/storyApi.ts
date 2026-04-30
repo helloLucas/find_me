@@ -32,4 +32,12 @@ export const storyApi = {
     );
     return response.data.data;
   },
+
+  getAutocomplete: async (cwd: string, input: string): Promise<string[]> => {
+    const response = await axiosInstance.get<BaseResponse<string[]>>(
+      "/api/v1/story/autocomplete",
+      { params: { cwd, input } }
+    );
+    return response.data.data;
+  },
 };
