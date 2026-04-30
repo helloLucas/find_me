@@ -499,7 +499,6 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   error: null,
   initializeStory: async (chapterCode) => {
     if (get().isLoading) return;
-
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
     useBrowserContentStore.getState().resetContent();
