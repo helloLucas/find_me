@@ -8,6 +8,7 @@ import com.lucas.story.dto.response.StoryNodeResponseDto;
 import com.lucas.story.dto.response.TransitionResponseDto;
 import com.lucas.story.service.StoryService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

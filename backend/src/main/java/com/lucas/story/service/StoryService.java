@@ -4,6 +4,7 @@ import com.lucas.story.dto.request.StartStoryRequestDto;
 import com.lucas.story.dto.request.TransitionRequestDto;
 import com.lucas.story.dto.response.StoryNodeResponseDto;
 import com.lucas.story.dto.response.TransitionResponseDto;
+import java.util.List;
 
 public interface StoryService {
 
