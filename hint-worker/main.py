@@ -277,7 +277,7 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
 위 데이터를 바탕으로 루카스의 '일간 팁' 메시지를 작성해줘.
 
 구조 예시:
-🐶 [루카스의 일간 팁] "제목"
+#### 🐶 [루카스의 일간 팁] "제목"
 
 **📊 이번 챕터에서 험난했던 구간**
 (구간 설명을 바탕으로 어떤 상황인지 반말로 친절하게 설명)
