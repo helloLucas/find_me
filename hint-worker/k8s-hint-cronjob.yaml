@@ -53,4 +53,9 @@ spec:
                 secretKeyRef:
                   name: hint-secrets
                   key: GMS_ENDPOINT
+            - name: MATTERMOST_REPORT_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: MATTERMOST_REPORT_WEBHOOK_URL
           restartPolicy: OnFailure
