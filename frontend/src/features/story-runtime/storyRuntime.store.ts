@@ -76,6 +76,7 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_CONNECT_CORE_SUCCESS: "auto",
   CH1_SSH_CONNECTED: "auto",
   CH2_WORLD_MAP_VIEW: "auto",
+  CH2_RECOVERED_DOCUMENT: "auto",
 };
 
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
@@ -216,12 +217,23 @@ function applyStoryNodeOutputBundle(
     browserStore.mergeContent(normalizedOutput.content);
   }
 
+  const content = objectRecord(normalizedOutput.content) ?? {};
+  const documentId = stringValue(content.documentId);
+
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
+    useWindowStore.getState().openWindow("browser", "Web Browser", undefined, "chrome");
   }
 
   if (node.code.startsWith("CH2_") || node.isTerminal) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", "terminal");
+    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
+  }
+
+  if (node.code === "CH2_RECOVERED_DOCUMENT") {
+    useWindowStore.getState().openWindow(
+      "document_viewer",
+      "FRAGMENT_RECOVERED_082.PDF",
+      documentId
+    );
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {
@@ -508,12 +520,25 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
     const autoInputValue = getAutoSystemInputValue(node);
     if (autoInputValue) {
-      window.setTimeout(() => {
-        const state = get();
-        if (state.currentNode?.id === node.id && !state.isLoading) {
-          void state.submitStoryAction("system", autoInputValue);
+      const scheduleAutoAction = () => {
+        const lucasState = useLucasStore.getState();
+        
+        // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
+        if (lucasState.isDialogueActive) {
+          window.setTimeout(scheduleAutoAction, 500);
+          return;
         }
-      }, 3000);
+
+        // 대화가 끝났거나 없는 경우 0.5초 뒤 액션 실행
+        window.setTimeout(() => {
+          const state = get();
+          if (state.currentNode?.id === node.id && !state.isLoading) {
+            void state.submitStoryAction("system", autoInputValue);
+          }
+        }, 500);
+      };
+
+      scheduleAutoAction();
     }
   },
 

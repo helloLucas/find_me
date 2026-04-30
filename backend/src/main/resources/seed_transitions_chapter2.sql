@@ -1219,13 +1219,11 @@ INSERT INTO story_transitions (
 SELECT
     from_node.id,
     to_node.id,
-    'click',
-    'complete_chapter',
-    'exact',
+    'system',
+    'auto',
+    'server_rule',
     $json${
-  "trim": true,
-  "caseInsensitive": false,
-  "normalizeWhitespace": true
+  "rule": "AUTO_SYSTEM"
 }$json$::jsonb,
     $json${
   "setFlags": {
