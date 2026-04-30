@@ -37,7 +37,7 @@ const LobbyPage = () => {
 
     // 레이아웃 흔들림(Layout Shift) 방지를 위한 공통 쉘 컴포넌트 렌더러
     const renderShell = (content: React.ReactNode, warningBar?: React.ReactNode) => (
-        <div className="select-none h-screen w-screen overflow-hidden flex flex-col relative p-4 md:p-8 bg-darkbg text-white font-pixel">
+        <div className="select-none h-screen w-screen overflow-hidden flex flex-col relative p-4 md:p-8 bg-darkbg text-white font-lobby">
             {/* Header */}
             <header className="shrink-0 flex justify-between items-center w-full max-w-5xl mx-auto tracking-widest border-b border-gray-800 pb-3 mb-4 transition-opacity duration-300">
                 <div className="flex gap-6 items-center">

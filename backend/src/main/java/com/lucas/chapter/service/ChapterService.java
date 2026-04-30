@@ -54,8 +54,8 @@ public class ChapterService {
     for (String code : FIXED_CHAPTER_CODES) {
       Chapter chapter = chapterMap.get(code);
 
-      // 미배포 챕터: DB에 챕터 정보가 없음
-      if (chapter == null) {
+      // 미배포 챕터: DB에 챕터 정보가 없거나 isPublished가 false인 경우
+      if (chapter == null || !chapter.getIsPublished()) {
         result.add(ChapterProgressResponse.of(code, "Unknown", "DISABLED"));
         continue;
       }

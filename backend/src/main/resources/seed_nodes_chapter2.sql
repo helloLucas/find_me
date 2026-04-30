@@ -123,6 +123,7 @@ SELECT
       "observer_status.log",
       "lucas_fragment_01.sh",
       "laplace_fragment_01.sh",
+      "maple_story.sh",
       "trash/"
     ]
   },
@@ -1039,6 +1040,7 @@ SELECT
     "resetTerminal": true
   },
   "content": {
+    "documentId": "nexus_secret_document.png",
     "terminalOutput": [
       "[RECOVERED DOCUMENT FRAGMENT]",
       "NEXUS INTERNAL / REDACTED",
@@ -1068,17 +1070,10 @@ SELECT
     "showDogAvatar": true
   }
 }$json$::jsonb,
-    'click',
+    'none',
     $json${
-  "allowedActions": [
-    "click"
-  ],
-  "buttons": [
-    {
-      "label": "Chapter 2 완료",
-      "value": "complete_chapter"
-    }
-  ]
+  "allowedActions": [],
+  "buttons": []
 }$json$::jsonb,
     TRUE,
     FALSE

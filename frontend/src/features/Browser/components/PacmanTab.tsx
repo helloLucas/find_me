@@ -304,7 +304,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   // 1. Check if we are still checking the database
   if (isCheckLoading) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#a48cff] font-pixel text-xl animate-pulse">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#a48cff] font-browser-game text-xl animate-pulse">
         <div className="mb-4 tracking-widest uppercase">Checking System Status...</div>
         <div className="w-48 h-1 bg-[#1a1130] rounded-full overflow-hidden border border-[#543ab7]/30">
           <div className="h-full bg-[#543ab7] animate-progress" style={{ width: '100%' }} />
@@ -316,7 +316,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   // 2. If already cleared in DB AND we didn't just win it in this session, show 404
   if (isCleared && !won) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#ff2255] font-pixel p-10 text-center select-none">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#ff2255] font-browser-game p-10 text-center select-none">
         <div className="text-8xl mb-6 opacity-80 drop-shadow-[0_0_20px_rgba(255,34,85,0.5)]">404</div>
         <div className="text-2xl mb-2 tracking-tighter uppercase font-bold">Resource Already Secured</div>
         <p className="text-sm opacity-50 max-w-md leading-relaxed">
@@ -332,7 +332,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   // 3. Music loading state (Only if we are allowed to play)
   if (!isMusicReady) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#a48cff] font-pixel text-xl animate-pulse">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#a48cff] font-browser-game text-xl animate-pulse">
         <div className="mb-4 tracking-widest uppercase">Initializing Driver...</div>
         <div className="w-48 h-2 bg-[#1a1130] rounded-full overflow-hidden border border-[#543ab7]">
           <div className="h-full bg-[#543ab7] transition-all duration-300" style={{ width: '50%' }} />
@@ -342,7 +342,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col items-center justify-center bg-black font-pixel overflow-hidden select-none">
+    <div ref={containerRef} className="relative w-full h-full flex flex-col items-center justify-center bg-black font-browser-game overflow-hidden select-none">
       {/* Header Section */}
       <div className="w-full flex flex-col items-center z-10 mb-1">
         <div

@@ -35,6 +35,7 @@ import com.lucas.user.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -176,6 +177,9 @@ public class StoryServiceImpl implements StoryService {
     userStoryProgressRepository.save(progress);
     log.info("Story started: User={}, Chapter={}", user.getId(), chapter.getCode());
 
+    String sessionId = "sess_user_" + user.getId();
+    storySessionRedisService.clearRecentCommands(sessionId);
+
     return StoryNodeResponseDto.from(firstNode);
   }
 
@@ -259,6 +263,9 @@ public class StoryServiceImpl implements StoryService {
         if (terminalResponse != null) {
           return terminalResponse;
         }
+
+        // 예상치 못한 오류(ERROR)를 ES에 기록
+        logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, "ERROR");
 
         // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
         CustomException e = new CustomException(ErrorCode.A1001);
@@ -396,6 +403,12 @@ public class StoryServiceImpl implements StoryService {
       }
     }
 
+    // source 추출 (어디서 요청을 보냈는지: browser, terminal 등)
+    String source = null;
+    if (request.getMeta() != null && request.getMeta().containsKey("source")) {
+      source = String.valueOf(request.getMeta().get("source"));
+    }
+
     String timestamp = storyActionLogService.generateTimestamp();
     String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
     String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
@@ -416,6 +429,7 @@ public class StoryServiceImpl implements StoryService {
             .failCountAfterAction(failCountAfterAction)
             .hintRequested(hintRequested)
             .stateVersion(stateVersion)
+            .source(source)
             .build();
 
     storySessionRedisService.recordAction(
@@ -429,7 +443,8 @@ public class StoryServiceImpl implements StoryService {
             result,
             fromNodeId,
             toNodeId,
-            hintRequested));
+            hintRequested,
+            source));
 
     // 한 줄 JSON 형태로 로거에 쏨
     storyActionLogService.logAction(event);
@@ -458,7 +473,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   // ══════════════════════════════════════════════
-  //  Private Helper Methods
+  // Private Helper Methods
   // ══════════════════════════════════════════════
 
   /**
@@ -812,11 +827,21 @@ public class StoryServiceImpl implements StoryService {
 
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
-      case "exact" -> request.getInputValue().equals(t.getExpectedInput()); // 완전 일치
+      case "exact" ->
+          matchesExactTransition(t.getExpectedInput(), request.getInputValue()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
+  }
+
+  private boolean matchesExactTransition(String expectedInput, String actualInput) {
+    if (actualInput.equals(expectedInput)) {
+      return true;
+    }
+
+    return "ssh guest@172.22.4.19".equals(expectedInput)
+        && "ssh guest@172.22.4.19:22".equals(actualInput);
   }
 
   /**
@@ -3004,5 +3029,83 @@ public class StoryServiceImpl implements StoryService {
 
     // 분석된 결과를 객체에 담아 반환합니다.
     return new ParsedCommand(cmd, args, input);
+  }
+
+  /**
+   * 터미널의 VFS 경로 자동완성 후보를 조회합니다.
+   *
+   * @param userId 사용자 식별자
+   * @param cwd 현재 작업 디렉토리
+   * @param input 현재 입력 중인 경로 조각
+   * @return 일치하는 파일 및 디렉토리명 리스트
+   */
+  @Override
+  @Transactional
+  public List<String> getAutocompleteSuggestions(Long userId, String cwd, String input) {
+    // 요청한 유저의 인증 정보를 바탕으로 유저 엔티티를 조회합니다.
+    User user = getAuthenticatedUser(userId);
+    // 해당 유저의 스토리 진행 기록을 조회하며, 없으면 null을 반환합니다.
+    UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
+    // 진행 기록이 존재하면 가장 최근에 저장된 스냅샷(VFS 오버레이 포함)을 가져옵니다.
+    JsonNode latestSnapshot = progress != null ? progress.getLatestSnapshotJson() : null;
+    // 정적 VFS와 유저의 동적 스냅샷을 병합하여 현재 가상 파일 시스템 컨텍스트를 생성합니다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+
+    // VFS의 최상위 루트 경로(예: /home/guest)를 가져옵니다.
+    String rootPath = vfs.getRootPath();
+    // 클라이언트에서 전달받은 현재 경로(cwd)가 비어있으면 루트 경로를 기본값으로 사용합니다.
+    String safeCwd = (cwd == null || cwd.trim().isEmpty()) ? rootPath : cwd;
+    // 사용자가 현재 입력 중인 타겟 문자열이 없으면 빈 문자열로 처리합니다.
+    String target = input == null ? "" : input;
+
+    // 경로 정규화를 위한 리졸버 객체를 생성합니다.
+    PathResolver pathResolver = new PathResolver();
+    // 프론트엔드에서 "~"와 같이 넘겨준 cwd를 실제 절대 경로(/home/guest 등)로 정규화합니다.
+    safeCwd = pathResolver.resolve(rootPath, safeCwd, rootPath);
+
+    // 타겟 문자열에서 마지막 디렉토리 구분자('/')의 위치를 찾습니다.
+    int lastSlash = target.lastIndexOf('/');
+    // 탐색할 대상 부모 디렉토리 경로를 저장할 변수입니다.
+    String parentDir;
+    // 부모 디렉토리 내에서 일치시켜야 할 파일/폴더명의 접두사입니다.
+    String prefix;
+
+    if (lastSlash == -1) {
+      // 입력에 '/'가 없으면 현재 경로(safeCwd) 안에서 자동완성을 수행합니다.
+      parentDir = safeCwd;
+      // 입력 전체를 접두사(prefix)로 간주합니다.
+      prefix = target;
+    } else {
+      // '/'가 존재하면 마지막 '/' 앞부분을 부모 경로 조각으로 분리합니다.
+      String rawParent = target.substring(0, lastSlash);
+      // 부모 경로 조각이 비어있으면(즉, 타겟이 '/'로 시작하면) 루트('/')로 간주합니다.
+      if (rawParent.isEmpty()) {
+        rawParent = "/";
+      }
+      // 안전한 현재 경로(safeCwd)를 기준으로 추출한 부모 경로 조각을 절대 경로로 정규화합니다.
+      parentDir = pathResolver.resolve(safeCwd, rawParent, rootPath);
+      // 마지막 '/' 뒷부분을 자동완성할 대상 접두사(prefix)로 분리합니다.
+      prefix = target.substring(lastSlash + 1);
+    }
+
+    // 최종적으로 도출된 부모 디렉토리의 VFS 노드를 조회합니다.
+    VfsNode parentNode = vfs.resolve(parentDir);
+    // 해당 부모 노드가 존재하지 않거나 디렉토리가 아니라면, 자동완성 후보가 없으므로 빈 리스트를 반환합니다.
+    if (parentNode == null || !parentNode.isDirectory()) {
+      return Collections.emptyList();
+    }
+
+    // 부모 디렉토리의 하위 노드 목록을 가져와 스트림으로 처리합니다.
+    return vfs.listChildren(parentDir).stream()
+        // 숨김 처리(hidden)된 파일이나 디렉토리는 자동완성 목록에서 제외합니다.
+        .filter(n -> !n.hidden())
+        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다.
+        .filter(n -> n.name().startsWith(prefix))
+        // 디렉토리일 경우 이름 뒤에 '/'를 붙여 반환하고, 파일이면 이름 그대로 반환합니다.
+        .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
+        // 자동완성 후보군을 알파벳 순으로 정렬합니다.
+        .sorted()
+        // 최종적으로 리스트 형태로 수집하여 반환합니다.
+        .collect(Collectors.toList());
   }
 }

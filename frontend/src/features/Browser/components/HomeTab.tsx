@@ -16,7 +16,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigate, isChapter2Mode }) 
   });
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0514] font-pixel">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0514] font-browser-chrome">
       <div className="text-4xl text-[#a48cff] mb-12 drop-shadow-[0_0_5px_#a48cff] tracking-widest font-bold">
         New Tab
       </div>

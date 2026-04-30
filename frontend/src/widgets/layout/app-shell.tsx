@@ -143,7 +143,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       {/* SYSTEM ACCESS OVERLAY */}
       {isAccessing && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md">
-          <div className="font-pixel text-[#a3e635] text-2xl animate-pulse tracking-[0.5em]">
+          <div className="font-system-overlay text-[#a3e635] text-2xl animate-pulse tracking-[0.5em]">
             SYSTEM_ACCESSING...
           </div>
           <div className="mt-4 w-48 h-1 bg-gray-900 overflow-hidden">

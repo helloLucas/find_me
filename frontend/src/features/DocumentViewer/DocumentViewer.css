@@ -1,0 +1,126 @@
+.document-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(10, 10, 20, 0.95);
+  color: #00ffcc;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  border: 1px solid rgba(0, 255, 204, 0.3);
+}
+
+.document-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(0, 255, 204, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 204, 0.2);
+}
+
+.document-viewer-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.document-viewer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #00ffcc;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.5);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #00ffcc;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00ffcc;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.document-viewer-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(0, 255, 204, 0.05) 0%, transparent 70%);
+}
+
+.document-image-container {
+  position: relative;
+  max-width: 100%;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.document-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  filter: contrast(1.1) brightness(0.9);
+}
+
+.document-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(0, 255, 204, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.8);
+  pointer-events: none;
+  animation: scan 4s linear infinite;
+}
+
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+.document-glitch-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 204, 0.03) 3px,
+    transparent 3px
+  );
+  pointer-events: none;
+}
+
+.document-viewer-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(255, 0, 0, 0.05);
+  border-top: 1px solid rgba(255, 0, 0, 0.2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #ff4444;
+}
+
+.footer-info {
+  letter-spacing: 0.1em;
+}
+
+.footer-warning {
+  text-decoration: underline;
+}
