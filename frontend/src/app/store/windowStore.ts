@@ -49,6 +49,7 @@ function resolveWindowId(
   if (idOrType === "browser") return "chrome";
   if (idOrType === "terminal") return "terminal";
   if (idOrType === "messenger") return "messenger";
+  if (idOrType === "email") return "email";
 
   return null;
 }

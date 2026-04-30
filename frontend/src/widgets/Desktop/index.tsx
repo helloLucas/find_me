@@ -13,6 +13,7 @@ import {
   DESKTOP_TASKBAR_HEIGHT,
   DESKTOP_WINDOW_DEFINITIONS,
 } from "../../shared/config/desktopWindows";
+import { BugReportModal } from "../BugReportModal";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
@@ -41,9 +42,10 @@ export const Desktop: React.FC = () => {
 
   const icons = [
     { id: "terminal", label: "Terminal", icon: DESKTOP_WINDOW_DEFINITIONS.terminal.iconPath },
-    { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" },
     { id: "chrome", label: "Browser", icon: DESKTOP_WINDOW_DEFINITIONS.chrome.iconPath },
     { id: "notepad", label: "Notebook", icon: "/pixel_notepad_icon.svg" },
+    { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" },
+    { id: "email", label: "Bug Report", icon: "/pixel_email_cyberpunk.png" },
   ];
 
   const handleIconDoubleClick = (id: string) => {
@@ -57,6 +59,11 @@ export const Desktop: React.FC = () => {
 
     if (id === "chrome") {
       openWindow("chrome");
+      return;
+    }
+
+    if (id === "email") {
+      openWindow("email");
       return;
     }
 
@@ -161,6 +168,18 @@ export const Desktop: React.FC = () => {
 
           if (windowState.type === "terminal") {
             return <TerminalScene key={windowState.id} windowId={windowState.id} />;
+          }
+
+          if (windowState.type === "email") {
+            return (
+              <BugReportModal 
+                key={windowState.id}
+                isOpen={true}
+                onClose={() => useWindowStore.getState().closeWindow("email")}
+                zIndex={windowState.zIndex}
+                onFocus={() => useWindowStore.getState().focusWindow("email")}
+              />
+            );
           }
 
           return <MessengerWindow key={windowState.id} windowId={windowState.id} />;

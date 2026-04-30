@@ -16,6 +16,7 @@ interface WindowFrameProps {
   allowMinimize?: boolean;
   allowMaximize?: boolean;
   allowResize?: boolean;
+  theme?: "green" | "magenta" | "cyan";
 }
 
 export const WindowFrame: React.FC<WindowFrameProps> = ({
@@ -34,6 +35,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   allowMinimize = true,
   allowMaximize = true,
   allowResize = true,
+  theme = "green",
 }) => {
   const windowRef = useRef<HTMLDivElement>(null);
   const geom = useRef({
@@ -163,8 +165,38 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     window.addEventListener("mouseup", onMouseUp);
   };
 
+  const themeClasses = theme === "cyan"
+    ? "border-[#00D4FF] shadow-[0_0_20px_rgba(0,212,255,0.25)]"
+    : theme === "magenta" 
+    ? "border-[#FF00FF] shadow-[0_0_20px_rgba(255,0,255,0.15)]"
+    : "border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)]";
+
+  const headerClasses = theme === "cyan"
+    ? "border-b-2 border-[#0099CC] bg-gray-900"
+    : theme === "magenta"
+    ? "border-b-2 border-[#BC00BC] bg-gray-900"
+    : "border-b-2 border-green-900 bg-gray-900";
+    
+  const titleClasses = theme === "cyan"
+    ? "text-[#00D4FF] drop-shadow-[0_0_5px_rgba(0,212,255,0.6)]"
+    : theme === "magenta"
+    ? "text-[#FF00FF] drop-shadow-[0_0_5px_rgba(255,0,255,0.5)]"
+    : "text-green-500";
+    
+  const iconClasses = theme === "cyan"
+    ? "bg-[#00D4FF]"
+    : theme === "magenta"
+    ? "bg-[#FF00FF]"
+    : "bg-green-500";
+    
+  const buttonClasses = theme === "cyan"
+    ? "text-[#00D4FF] hover:bg-[#00D4FF]/10 hover:text-[#00D4FF] hover:border-[#00D4FF]/50"
+    : theme === "magenta"
+    ? "text-[#FF00FF] hover:bg-[#2A002A] hover:text-[#FF00FF] hover:border-[#FF00FF]/50"
+    : "text-green-600 hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50";
+
   const baseClasses =
-    "absolute flex flex-col overflow-hidden bg-black border-2 border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)] ring-1 ring-black origin-bottom";
+    `absolute flex flex-col overflow-hidden bg-black border-2 ${themeClasses} ring-1 ring-black origin-bottom`;
   const stateClasses = isMinimized
     ? "opacity-0 scale-50 pointer-events-none transition-all duration-300 ease-in-out"
     : isMaximized
@@ -179,19 +211,19 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       onMouseDownCapture={onFocus}
     >
       <div
-        className="flex items-center justify-between bg-gray-900 border-b-2 border-green-900 select-none cursor-move h-8 px-1"
+        className={`flex items-center justify-between select-none cursor-move h-8 px-1 ${headerClasses}`}
         onMouseDown={handleHeaderMouseDown}
         onDoubleClick={allowMaximize ? onToggleMaximize : undefined}
       >
-        <div className="flex items-center space-x-2 px-2 text-green-500 font-mono text-sm tracking-wide font-bold">
-          <div className="w-3 h-3 bg-green-500 rounded-sm opacity-80" />
+        <div className={`flex items-center space-x-2 px-2 font-mono text-sm tracking-wide font-bold ${titleClasses}`}>
+          <div className={`w-3 h-3 rounded-sm opacity-80 ${iconClasses}`} />
           <span>{title}</span>
         </div>
 
         <div className="flex items-center h-full gap-1 mr-1">
           {allowMinimize && onMinimize && (
             <button
-              className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50 transition-colors"
+              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] transition-colors ${buttonClasses}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onMinimize();
@@ -202,7 +234,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           )}
           {allowMaximize && onToggleMaximize && (
             <button
-              className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50 transition-colors"
+              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] transition-colors ${buttonClasses}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onToggleMaximize();
@@ -215,7 +247,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           )}
           {onClose && (
             <button
-              className="w-7 h-6 flex items-center justify-center text-green-600 bg-transparent border border-transparent mx-[1px] hover:bg-red-800/70 hover:text-white hover:border-red-500/50 transition-colors"
+              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] hover:bg-red-800/70 hover:text-white hover:border-red-500/50 transition-colors ${theme === "cyan" ? "text-[#00D4FF]" : theme === "magenta" ? "text-[#FF00FF]" : "text-green-600"}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onClose();
