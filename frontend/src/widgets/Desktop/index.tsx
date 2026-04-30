@@ -153,6 +153,7 @@ export const Desktop: React.FC = () => {
                 id={windowState.id}
                 title={windowState.title}
                 icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+                defaultWidth={1000}
               >
                 <Browser windowId={windowState.id} />
               </Window>
