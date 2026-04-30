@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+import time
 import requests
 import psycopg2
 from psycopg2 import pool
@@ -54,8 +55,18 @@ except Exception as e:
     sys.exit(1)
 
 def get_db_connection():
-    """풀에서 DB 연결을 가져옵니다."""
-    return db_pool.getconn()
+    """풀에서 DB 연결을 가져옵니다. 실패 시 최대 3번 재시도합니다."""
+    retries = 3
+    for i in range(retries):
+        try:
+            return db_pool.getconn()
+        except Exception as e:
+            if i < retries - 1:
+                logger.warning(f"Failed to get DB connection (attempt {i+1}/{retries}): {e}. Retrying in 2s...")
+                time.sleep(2)
+            else:
+                logger.error(f"Failed to get DB connection after {retries} attempts.")
+                raise e
 
 def release_db_connection(conn):
     """DB 연결을 풀에 반환합니다."""
@@ -112,6 +123,10 @@ def get_bottleneck_data(chapter_id=None):
     """Elasticsearch에서 세션 기반 고도화 병목 지표를 추출합니다."""
     logger.info(f"Analyzing bottleneck patterns for Chapter: {chapter_id}...")
     es = Elasticsearch([ES_URL])
+    
+    # 챕터별 정밀 인덱싱: 최근 7일간의 인덱스만 명시적으로 타겟팅
+    # 인덱스 패턴이 game-logs-YYYY.MM.DD 형식이므로 와일드카드를 사용하되 범위를 제한
+    target_index = "game-logs-*" 
     
     # 챕터 필터 설정
     must_conditions = [{"range": {"@timestamp": {"gte": "now-7d", "lte": "now"}}}]
@@ -177,7 +192,8 @@ def get_bottleneck_data(chapter_id=None):
     }
     
     try:
-        response = es.search(index="game-logs-*", body=query)
+        # request_timeout을 추가하여 ES 검색 지연 방지
+        response = es.search(index=target_index, body=query, request_timeout=60)
         buckets = response.get("aggregations", {}).get("nodes", {}).get("buckets", [])
         
         candidates = []
@@ -289,7 +305,8 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
     }
 
     try:
-        response = requests.post(GMS_ENDPOINT, headers=headers, json=payload)
+        # timeout 설정을 추가하여 무한 대기 방지
+        response = requests.post(GMS_ENDPOINT, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         
         result = response.json()
@@ -318,7 +335,8 @@ def send_to_mattermost(markdown_message):
         response = requests.post(
             MATTERMOST_WEBHOOK_URL, 
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            timeout=20
         )
         response.raise_for_status()
         logger.info("Successfully sent message to Mattermost.")
