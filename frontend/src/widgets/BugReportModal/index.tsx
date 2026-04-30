@@ -20,15 +20,34 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
   const [isCompressing, setIsCompressing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [showCompleteText, setShowCompleteText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   const nickname = useAuthStore((state) => state.nickname);
   const currentNode = useStoryRuntimeStore((state) => state.currentNode);
-  
+
   // currentNode?.code 값을 사용하여 현재 챕터/노드 정보를 가져옴 (예: "CH1_SSH_CONNECTED")
   const currentChapter = currentNode?.code || "N/A";
+
+  // 성공 상태일 때 프로그래스바 애니메이션 및 문구 노출 트리거
+  React.useEffect(() => {
+    if (success) {
+      // 1. 프로그래스바 애니메이션 시작 (100ms 후)
+      const barTimer = setTimeout(() => setProgress(100), 100);
+      // 2. 애니메이션 완료(1500ms) 후 텍스트 노출 (총 1600ms 후)
+      const textTimer = setTimeout(() => setShowCompleteText(true), 1600);
+      return () => {
+        clearTimeout(barTimer);
+        clearTimeout(textTimer);
+      };
+    } else {
+      setProgress(0);
+      setShowCompleteText(false);
+    }
+  }, [success]);
 
   if (!isOpen) return null;
 
@@ -66,16 +85,16 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       const processedFiles = await processFiles(selectedFiles);
-      
+
       const currentTotalSize = files.reduce((acc, f) => acc + f.size, 0);
       const newTotalSize = processedFiles.reduce((acc, f) => acc + f.size, 0);
-      
+
       if (currentTotalSize + newTotalSize > MAX_FILE_SIZE) {
         setError("Total file size cannot exceed 10MB.");
         e.target.value = '';
         return;
       }
-      
+
       setError(null);
       setFiles((prev) => [...prev, ...processedFiles]);
     }
@@ -97,15 +116,15 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(e.dataTransfer.files);
       const processedFiles = await processFiles(droppedFiles);
-      
+
       const currentTotalSize = files.reduce((acc, f) => acc + f.size, 0);
       const newTotalSize = processedFiles.reduce((acc, f) => acc + f.size, 0);
-      
+
       if (currentTotalSize + newTotalSize > MAX_FILE_SIZE) {
         setError("Total file size cannot exceed 10MB.");
         return;
       }
-      
+
       setError(null);
       setFiles((prev) => [...prev, ...processedFiles]);
     }
@@ -128,7 +147,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
 
     try {
       const formData = new FormData();
-      
+
       const requestData = {
         title,
         content,
@@ -148,20 +167,23 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       });
 
       await bugReportApi.sendBugReport(formData);
-      
+
       setSuccess(true);
-      setTimeout(() => {
-        onClose();
-        setTitle("");
-        setContent("");
-        setFiles([]);
-        setSuccess(false);
-      }, 2000);
     } catch (err: any) {
       setError(err.message || "An error occurred while sending the bug report.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSuccessConfirm = () => {
+    onClose();
+    setTitle("");
+    setContent("");
+    setFiles([]);
+    setSuccess(false);
+    setProgress(0);
+    setShowCompleteText(false);
   };
 
   return (
@@ -195,16 +217,40 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
         )}
 
         {success ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center animate-pulse drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">
-              <p className="text-xl font-bold mb-2">SYSTEM ERROR LOG TRANSMITTED.</p>
-              <p className="text-[#0099CC]">Thank you for your report.</p>
+          <div className="flex flex-col items-center justify-center h-full gap-6">
+            <div className="text-center drop-shadow-[0_0_10px_rgba(0,212,255,0.8)] h-16 flex flex-col justify-center">
+              <p className={`text-xl font-bold mb-1 text-[#00D4FF] transition-all duration-500 ${showCompleteText ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                시스템 오류 로그 전송 완료
+              </p>
+              <p className={`text-[#0099CC] text-sm transition-opacity duration-500 ${showCompleteText ? "opacity-100" : "opacity-40 animate-pulse"}`}>
+                {showCompleteText ? "신고해주셔서 감사합니다." : "데이터 패킷 전송 중..."}
+              </p>
             </div>
+
+            {/* Progress Bar UI */}
+            <div className="w-64 h-3 border border-[#00D4FF]/30 p-[2px] bg-black">
+              <div
+                className="h-full bg-[#00D4FF] shadow-[0_0_15px_rgba(0,212,255,0.6)] transition-all duration-1500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <div className="text-[10px] text-[#0099CC] mt-[-10px] tracking-widest font-bold">
+              TRANSMISSION {progress}% {progress === 100 ? "COMPLETE" : "IN PROGRESS"}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSuccessConfirm}
+              className="px-10 py-2 bg-[#00D4FF] text-black hover:bg-[#0099CC] hover:shadow-[0_0_15px_rgba(0,212,255,0.8)] transition-all uppercase text-sm font-bold shadow-[0_0_8px_rgba(0,212,255,0.6)] mt-4"
+            >
+              확인
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 h-full">
             <div className="border-b border-[#0099CC]/50 pb-2 mb-2">
-              <h2 className="text-lg font-bold drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">SEND BUG REPORT</h2>
+              <h2 className="text-lg font-bold drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">[시스템 오류 보고 전송]</h2>
               <p className="text-xs text-[#0099CC]">AGENT: {nickname} | LOC: {currentChapter}</p>
             </div>
 
@@ -215,7 +261,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="bg-gray-900 border border-[#0099CC] text-white p-2 outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] focus:bg-[#00D4FF]/[0.05] focus:shadow-[0_0_8px_rgba(0,212,255,0.6)] transition-all"
-                placeholder="Brief description of the bug..."
+                placeholder="오류 데이터 요약..."
                 disabled={isSubmitting}
               />
             </div>
@@ -226,15 +272,15 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="bg-gray-900 border border-[#0099CC] text-white p-2 outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] focus:bg-[#00D4FF]/[0.05] focus:shadow-[0_0_8px_rgba(0,212,255,0.6)] transition-all flex-1 resize-none terminal-scrollbar"
-                placeholder="Please describe the steps to reproduce..."
+                placeholder="어떤 행동을 했을 때 오류가 발생했나요?"
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">Attachments (Optional)</label>
-              
-              <div 
+
+              <div
                 className={`relative overflow-hidden w-full border-2 border-dashed transition-all p-4 flex flex-col items-center justify-center gap-2 ${
                   isDragging ? "border-[#00D4FF] bg-[#00D4FF]/20 shadow-[inset_0_0_20px_rgba(0,212,255,0.2)]" : "border-[#0099CC]/50 bg-black hover:border-[#00D4FF]/70"
                 }`}
@@ -250,10 +296,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                   disabled={isSubmitting || isCompressing}
                 />
                 <span className="font-bold uppercase text-sm transition-colors text-center pointer-events-none drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]" style={{ color: isDragging ? '#ffffff' : '#00D4FF' }}>
-                  {isCompressing ? "COMPRESSING IMAGES..." : isDragging ? "DROP FILES HERE" : "CLICK TO CHOOSE OR DRAG & DROP"}
+                  {isCompressing ? "COMPRESSING IMAGES..." : isDragging ? "DROP FILES HERE" : "파일 업로드"}
                 </span>
                 <span className="text-xs text-[#0099CC] pointer-events-none">
-                  (Max 10MB Total)
+                  [용량 제한: 총 10MB]
                 </span>
               </div>
 
@@ -262,8 +308,8 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                   {files.map((f, i) => (
                     <div key={i} className="flex items-center justify-between bg-[#00D4FF]/5 p-1 px-2 border border-[#0099CC]/50 hover:border-[#00D4FF]/50 transition-colors">
                       <span className="truncate flex-1 text-white">- {f.name}</span>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeFile(i)}
                         className="text-red-500 hover:text-red-400 hover:bg-red-900/20 font-bold px-2 py-1 ml-2 transition-colors"
                         disabled={isSubmitting || isCompressing}
