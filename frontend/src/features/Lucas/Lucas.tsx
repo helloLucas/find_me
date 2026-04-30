@@ -30,6 +30,7 @@ export const Lucas: React.FC = () => {
   const [hintInput, setHintInput] = useState('');
   const [isHintRequesting, setIsHintRequesting] = useState(false);
   const [pendingFrame, setPendingFrame] = useState(0);
+  const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isLastMessage = currentScene
@@ -59,8 +60,15 @@ export const Lucas: React.FC = () => {
   }, [isDialogueActive, currentMessage]);
 
   useEffect(() => {
-    if (!chatEndRef.current) return;
-    chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const container = hintMessagesRef.current;
+    if (!container || !isHintMode) return;
+
+    window.requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    });
   }, [chatHistory, isHintMode, isHintRequesting]);
 
   useEffect(() => {
@@ -81,13 +89,9 @@ export const Lucas: React.FC = () => {
       return;
     }
 
-    const isLastSceneMessage = currentScene
-      ? currentMessageIndex >= currentScene.messages.length - 1
-      : false;
-
     nextMessage();
 
-    if (isLastSceneMessage) {
+    if (isLastMessage) {
       const storyRuntime = useStoryRuntimeStore.getState();
       const node = storyRuntime.currentNode;
       if (canSubmitStoryAction(node, 'click', 'reopen_network_clue')) {
@@ -113,11 +117,14 @@ export const Lucas: React.FC = () => {
       if (hintText) {
         addChatMessage('LUCAS', hintText);
       } else {
-        addChatMessage('LUCAS', '응답을 읽지 못했어. 같은 질문을 한 번 더 보내줘.');
+        addChatMessage(
+          'LUCAS',
+          '연결 상태가 좋지 못해서 채팅을 읽지 못했어. 같은 질문을 한 번 더 보내줘.',
+        );
       }
     } catch (error) {
       console.error('[Lucas] hint request failed', error);
-      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠시 후 다시 요청해줘.');
+      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 말해줘.');
     } finally {
       setIsHintRequesting(false);
     }
@@ -155,8 +162,9 @@ export const Lucas: React.FC = () => {
                 </div>
               )}
             {!isTyping &&
-              (currentMessage.blocking || (isLastMessage && currentNode?.promptType === 'command')) &&
-              !currentNode?.promptMeta?.buttons && <span className="bubble-arrow">▶</span>}
+              (currentMessage.blocking ||
+                (isLastMessage && currentNode?.promptType === 'command')) &&
+              !currentNode?.promptMeta?.buttons && <span className="bubble-arrow">▼</span>}
           </div>
         </div>
       )}
@@ -164,7 +172,7 @@ export const Lucas: React.FC = () => {
       {isHintMode && !isDialogueActive && (
         <div className="lucas-hint-ui">
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
-          <div className="hint-messages">
+          <div className="hint-messages" ref={hintMessagesRef}>
             {chatHistory.map((chat) => (
               <div key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
                 <span className="chat-speaker">{chat.speaker}</span>
@@ -184,7 +192,7 @@ export const Lucas: React.FC = () => {
               type="text"
               value={hintInput}
               onChange={(event) => setHintInput(event.target.value)}
-              placeholder={isHintRequesting ? '입력 분석 중...' : '루카스에게 질문해봐'}
+              placeholder={isHintRequesting ? '응답 생성 중...' : '루카스에게 메시지를 보내세요'}
               autoFocus
               disabled={isHintRequesting}
             />
@@ -217,4 +225,3 @@ export const Lucas: React.FC = () => {
     </div>
   );
 };
-

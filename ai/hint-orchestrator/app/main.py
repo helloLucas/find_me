@@ -69,7 +69,13 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
 
     parsed = _parse_json_or_none(raw_text)
     if parsed is None:
-        return _fallback_response(request)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "LLM_INVALID_JSON",
+                "message": "LLM returned invalid JSON response",
+            },
+        )
 
     try:
         response = HintGenerateResponse(
@@ -81,10 +87,22 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
             model=settings.gms_llm_model.removeprefix("models/"),
         )
     except Exception:
-        return _fallback_response(request)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "LLM_RESPONSE_SCHEMA_ERROR",
+                "message": "LLM response schema validation failed",
+            },
+        )
 
     if not response.hint_text.strip() or not response.hint_level.strip():
-        return _fallback_response(request)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "LLM_EMPTY_RESPONSE",
+                "message": "LLM returned empty hint fields",
+            },
+        )
 
     return response
 
