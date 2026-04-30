@@ -812,11 +812,20 @@ public class StoryServiceImpl implements StoryService {
 
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
-      case "exact" -> request.getInputValue().equals(t.getExpectedInput()); // 완전 일치
+      case "exact" -> matchesExactTransition(t.getExpectedInput(), request.getInputValue()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
+  }
+
+  private boolean matchesExactTransition(String expectedInput, String actualInput) {
+    if (actualInput.equals(expectedInput)) {
+      return true;
+    }
+
+    return "ssh guest@172.22.4.19".equals(expectedInput)
+        && "ssh guest@172.22.4.19:22".equals(actualInput);
   }
 
   /**

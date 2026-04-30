@@ -358,11 +358,7 @@ function getRetryTerminalLinesOverride(
 
   if (
     fromNodeCode === "CH1_SSH_AUTH_PROMPT" &&
-    (
-      normalizedInput === "no" ||
-      normalizedInput === "ssh guest@172.22.4.19" ||
-      normalizedInput === "ssh guest@172.22.4.19:22"
-    )
+    normalizedInput === "no"
   ) {
     return [];
   }

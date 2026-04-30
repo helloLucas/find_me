@@ -112,16 +112,9 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
 
     const normalizedLowerCommand = normalizedWhitespaceCommand.toLowerCase();
-    const isReconnectSshCommand =
-      /^ssh\s+guest@172\.22\.4\.19(?::22)?$/i.test(normalizedWhitespaceCommand);
     const isSshAuthNode = activeNode?.code === SSH_AUTH_PROMPT_NODE_CODE;
     const isSshAuthYes = isSshAuthNode && normalizedLowerCommand === "yes";
-    const command =
-      isSshAuthYes
-        ? "YES"
-        : activeNode?.code === "CH1_TERMINAL_SSH_READY" && isReconnectSshCommand
-          ? "ssh guest@172.22.4.19"
-          : rawCommand;
+    const command = isSshAuthYes ? "YES" : rawCommand;
 
     appendTerminalOutput(
       "input",
@@ -171,6 +164,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   if (!windowState) return null;
 
   const availableHeight = Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT);
+  const defaultTerminalSize = { w: 800, h: 450 };
 
   return (
     <WindowFrame
@@ -182,11 +176,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       onToggleMaximize={() => toggleMaximizeWindow(windowState.id)}
       isMinimized={windowState.isMinimized}
       isMaximized={windowState.isMaximized}
-      defaultSize={{ w: 700, h: 450 }}
-      defaultPosition={{ x: window.innerWidth / 2 - 350, y: availableHeight / 2 - 225 }}
+      defaultSize={defaultTerminalSize}
+      defaultPosition={{
+        x: window.innerWidth / 2 - defaultTerminalSize.w / 2,
+        y: availableHeight / 2 - defaultTerminalSize.h / 2,
+      }}
     >
       <div
-        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-sm terminal-scrollbar"
+        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-xs leading-tight terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
           if (window.getSelection()?.toString() === "") {
