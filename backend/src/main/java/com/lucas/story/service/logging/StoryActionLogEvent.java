@@ -45,4 +45,7 @@ public class StoryActionLogEvent {
 
   @JsonProperty("state_version")
   private int stateVersion;
+
+  @JsonProperty("source")
+  private String source;
 }
