@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'node' 
+        nodejs 'node'
     }
 
     options {
@@ -10,13 +10,14 @@ pipeline {
     }
 
     environment {
-        DOCKER_HUB_ID = 'shyunnnn' 
+        DOCKER_HUB_ID = 'shyunnnn'
         FRONT_IMAGE = "${DOCKER_HUB_ID}/find-me-frontend"
         BACK_IMAGE = "${DOCKER_HUB_ID}/find-me-backend"
         HINT_IMAGE = "${DOCKER_HUB_ID}/find-me-hint"
-        
+        ORCH_IMAGE = "${DOCKER_HUB_ID}/find-me-orchestrator"
+
         ENV_TAG = "${(env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").contains('main') ? 'prod' : 'dev'}"
-        
+
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
     }
 
@@ -27,10 +28,10 @@ pipeline {
                     // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
                     // env.BRANCH_NAME이 없으면 env.GIT_BRANCH나 GitLab 플러그인 변수를 확인합니다.
                     def rawBranch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.gitlabTargetBranch ?: ""
-                    
+
                     // 2. 'origin/develop' 같이 경로가 포함된 경우를 대비해 순수 이름만 추출
                     def currentBranch = rawBranch.replace('origin/', '')
-                    
+
                     echo "--- 디버깅: 현재 인식된 브랜치명: ${currentBranch} ---"
 
                     // 3. 브랜치 검증
@@ -46,7 +47,7 @@ pipeline {
                             sh '''
                                 # 1. 현재 브랜치 이름을 'main'으로 강제 고정
                                 git checkout -B main
-                                
+
                                 # semantic-release가 'origin/main'이 아닌 'main'으로 인식하도록 환경 변수 강제 설정
                                 export GIT_BRANCH=main
                                 export BRANCH_NAME=main
@@ -63,14 +64,14 @@ pipeline {
                                 export gitlabMergeRequestId=""
                                 export CHANGE_ID=""
                                 export PULL_REQUEST="false"
-                                
+
                                 export GL_TOKEN=${GIT_TOKEN}
-                                
+
                                 npm install
-                                
+
                                 # 4. 인증 정보가 포함된 URL을 직접 전달하는 대신, 설정된 origin과 GL_TOKEN을 사용
                                 npx semantic-release
-                                
+
                                 # 태그 페치도 인증이 필요하므로 블록 안에서 실행
                                 git fetch --tags || true
                             '''
@@ -80,7 +81,7 @@ pipeline {
                         echo "--- 개발 환경 ---"
                         env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
                     }
-                    
+
                     // 5. 이후 단계를 위해 브랜치명을 표준화된 변수로 저장
                     env.NORMALIZED_BRANCH = currentBranch
                 }
@@ -88,7 +89,7 @@ pipeline {
         }
 
         stage('Frontend Build & Push') {
-            when { 
+            when {
                 expression { return isTargetBranch() }
             }
             steps {
@@ -117,14 +118,14 @@ pipeline {
                     }
                 }
             }
-        }   
+        }
 
 
         stage('Backend Build & Push') {
-            when { 
+            when {
                 expression { return isTargetBranch() }
                 // anyOf { branch 'main'; branch 'develop' }
-                // changeset "backend/**" 
+                // changeset "backend/**"
             }
             steps {
                 script {
@@ -141,8 +142,27 @@ pipeline {
             }
         }
 
+        stage('Orchestrator Build & Push') {
+            when {
+                expression { return isTargetBranch() }
+            }
+            steps {
+                script {
+                    dir('ai/hint-orchestrator') {
+                        sh "docker build -t ${ORCH_IMAGE}:${env.IMAGE_TAG} ."
+                        sh "docker tag ${ORCH_IMAGE}:${env.IMAGE_TAG} ${ORCH_IMAGE}:${ENV_TAG}-latest"
+                        withCredentials([usernamePassword(credentialsId: 'docker-hub-auth', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                            sh "docker login -u $USER -p $PASS"
+                            sh "docker push ${ORCH_IMAGE}:${env.IMAGE_TAG}"
+                            sh "docker push ${ORCH_IMAGE}:${ENV_TAG}-latest"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Hint Worker Build & Push') {
-            when { 
+            when {
                 expression { return isTargetBranch() }
                 changeset "hint-worker/**"
             }
@@ -162,9 +182,9 @@ pipeline {
         }
 
         stage('K8s Manifest Update & Push') {
-            when { 
+            when {
                 expression { return isTargetBranch() }
-                // anyOf { branch 'main'; branch 'develop' } 
+                // anyOf { branch 'main'; branch 'develop' }
                 }
             steps {
                 script {
@@ -174,6 +194,9 @@ pipeline {
                     sh "sed -i 's|${FRONT_IMAGE}:.*|${FRONT_IMAGE}:${env.IMAGE_TAG}|g' k8s/frontend.yaml"
                     sh "sed -i 's|${BACK_IMAGE}:.*|${BACK_IMAGE}:${env.IMAGE_TAG}|g' k8s/backend.yaml"
                     sh "sed -i 's|${HINT_IMAGE}:.*|${HINT_IMAGE}:${env.IMAGE_TAG}|g' hint-worker/k8s-hint-cronjob.yaml"
+                    sh "sed -i 's|${ORCH_IMAGE}:.*|${ORCH_IMAGE}:${env.IMAGE_TAG}|g' k8s/orchestrator.yml"
+
+                    sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/orchestrator.yml"
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/frontend.yaml"
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/backend.yaml"
 
@@ -186,7 +209,7 @@ pipeline {
                         sh 'git config user.email "jenkins@ssafy.com"'
                         sh 'git config user.name "Jenkins-CI"'
                         sh 'git add .'
-                        
+
                         // 커밋 메시지에 [skip ci]를 넣어 무한 루프 방지
                         sh "git commit -m 'chore(deploy): update image tag to ${env.IMAGE_TAG} [skip ci]' || echo 'nothing to commit'"
 
@@ -202,18 +225,26 @@ pipeline {
             steps {
                 script {
                     echo "--- ${ENV_TAG} 환경에 배포를 시작합니다 ---"
-                    
+
                     // 네임스페이스가 없으면 생성 (dev/prod)
                     sh "kubectl create namespace ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
-                    
+
                     // 1. 시크릿 업데이트
                     def backendSecretId = "backend-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
                          sh "kubectl create secret generic backend-secrets --from-env-file=${BACK_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
                     }
 
+                    def orchSecretId = "orchestrator-env-${ENV_TAG}"
+                    withCredentials([file(credentialsId: orchSecretId, variable: 'ORCH_ENV_FILE')]) {
+                         sh "kubectl create secret generic orchestrator-secrets --from-env-file=${ORCH_ENV_FILE} -n ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
+                    }
+
                     // 2. 실제 서비스 배포 (Frontend, Backend)
                     dir('k8s') {
+                        sh "kubectl apply -f orchestrator.yml -n ${ENV_TAG}"
+                        sh "kubectl rollout status deploy/hint-orchestrator -n ${ENV_TAG} --timeout=180s"
+
                         sh "kubectl apply -f frontend.yaml -n ${ENV_TAG}"
                         sh "kubectl apply -f backend.yaml -n ${ENV_TAG}"
 
@@ -224,13 +255,13 @@ pipeline {
 
                     // 3. Hint Worker 시크릿 및 배포 (별도 네임스페이스 lucas-elk 사용)
                     sh "kubectl create namespace lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
-                    
+
                     def hintSecretId = "hint-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: hintSecretId, variable: 'HINT_ENV_FILE')]) {
                          sh "kubectl create secret generic hint-secrets --from-env-file=${HINT_ENV_FILE} -n lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
                     }
                     sh "kubectl apply -f hint-worker/k8s-hint-cronjob.yaml -n lucas-elk"
-                    
+
                     echo "--- 배포 완료! ---"
                 }
             }
