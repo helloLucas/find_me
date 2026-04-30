@@ -15,11 +15,13 @@ class Settings(BaseSettings):
     gms_base_url: str = Field(default="https://gms.ssafy.io/gmsapi", alias="GMS_BASE_URL")
     gms_key: str = Field(default="", alias="GMS_KEY")
     gms_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LLM_MODEL")
+    gms_router_model: str = Field(default="gpt-5-nano", alias="GMS_ROUTER_MODEL")
     gms_openai_chat_path: str = Field(
         default="api.openai.com/v1/chat/completions", alias="GMS_OPENAI_CHAT_PATH"
     )
-    gms_timeout_seconds: float = Field(default=20.0, alias="GMS_TIMEOUT_SECONDS")
+    gms_timeout_seconds: float = Field(default=30.0, alias="GMS_TIMEOUT_SECONDS")
     gms_max_output_tokens: int = Field(default=1536, alias="GMS_MAX_OUTPUT_TOKENS")
+    gms_router_max_output_tokens: int = Field(default=128, alias="GMS_ROUTER_MAX_OUTPUT_TOKENS")
     gms_temperature: float = Field(default=0.2, alias="GMS_TEMPERATURE")
     gms_embedding_model: str = Field(default="gemini-embedding-001", alias="GMS_EMBEDDING_MODEL")
     gms_embedding_output_dimensionality: int = Field(default=1536, alias="GMS_EMBEDDING_OUTPUT_DIMENSIONALITY")
@@ -30,7 +32,7 @@ class Settings(BaseSettings):
     pg_user: str = Field(default="lucas_admin", alias="PG_USER")
     pg_password: str = Field(default="", alias="PG_PASSWORD")
 
-    retrieve_default_search_top_k: int = Field(default=10, alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
+    retrieve_default_search_top_k: int = Field(default=7, alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
     retrieve_default_evidence_limit: int = Field(default=3, alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
     retrieve_default_min_similarity: float = Field(default=0.70, alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
 
@@ -41,6 +43,8 @@ class Settings(BaseSettings):
     vector_knowledge_kind_filter: str = Field(
         default="next_node_answer", alias="VECTOR_KNOWLEDGE_KIND_FILTER"
     )
+
+    hint_user_message_max_length: int = Field(default=200, alias="HINT_USER_MESSAGE_MAX_LENGTH")
 
 
 @lru_cache

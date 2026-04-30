@@ -117,6 +117,8 @@ public class HintLlmOrchestratorClient {
     private String fromNodeCode;
     @JsonProperty("action_type")
     private String actionType;
+    @JsonProperty("user_message")
+    private String userMessage;
     @JsonProperty("fail_count_after_action")
     private int failCountAfterAction;
     @JsonProperty("selected_phase")

@@ -53,6 +53,7 @@ def _to_prompt_payload(request: HintGenerateRequest, hint_level: str) -> dict[st
             "action_type": request.action_type,
             "fail_count_after_action": request.fail_count_after_action,
         },
+        "user_message": request.user_message,
         "query_text": request.query_text,
         "evidences": [item.model_dump() for item in request.evidences],
         "es_signal": request.es_signal.model_dump() if request.es_signal else None,

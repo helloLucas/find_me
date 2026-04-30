@@ -12,7 +12,8 @@
 
 제약:
 - 사실은 evidences/metadata 범위 안에서만 말한다.
-- LOW_CONFIDENCE에서는 정답 문자열을 직접 노출하지 않는다.
+- 어떤 hint_level에서도 정답 문자열을 완전 동일하게 직접 노출하지 않는다.
+- 정답 입력 패턴이 필요하면 일부를 마스킹/생략한 형태로만 제시한다. (예: ssh guest@서버ip)
 - used_transition_ids에는 근거로 사용한 transition_id만 넣는다.
 
 출력:

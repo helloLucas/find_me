@@ -26,6 +26,7 @@ def render_query_text(
     recent_actions: list[dict],
     extra_context: list[str],
     es_signal: dict | None,
+    user_message: str | None = None,
 ) -> str:
     lines: list[str] = [
         "query_scope: lucas_hint_runtime",
@@ -71,5 +72,7 @@ def render_query_text(
             lines.append(f"- {item.strip()}")
     else:
         lines.append("-")
-    return "\n".join(lines)
 
+    lines.append("user_message:")
+    lines.append(_normalize(user_message))
+    return "\n".join(lines)

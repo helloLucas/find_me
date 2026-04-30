@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,5 +34,8 @@ public class HintLiveRetrieveRequestDto {
   @DecimalMin(value = "0.0", message = "minSimilarity는 0.0 이상이어야 합니다.")
   @DecimalMax(value = "1.0", message = "minSimilarity는 1.0 이하여야 합니다.")
   private Double minSimilarity;
-}
 
+  /** 사용자 채팅 입력 (optional) */
+  @Size(max = 300, message = "userMessage는 300자 이하여야 합니다.")
+  private String userMessage;
+}

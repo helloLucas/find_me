@@ -13,6 +13,8 @@ public class HintLiveRetrieveResponseDto {
   private Long userId;
   private String chapterCode;
   private String fromNodeCode;
+  private String messageType;
+  private String routeDecision;
   private String actionType;
   private int failCountAfterAction;
   private int queryVectorDimension;
@@ -25,4 +27,3 @@ public class HintLiveRetrieveResponseDto {
   private int candidateCount;
   private List<HintEvidenceResponseDto> evidences;
 }
-

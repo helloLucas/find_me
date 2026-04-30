@@ -42,6 +42,7 @@ class HintGenerateRequest(BaseModel):
     chapter_code: str = Field(validation_alias=AliasChoices("chapter_code", "chapterCode"))
     from_node_code: str = Field(validation_alias=AliasChoices("from_node_code", "fromNodeCode"))
     action_type: str | None = Field(default=None, validation_alias=AliasChoices("action_type", "actionType"))
+    user_message: str | None = Field(default=None, validation_alias=AliasChoices("user_message", "userMessage"))
     fail_count_after_action: int = Field(
         default=0, validation_alias=AliasChoices("fail_count_after_action", "failCountAfterAction")
     )
@@ -73,6 +74,7 @@ class HintRetrieveRequest(BaseModel):
     from_node_id: str = Field(validation_alias=AliasChoices("from_node_id", "fromNodeId"))
     action_type: str | None = Field(default=None, validation_alias=AliasChoices("action_type", "actionType"))
     current_input: str | None = Field(default=None, validation_alias=AliasChoices("current_input", "currentInput"))
+    user_message: str | None = Field(default=None, validation_alias=AliasChoices("user_message", "userMessage"))
     fail_count_after_action: int = Field(
         default=0, validation_alias=AliasChoices("fail_count_after_action", "failCountAfterAction")
     )
@@ -96,6 +98,8 @@ class HintRetrieveRequest(BaseModel):
 
 
 class HintRetrieveResponse(BaseModel):
+    message_type: str
+    route_decision: str
     selected_phase: str
     low_confidence: bool
     query_vector_dimension: int

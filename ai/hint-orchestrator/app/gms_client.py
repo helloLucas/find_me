@@ -21,10 +21,6 @@ class GmsLlmClient:
         await self._http.aclose()
 
     async def generate_text(self, prompt: str) -> str:
-        base = self._settings.gms_base_url.rstrip("/")
-        path = self._settings.gms_openai_chat_path.lstrip("/")
-        url = f"{base}/{path}"
-
         payload: dict[str, Any] = {
             "model": self._settings.gms_llm_model,
             "messages": [
@@ -34,7 +30,54 @@ class GmsLlmClient:
             "max_completion_tokens": self._settings.gms_max_output_tokens,
             "response_format": {"type": "json_object"},
         }
-        if not self._is_gpt5_family(self._settings.gms_llm_model):
+        return await self._chat(payload, self._settings.gms_llm_model)
+
+    async def classify_message(
+        self,
+        user_message: str,
+        *,
+        chapter_code: str | None = None,
+        from_node_code: str | None = None,
+        action_type: str | None = None,
+        fail_count_after_action: int = 0,
+    ) -> str:
+        developer_prompt = (
+            "너는 게임 힌트 라우팅 분류기다. 반드시 JSON 객체 하나만 출력한다. "
+            "허용 라벨: message_type=hint_question|lore_question|other, "
+            "route_decision=RAG_HINT|BLOCKED_NON_HINT. "
+            "규칙: 게임 진행/현재 단계 해결 요청이면 hint_question. "
+            "세계관/설정/스토리 설명 요청이면 lore_question. "
+            "욕설/잡담/무관 질문/정답만 달라는 요청은 other. "
+            "애매하면 hint_question으로 분류한다."
+        )
+        context_lines = [
+            f"chapter_code={chapter_code or '-'}",
+            f"from_node_code={from_node_code or '-'}",
+            f"action_type={action_type or '-'}",
+            f"fail_count_after_action={fail_count_after_action}",
+            f"user_message={user_message}",
+            "출력 JSON 스키마:",
+            '{"message_type":"hint_question|lore_question|other","route_decision":"RAG_HINT|BLOCKED_NON_HINT"}',
+        ]
+        user_prompt = "\n".join(context_lines)
+
+        payload: dict[str, Any] = {
+            "model": self._settings.gms_router_model,
+            "messages": [
+                {"role": "developer", "content": developer_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "max_completion_tokens": self._settings.gms_router_max_output_tokens,
+            "response_format": {"type": "json_object"},
+        }
+        return await self._chat(payload, self._settings.gms_router_model)
+
+    async def _chat(self, payload: dict[str, Any], model_name: str) -> str:
+        base = self._settings.gms_base_url.rstrip("/")
+        path = self._settings.gms_openai_chat_path.lstrip("/")
+        url = f"{base}/{path}"
+
+        if not self._is_gpt5_family(model_name):
             payload["temperature"] = self._settings.gms_temperature
 
         response = await self._http.post(

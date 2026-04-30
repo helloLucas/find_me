@@ -93,6 +93,40 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
 async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveResponse:
     llm: GmsLlmClient = app.state.gms_client
     repo: VectorSearchRepository = app.state.vector_repo
+    user_message = _sanitize_user_message(request.user_message)
+    message_type = "none"
+    route_decision = "RAG_HINT"
+    if user_message:
+        try:
+            raw_classification = await llm.classify_message(
+                user_message,
+                chapter_code=request.chapter_id,
+                from_node_code=request.from_node_id,
+                action_type=request.action_type,
+                fail_count_after_action=request.fail_count_after_action,
+            )
+            parsed_classification = _parse_json_or_none(raw_classification) or {}
+            message_type = _normalize_message_type(parsed_classification.get("message_type"))
+        except httpx.HTTPStatusError:
+            message_type = "hint_question"
+        except httpx.RequestError:
+            message_type = "hint_question"
+        except Exception:
+            message_type = "hint_question"
+
+        route_decision = _route_decision_from_message_type(message_type)
+        if route_decision == "BLOCKED_NON_HINT":
+            return HintRetrieveResponse(
+                message_type=message_type,
+                route_decision=route_decision,
+                selected_phase="blocked_non_hint",
+                low_confidence=True,
+                query_vector_dimension=0,
+                query_text="",
+                candidate_count=0,
+                evidences=[],
+            )
+
     output_dim = request.output_dimensionality or settings.gms_embedding_output_dimensionality
     search_top_k = request.search_top_k or settings.retrieve_default_search_top_k
     evidence_limit = request.evidence_limit or settings.retrieve_default_evidence_limit
@@ -109,6 +143,7 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         recent_actions=request.recent_actions,
         extra_context=request.extra_context,
         es_signal=request.es_signal,
+        user_message=user_message,
     )
 
     try:
@@ -154,6 +189,8 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         for item in selected
     ]
     return HintRetrieveResponse(
+        message_type=message_type,
+        route_decision=route_decision,
         selected_phase=phase,
         low_confidence=low_confidence,
         query_vector_dimension=len(vector),
@@ -239,3 +276,26 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
         used_transition_ids=used_transition_ids,
         model=settings.gms_llm_model.removeprefix("models/"),
     )
+
+
+def _sanitize_user_message(user_message: str | None) -> str | None:
+    if user_message is None:
+        return None
+    normalized = user_message.strip()
+    if not normalized:
+        return None
+    max_len = max(1, settings.hint_user_message_max_length)
+    return normalized[:max_len]
+
+
+def _normalize_message_type(raw_value: object) -> str:
+    value = str(raw_value or "").strip().lower()
+    if value in {"hint_question", "lore_question", "other"}:
+        return value
+    return "hint_question"
+
+
+def _route_decision_from_message_type(message_type: str) -> str:
+    if message_type == "hint_question":
+        return "RAG_HINT"
+    return "BLOCKED_NON_HINT"

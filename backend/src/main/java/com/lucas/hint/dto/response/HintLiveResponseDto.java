@@ -11,6 +11,8 @@ public class HintLiveResponseDto {
 
   private String hint;
   private String hintLevel;
+  private String messageType;
+  private String routeDecision;
   private String selectedPhase;
   private boolean lowConfidence;
   private int failCountAfterAction;
@@ -22,4 +24,3 @@ public class HintLiveResponseDto {
   private HintEsSignalResponseDto esSignal;
   private HintLiveRetrieveResponseDto retrieval;
 }
-

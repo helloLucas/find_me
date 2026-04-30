@@ -66,13 +66,19 @@ public class HintRetrieveOrchestratorClient {
       }
 
       JsonNode body = objectMapper.readTree(response.body());
+      String messageType = body.path("message_type").asText("none");
+      String routeDecision = body.path("route_decision").asText("RAG_HINT");
       String selectedPhase = body.path("selected_phase").asText(null);
       boolean lowConfidence = body.path("low_confidence").asBoolean(false);
       int queryVectorDimension = body.path("query_vector_dimension").asInt(0);
       String queryText = body.path("query_text").asText("");
       int candidateCount = body.path("candidate_count").asInt(0);
 
-      if (selectedPhase == null || selectedPhase.isBlank() || queryVectorDimension <= 0) {
+      boolean blockedNonHint = "BLOCKED_NON_HINT".equals(routeDecision);
+      if (selectedPhase == null || selectedPhase.isBlank()) {
+        throw new CustomException(ErrorCode.G1000);
+      }
+      if (!blockedNonHint && queryVectorDimension <= 0) {
         throw new CustomException(ErrorCode.G1000);
       }
 
@@ -99,6 +105,8 @@ public class HintRetrieveOrchestratorClient {
       }
 
       return new HintRetrieveResult(
+          messageType,
+          routeDecision,
           selectedPhase,
           lowConfidence,
           queryVectorDimension,
@@ -180,6 +188,7 @@ public class HintRetrieveOrchestratorClient {
     private String from_node_id;
     private String action_type;
     private String current_input;
+    private String user_message;
     private int fail_count_after_action;
     private String expected_action_type;
     private String expected_input_hint;
@@ -193,6 +202,8 @@ public class HintRetrieveOrchestratorClient {
   }
 
   public record HintRetrieveResult(
+      String messageType,
+      String routeDecision,
       String selectedPhase,
       boolean lowConfidence,
       int queryVectorDimension,
