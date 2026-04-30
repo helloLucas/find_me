@@ -4,7 +4,7 @@ metadata:
   name: lucas-hint-worker
   namespace: lucas-elk
 spec:
-  schedule: "0 10 * * *" # 매일 오전 10시에 실행
+  schedule: "0 10 * * 1-5" # 월~금 오전 10시에 실행 (주말 제외)
   timeZone: "Asia/Seoul"
   concurrencyPolicy: Forbid # 중복 실행 방지
   successfulJobsHistoryLimit: 3
