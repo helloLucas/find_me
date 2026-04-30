@@ -509,7 +509,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
     try {
       const node = normalizeStoryNodeResponse(
-        await storyApi.startStory(resolvedChapterCode)
+        await storyApi.startStory(resolveChapterCode(chapterCode))
       );
       get().setCurrentNode(node);
     } catch (startError) {
