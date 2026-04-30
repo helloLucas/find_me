@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: shyunnnn/find-me-backend:123-dev
+        image: shyunnnn/find-me-backend:124-dev
         resources:
           requests:
             cpu: 250m
