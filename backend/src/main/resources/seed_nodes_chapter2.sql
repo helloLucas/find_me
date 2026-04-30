@@ -123,6 +123,7 @@ SELECT
       "observer_status.log",
       "lucas_fragment_01.sh",
       "laplace_fragment_01.sh",
+      "maple_story.sh",
       "trash/"
     ]
   },
