@@ -194,6 +194,10 @@ pipeline {
                     dir('k8s') {
                         sh "kubectl apply -f frontend.yaml -n ${ENV_TAG}"
                         sh "kubectl apply -f backend.yaml -n ${ENV_TAG}"
+
+                        if (ENV_TAG == 'prod') {
+                            sh "kubectl apply -f backend-hpa.yaml -n ${ENV_TAG}"
+                        }
                     }
                     
                     echo "--- 배포 완료! ---"
