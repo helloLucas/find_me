@@ -15,6 +15,7 @@ import {
   shouldBlockUnavailableTerminalCommand,
   UNAVAILABLE_COMMAND_TOAST_MESSAGE,
 } from "./terminalCommandFeedback";
+import { AnimatedTerminalLine } from "./AnimatedTerminalLine";
 
 interface TerminalSceneProps {
   windowId: DesktopWindowId;
@@ -86,6 +87,21 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
+  
+  const isMapAnimationPlayed = useClientStore((state) => state.hasMapAnimationPlayed);
+  const [showPart2, setShowPart2] = useState(isMapAnimationPlayed);
+
+  useEffect(() => {
+    if (isMapAnimationPlayed || showPart2) return;
+    
+    const hasPart2 = terminalOutput.some(o => o.text.includes("[SESSION MAP : NULL POINT"));
+    if (hasPart2) {
+      const timer = setTimeout(() => {
+        setShowPart2(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [terminalOutput, isMapAnimationPlayed, showPart2]);
 
   useEffect(() => {
     storyApi.getRecentCommands()
@@ -106,10 +122,52 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     isSshAuthQuestion(lastTerminalOutput.text);
   const endOfOutputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom whenever content height changes
+  useEffect(() => {
+    if (!scrollContainerRef.current || !contentRef.current) return;
+
+    const scrollToEnd = () => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    };
+
+    const observer = new ResizeObserver(() => {
+      scrollToEnd();
+    });
+
+    observer.observe(contentRef.current);
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    endOfOutputRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [terminalOutput, autocompleteSuggestions]);
+    const scrollToEnd = () => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    };
+
+    // Initial scroll
+    scrollToEnd();
+
+    // Secondary scrolls to handle potential layout shifts or React render delays
+    const timer1 = setTimeout(() => {
+      requestAnimationFrame(scrollToEnd);
+    }, 50);
+
+    const timer2 = setTimeout(() => {
+      requestAnimationFrame(scrollToEnd);
+    }, 200);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [terminalOutput, autocompleteSuggestions, showPart2]);
 
   useEffect(() => {
     if (!windowState || windowState.isMinimized || activeWindowId !== windowId) return;
@@ -290,6 +348,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       }}
     >
       <div
+        ref={scrollContainerRef}
         className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-xs leading-tight terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
@@ -298,8 +357,16 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           }
         }}
       >
-        {terminalOutput.map((output, index) => {
-          const inlineInput =
+        <div ref={contentRef}>
+          {terminalOutput.map((output, index) => {
+            const part2StartIndex = terminalOutput.findIndex(o => o.text.includes("[SESSION MAP : NULL POINT"));
+            const isPart2 = part2StartIndex !== -1 && index >= part2StartIndex;
+            
+            if (!showPart2 && isPart2) {
+              return null;
+            }
+
+            const inlineInput =
             output.type === "input" ? getInlinePromptInput(output.text) : undefined;
           if (inlineInput !== undefined) {
             return null;
@@ -364,7 +431,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
           return (
             <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
-              {output.text}
+              <AnimatedTerminalLine text={output.text} isPart2={isPart2} />
             </div>
           );
         })}
@@ -413,6 +480,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
             </span>
           </div>
         ) : null}
+        </div>
         <div ref={endOfOutputRef} />
       </div>
     </WindowFrame>
