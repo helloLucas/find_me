@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import time
+from datetime import datetime
 import requests
 import psycopg2
 from psycopg2 import pool
@@ -435,14 +436,16 @@ def get_detailed_stats(chapter_id, days=7):
         logger.error(f"Failed to gather detailed stats: {e}")
         return None
 
-def generate_dev_report(chapter_id, stats_1d, stats_7d):
+def generate_dev_report(chapter_id, stats_1d, stats_7d, is_monday=False):
     """운영진용 일간/주간 비교 분석 리포트 마크다운을 생성합니다."""
     if not stats_1d or not stats_7d: return "데이터를 불러오지 못했습니다."
     
-    report = f"### 📊 [운영 리포트] {chapter_id} 분석 결과\n\n"
+    title_suffix = "(주말 포함)" if is_monday else "(24h)"
+    report = f"### 📊 [운영 리포트] {chapter_id} 분석 결과 {title_suffix}\n\n"
     
     # 요약 비교 섹션
-    report += "#### 📈 주요 지표 요약 (어제 vs 최근 7일)\n"
+    label_1d = "지난 3일(주말)" if is_monday else "어제"
+    report += f"#### 📈 주요 지표 요약 ({label_1d} vs 최근 7일)\n"
     report += f"- **총 참여 유저**: {stats_1d['total_users']}명 (주간 합계: {stats_7d['total_users']}명)\n"
     report += f"- **평균 플레이 시간**: {stats_1d['avg_duration']:.1f}분 (주간 평균: {stats_7d['avg_duration']:.1f}분)\n"
     report += f"- **총 액션 발생**: {stats_1d['total_actions']}회 (주간 합계: {stats_7d['total_actions']}회)\n\n"
@@ -513,9 +516,14 @@ def main():
     
     # 8. 운영진용 상세 리포트 생성 및 발송 (1일 vs 7일 비교)
     report_webhook = MATTERMOST_REPORT_WEBHOOK_URL
-    stats_1d = get_detailed_stats(active_chapter, days=1)
+    
+    # 월요일이면 주말(3일치)을 포함하여 리포트 생성
+    is_monday = datetime.now().weekday() == 0
+    report_days = 3 if is_monday else 1
+    
+    stats_1d = get_detailed_stats(active_chapter, days=report_days)
     stats_7d = get_detailed_stats(active_chapter, days=7)
-    dev_report = generate_dev_report(active_chapter, stats_1d, stats_7d)
+    dev_report = generate_dev_report(active_chapter, stats_1d, stats_7d, is_monday=is_monday)
     send_to_mattermost(dev_report, report_webhook, username="Lucas-Analyzer")
     
     # 9. 발송 이력 기록
