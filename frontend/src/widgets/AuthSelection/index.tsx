@@ -57,19 +57,19 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
                 <div className="absolute bottom-3 left-3 w-4 h-4 border-b border-l border-cyan-200/30 pointer-events-none" />
                 <div className="absolute bottom-3 right-3 w-4 h-4 border-b border-r border-cyan-200/30 pointer-events-none" />
 
-                <div className="flex items-center justify-between opacity-50 text-[9px] font-pixel text-white tracking-[0.3em] uppercase">
+                <div className="flex items-center justify-between opacity-50 text-[9px] font-auth-flow text-white tracking-[0.3em] uppercase">
                     <span>System Access</span>
                     <span>Auth Gateway</span>
                 </div>
 
                 <div className="flex flex-col gap-2 text-center">
-                    <p className="font-pixel text-[10px] uppercase tracking-[0.45em] text-cyan-200/70">
+                    <p className="font-auth-flow text-[10px] uppercase tracking-[0.45em] text-cyan-200/70">
                         Select Login Method
                     </p>
-                    <h2 className="font-pixel text-xl text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.15)]">
+                    <h2 className="font-auth-flow text-xl text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.15)]">
                         Choose Access Channel
                     </h2>
-                    <p className="font-pixel text-[10px] text-white/45 tracking-[0.18em] uppercase">
+                    <p className="font-auth-flow text-[10px] text-white/45 tracking-[0.18em] uppercase">
                         Connect through an approved identity source
                     </p>
                 </div>
@@ -93,18 +93,18 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
                             </div>
 
                             <div className="relative z-10 flex-1 min-w-0">
-                                <p className="font-pixel text-[9px] uppercase tracking-[0.32em] text-cyan-200/65 mb-1">
+                                <p className="font-auth-flow text-[9px] uppercase tracking-[0.32em] text-cyan-200/65 mb-1">
                                     {provider.channel}
                                 </p>
-                                <p className="font-pixel text-sm text-white tracking-[0.12em] uppercase">
+                                <p className="font-auth-flow text-sm text-white tracking-[0.12em] uppercase">
                                     {provider.label}
                                 </p>
-                                <p className="font-pixel text-[9px] text-white/45 tracking-[0.12em] uppercase mt-1">
+                                <p className="font-auth-flow text-[9px] text-white/45 tracking-[0.12em] uppercase mt-1">
                                     {provider.description}
                                 </p>
                             </div>
 
-                            <div className="relative z-10 font-pixel text-xs text-white/35 group-hover:text-cyan-200/80 tracking-[0.3em] uppercase">
+                            <div className="relative z-10 font-auth-flow text-xs text-white/35 group-hover:text-cyan-200/80 tracking-[0.3em] uppercase">
                                 Enter
                             </div>
                         </button>
@@ -113,7 +113,7 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
 
                 <button
                     onClick={onClose}
-                    className="self-center font-pixel text-[10px] text-white/55 hover:text-white transition-all uppercase tracking-[0.35em] mt-2"
+                    className="self-center font-auth-flow text-[10px] text-white/55 hover:text-white transition-all uppercase tracking-[0.35em] mt-2"
                 >
                     [ Close ]
                 </button>

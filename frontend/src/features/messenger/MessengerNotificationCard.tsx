@@ -42,7 +42,7 @@ export const MessengerNotificationCard: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-pixel"
+      className="fixed bottom-14 right-4 z-[1500] cursor-pointer select-none font-messenger"
       style={{ zIndex: DESKTOP_LAYER.notification }}
       onClick={handleOpenNotification}
     >
@@ -62,7 +62,7 @@ export const MessengerNotificationCard: React.FC = () => {
         <div className="rounded-[5px] overflow-hidden bg-[#1a1028]">
           <div className="flex items-center justify-between px-3 py-2 bg-[#1a1028]">
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-xs font-black">MSG</span>
+              {/* <span className="text-blue-400 text-xs font-black">MSG</span> */}
               <span className="text-white text-sm font-bold tracking-wide">
                 {conversation.title}
               </span>

@@ -295,7 +295,7 @@ export const NetworkDevTools: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-sans text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
+    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-devtools-ui text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
       <div className="flex items-center bg-[#1e1e1e] border-b border-[#333] px-2 h-7 flex-shrink-0">
         <button
           className={`px-3 py-1 ${activeTab === "elements" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
@@ -318,7 +318,7 @@ export const NetworkDevTools: React.FC = () => {
       </div>
 
       {activeTab === "elements" && (
-        <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-3 font-mono text-[11px] text-[#888]">
+        <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-3 font-devtools-code text-[11px] text-[#888]">
           <div>&lt;article data-render-state="corrupted"&gt;</div>
           <div className="pl-4 text-[#ccc]">Open Network to inspect blocked requests.</div>
           <div>&lt;/article&gt;</div>
@@ -326,7 +326,7 @@ export const NetworkDevTools: React.FC = () => {
       )}
 
       {activeTab === "console" && (
-        <div className="flex-1 p-2 font-mono text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
+        <div className="flex-1 p-2 font-devtools-code text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
           <div className="border-b border-[#333] pb-1 mb-1 opacity-50 flex-shrink-0">top</div>
           <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-2">
             {consoleEntries.map((item) => (
@@ -360,7 +360,7 @@ export const NetworkDevTools: React.FC = () => {
       {activeTab === "network" && (
         <div className="flex-1 flex flex-row overflow-hidden relative bg-[#1e1e1e]">
           <div className={`flex-1 overflow-x-auto overflow-y-auto ${selectedLog ? "border-r border-[#444] hidden md:block" : ""}`}>
-            <table className="min-w-full text-left table-fixed whitespace-nowrap font-mono text-[11px]">
+            <table className="min-w-full text-left table-fixed whitespace-nowrap font-devtools-code text-[11px]">
               <thead className="sticky top-0 z-10 bg-[#2d2d2d] text-[#ccc] border-b border-[#444]">
                 <tr>
                   <th className="w-12 px-2 py-1 font-normal border-r border-[#444] bg-[#2d2d2d]">Status</th>
@@ -448,7 +448,7 @@ export const NetworkDevTools: React.FC = () => {
                   <div className="flex flex-col gap-3">
                     <button
                       type="button"
-                      className={`font-mono text-left text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded ${
+                      className={`font-devtools-code text-left text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded ${
                         canInspectResponse
                           ? "cursor-pointer hover:bg-[#1a2333] hover:border-[#0ff] hover:text-[#0ff] transition-all hover:shadow-[0_0_8px_rgba(0,255,255,0.4)]"
                           : "cursor-default"
@@ -459,7 +459,7 @@ export const NetworkDevTools: React.FC = () => {
                       {responseBody ? formatJson(responseBody) : '{"status":"pending","payload":"encrypted"}'}
                     </button>
                     {consoleLogs.map((line, idx) => (
-                      <div key={idx} className="font-mono text-[#f0c674]">
+                      <div key={idx} className="font-devtools-code text-[#f0c674]">
                         {line}
                       </div>
                     ))}

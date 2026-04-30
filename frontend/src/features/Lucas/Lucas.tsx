@@ -23,12 +23,18 @@ export const Lucas: React.FC = () => {
     glitchLevel,
   } = useLucasStore();
 
+  const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [hintInput, setHintInput] = useState('');
   const [isHintRequesting, setIsHintRequesting] = useState(false);
   const [pendingFrame, setPendingFrame] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const isLastMessage = currentScene
+    ? currentMessageIndex >= currentScene.messages.length - 1
+    : false;
 
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
 
@@ -75,13 +81,13 @@ export const Lucas: React.FC = () => {
       return;
     }
 
-    const isLastMessage = currentScene
+    const isLastSceneMessage = currentScene
       ? currentMessageIndex >= currentScene.messages.length - 1
       : false;
 
     nextMessage();
 
-    if (isLastMessage) {
+    if (isLastSceneMessage) {
       const storyRuntime = useStoryRuntimeStore.getState();
       const node = storyRuntime.currentNode;
       if (canSubmitStoryAction(node, 'click', 'reopen_network_clue')) {
@@ -107,11 +113,11 @@ export const Lucas: React.FC = () => {
       if (hintText) {
         addChatMessage('LUCAS', hintText);
       } else {
-        addChatMessage('LUCAS', '연결 상태가 좋지 못해서 너의 채팅을 읽지 못했어. 같은 질문을 한 번 더 보내줘.');
+        addChatMessage('LUCAS', '응답을 읽지 못했어. 같은 질문을 한 번 더 보내줘.');
       }
     } catch (error) {
       console.error('[Lucas] hint request failed', error);
-      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 말해줘.');
+      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠시 후 다시 요청해줘.');
     } finally {
       setIsHintRequesting(false);
     }
@@ -129,7 +135,28 @@ export const Lucas: React.FC = () => {
           <div className="lucas-speaker-label">{currentMessage.speaker}</div>
           <div className="lucas-bubble">
             <p>{displayText}</p>
-            {!isTyping && currentMessage.blocking && <span className="bubble-arrow">▶</span>}
+            {!isTyping &&
+              isLastMessage &&
+              currentNode?.promptType === 'click' &&
+              currentNode.promptMeta?.buttons && (
+                <div className="lucas-buttons-container">
+                  {currentNode.promptMeta.buttons.map((btn: any) => (
+                    <button
+                      key={btn.value}
+                      className="lucas-action-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void submitStoryClick(btn.value);
+                      }}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            {!isTyping &&
+              (currentMessage.blocking || (isLastMessage && currentNode?.promptType === 'command')) &&
+              !currentNode?.promptMeta?.buttons && <span className="bubble-arrow">▶</span>}
           </div>
         </div>
       )}
@@ -157,7 +184,7 @@ export const Lucas: React.FC = () => {
               type="text"
               value={hintInput}
               onChange={(event) => setHintInput(event.target.value)}
-              placeholder={isHintRequesting ? '응답 생성 중...' : '루카스에게 메시지를 보내세요'}
+              placeholder={isHintRequesting ? '입력 분석 중...' : '루카스에게 질문해봐'}
               autoFocus
               disabled={isHintRequesting}
             />
@@ -190,3 +217,4 @@ export const Lucas: React.FC = () => {
     </div>
   );
 };
+

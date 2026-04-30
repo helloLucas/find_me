@@ -14,9 +14,106 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Font area assignments. Change values here to update each UI area. */
+  --lucas-font-app-text: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
+  --lucas-font-auth-flow: var(--lucas-font-app-text);
+  --lucas-font-lobby: var(--lucas-font-app-text);
+  --lucas-font-system-overlay: var(--lucas-font-app-text);
+  --lucas-font-desktop-ui: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-window-title: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-messenger: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-assistant: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --lucas-font-landing-title: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+
+  --lucas-font-terminal: "JetBrains Mono", "Courier New", Courier, monospace;
+  --lucas-font-browser-content: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-browser-chrome: var(--lucas-font-browser-content);
+  --lucas-font-browser-article: var(--lucas-font-browser-content);
+  --lucas-font-browser-game: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
+  --lucas-font-browser-heading: var(--lucas-font-browser-content);
+  --lucas-font-news-title: var(--lucas-font-browser-content);
+  --lucas-font-browser-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --lucas-font-devtools-ui: var(--lucas-font-browser-content);
+  --lucas-font-devtools-code: var(--lucas-font-browser-code);
+}
+
 @theme {
-  --font-pixel: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
-  --font-game: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+  --font-app-text: var(--lucas-font-app-text);
+  --font-auth-flow: var(--lucas-font-auth-flow);
+  --font-lobby: var(--lucas-font-lobby);
+  --font-system-overlay: var(--lucas-font-system-overlay);
+  --font-desktop-ui: var(--lucas-font-desktop-ui);
+  --font-window-title: var(--lucas-font-window-title);
+  --font-messenger: var(--lucas-font-messenger);
+  --font-browser-chrome: var(--lucas-font-browser-chrome);
+  --font-browser-article: var(--lucas-font-browser-article);
+  --font-browser-game: var(--lucas-font-browser-game);
+  --font-landing-title: var(--lucas-font-landing-title);
+  --font-browser-heading: var(--lucas-font-browser-heading);
+  --font-news-title: var(--lucas-font-news-title);
+  --font-terminal: var(--lucas-font-terminal);
+  --font-browser-content: var(--lucas-font-browser-content);
+  --font-browser-code: var(--lucas-font-browser-code);
+  --font-devtools-ui: var(--lucas-font-devtools-ui);
+  --font-devtools-code: var(--lucas-font-devtools-code);
 }
 
 html,
@@ -28,6 +125,7 @@ body,
   height: 100%;
   overflow: hidden;
   background-color: #0b0216;
+  font-family: var(--lucas-font-app-text);
   /* Fallback deep purple */
 }
 

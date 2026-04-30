@@ -8,4 +8,5 @@ public record StoryRecentEvent(
     String result,
     String fromNodeId,
     String toNodeId,
-    boolean hintRequested) {}
+    boolean hintRequested,
+    String source) {}

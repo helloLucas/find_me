@@ -4,6 +4,7 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
 import { HomeTab } from "./components/HomeTab";
 import { PacmanTab } from "./components/PacmanTab";
+import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { DocTab } from "./components/DocTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
@@ -19,10 +20,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "history" | "doc";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "history" | "doc";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
     title: string;
   }>;
   historyIndex: number;
@@ -31,6 +32,12 @@ interface Tab {
 interface BrowserProps {
   windowId: DesktopWindowId;
 }
+
+type KeyboardLockNavigator = Navigator & {
+  keyboard?: {
+    lock?: (keys: string[]) => Promise<void>;
+  };
+};
 
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
@@ -45,6 +52,17 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
+    if (windowId === "terminal2") {
+      return [{
+        id: "tab1",
+        title: "Starforce Core",
+        url: "system://terminal2/starforce",
+        component: "starforce",
+        history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
+        historyIndex: 0,
+      }];
+    }
+
     // 챕터 2일 경우 히스토리 탭을 기본으로 노출
     if (currentNode?.code?.startsWith("CH2_")) {
       return [{
@@ -202,8 +220,9 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   };
 
   useEffect(() => {
-    if ("keyboard" in navigator && (navigator as any).keyboard?.lock) {
-      (navigator as any).keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
+    const keyboard = (navigator as KeyboardLockNavigator).keyboard;
+    if (keyboard?.lock) {
+      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
     }
 
     const handleCaptureKeyDown = (event: KeyboardEvent) => {
@@ -265,23 +284,46 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     const snapshot = resolveNewsSnapshot(currentNode.code, articleTitleFromContent);
     if (!snapshot) return;
 
-    setTabs((prev) => {
-      let changed = false;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
 
-      const nextTabs = prev.map((tab) => {
-        if (tab.id !== activeTab.id) return tab;
+      setTabs((prev) => {
+        let changed = false;
 
-        const currentEntry = tab.history[tab.historyIndex];
-        const isSameEntry =
-          currentEntry &&
-          currentEntry.url === snapshot.url &&
-          currentEntry.title === snapshot.title &&
-          currentEntry.component === "news";
+        const nextTabs = prev.map((tab) => {
+          if (tab.id !== activeTab.id) return tab;
 
-        if (isSameEntry) {
-          if (tab.url === snapshot.url && tab.title === snapshot.title && tab.component === "news") {
-            return tab;
+          const currentEntry = tab.history[tab.historyIndex];
+          const isSameEntry =
+            currentEntry &&
+            currentEntry.url === snapshot.url &&
+            currentEntry.title === snapshot.title &&
+            currentEntry.component === "news";
+
+          if (isSameEntry) {
+            if (tab.url === snapshot.url && tab.title === snapshot.title && tab.component === "news") {
+              return tab;
+            }
+
+            changed = true;
+            return {
+              ...tab,
+              url: snapshot.url,
+              title: snapshot.title,
+              component: "news" as const,
+            };
           }
+
+          const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
+          const nextHistory = [
+            ...truncatedHistory,
+            {
+              url: snapshot.url,
+              title: snapshot.title,
+              component: "news" as const,
+            },
+          ];
 
           changed = true;
           return {
@@ -289,32 +331,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             url: snapshot.url,
             title: snapshot.title,
             component: "news" as const,
+            history: nextHistory,
+            historyIndex: nextHistory.length - 1,
           };
-        }
+        });
 
-        const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
-        const nextHistory = [
-          ...truncatedHistory,
-          {
-            url: snapshot.url,
-            title: snapshot.title,
-            component: "news" as const,
-          },
-        ];
-
-        changed = true;
-        return {
-          ...tab,
-          url: snapshot.url,
-          title: snapshot.title,
-          component: "news" as const,
-          history: nextHistory,
-          historyIndex: nextHistory.length - 1,
-        };
+        return changed ? nextTabs : prev;
       });
-
-      return changed ? nextTabs : prev;
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab, articleTitleFromContent, currentNode]);
 
   const newsViewMode: "auto" | "list" | "article" =
@@ -385,7 +413,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col w-full h-full bg-[#0a0514] font-pixel outline-none"
+      className="flex flex-col w-full h-full bg-[#0a0514] font-browser-chrome outline-none"
       tabIndex={-1}
       onContextMenu={handleContextMenu}
       onClick={() => focusWindow(windowId)}
@@ -461,6 +489,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
+          {activeTab?.component === 'starforce' && <StarforceTab windowId={windowId} />}
           {activeTab?.component === 'history' && (
             <HistoryTab onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} />
           )}

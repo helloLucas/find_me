@@ -13,6 +13,7 @@ export interface WindowState {
   isMinimized: boolean;
   isMaximized: boolean;
   zIndex: number;
+  content?: string;
 }
 
 interface WindowStore {
@@ -21,6 +22,7 @@ interface WindowStore {
   openWindow: (
     idOrType: DesktopWindowId | string,
     title?: string,
+    content?: string,
     legacyId?: string
   ) => void;
   closeWindow: (id: DesktopWindowId) => void;
@@ -48,6 +50,7 @@ function resolveWindowId(
 
   if (idOrType === "browser") return "chrome";
   if (idOrType === "terminal") return "terminal";
+  if (idOrType === "terminal2") return "terminal2";
   if (idOrType === "messenger") return "messenger";
 
   return null;
@@ -110,7 +113,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
   windows: [],
   activeWindowId: null,
 
-  openWindow: (idOrType, title, legacyId) =>
+  openWindow: (idOrType, title, content, legacyId) =>
     set((state) => {
       const resolvedId = resolveWindowId(idOrType, legacyId);
       if (!resolvedId) return state;
@@ -133,6 +136,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         id: definition.id,
         type: definition.type,
         title: title ?? definition.title,
+        content,
         isMinimized: false,
         isMaximized: false,
         zIndex: nextZIndex,

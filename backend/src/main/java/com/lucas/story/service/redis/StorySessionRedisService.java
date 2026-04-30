@@ -55,11 +55,13 @@ public class StorySessionRedisService {
       redisTemplate.opsForList().trim(recentEventsKey, 0, RECENT_EVENTS_LIMIT - 1);
 
       if ("command".equals(recentEvent.actionType())) {
-        redisTemplate
-            .opsForList()
-            .leftPush(recentCommandsKey, safeString(recentEvent.inputValueNorm()));
-        redisTemplate.opsForList().trim(recentCommandsKey, 0, RECENT_COMMANDS_LIMIT - 1);
-        redisTemplate.expire(recentCommandsKey, SESSION_TTL_HOURS, TimeUnit.HOURS);
+        String normCmd = safeString(recentEvent.inputValueNorm());
+        // 내부 트리거 명령어 등 괄호가 포함된 시스템성 명령어는 히스토리에 저장하지 않음
+        if (!normCmd.contains("(") && !normCmd.contains(")")) {
+          redisTemplate.opsForList().leftPush(recentCommandsKey, normCmd);
+          redisTemplate.opsForList().trim(recentCommandsKey, 0, RECENT_COMMANDS_LIMIT - 1);
+          redisTemplate.expire(recentCommandsKey, SESSION_TTL_HOURS, TimeUnit.HOURS);
+        }
       }
 
       redisTemplate.expire(stateKey, SESSION_TTL_HOURS, TimeUnit.HOURS);
@@ -74,6 +76,12 @@ public class StorySessionRedisService {
   public java.util.List<String> getRecentCommands(String sessionId) {
     String recentCommandsKey = resolveSessionKey(sessionId, RECENT_COMMANDS_SUFFIX);
     return redisTemplate.opsForList().range(recentCommandsKey, 0, RECENT_COMMANDS_LIMIT - 1);
+  }
+
+  public void clearRecentCommands(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) return;
+    String recentCommandsKey = resolveSessionKey(sessionId, RECENT_COMMANDS_SUFFIX);
+    redisTemplate.delete(recentCommandsKey);
   }
 
   /**

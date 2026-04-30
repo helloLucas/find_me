@@ -29,7 +29,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="w-full h-full bg-[#0a0514] text-[#c7b3ff] flex flex-col font-sans overflow-hidden">
+    <div className="w-full h-full bg-[#0a0514] text-[#c7b3ff] flex flex-col font-browser-content overflow-hidden">
       {/* Chrome-like Header / Search Bar */}
       <header className="h-14 bg-[#110a26] border-b border-[#543ab7]/30 flex items-center px-6 gap-6 flex-shrink-0">
         <div className="flex items-center gap-2">
