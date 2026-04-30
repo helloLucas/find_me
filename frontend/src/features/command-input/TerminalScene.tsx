@@ -48,6 +48,23 @@ function splitPromptInput(text: string) {
   };
 }
 
+function getCommonPrefix(strings: string[]): string {
+  if (strings.length === 0) return "";
+  let commonPrefix = strings[0];
+  for (let i = 1; i < strings.length; i++) {
+    let j = 0;
+    while (
+      j < commonPrefix.length &&
+      j < strings[i].length &&
+      commonPrefix[j] === strings[i][j]
+    ) {
+      j++;
+    }
+    commonPrefix = commonPrefix.substring(0, j);
+  }
+  return commonPrefix;
+}
+
 export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   const {
     terminalOutput,
@@ -195,14 +212,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           setInputValue(words.join(" "));
           setAutocompleteSuggestions([]);
         } else if (suggestions.length > 1) {
-          let commonPrefix = suggestions[0];
-          for (let i = 1; i < suggestions.length; i++) {
-            let j = 0;
-            while (j < commonPrefix.length && j < suggestions[i].length && commonPrefix[j] === suggestions[i][j]) {
-              j++;
-            }
-            commonPrefix = commonPrefix.substring(0, j);
-          }
+          const commonPrefix = getCommonPrefix(suggestions);
 
           const currentPrefix = lastWord.substring(lastWord.lastIndexOf("/") + 1);
           if (commonPrefix.length > currentPrefix.length) {
@@ -389,7 +399,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
             </div>
             {autocompleteSuggestions.length > 0 && (
               <div className="text-gray-400 whitespace-pre-wrap mt-1">
-                {autocompleteSuggestions.join("  ")}
+                {autocompleteSuggestions.length > 20
+                  ? autocompleteSuggestions.slice(0, 20).join("  ") +
+                    `\n...and ${autocompleteSuggestions.length - 20} more items`
+                  : autocompleteSuggestions.join("  ")}
               </div>
             )}
           </div>
