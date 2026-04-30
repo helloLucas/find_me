@@ -68,4 +68,3 @@ services:
 volumes:
   lucas-postgres-data:
   lucas-redis-data:
-
