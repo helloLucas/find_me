@@ -2269,16 +2269,18 @@ public class StoryServiceImpl implements StoryService {
    * nc 인자 목록을 전송 검증 구조로 파싱한다.
    * 다양한 타임아웃 옵션 형식을 지원한다.
    *
-   * @param args nc 명령 뒤의 인자 목록
-   * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
+   * @param arg 옵션 토큰
+   * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
    */
   private boolean isTarOldStyleOptionToken(String arg) {
     if (arg == null || arg.isBlank() || arg.startsWith("-")) {
       return false;
     }
+    // 생성(c)과 파일지정(f) 옵션이 반드시 포함되어야 함
     if (!arg.contains("c") || !arg.contains("f")) {
       return false;
     }
+    // 허용된 문자(c, v, f) 이외의 문자가 섞여 있으면 실패
     for (int i = 0; i < arg.length(); i++) {
       char option = arg.charAt(i);
       if (option != 'c' && option != 'v' && option != 'f') {
@@ -2288,6 +2290,13 @@ public class StoryServiceImpl implements StoryService {
     return true;
   }
 
+  /**
+   * nc 인자 목록을 전송 검증 구조로 파싱한다.
+   * 다양한 타임아웃 옵션 형식을 지원한다.
+   *
+   * @param args nc 명령 뒤의 인자 목록
+   * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
+   */
   private ParsedNcCommand parseNcCommand(List<String> args) {
     // -w 옵션 값을 저장한다.
     Integer timeoutSeconds = null;
