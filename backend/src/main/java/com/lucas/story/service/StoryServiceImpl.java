@@ -2272,6 +2272,22 @@ public class StoryServiceImpl implements StoryService {
    * @param args nc 명령 뒤의 인자 목록
    * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
    */
+  private boolean isTarOldStyleOptionToken(String arg) {
+    if (arg == null || arg.isBlank() || arg.startsWith("-")) {
+      return false;
+    }
+    if (!arg.contains("c") || !arg.contains("f")) {
+      return false;
+    }
+    for (int i = 0; i < arg.length(); i++) {
+      char option = arg.charAt(i);
+      if (option != 'c' && option != 'v' && option != 'f') {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private ParsedNcCommand parseNcCommand(List<String> args) {
     // -w 옵션 값을 저장한다.
     Integer timeoutSeconds = null;

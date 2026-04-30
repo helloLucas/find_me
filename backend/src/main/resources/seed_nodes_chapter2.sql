@@ -107,6 +107,136 @@ INSERT INTO story_nodes (
 )
 SELECT
     chapter_row.id,
+    'CH2_TRACE_FILE_REMOVED',
+    'console',
+    $json${
+  "scene": {
+    "id": "CH2_TRACE_FILE_REMOVED",
+    "mode": "terminal",
+    "bgm": "server_hum",
+    "glitchLevel": 2,
+    "scanPercent": 63,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": []
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "decoy.tar는 지워졌어. 이제 접속 기록도 비워야 해.",
+      "blocking": true
+    }
+  ],
+  "notifications": [],
+  "uiMarkers": {},
+  "effects": {
+    "showDogAvatar": true
+  }
+}$json$::jsonb,
+    'command',
+    $json${
+  "allowedActions": [
+    "command"
+  ],
+  "placeholder": "",
+  "validationHint": "terminal_command",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter2"
+}$json$::jsonb,
+    FALSE,
+    FALSE
+FROM chapter_row
+ON CONFLICT (code) DO UPDATE
+SET node_type = EXCLUDED.node_type,
+    output_bundle = EXCLUDED.output_bundle,
+    prompt_type = EXCLUDED.prompt_type,
+    prompt_meta = EXCLUDED.prompt_meta,
+    is_checkpoint = EXCLUDED.is_checkpoint,
+    is_terminal = EXCLUDED.is_terminal,
+    updated_at = NOW();
+
+WITH chapter_row AS (
+    SELECT id FROM chapters WHERE code = 'week02'
+)
+INSERT INTO story_nodes (
+    chapter_id,
+    code,
+    node_type,
+    output_bundle,
+    prompt_type,
+    prompt_meta,
+    is_checkpoint,
+    is_terminal
+)
+SELECT
+    chapter_row.id,
+    'CH2_HISTORY_CLEARED',
+    'console',
+    $json${
+  "scene": {
+    "id": "CH2_HISTORY_CLEARED",
+    "mode": "terminal",
+    "bgm": "server_hum",
+    "glitchLevel": 2,
+    "scanPercent": 63,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": []
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "접속 기록은 비워졌어. decoy.tar도 남기면 안 돼.",
+      "blocking": true
+    }
+  ],
+  "notifications": [],
+  "uiMarkers": {},
+  "effects": {
+    "showDogAvatar": true
+  }
+}$json$::jsonb,
+    'command',
+    $json${
+  "allowedActions": [
+    "command"
+  ],
+  "placeholder": "",
+  "validationHint": "terminal_command",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter2"
+}$json$::jsonb,
+    FALSE,
+    FALSE
+FROM chapter_row
+ON CONFLICT (code) DO UPDATE
+SET node_type = EXCLUDED.node_type,
+    output_bundle = EXCLUDED.output_bundle,
+    prompt_type = EXCLUDED.prompt_type,
+    prompt_meta = EXCLUDED.prompt_meta,
+    is_checkpoint = EXCLUDED.is_checkpoint,
+    is_terminal = EXCLUDED.is_terminal,
+    updated_at = NOW();
+
+WITH chapter_row AS (
+    SELECT id FROM chapters WHERE code = 'week02'
+)
+INSERT INTO story_nodes (
+    chapter_id,
+    code,
+    node_type,
+    output_bundle,
+    prompt_type,
+    prompt_meta,
+    is_checkpoint,
+    is_terminal
+)
+SELECT
+    chapter_row.id,
     'CH2_FILE_LIST',
     'console',
     $json${
@@ -120,9 +250,7 @@ SELECT
   },
   "content": {
     "terminalOutput": [
-      "world_map.map",
-      "observer_status.log",
-      "lucas_fragment_01.sh",
+      "cache/",
       "laplace_fragment_01.sh",
       "trash/",
       "guest@lucas-server:~$"
@@ -590,7 +718,6 @@ SELECT
   "content": {
     "terminalOutput": [
       "[LAPLACE FRAGMENT 01 :: DECOY PACKET]",
-      "Mission: Generate a fake data mass and redirect GC scan path.",
       "Status: ACTIVE",
       "",
       "Hint:",
@@ -605,6 +732,12 @@ SELECT
       "speaker": "LUCAS",
       "channel": "bubble",
       "text": "좋아, 일단 주변의 무의미한 데이터들을 다 긁어모아. 그래야 큰 덩어리를 만들 수 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "root 안쪽의 보호된 코어 조각은 섞지 마. 지금 필요한 건 미끼야.",
       "blocking": true
     }
   ],
@@ -839,7 +972,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "좋아. 이제 그 패킷을 감시망이 훑고 지나가는 포트로 흘려보내.",
+      "text": "포장이 끝났네. 이제 저 미끼 파일을 시스템 내부 데이터 게이트로 보내서 감시자들의 눈을 속여보자.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "내부망 주소인 127.0.0.1의 8080번 포트로 연결을 열고 저 패킷을 전송해. 놈들이 가짜 데이터를 분석하느라 한참 동안 버벅댈 거야.",
       "blocking": true
     }
   ],
