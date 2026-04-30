@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     gms_base_url: str = Field(default="https://gms.ssafy.io/gmsapi", alias="GMS_BASE_URL")
     gms_key: str = Field(default="", alias="GMS_KEY")
+    gms_llm_provider: str = Field(default="openai", alias="GMS_LLM_PROVIDER")
+    gms_router_provider: str = Field(default="openai", alias="GMS_ROUTER_PROVIDER")
     gms_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LLM_MODEL")
     gms_router_model: str = Field(default="gpt-5-mini", alias="GMS_ROUTER_MODEL")
     gms_openai_chat_path: str = Field(
@@ -21,8 +23,10 @@ class Settings(BaseSettings):
     )
     gms_timeout_seconds: float = Field(default=30.0, alias="GMS_TIMEOUT_SECONDS")
     gms_max_output_tokens: int = Field(default=2048, alias="GMS_MAX_OUTPUT_TOKENS")
-    gms_router_max_output_tokens: int = Field(default=384, alias="GMS_ROUTER_MAX_OUTPUT_TOKENS")
+    gms_router_max_output_tokens: int = Field(default=96, alias="GMS_ROUTER_MAX_OUTPUT_TOKENS")
     gms_temperature: float = Field(default=0.2, alias="GMS_TEMPERATURE")
+    gms_router_reasoning_effort: str = Field(default="low", alias="GMS_ROUTER_REASONING_EFFORT")
+    gms_llm_reasoning_effort: str = Field(default="low", alias="GMS_LLM_REASONING_EFFORT")
     gms_embedding_model: str = Field(default="gemini-embedding-001", alias="GMS_EMBEDDING_MODEL")
     gms_embedding_output_dimensionality: int = Field(default=1536, alias="GMS_EMBEDDING_OUTPUT_DIMENSIONALITY")
 
