@@ -129,7 +129,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   return (
     <div
       ref={windowRef}
-      className="absolute top-0 left-0 font-pixel"
+      className="absolute top-0 left-0 font-messenger"
       style={{
         width: WINDOW_W,
         height: WINDOW_H,

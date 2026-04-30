@@ -14,9 +14,50 @@
   font-style: normal;
 }
 
+:root {
+  /* Font area assignments. Change values here to update each UI area. */
+  --lucas-font-app-text: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
+  --lucas-font-auth-flow: var(--lucas-font-app-text);
+  --lucas-font-lobby: var(--lucas-font-app-text);
+  --lucas-font-system-overlay: var(--lucas-font-app-text);
+  --lucas-font-desktop-ui: var(--lucas-font-app-text);
+  --lucas-font-window-title: var(--lucas-font-app-text);
+  --lucas-font-messenger: var(--lucas-font-app-text);
+  --lucas-font-assistant: var(--lucas-font-app-text);
+  --lucas-font-browser-chrome: var(--lucas-font-app-text);
+  --lucas-font-browser-article: var(--lucas-font-app-text);
+  --lucas-font-browser-game: var(--lucas-font-app-text);
+
+  --lucas-font-landing-title: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+  --lucas-font-browser-heading: var(--lucas-font-landing-title);
+  --lucas-font-news-title: Georgia, "Times New Roman", serif;
+
+  --lucas-font-terminal: "Courier New", Courier, monospace;
+  --lucas-font-browser-content: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-browser-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --lucas-font-devtools-ui: var(--lucas-font-browser-content);
+  --lucas-font-devtools-code: var(--lucas-font-browser-code);
+}
+
 @theme {
-  --font-pixel: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
-  --font-game: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+  --font-app-text: var(--lucas-font-app-text);
+  --font-auth-flow: var(--lucas-font-auth-flow);
+  --font-lobby: var(--lucas-font-lobby);
+  --font-system-overlay: var(--lucas-font-system-overlay);
+  --font-desktop-ui: var(--lucas-font-desktop-ui);
+  --font-window-title: var(--lucas-font-window-title);
+  --font-messenger: var(--lucas-font-messenger);
+  --font-browser-chrome: var(--lucas-font-browser-chrome);
+  --font-browser-article: var(--lucas-font-browser-article);
+  --font-browser-game: var(--lucas-font-browser-game);
+  --font-landing-title: var(--lucas-font-landing-title);
+  --font-browser-heading: var(--lucas-font-browser-heading);
+  --font-news-title: var(--lucas-font-news-title);
+  --font-terminal: var(--lucas-font-terminal);
+  --font-browser-content: var(--lucas-font-browser-content);
+  --font-browser-code: var(--lucas-font-browser-code);
+  --font-devtools-ui: var(--lucas-font-devtools-ui);
+  --font-devtools-code: var(--lucas-font-devtools-code);
 }
 
 html,
@@ -28,6 +69,7 @@ body,
   height: 100%;
   overflow: hidden;
   background-color: #0b0216;
+  font-family: var(--lucas-font-app-text);
   /* Fallback deep purple */
 }
 

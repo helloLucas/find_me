@@ -64,7 +64,7 @@ export function PreVideoPlayer({ videoUrl, onFinish }: PreVideoPlayerProps) {
       />
       <button
         onClick={onFinish}
-        className="absolute bottom-8 right-8 z-[10001] bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-md px-6 py-2 rounded font-pixel transition-all cursor-pointer"
+        className="absolute bottom-8 right-8 z-[10001] bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-md px-6 py-2 rounded font-system-overlay transition-all cursor-pointer"
       >
         SKIP ⏭
       </button>

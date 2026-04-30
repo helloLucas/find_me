@@ -50,7 +50,7 @@ const SetupNicknamePage = () => {
     };
 
     return (
-        <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0a0a0a] overflow-hidden font-pixel text-gray-400">
+        <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0a0a0a] overflow-hidden font-auth-flow text-gray-400">
 
             {/* 배경 패턴 (회색 처리) */}
             <div className="absolute inset-0 opacity-5 pointer-events-none"
@@ -163,7 +163,7 @@ const SetupNicknamePage = () => {
                     </div>
 
                     {/* 하단 상태바 */}
-                    <div className="bg-gray-900 border-t border-gray-800 px-5 py-3 flex justify-between items-center text-[9px] text-gray-600 tracking-widest font-mono relative z-10">
+                    <div className="bg-gray-900 border-t border-gray-800 px-5 py-3 flex justify-between items-center text-[9px] text-gray-600 tracking-widest font-terminal relative z-10">
                         <div className="flex gap-4">
                             <span>S_STATUS: READY</span>
                             <span>AUTH: PENDING</span>

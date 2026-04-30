@@ -40,7 +40,7 @@ export const ExitGameOverlay: React.FC<ExitGameOverlayProps> = ({
 
         <div className="flex flex-col gap-12 w-full">
           {/* System Label */}
-          <div className="flex items-center justify-between opacity-10 text-[9px] font-pixel text-white tracking-[0.3em] px-1">
+          <div className="flex items-center justify-between opacity-10 text-[9px] font-system-overlay text-white tracking-[0.3em] px-1">
             <span>SYSTEM_EXIT_PROTOCOL</span>
             <span>TERMINATE_SESSION</span>
           </div>
@@ -49,18 +49,18 @@ export const ExitGameOverlay: React.FC<ExitGameOverlayProps> = ({
             {/* Warning Icon */}
             <div className="flex justify-center">
               <div className="w-12 h-12 border-2 border-red-500/40 rounded-full flex items-center justify-center">
-                <span className="font-pixel text-xl text-red-500/80">!</span>
+                <span className="font-system-overlay text-xl text-red-500/80">!</span>
               </div>
             </div>
 
             {/* Main Message */}
-            <p className="font-pixel text-[20px] md:text-[24px] text-white/90 tracking-tight leading-relaxed drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+            <p className="font-system-overlay text-[20px] md:text-[24px] text-white/90 tracking-tight leading-relaxed drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
               {message}
             </p>
 
             {/* Sub Message */}
             {subMessage && (
-              <p className="font-pixel text-xs text-white/30 tracking-wide leading-relaxed">
+              <p className="font-system-overlay text-xs text-white/30 tracking-wide leading-relaxed">
                 {subMessage}
               </p>
             )}
@@ -75,7 +75,7 @@ export const ExitGameOverlay: React.FC<ExitGameOverlayProps> = ({
             >
               <div className="absolute inset-0 border border-white/20 group-hover/btn:border-white/40 rounded-md" />
               <div className="absolute inset-[6px] border border-white/10 group-hover/btn:border-white/30 bg-white/[0.01] flex items-center justify-center rounded-sm">
-                <span className="font-pixel text-xs text-white/40 group-hover/btn:text-white/70">취소</span>
+                <span className="font-system-overlay text-xs text-white/40 group-hover/btn:text-white/70">취소</span>
               </div>
               {/* Depth lines */}
               <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-white/10 origin-top-left rotate-45" />
@@ -91,7 +91,7 @@ export const ExitGameOverlay: React.FC<ExitGameOverlayProps> = ({
             >
               <div className="absolute inset-0 border border-red-500/30 group-hover/btn:border-red-500/60 group-hover/btn:shadow-[0_0_15px_rgba(239,68,68,0.2)] rounded-md" />
               <div className="absolute inset-[6px] border border-red-500/20 group-hover/btn:border-red-500/50 bg-red-500/[0.03] flex items-center justify-center rounded-sm">
-                <span className="font-pixel text-xs text-red-400/80 group-hover/btn:text-red-400">종료</span>
+                <span className="font-system-overlay text-xs text-red-400/80 group-hover/btn:text-red-400">종료</span>
               </div>
               {/* Depth lines */}
               <div className="absolute top-[1px] left-[1px] w-2.5 h-[1px] bg-red-500/20 origin-top-left rotate-45" />

@@ -93,7 +93,7 @@ export const Desktop: React.FC = () => {
 
   return (
     <div
-      className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none"
+      className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none font-desktop-ui"
       style={{ backgroundImage: 'url("/display_background.png")' }}
       onContextMenu={(event) => event.preventDefault()}
     >

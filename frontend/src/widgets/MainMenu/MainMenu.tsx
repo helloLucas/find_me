@@ -16,7 +16,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
   const navigate = useNavigate();
 
   // 공통 스타일 클래스 정의
-  const baseClass = "font-pixel cursor-pointer transition-colors drop-shadow-md hover:text-gray-400";
+  const baseClass = "font-app-text cursor-pointer transition-colors drop-shadow-md hover:text-gray-400";
   const sizeClass = "text-4xl md:text-5xl uppercase tracking-tighter";
 
   return (
