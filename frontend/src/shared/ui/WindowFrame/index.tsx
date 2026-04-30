@@ -176,19 +176,16 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     : theme === "magenta"
     ? "border-b-2 border-[#BC00BC] bg-gray-900"
     : "border-b-2 border-green-900 bg-gray-900";
-
   const titleClasses = theme === "cyan"
     ? "text-[#00D4FF] drop-shadow-[0_0_5px_rgba(0,212,255,0.6)]"
     : theme === "magenta"
     ? "text-[#FF00FF] drop-shadow-[0_0_5px_rgba(255,0,255,0.5)]"
     : "text-green-500";
-
   const iconClasses = theme === "cyan"
     ? "bg-[#00D4FF]"
     : theme === "magenta"
     ? "bg-[#FF00FF]"
     : "bg-green-500";
-
   const buttonClasses = theme === "cyan"
     ? "text-[#00D4FF] hover:bg-[#00D4FF]/10 hover:text-[#00D4FF] hover:border-[#00D4FF]/50"
     : theme === "magenta"

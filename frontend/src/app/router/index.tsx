@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import HomePage from "../../pages/Home";
-import LobbyPage from "../../pages/lobby";
+import LobbyPage from "../../pages/Lobby";
 import PlayPage from "../../pages/play";
 import EndingPage from "../../pages/ending";
 import OAuthCallbackPage from "../../pages/auth/oauth-callback";
