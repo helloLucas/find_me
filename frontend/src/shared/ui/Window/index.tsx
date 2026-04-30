@@ -110,7 +110,7 @@ export const Window: React.FC<WindowProps> = ({
                 style={{ imageRendering: "pixelated" }}
               />
             )}
-            <span className="text-[#a48cff] font-pixel text-sm tracking-wider drop-shadow-[0_0_3px_rgba(164,140,255,0.8)]">
+            <span className="text-[#a48cff] font-window-title text-sm tracking-wider drop-shadow-[0_0_3px_rgba(164,140,255,0.8)]">
               {title}
             </span>
           </div>

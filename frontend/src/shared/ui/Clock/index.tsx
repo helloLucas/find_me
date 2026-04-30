@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 export const Clock = () => {
   const [time, setTime] = useState(new Date());
+  const displayYear = "2088";
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -18,10 +19,9 @@ export const Clock = () => {
   };
 
   const formatDate = (date: Date) => {
-    const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    return `${year}-${month < 10 ? `0${month}` : month}-${day < 10 ? `0${day}` : day}`;
+    return `${displayYear}-${month < 10 ? `0${month}` : month}-${day < 10 ? `0${day}` : day}`;
   };
 
   return (

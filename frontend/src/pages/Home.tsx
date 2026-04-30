@@ -163,13 +163,13 @@ const Home = () => {
             <div className="absolute top-32 left-16 md:top-40 md:left-24 flex flex-col">
                 <header className="flex flex-col mb-20 select-none glitch-group">
                     <h1 
-                        className="glitch-text-pro font-game text-7xl md:text-8xl tracking-tighter"
+                        className="glitch-text-pro font-landing-title text-7xl md:text-8xl tracking-tighter"
                         data-text="FIND ME"
                     >
                         FIND ME
                     </h1>
                     <h2 
-                        className="glitch-text-pro font-game text-4xl md:text-5xl tracking-widest self-end -mt-6 mr-4 opacity-80"
+                        className="glitch-text-pro font-landing-title text-4xl md:text-5xl tracking-widest self-end -mt-6 mr-4 opacity-80"
                         data-text=": VOID CITY"
                     >
                         : VOID CITY
@@ -185,7 +185,7 @@ const Home = () => {
             </div>
 
             <div className="absolute bottom-10 left-16 md:left-24 opacity-30">
-                <p className="font-pixel text-[9px] text-white/40 uppercase tracking-[0.4em] flex items-center gap-3">
+                <p className="font-app-text text-[9px] text-white/40 uppercase tracking-[0.4em] flex items-center gap-3">
                     <span className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse"></span>
                     Connection: Secure // Protocol: Lucas_v3
                 </p>

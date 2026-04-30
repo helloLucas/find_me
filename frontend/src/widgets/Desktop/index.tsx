@@ -3,10 +3,12 @@ import { DesktopIcon } from "../../shared/ui/DesktopIcon";
 import { Taskbar } from "../Taskbar";
 import { TerminalScene } from "../../features/command-input/TerminalScene";
 import { useWindowStore } from "../../app/store/windowStore";
+import { env } from "../../shared/config/env";
 import { Window } from "../../shared/ui/Window";
 import { Browser } from "../../features/Browser";
 import { MessengerNotificationCard, MessengerWindow } from "../../features/messenger";
 import { Lucas } from "../../features/Lucas/Lucas";
+import { DocumentViewer } from "../../features/DocumentViewer/DocumentViewer";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import {
@@ -93,7 +95,7 @@ export const Desktop: React.FC = () => {
 
   return (
     <div
-      className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none"
+      className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none font-desktop-ui"
       style={{ backgroundImage: 'url("/display_background.png")' }}
       onContextMenu={(event) => event.preventDefault()}
     >
@@ -153,6 +155,7 @@ export const Desktop: React.FC = () => {
                 id={windowState.id}
                 title={windowState.title}
                 icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+                defaultWidth={1000}
               >
                 <Browser windowId={windowState.id} />
               </Window>
@@ -161,6 +164,25 @@ export const Desktop: React.FC = () => {
 
           if (windowState.type === "terminal") {
             return <TerminalScene key={windowState.id} windowId={windowState.id} />;
+          }
+
+          if (windowState.type === "document_viewer") {
+            const documentSrc = windowState.content
+              ? `${env.cdnUrl}/images/${windowState.content}`
+              : "";
+
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+                defaultWidth={600}
+                defaultHeight={800}
+              >
+                <DocumentViewer src={documentSrc} title={windowState.title} />
+              </Window>
+            );
           }
 
           return <MessengerWindow key={windowState.id} windowId={windowState.id} />;

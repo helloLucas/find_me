@@ -115,7 +115,7 @@ export const Taskbar: React.FC = () => {
   return (
     <>
       <footer
-        className="fixed bottom-0 left-0 right-0 h-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-md px-1 flex items-center justify-between pixel-font"
+        className="fixed bottom-0 left-0 right-0 h-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-md px-1 flex items-center justify-between font-desktop-ui"
         style={{ zIndex: DESKTOP_LAYER.taskbar }}
       >
         <div className="flex h-full items-center gap-1">
@@ -153,7 +153,7 @@ export const Taskbar: React.FC = () => {
             {terminalWindow && (
               <button
                 onClick={handleTerminalTaskbarClick}
-                className={`flex h-8 px-3 items-center justify-start min-w-[150px] max-w-[200px] rounded truncate text-green-400 text-xs transition-all pixel-font ${
+                className={`flex h-8 px-3 items-center justify-start min-w-[150px] max-w-[200px] rounded truncate text-green-400 text-xs transition-all font-desktop-ui ${
                   terminalWindow.isMinimized
                     ? "bg-white/10 hover:bg-white/20 active:bg-white/30"
                     : "bg-white/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]"

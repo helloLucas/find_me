@@ -4,6 +4,7 @@ import com.lucas.story.dto.request.StartStoryRequestDto;
 import com.lucas.story.dto.request.TransitionRequestDto;
 import com.lucas.story.dto.response.StoryNodeResponseDto;
 import com.lucas.story.dto.response.TransitionResponseDto;
+import java.util.List;
 
 public interface StoryService {
 
@@ -29,4 +30,22 @@ public interface StoryService {
    * @return 전이된 이후의 새로운 노드 정보
    */
   TransitionResponseDto processTransition(Long userId, TransitionRequestDto request);
+
+  /**
+   * 사용자의 최근 터미널 명령어 입력 기록을 조회합니다.
+   *
+   * @param userId 사용자 식별자
+   * @return 최근 명령어 문자열 리스트
+   */
+  List<String> getRecentCommands(Long userId);
+
+  /**
+   * 터미널의 VFS 경로 자동완성 후보를 조회합니다.
+   *
+   * @param userId 사용자 식별자
+   * @param cwd 현재 작업 디렉토리
+   * @param input 현재 입력 중인 경로 조각
+   * @return 일치하는 파일 및 디렉토리명 리스트
+   */
+  List<String> getAutocompleteSuggestions(Long userId, String cwd, String input);
 }
