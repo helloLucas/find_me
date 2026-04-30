@@ -4,6 +4,7 @@ import json
 import logging
 import requests
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from elasticsearch import Elasticsearch
 
@@ -18,10 +19,11 @@ DB_USER = os.getenv("SPRING_DATASOURCE_USERNAME")
 DB_PASS = os.getenv("SPRING_DATASOURCE_PASSWORD")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MATTERMOST_WEBHOOK_URL = os.getenv("MATTERMOST_WEBHOOK_URL")
+GMS_ENDPOINT = os.getenv("GMS_ENDPOINT")
 
 # 필수 환경변수 검증
-if not all([ES_URL, DB_URL, DB_USER, DB_PASS, OPENAI_API_KEY, MATTERMOST_WEBHOOK_URL]):
-    logger.error("Missing required environment variables.")
+if not all([ES_URL, DB_URL, DB_USER, DB_PASS, OPENAI_API_KEY, MATTERMOST_WEBHOOK_URL, GMS_ENDPOINT]):
+    logger.error("Missing required environment variables (check ELASTICSEARCH_URL, SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD, OPENAI_API_KEY, MATTERMOST_WEBHOOK_URL, GMS_ENDPOINT).")
     sys.exit(1)
 
 # PostgreSQL 연결 파싱
@@ -35,15 +37,29 @@ except Exception as e:
     logger.error(f"Failed to parse DB_URL: {DB_URL}")
     sys.exit(1)
 
-def get_db_connection():
-    """DB 연결을 생성합니다."""
-    return psycopg2.connect(
+# 전역 DB 커넥션 풀 초기화
+try:
+    db_pool = pool.SimpleConnectionPool(
+        1, 5, # 최소 1개, 최대 5개 커넥션
         host=db_host,
         port=db_port,
         dbname=db_name,
         user=DB_USER,
         password=DB_PASS
     )
+    if db_pool:
+        logger.info("Database connection pool created successfully.")
+except Exception as e:
+    logger.error(f"Failed to create database connection pool: {e}")
+    sys.exit(1)
+
+def get_db_connection():
+    """풀에서 DB 연결을 가져옵니다."""
+    return db_pool.getconn()
+
+def release_db_connection(conn):
+    """DB 연결을 풀에 반환합니다."""
+    db_pool.putconn(conn)
 
 def get_active_chapter():
     """is_published가 true인 챕터들 중 sort_order가 가장 높은(최신) 챕터 코드를 가져옵니다."""
@@ -58,7 +74,7 @@ def get_active_chapter():
         return "week01"
     finally:
         cur.close()
-        conn.close()
+        release_db_connection(conn)
 
 def get_already_sent_nodes(chapter_id):
     """현재 챕터에서 최근 7일 이내에 이미 발송된 노드 리스트를 가져옵니다."""
@@ -75,7 +91,7 @@ def get_already_sent_nodes(chapter_id):
         return []
     finally:
         cur.close()
-        conn.close()
+        release_db_connection(conn)
 
 def record_sent_hint(node_id, chapter_id):
     """발송된 힌트 정보를 DB에 기록합니다."""
@@ -90,7 +106,7 @@ def record_sent_hint(node_id, chapter_id):
         logger.error(f"Failed to record hint history: {e}")
     finally:
         cur.close()
-        conn.close()
+        release_db_connection(conn)
 
 def get_bottleneck_data(chapter_id=None):
     """Elasticsearch에서 세션 기반 고도화 병목 지표를 추출합니다."""
@@ -196,24 +212,12 @@ def get_bottleneck_data(chapter_id=None):
 def get_node_guideline(node_id):
     """PostgreSQL(pgvector)에서 해당 퍼즐 노드의 정답 가이드를 조회합니다."""
     logger.info(f"Connecting to DB to get guideline for node: {node_id}")
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            dbname=db_name,
-            user=DB_USER,
-            password=DB_PASS
-        )
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # lucas_knowledge 테이블 구조에 맞게 조회 (puzzle_id 필드 가정)
-        # 만약 puzzle_id 필드가 없다면 메타데이터 JSON 필드를 검색하거나 적절한 컬럼 사용
         query = "SELECT content FROM lucas_knowledge WHERE metadata->>'puzzle_id' = %s LIMIT 1"
         cur.execute(query, (node_id,))
         result = cur.fetchone()
-        
-        cur.close()
-        conn.close()
         
         if result:
             return result.get('content')
@@ -221,13 +225,15 @@ def get_node_guideline(node_id):
     except Exception as e:
         logger.error(f"Database query failed: {e}")
         return "데이터베이스에서 정답 가이드를 불러오는 데 실패했습니다."
+    finally:
+        cur.close()
+        release_db_connection(conn)
 
 def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content):
     """GMS Gemini API를 사용하여 루카스 페르소나의 모호한 힌트 메시지를 생성합니다."""
     logger.info("Generating persona-driven hint using GMS Gemini API...")
     
-    # GMS 엔드포인트 설정
-    GMS_ENDPOINT = "https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+    # GMS 엔드포인트 설정 (환경변수에서 로드)
     
     system_prompt = """당신은 게임의 조력자 '루카스'입니다. 
 당신의 목표는 데이터 분석 결과를 바탕으로 플레이어들에게 '일간 팁'을 제공하는 것입니다.
@@ -370,6 +376,11 @@ def main():
     
     # 8. 발송 이력 기록
     record_sent_hint(node_id, active_chapter)
+    
+    # 9. 커넥션 풀 종료
+    if db_pool:
+        db_pool.closeall()
+        logger.info("Database connection pool closed.")
     
     logger.info("Job completed successfully.")
 

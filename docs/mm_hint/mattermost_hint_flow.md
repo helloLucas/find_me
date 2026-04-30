@@ -43,7 +43,7 @@ $$Score = \left( \frac{avgFails}{7.0} \times 40 \right) + \left( \frac{churnRate
 
 ## 3. 데이터 활용 및 힌트 생성 (LLM)
 
-선정된 병목 구간의 데이터는 LLM(Gemini 2.5 Flash)에 전달되어 사용자 친화적인 메시지로 변환됩니다.
+선정된 병목 구간의 데이터는 LLM(Gemini 2.5 Flash lite)에 전달되어 사용자 친화적인 메시지로 변환됩니다.
 
 ### 활용 데이터
 1.  **구간 설명**: `lucas_knowledge`에 저장된 해당 퍼즐의 정답 로직 및 의도.

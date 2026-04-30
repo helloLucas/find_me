@@ -48,4 +48,9 @@ spec:
                 secretKeyRef:
                   name: hint-secrets
                   key: mattermost-webhook-url
+            - name: GMS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: gms-endpoint
           restartPolicy: OnFailure
