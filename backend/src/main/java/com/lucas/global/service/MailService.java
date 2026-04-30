@@ -4,6 +4,7 @@ import com.lucas.bugreport.dto.request.BugReportRequest;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -92,6 +93,12 @@ public class MailService {
             helper.setTo(adminEmail);
             helper.setSubject(subject);
             helper.setText(text, true); // true = HTML 형식 적용
+
+            try {
+                helper.setFrom(adminEmail, "FIND ME 시스템"); // 관리자 이메일과 발송자 닉네임 설정
+            } catch (UnsupportedEncodingException e) {
+                helper.setFrom(adminEmail);
+            }
 
             if (attachments != null && !attachments.isEmpty()) {
                 for (MailAttachment attachment : attachments) {
