@@ -107,11 +107,11 @@ export const Lucas: React.FC = () => {
       if (hintText) {
         addChatMessage('LUCAS', hintText);
       } else {
-        addChatMessage('LUCAS', '응답을 읽지 못했어. 같은 질문을 한 번 더 보내줘.');
+        addChatMessage('LUCAS', '연결 상태가 좋지 못해서 너의 채팅을 읽지 못했어. 같은 질문을 한 번 더 보내줘.');
       }
     } catch (error) {
       console.error('[Lucas] hint request failed', error);
-      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 요청해줘.');
+      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 말해줘.');
     } finally {
       setIsHintRequesting(false);
     }

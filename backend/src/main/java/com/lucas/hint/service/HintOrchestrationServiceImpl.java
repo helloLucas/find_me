@@ -163,32 +163,12 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
 
   private String composeFallbackHint(
       String hintLevel, HintLiveRetrieveResponseDto retrieval, HintEvidenceResponseDto topEvidence) {
-    if (topEvidence == null) {
-      return "지금 노드에서 가능한 행동 타입을 다시 확인해봐. 바로 직전 행동과 연결되는 단서를 먼저 점검하자.";
-    }
-
-    String actionType = safeText(topEvidence.getActionType());
-    String expectedInput = extractExpectedInput(topEvidence);
-    String maskedInput = obfuscateExpectedInput(expectedInput);
-
-    if ("LOW_CONFIDENCE".equals(hintLevel)) {
-      return "지금은 근거가 약해. 직전 행동을 기준으로 " + actionType + " 계열 동작을 다시 맞춰보자.";
-    }
-    if ("LIGHT".equals(hintLevel)) {
-      return "지금 노드의 핵심 행동 타입은 " + actionType + "이야. 입력이나 대상 선택을 다시 점검해봐.";
-    }
-    if ("MEDIUM".equals(hintLevel)) {
-      if (isBlank(maskedInput)) {
-        return "지금 노드에서는 " + actionType + " 동작이 맞아. 형식과 대상이 맞는지 한 번 더 확인해줘.";
-      }
-      return "지금 노드의 정답 행동은 " + actionType + "이야. 입력은 `" + maskedInput + "` 형태로 맞춰봐.";
-    }
-    if (!isBlank(maskedInput)) {
-      return "정답 행동은 " + actionType + "이야. 값 전체를 그대로 말해줄 순 없고, `"
-          + maskedInput
-          + "` 형태를 기준으로 시도해봐.";
-    }
-    return "정답 행동은 " + actionType + "이야. 현재 노드(" + retrieval.getFromNodeCode() + ") 조건을 다시 맞춰봐.";
+    List<String> fallbackMessages =
+        List.of(
+            "지금 신호가 불안정해서 너의 채팅을 못봤어. 잠시 후 다시 말을 걸어줘.",
+            "연결 상태가 불안정해. 잠깐 뒤에 다시 말해줘.",
+            "시스템 간섭으로 우리의 연결 상태가 좋지 못해. 잠시 후 다시 말을 걸어줘.");
+    return fallbackMessages.get(ThreadLocalRandom.current().nextInt(fallbackMessages.size()));
   }
 
   private String extractExpectedInput(HintEvidenceResponseDto evidence) {
@@ -254,6 +234,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     }
     return normalized.substring(0, normalized.length() - 2) + "..";
   }
+
   private String sanitizeInternalActionTokensInText(String text) {
     if (isBlank(text)) {
       return text;
@@ -266,6 +247,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     sanitized = sanitized.replaceAll("(?i)\\bauto\\b", "자동 트리거");
     return sanitized;
   }
+
   private boolean looksLikeInternalActionToken(String text) {
     return text.matches("(?i)[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
   }
