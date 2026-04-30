@@ -512,7 +512,7 @@ def main():
     send_to_mattermost(hint_message, MATTERMOST_WEBHOOK_URL, username="Lucas")
     
     # 8. 운영진용 상세 리포트 생성 및 발송 (1일 vs 7일 비교)
-    report_webhook = MATTERMOST_REPORT_WEBHOOK_URL or MATTERMOST_WEBHOOK_URL
+    report_webhook = MATTERMOST_REPORT_WEBHOOK_URL
     stats_1d = get_detailed_stats(active_chapter, days=1)
     stats_7d = get_detailed_stats(active_chapter, days=7)
     dev_report = generate_dev_report(active_chapter, stats_1d, stats_7d)
