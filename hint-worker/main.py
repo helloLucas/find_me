@@ -277,7 +277,7 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
 위 데이터를 바탕으로 루카스의 '일간 팁' 메시지를 작성해줘.
 
 구조 예시:
-🐶 [루카스의 일간 팁] "제목"
+#### 🐶 [루카스의 일간 팁] "제목"
 
 **📊 이번 챕터에서 험난했던 구간**
 (구간 설명을 바탕으로 어떤 상황인지 반말로 친절하게 설명)
@@ -512,7 +512,7 @@ def main():
     send_to_mattermost(hint_message, MATTERMOST_WEBHOOK_URL, username="Lucas")
     
     # 8. 운영진용 상세 리포트 생성 및 발송 (1일 vs 7일 비교)
-    report_webhook = MATTERMOST_REPORT_WEBHOOK_URL or MATTERMOST_WEBHOOK_URL
+    report_webhook = MATTERMOST_REPORT_WEBHOOK_URL
     stats_1d = get_detailed_stats(active_chapter, days=1)
     stats_7d = get_detailed_stats(active_chapter, days=7)
     dev_report = generate_dev_report(active_chapter, stats_1d, stats_7d)

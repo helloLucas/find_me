@@ -15,7 +15,7 @@ spec:
         spec:
           containers:
           - name: hint-worker
-            image: shyunnnn/find-me-hint:138-dev
+            image: shyunnnn/find-me-hint:141-dev
             imagePullPolicy: Always
             env:
             - name: ELASTICSEARCH_URL
@@ -53,4 +53,9 @@ spec:
                 secretKeyRef:
                   name: hint-secrets
                   key: GMS_ENDPOINT
+            - name: MATTERMOST_REPORT_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hint-secrets
+                  key: MATTERMOST_REPORT_WEBHOOK_URL
           restartPolicy: OnFailure
