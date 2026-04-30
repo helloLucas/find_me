@@ -234,6 +234,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     }
     return normalized.substring(0, normalized.length() - 2) + "..";
   }
+
   private String sanitizeInternalActionTokensInText(String text) {
     if (isBlank(text)) {
       return text;
@@ -246,6 +247,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     sanitized = sanitized.replaceAll("(?i)\\bauto\\b", "자동 트리거");
     return sanitized;
   }
+
   private boolean looksLikeInternalActionToken(String text) {
     return text.matches("(?i)[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
   }
