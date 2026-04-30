@@ -279,7 +279,7 @@ def generate_hint(node_id, fail_count, churn_rate, wrong_answers, guide_content)
     
     headers = {
         "Content-Type": "application/json",
-        "x-goog-api-key": OPENAI_API_KEY # 기존 변수명 유지 (GMS 키가 주입됨)
+        "x-goog-api-key": OPENAI_API_KEY
     }
 
     try:
@@ -304,8 +304,8 @@ def send_to_mattermost(markdown_message):
     logger.info("Sending hint to Mattermost...")
     payload = {
         "text": markdown_message,
-        "username": "Lucas Hint Bot",
-        "icon_url": "https://lucas-assets.s3.amazonaws.com/lucas-icon.png" # 아이콘이 있다면 설정
+        "username": "Lucas",
+        # "icon_url": "https://lucas-assets.s3.amazonaws.com/lucas-icon.png"
     }
     
     try:
@@ -322,7 +322,7 @@ def send_to_mattermost(markdown_message):
 def main():
     logger.info("Starting Daily Mattermost Hint Generation Job...")
     
-    # 1. 현재 활성화된 챕터 조회 (DB에서 관리)
+    # 1. 현재 활성화된 챕터 조회
     active_chapter = get_active_chapter()
     logger.info(f"Current Active Chapter: {active_chapter}")
     
