@@ -31,13 +31,13 @@ spec:
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
-                  key: username
+                  name: hint-secrets
+                  key: SPRING_DATASOURCE_USERNAME
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
-                  key: password
+                  name: hint-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
