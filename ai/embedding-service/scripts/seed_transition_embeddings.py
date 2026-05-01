@@ -35,7 +35,16 @@ def _repo_root() -> Path:
 
 
 def _default_sql_path() -> Path:
-    return _repo_root() / "backend" / "src" / "main" / "resources" / "seed_lucas_knowledge_from_transitions.sql"
+    repo_root = _repo_root()
+    candidates = [
+        repo_root / "backend" / "src" / "main" / "resources" / "embed" / "embed_lucas_knowledge_from_transitions.sql",
+        # Backward-compatibility for older repository layouts.
+        repo_root / "backend" / "src" / "main" / "resources" / "seed_lucas_knowledge_from_transitions.sql",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
 
 
 def _parse_args() -> argparse.Namespace:

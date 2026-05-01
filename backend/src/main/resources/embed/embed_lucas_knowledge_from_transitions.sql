@@ -1,3 +1,5 @@
+-- 용도: story_transitions 기반으로 lucas_knowledge(source=story_transitions)를 재생성/적재하는 스크립트.
+
 -- lucas_knowledge 에 있는 모든 데이터 지우고 새롭게 생성
 -- (기존에 들어가있던 노드에 변화가 생겼을 시)
 

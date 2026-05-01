@@ -1,3 +1,5 @@
+-- 용도: pgvector 확장 포함 PostgreSQL 핵심 스키마(테이블/제약/인덱스) 초기 생성 스크립트.
+
 CREATE EXTENSION IF NOT EXISTS vector;
 
 SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';

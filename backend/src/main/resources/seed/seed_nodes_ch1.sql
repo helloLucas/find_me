@@ -1,3 +1,5 @@
+-- 용도: 챕터 1 메타데이터 및 기본 story_nodes를 시드하는 스크립트.
+
 BEGIN;
 
 INSERT INTO

@@ -1,3 +1,5 @@
+-- 용도: 이미 적재된 런타임 데이터의 lukas 표기를 lucas 표기로 정규화하는 패치 스크립트.
+
 -- Runtime patch: rename lukas variants in already-seeded DB data.
 -- Mapping policy:
 --   lukas -> lucas

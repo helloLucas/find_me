@@ -1,3 +1,5 @@
+-- 용도: week02(Chapter 2) story_nodes 데이터를 시드하는 스크립트.
+
 -- Chapter 2 seed_nodes.sql
 
 -- Generated from Chapter 2 finalized technical decisions.
