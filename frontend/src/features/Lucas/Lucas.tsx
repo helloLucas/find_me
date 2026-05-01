@@ -18,6 +18,7 @@ export const Lucas: React.FC = () => {
     nextMessage,
     isHintMode,
     chatHistory,
+    chatScopeKey,
     addChatMessage,
     toggleHintMode,
     glitchLevel,
@@ -32,12 +33,23 @@ export const Lucas: React.FC = () => {
   const [pendingFrame, setPendingFrame] = useState(0);
   const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const lastReadIndicesRef = useRef<Record<string, number>>({});
+  const savedScrollTopRef = useRef<Record<string, number>>({});
+  const wasHintPanelVisibleRef = useRef(false);
+  const isRestoringScrollRef = useRef(false);
+  const isHintPanelVisible = isHintMode && !isDialogueActive;
 
   const isLastMessage = currentScene
     ? currentMessageIndex >= currentScene.messages.length - 1
     : false;
 
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
+
+  const persistHintScrollTop = () => {
+    const container = hintMessagesRef.current;
+    if (!container) return;
+    savedScrollTopRef.current[chatScopeKey] = container.scrollTop;
+  };
 
   useEffect(() => {
     if (!isDialogueActive || !currentMessage) return;
@@ -60,16 +72,67 @@ export const Lucas: React.FC = () => {
   }, [isDialogueActive, currentMessage]);
 
   useEffect(() => {
+    const wasVisible = wasHintPanelVisibleRef.current;
+    const isVisible = isHintPanelVisible;
+
+    if (wasVisible && !isVisible) {
+      persistHintScrollTop();
+      lastReadIndicesRef.current[chatScopeKey] = chatHistory.length;
+    }
+
+    if (!wasVisible && isVisible) {
+      const container = hintMessagesRef.current;
+      if (container) {
+        const currentLen = chatHistory.length;
+        const lastRead = lastReadIndicesRef.current[chatScopeKey] ?? currentLen;
+        isRestoringScrollRef.current = true;
+
+        window.requestAnimationFrame(() => {
+          const savedScrollTop = savedScrollTopRef.current[chatScopeKey];
+
+          if (typeof savedScrollTop === 'number' && Number.isFinite(savedScrollTop)) {
+            container.scrollTop = savedScrollTop;
+          } else if (currentLen > lastRead) {
+            const scrollTargetIdx = Math.max(0, lastRead - 1);
+            const msgToScroll = chatHistory[scrollTargetIdx];
+
+            if (msgToScroll) {
+              const element = document.getElementById(`lucas-msg-${msgToScroll.id}`);
+              if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'start' });
+              } else {
+                container.scrollTop = container.scrollHeight;
+              }
+            } else {
+              container.scrollTop = container.scrollHeight;
+            }
+          } else {
+            container.scrollTop = container.scrollHeight;
+          }
+
+          savedScrollTopRef.current[chatScopeKey] = container.scrollTop;
+          lastReadIndicesRef.current[chatScopeKey] = currentLen;
+          isRestoringScrollRef.current = false;
+        });
+      }
+    }
+
+    wasHintPanelVisibleRef.current = isVisible;
+  }, [isHintPanelVisible, chatScopeKey, chatHistory]);
+
+  useEffect(() => {
     const container = hintMessagesRef.current;
-    if (!container || !isHintMode) return;
+    if (!container || !isHintPanelVisible || isRestoringScrollRef.current) return;
 
     window.requestAnimationFrame(() => {
       container.scrollTop = container.scrollHeight;
       if (chatEndRef.current) {
         chatEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
       }
+      savedScrollTopRef.current[chatScopeKey] = container.scrollTop;
+      lastReadIndicesRef.current[chatScopeKey] = chatHistory.length;
     });
-  }, [chatHistory, isHintMode, isHintRequesting]);
+  }, [chatHistory, isHintPanelVisible, isHintRequesting, chatScopeKey]);
 
   useEffect(() => {
     if (!isHintRequesting) {
@@ -172,9 +235,9 @@ export const Lucas: React.FC = () => {
       {isHintMode && !isDialogueActive && (
         <div className="lucas-hint-ui">
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
-          <div className="hint-messages" ref={hintMessagesRef}>
+          <div className="hint-messages" ref={hintMessagesRef} onScroll={persistHintScrollTop}>
             {chatHistory.map((chat) => (
-              <div key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
+              <div id={`lucas-msg-${chat.id}`} key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
                 <span className="chat-speaker">{chat.speaker}</span>
                 <div className="chat-text">{chat.text}</div>
               </div>
