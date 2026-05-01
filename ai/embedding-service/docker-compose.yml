@@ -1,0 +1,12 @@
+services:
+  embedding-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lucas-embedding-service
+    env_file:
+      - ./.env
+    ports:
+      - "8101:8101"
+    restart: unless-stopped
+

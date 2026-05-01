@@ -4,6 +4,9 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
 import { HomeTab } from "./components/HomeTab";
 import { PacmanTab } from "./components/PacmanTab";
+import { StarforceTab } from "./components/StarforceTab";
+import { HistoryTab } from "./components/HistoryTab";
+import { DocTab } from "./components/DocTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
@@ -17,10 +20,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
     title: string;
   }>;
   historyIndex: number;
@@ -30,26 +33,58 @@ interface BrowserProps {
   windowId: DesktopWindowId;
 }
 
+type KeyboardLockNavigator = Navigator & {
+  keyboard?: {
+    lock?: (keys: string[]) => Promise<void>;
+  };
+};
+
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const browserContent = useBrowserContentStore((state) => state.content);
-  const [tabs, setTabs] = useState<Tab[]>([
-    {
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode } = useBrowserContentStore();
+
+  // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
+  useEffect(() => {
+    if (currentNode?.code?.startsWith("CH2_") && !isChapter2Mode) {
+      setIsChapter2Mode(true);
+    }
+  }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
+
+  const [tabs, setTabs] = useState<Tab[]>(() => {
+    if (windowId === "terminal2") {
+      return [{
+        id: "tab1",
+        title: "Starforce Core",
+        url: "system://terminal2/starforce",
+        component: "starforce",
+        history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
+        historyIndex: 0,
+      }];
+    }
+
+    // 챕터 2일 경우 히스토리 탭을 기본으로 노출
+    if (currentNode?.code?.startsWith("CH2_")) {
+      return [{
+        id: "tab1",
+        title: "History",
+        url: "system://history",
+        component: "history",
+        history: [{ url: "system://history", component: "history", title: "History" }],
+        historyIndex: 0,
+      }];
+    }
+    
+    // 기본값 (챕터 1 등)
+    return [{
       id: "tab1",
       title: "Home",
       url: "https://voidcity-news/recent/1",
       component: "news",
-      history: [
-        {
-          url: "https://voidcity-news/recent/1",
-          component: "news",
-          title: "Home",
-        },
-      ],
+      history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "Home" }],
       historyIndex: 0,
-    },
-  ]);
+    }];
+  });
   const [activeTabId, setActiveTabId] = useState("tab1");
   const [showDevTools, setShowDevTools] = useState(false);
   const [devToolsWidth, setDevToolsWidth] = useState(320);
@@ -146,6 +181,14 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const openDevTools = () => {
     setShowDevTools(true);
+    
+    // DevTools 너비가 브라우저 전체 너비의 70%를 넘지 않도록 제한
+    if (containerRef.current) {
+      const maxAllowedWidth = containerRef.current.offsetWidth * 0.7;
+      if (devToolsWidth > maxAllowedWidth) {
+        setDevToolsWidth(Math.max(200, maxAllowedWidth));
+      }
+    }
 
     const inspectTarget = getStoryInspectTarget(currentNode);
     if (inspectTarget && canSubmitStoryAction(currentNode, "inspect", inspectTarget)) {
@@ -177,13 +220,19 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   };
 
   useEffect(() => {
-    if ("keyboard" in navigator && (navigator as any).keyboard?.lock) {
-      (navigator as any).keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
+    const keyboard = (navigator as KeyboardLockNavigator).keyboard;
+    if (keyboard?.lock) {
+      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
     }
 
     const handleCaptureKeyDown = (event: KeyboardEvent) => {
       const activeWindowId = useWindowStore.getState().activeWindowId;
       if (activeWindowId !== windowId) return;
+
+      const isModKey = event.ctrlKey || event.metaKey; // Mac에서는 Cmd(meta), Windows/Linux에서는 Ctrl
+      const isW = event.key.toLowerCase() === "w";
+      const isN = event.key.toLowerCase() === "n";
+      const isT = event.key.toLowerCase() === "t";
 
       if (event.key === "F12") {
         event.preventDefault();
@@ -192,13 +241,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         return;
       }
 
-      if (!event.ctrlKey) return;
+      if (!isModKey) return;
 
-      if (event.key.toLowerCase() === "w") {
+      if (isW) {
         event.preventDefault();
         event.stopPropagation();
         handleCloseTab(activeTabId);
-      } else if (event.key.toLowerCase() === "n" || event.key.toLowerCase() === "t") {
+      } else if (isN || isT) {
         event.preventDefault();
         event.stopPropagation();
         handleNewTab();
@@ -235,23 +284,46 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     const snapshot = resolveNewsSnapshot(currentNode.code, articleTitleFromContent);
     if (!snapshot) return;
 
-    setTabs((prev) => {
-      let changed = false;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
 
-      const nextTabs = prev.map((tab) => {
-        if (tab.id !== activeTab.id) return tab;
+      setTabs((prev) => {
+        let changed = false;
 
-        const currentEntry = tab.history[tab.historyIndex];
-        const isSameEntry =
-          currentEntry &&
-          currentEntry.url === snapshot.url &&
-          currentEntry.title === snapshot.title &&
-          currentEntry.component === "news";
+        const nextTabs = prev.map((tab) => {
+          if (tab.id !== activeTab.id) return tab;
 
-        if (isSameEntry) {
-          if (tab.url === snapshot.url && tab.title === snapshot.title && tab.component === "news") {
-            return tab;
+          const currentEntry = tab.history[tab.historyIndex];
+          const isSameEntry =
+            currentEntry &&
+            currentEntry.url === snapshot.url &&
+            currentEntry.title === snapshot.title &&
+            currentEntry.component === "news";
+
+          if (isSameEntry) {
+            if (tab.url === snapshot.url && tab.title === snapshot.title && tab.component === "news") {
+              return tab;
+            }
+
+            changed = true;
+            return {
+              ...tab,
+              url: snapshot.url,
+              title: snapshot.title,
+              component: "news" as const,
+            };
           }
+
+          const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
+          const nextHistory = [
+            ...truncatedHistory,
+            {
+              url: snapshot.url,
+              title: snapshot.title,
+              component: "news" as const,
+            },
+          ];
 
           changed = true;
           return {
@@ -259,32 +331,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             url: snapshot.url,
             title: snapshot.title,
             component: "news" as const,
+            history: nextHistory,
+            historyIndex: nextHistory.length - 1,
           };
-        }
+        });
 
-        const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
-        const nextHistory = [
-          ...truncatedHistory,
-          {
-            url: snapshot.url,
-            title: snapshot.title,
-            component: "news" as const,
-          },
-        ];
-
-        changed = true;
-        return {
-          ...tab,
-          url: snapshot.url,
-          title: snapshot.title,
-          component: "news" as const,
-          history: nextHistory,
-          historyIndex: nextHistory.length - 1,
-        };
+        return changed ? nextTabs : prev;
       });
-
-      return changed ? nextTabs : prev;
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab, articleTitleFromContent, currentNode]);
 
   const newsViewMode: "auto" | "list" | "article" =
@@ -355,7 +413,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col w-full h-full bg-[#0a0514] font-pixel outline-none"
+      className="flex flex-col w-full h-full bg-[#0a0514] font-browser-chrome outline-none"
       tabIndex={-1}
       onContextMenu={handleContextMenu}
       onClick={() => focusWindow(windowId)}
@@ -425,9 +483,19 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             />
           )}
           {activeTab?.component === "home" && (
-            <HomeTab onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} />
+            <HomeTab 
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} 
+              isChapter2Mode={isChapter2Mode}
+            />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
+          {activeTab?.component === 'starforce' && <StarforceTab windowId={windowId} />}
+          {activeTab?.component === 'history' && (
+            <HistoryTab onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} />
+          )}
+          {activeTab?.component === 'doc' && (
+            <DocTab url={activeTab.url} />
+          )}
         </div>
 
         {showDevTools && (
@@ -444,7 +512,9 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                 const startW = devToolsWidth;
 
                 const onMouseMove = (moveEvent: MouseEvent) => {
-                  const newWidth = Math.max(200, Math.min(800, startW - (moveEvent.clientX - startX)));
+                  const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
+                  const maxAllowedWidth = containerWidth * 0.7;
+                  const newWidth = Math.max(200, Math.min(maxAllowedWidth, startW - (moveEvent.clientX - startX)));
                   setDevToolsWidth(newWidth);
                 };
 

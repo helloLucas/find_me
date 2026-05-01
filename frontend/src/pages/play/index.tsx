@@ -75,17 +75,12 @@ export default function PlayPage() {
 
   return (
     <main className="h-screen w-screen overflow-hidden">
-      {!isFullscreen ? (
-        <FullscreenEnforcer />
+      {isPlayingVideo && currentPreVideoUrl ? (
+        <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
       ) : (
-        <>
-          {isPlayingVideo && currentPreVideoUrl ? (
-            <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
-          ) : (
-            <Desktop />
-          )}
-        </>
+        <Desktop />
       )}
+      {!isFullscreen && <FullscreenEnforcer />}
 
 
 

@@ -129,7 +129,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   return (
     <div
       ref={windowRef}
-      className="absolute top-0 left-0 font-pixel"
+      className="absolute top-0 left-0 font-messenger"
       style={{
         width: WINDOW_W,
         height: WINDOW_H,
@@ -187,7 +187,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             onMouseDown={handleHeaderMouseDown}
           >
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-xs">MSG</span>
+              {/* <span className="text-blue-400 text-xs">MSG</span> */}
               <span className="text-white text-sm tracking-wide">{conversation.title}</span>
               {conversation.online && (
                 <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />

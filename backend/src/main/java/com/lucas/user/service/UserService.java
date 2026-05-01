@@ -8,14 +8,12 @@ import com.lucas.global.exception.ErrorCode;
 import com.lucas.user.dto.request.UserRegisterRequest;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 /** 사용자 정보와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다. */
 @Slf4j
@@ -45,7 +43,8 @@ public class UserService {
     PendingUserInfo pendingInfo = authService.getPendingUserInfo(request.getTempKey());
 
     // 닉네임 누락 (신규 회원 가입 or 게스트에서 새로운 소셜 계정으로 승격하는 상황일 때는 닉네임 입력 필수)
-    if (!request.isConfirmSwitch() && (request.getNickname() == null || request.getNickname().isBlank())) {
+    if (!request.isConfirmSwitch()
+        && (request.getNickname() == null || request.getNickname().isBlank())) {
       log.warn("닉네임 누락 - 가입 제한");
       throw new CustomException(ErrorCode.H1000);
     }
@@ -53,9 +52,9 @@ public class UserService {
     // 소셜 정보가 있는 경우에만 DB 조회
     Optional<User> socialUserOpt = Optional.empty();
     if (pendingInfo.getProvider() != null) { //
-      socialUserOpt = userRepository.findByProviderAndProviderUserId(
-          pendingInfo.getProvider(),
-          pendingInfo.getProviderUserId());
+      socialUserOpt =
+          userRepository.findByProviderAndProviderUserId(
+              pendingInfo.getProvider(), pendingInfo.getProviderUserId());
     }
 
     User user;
@@ -65,8 +64,10 @@ public class UserService {
       User socialUser = socialUserOpt.get();
 
       if (!request.isConfirmSwitch()) {
-        log.warn("이미 가입된 소셜 계정 - 가입 제한: provider={}, providerUserId={}",
-            pendingInfo.getProvider(), pendingInfo.getProviderUserId());
+        log.warn(
+            "이미 가입된 소셜 계정 - 가입 제한: provider={}, providerUserId={}",
+            pendingInfo.getProvider(),
+            pendingInfo.getProviderUserId());
         throw new CustomException(ErrorCode.H1000); // "이미 가입된 소셜 계정입니다."
       }
 
@@ -78,8 +79,10 @@ public class UserService {
 
     // 3. 상황별 유저 엔티티 준비 (승격 또는 신규 생성)
     if (request.getGuestId() != null) { // GUEST -> MEMBER 승격 (신규 소셜 계정 사용)
-      user = userRepository.findById(request.getGuestId())
-          .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      user =
+          userRepository
+              .findById(request.getGuestId())
+              .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       user.upgradeToMember(
           pendingInfo.getEmail(),
@@ -87,20 +90,22 @@ public class UserService {
           pendingInfo.getProvider(),
           pendingInfo.getProviderUserId());
     } else if (pendingInfo.isGuest()) { // 닉네임만 있는 순수 게스트 가입 (닉네임 설정 완료 시점)
-      user = User.builder()
-          .oauthName(pendingInfo.getOauthName())
-          .nickname(request.getNickname())
-          .role(UserRole.GUEST)
-          .build();
+      user =
+          User.builder()
+              .oauthName(pendingInfo.getOauthName())
+              .nickname(request.getNickname())
+              .role(UserRole.GUEST)
+              .build();
     } else { // 아예 처음인 신규 소셜 회원 가입 (닉네임 설정 완료 시점)
-      user = User.builder()
-          .email(pendingInfo.getEmail())
-          .oauthName(pendingInfo.getOauthName())
-          .nickname(request.getNickname())
-          .provider(pendingInfo.getProvider())
-          .providerUserId(pendingInfo.getProviderUserId())
-          .role(UserRole.MEMBER)
-          .build();
+      user =
+          User.builder()
+              .email(pendingInfo.getEmail())
+              .oauthName(pendingInfo.getOauthName())
+              .nickname(request.getNickname())
+              .provider(pendingInfo.getProvider())
+              .providerUserId(pendingInfo.getProviderUserId())
+              .role(UserRole.MEMBER)
+              .build();
     }
 
     User savedUser = userRepository.save(user);
@@ -113,19 +118,19 @@ public class UserService {
     return issueTokensForUser(savedUser);
   }
 
-  /**
-   * 유저를 위한 토큰 세트를 발급합니다.
-   */
+  /** 유저를 위한 토큰 세트를 발급합니다. */
   private TokenResponse issueTokensForUser(User user) {
-    String accessToken = jwtUtil.createAccessToken(
-        user.getId(),
-        user.getEmail(),
-        user.getNickname(),
-        user.getProvider(),
-        user.getRole().name(),
-        accessTokenExpiration);
+    String accessToken =
+        jwtUtil.createAccessToken(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            user.getProvider(),
+            user.getRole().name(),
+            accessTokenExpiration);
 
-    String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+    String refreshToken =
+        jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
     authService.replaceRefreshToken(user.getId(), refreshToken);
 
     return TokenResponse.builder()
@@ -156,7 +161,8 @@ public class UserService {
       throw new CustomException(ErrorCode.H1000);
     }
 
-    User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     user.updateNickname(trimmedNickname);
     log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);

@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipeline
+  namespace: lucas-elk
+  labels:
+    app: logstash
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      if [message] =~ /StoryActionLogger/ {
+        grok {
+          match => { "message" => "StoryActionLogger\s+:\s+%{GREEDYDATA:json_payload}" }
+        }
+        mutate {
+          strip => ["json_payload"]
+        }
+        json {
+          source => "json_payload"
+        }
+        mutate {
+          remove_field => ["json_payload"]
+        }
+      } else {
+        drop {}
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch.lucas-elk.svc.cluster.local:9200"]
+        index => "game-logs-%{+YYYY.MM.dd}"
+      }
+    }

@@ -1,13 +1,12 @@
 package com.lucas.chapter.controller;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.chapter.dto.response.ChapterProgressResponse;
 import com.lucas.chapter.service.ChapterService;
 import com.lucas.global.dto.BaseResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +38,7 @@ public class ChapterController {
 
     Long userId = principal.getUserId();
     log.info("User ID: {} accessed chapter progress list.", userId);
-    
+
     List<ChapterProgressResponse> response = chapterService.getChapterProgressList(userId);
 
     return ResponseEntity.ok(BaseResponse.success("챕터 목록 조회가 완료되었습니다.", response));

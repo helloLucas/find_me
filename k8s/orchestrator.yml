@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hint-orchestrator
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: hint-orchestrator
+  template:
+    metadata:
+      labels:
+        app: hint-orchestrator
+    spec:
+      nodeSelector:
+        env: dev
+      containers:
+        - name: hint-orchestrator
+          image: shyunnnn/find-me-orchestrator:152-dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8201
+          envFrom:
+            - secretRef:
+                name: orchestrator-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8201
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8201
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hint-orchestrator
+spec:
+  type: ClusterIP
+  selector:
+    app: hint-orchestrator
+  ports:
+    - name: http
+      port: 8201
+      targetPort: 8201
