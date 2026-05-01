@@ -1,3 +1,5 @@
+-- 용도: story_transitions 업서트를 위한 natural key 제약을 추가하는 스키마 패치 스크립트.
+
 -- Runtime schema patch: add the natural key needed by transition seed upserts.
 -- Run once before seed_transitions_chapter2.sql or any transition seed that uses ON CONFLICT.
 

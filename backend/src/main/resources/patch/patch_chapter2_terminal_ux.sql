@@ -1,3 +1,5 @@
+-- 용도: Chapter 2 터미널 UX 허용 범위 및 관련 출력 동작을 런타임 DB에 패치하는 스크립트.
+
 -- Runtime patch: Chapter 2 terminal UX tolerance update.
 -- Run after patch_story_transitions_natural_key.sql has been applied.
 -- Static VFS changes are in story/chapter02/vfs.json and require backend redeploy.

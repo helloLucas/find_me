@@ -1,3 +1,5 @@
+-- 용도: Chapter 1 전체 story_transitions 데이터를 시드하는 스크립트.
+
 -- Full Chapter 01 transition seed based on current seed_nodes.sql
 -- Start node: CH1_FRIEND_CHAT_PUSH
 BEGIN;

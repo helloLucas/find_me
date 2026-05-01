@@ -1,3 +1,5 @@
+-- 용도: Chapter 2 story_transitions를 초기화 후 재시드하는 스크립트.
+
 -- Chapter 2 seed_transitions.sql
 
 -- Run after seed_nodes_chapter2.sql.
