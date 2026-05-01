@@ -14,7 +14,7 @@ spec:
         app: hint-orchestrator
     spec:
       nodeSelector:
-        env: dev
+        env: prod
       containers:
         - name: hint-orchestrator
           image: shyunnnn/find-me-orchestrator:null
