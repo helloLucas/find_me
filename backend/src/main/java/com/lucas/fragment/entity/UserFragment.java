@@ -1,6 +1,5 @@
 package com.lucas.fragment.entity;
 
-
 import com.lucas.user.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

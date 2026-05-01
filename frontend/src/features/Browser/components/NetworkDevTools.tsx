@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useBrowserContentStore } from "../../../app/store/browserContentStore";
+import { useToastStore } from "../../../app/store/toastStore";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
 import {
   canSubmitStoryAction,
@@ -59,7 +60,8 @@ export const NetworkDevTools: React.FC = () => {
     submitStoryInspect,
     submitStoryCommand,
   } = useStoryRuntimeStore();
-  const persistedContent = useBrowserContentStore((state) => state.content);
+  const showToast = useToastStore((state) => state.showToast);
+  const { content: persistedContent, isChapter2Mode, lastCopiedCommand } = useBrowserContentStore();
 
   const [activeTab, setActiveTab] = useState<DevToolsTab>("elements");
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
@@ -95,11 +97,21 @@ export const NetworkDevTools: React.FC = () => {
   const responseBody = rawResponseBody;
 
   const logs = useMemo(() => {
-    const requests = recordArray(content.networkRequests).map(normalizeNetworkLog);
+    let requests = recordArray(content.networkRequests).map(normalizeNetworkLog);
+    
+    // 챕터 2일 경우 모든 로그의 상태를 200으로 강제
+    if (isChapter2Mode) {
+      requests = (requests.length > 0 ? requests : FALLBACK_LOGS).map(log => ({
+        ...log,
+        status: 200
+      }));
+      return requests;
+    }
+
     if (requests.length > 0) return requests;
     if (Object.keys(headers).length > 0 || responseBody) return [CORE_ANCHOR_LOG];
     return FALLBACK_LOGS;
-  }, [content.networkRequests, headers, responseBody]);
+  }, [content.networkRequests, isChapter2Mode, headers, responseBody]);
 
   const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
   const consoleLogs = Array.isArray(content.consoleLogs) ? content.consoleLogs.map(String) : [];
@@ -232,7 +244,23 @@ export const NetworkDevTools: React.FC = () => {
 
     let node = useStoryRuntimeStore.getState().currentNode;
 
-    if (command === "connect_core()" && node?.code === "CH1_PACKET_MESSAGE") {
+    // 터미널용 명령어가 브라우저 콘솔에서 실행되어 스토리가 진행되는 것을 방지
+    const terminalCommands = ["ls", "cd", "tar", "nc", "cat", "pwd", "rm", "cp", "mv", "ssh", "mkdir"];
+    const firstWord = command.split(" ")[0].toLowerCase();
+    if (terminalCommands.includes(firstWord)) {
+      appendConsoleEntry("error", `Uncaught ReferenceError: ${firstWord} is not defined`);
+      return;
+    }
+
+    // 챕터 2에서 connect_core() 시도 시 현재 연결 상태 안내 (이스터 에그/연속성)
+    const normalizedCommand = command.replace(/;$/, "").trim();
+    if (isChapter2Mode && (normalizedCommand === "connect_core()" || normalizedCommand === "connect_core")) {
+       appendConsoleEntry("success", "Core connection already established.");
+       return;
+    }
+
+    // 챕터 1 전용 커맨드 예외 처리
+    if (command === "connect_core()" && !isChapter2Mode && node?.code === "CH1_PACKET_MESSAGE") {
       if (canSubmitStoryAction(node, "click", "go_to_console")) {
         await submitStoryClick("go_to_console");
         node = useStoryRuntimeStore.getState().currentNode;
@@ -240,16 +268,34 @@ export const NetworkDevTools: React.FC = () => {
     }
 
     if (canSubmitStoryAction(node, "command", command)) {
-      await submitStoryCommand(command);
-      appendConsoleEntry("success", "Command executed.");
+      await submitStoryCommand(command, { source: "browser" });
+      
+      // 챕터 2에서는 "Command executed." 메시지 출력 방지 (시스템 메시지 성격 배제)
+      if (!isChapter2Mode) {
+        appendConsoleEntry("success", "Command executed.");
+      }
       return;
     }
+
 
     appendConsoleEntry("error", `Uncaught ReferenceError: ${command} is not defined`);
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // 챕터 2 모드에서만 붙여넣기 제한 적용
+    if (!isChapter2Mode) return;
+
+    const pastedText = e.clipboardData.getData("text");
+
+    // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
+    if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
+      e.preventDefault();
+      showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
+    }
+  };
+
   return (
-    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-sans text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
+    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-devtools-ui text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
       <div className="flex items-center bg-[#1e1e1e] border-b border-[#333] px-2 h-7 flex-shrink-0">
         <button
           className={`px-3 py-1 ${activeTab === "elements" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
@@ -272,7 +318,7 @@ export const NetworkDevTools: React.FC = () => {
       </div>
 
       {activeTab === "elements" && (
-        <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-3 font-mono text-[11px] text-[#888]">
+        <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-3 font-devtools-code text-[11px] text-[#888]">
           <div>&lt;article data-render-state="corrupted"&gt;</div>
           <div className="pl-4 text-[#ccc]">Open Network to inspect blocked requests.</div>
           <div>&lt;/article&gt;</div>
@@ -280,7 +326,7 @@ export const NetworkDevTools: React.FC = () => {
       )}
 
       {activeTab === "console" && (
-        <div className="flex-1 p-2 font-mono text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
+        <div className="flex-1 p-2 font-devtools-code text-xs overflow-y-auto bg-[#1e1e1e] flex flex-col">
           <div className="border-b border-[#333] pb-1 mb-1 opacity-50 flex-shrink-0">top</div>
           <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-2">
             {consoleEntries.map((item) => (
@@ -303,6 +349,7 @@ export const NetworkDevTools: React.FC = () => {
               value={consoleInput}
               onChange={(e) => setConsoleInput(e.target.value)}
               onKeyDown={handleConsoleSubmit}
+              onPaste={handlePaste}
               autoFocus
               spellCheck={false}
             />
@@ -313,7 +360,7 @@ export const NetworkDevTools: React.FC = () => {
       {activeTab === "network" && (
         <div className="flex-1 flex flex-row overflow-hidden relative bg-[#1e1e1e]">
           <div className={`flex-1 overflow-x-auto overflow-y-auto ${selectedLog ? "border-r border-[#444] hidden md:block" : ""}`}>
-            <table className="min-w-full text-left table-fixed whitespace-nowrap font-mono text-[11px]">
+            <table className="min-w-full text-left table-fixed whitespace-nowrap font-devtools-code text-[11px]">
               <thead className="sticky top-0 z-10 bg-[#2d2d2d] text-[#ccc] border-b border-[#444]">
                 <tr>
                   <th className="w-12 px-2 py-1 font-normal border-r border-[#444] bg-[#2d2d2d]">Status</th>
@@ -401,7 +448,7 @@ export const NetworkDevTools: React.FC = () => {
                   <div className="flex flex-col gap-3">
                     <button
                       type="button"
-                      className={`font-mono text-left text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded ${
+                      className={`font-devtools-code text-left text-[#a5d6ff] whitespace-pre-wrap break-all p-1 bg-[#0d1117] border border-[#30363d] rounded ${
                         canInspectResponse
                           ? "cursor-pointer hover:bg-[#1a2333] hover:border-[#0ff] hover:text-[#0ff] transition-all hover:shadow-[0_0_8px_rgba(0,255,255,0.4)]"
                           : "cursor-default"
@@ -412,7 +459,7 @@ export const NetworkDevTools: React.FC = () => {
                       {responseBody ? formatJson(responseBody) : '{"status":"pending","payload":"encrypted"}'}
                     </button>
                     {consoleLogs.map((line, idx) => (
-                      <div key={idx} className="font-mono text-[#f0c674]">
+                      <div key={idx} className="font-devtools-code text-[#f0c674]">
                         {line}
                       </div>
                     ))}

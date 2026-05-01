@@ -114,25 +114,25 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             className={`flex-1 border px-6 py-6 flex flex-col justify-center relative overflow-hidden rounded-sm transition-all duration-300 ${config.containerClass}`}
         >
             <div className="z-10">
-                <span className={`text-[10px] md:text-sm tracking-widest flex items-center mb-1 font-pixel ${config.labelClass}`}>
+                <span className={`text-[10px] md:text-sm tracking-widest flex items-center mb-1 font-lobby ${config.labelClass}`}>
                     {config.icon}
                     {config.label}
                 </span>
-                <h2 className={`text-xl md:text-2xl tracking-widest font-pixel ${config.titleClass}`}>
+                <h2 className={`text-xl md:text-2xl tracking-widest font-lobby ${config.titleClass}`}>
                     CHAPTER {chapterId}
                 </h2>
-                <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-pixel opacity-70 ${config.titleClass}`}>
+                <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-lobby opacity-70 ${config.titleClass}`}>
                     {title}
                 </h3>
             </div>
 
-            <div className={`absolute right-4 -bottom-4 text-6xl md:text-[90px] font-bold pointer-events-none leading-none font-pixel transition-colors ${config.watermarkClass}`}>
+            <div className={`absolute right-4 -bottom-4 text-6xl md:text-[90px] font-bold pointer-events-none leading-none font-lobby transition-colors ${config.watermarkClass}`}>
                 {watermarkId}
             </div>
 
             {/* Cleared Stamp (Visible only when COMPLETED) */}
             {status === CHAPTER_STATUS.COMPLETED && (
-                <div className="absolute top-4 right-6 z-20 border-2 border-[#a3e635] text-[#a3e635] text-[10px] md:text-xs px-2 py-1 font-pixel rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 shadow-[0_0_10px_rgba(163,230,53,0.3)]">
+                <div className="absolute top-4 right-6 z-20 border-2 border-[#a3e635] text-[#a3e635] text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 shadow-[0_0_10px_rgba(163,230,53,0.3)]">
                     [ CLEARED ]
                 </div>
             )}

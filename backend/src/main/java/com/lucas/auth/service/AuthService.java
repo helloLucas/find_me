@@ -45,7 +45,9 @@ public class AuthService {
   public void replaceRefreshToken(Long userId, String refreshToken) {
     String key = REFRESH_TOKEN_PREFIX + userId;
     // Redis 저장 및 TTL 설정 (Refresh Token 만료 시간과 동기화)
-    redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
+    redisTemplate
+        .opsForValue()
+        .set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
     log.info("Refresh Token 저장 완료 - userId: {}", userId);
   }
 
@@ -91,18 +93,21 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user =
+          userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      String newAccessToken = jwtUtil.createAccessToken(
-          user.getId(),
-          user.getEmail(),
-          user.getNickname(),
-          user.getProvider(),
-          user.getRole().name(),
-          accessTokenExpiration);
+      String newAccessToken =
+          jwtUtil.createAccessToken(
+              user.getId(),
+              user.getEmail(),
+              user.getNickname(),
+              user.getProvider(),
+              user.getRole().name(),
+              accessTokenExpiration);
 
-      String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+      String newRefreshToken =
+          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
       // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
@@ -142,10 +147,11 @@ public class AuthService {
    * @return 임시 식별 키 (UUID)
    */
   public String initGuest() {
-    PendingUserInfo guestInfo = PendingUserInfo.builder()
-        .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
-        .guest(true)
-        .build();
+    PendingUserInfo guestInfo =
+        PendingUserInfo.builder()
+            .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
+            .guest(true)
+            .build();
 
     return savePendingUserInfo(guestInfo);
   }
@@ -190,9 +196,7 @@ public class AuthService {
     }
   }
 
-  /**
-   * 가입이 완료된 후 사용된 임시 데이터를 삭제합니다.
-   */
+  /** 가입이 완료된 후 사용된 임시 데이터를 삭제합니다. */
   public void deletePendingUserInfo(String tempKey) {
     redisTemplate.delete(PENDING_USER_PREFIX + tempKey);
   }

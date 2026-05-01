@@ -12,6 +12,10 @@ interface ClientState {
 
   isAccessing: boolean;
   setIsAccessing: (isAccessing: boolean) => void;
+  
+  hasMapAnimationPlayed: boolean;
+  setHasMapAnimationPlayed: (played: boolean) => void;
+  
   resetClientStore: () => void;
 }
 
@@ -38,11 +42,16 @@ export const useClientStore = create<ClientState>((set) => ({
 
   isAccessing: false,
   setIsAccessing: (isAccessing) => set({ isAccessing }),
+  
+  hasMapAnimationPlayed: false,
+  setHasMapAnimationPlayed: (played) => set({ hasMapAnimationPlayed: played }),
+
   resetClientStore: () => set({
     terminalUser: "guest",
     terminalHost: "lucas-os",
     terminalPath: "~",
     terminalOutput: [],
     isAccessing: false,
+    hasMapAnimationPlayed: false,
   }),
 }));
