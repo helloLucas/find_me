@@ -128,40 +128,6 @@ public class StoryServiceImpl implements StoryService {
     }
   }
 
-  private JsonNode chapter02Vfs;
-
-  /**
-   * Bean 초기화 시 Chapter 2 정적 VFS 리소스를 메모리에 로드합니다.
-   *
-   * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
-   */
-  @PostConstruct
-  public void init() {
-    // Chapter 2 VFS JSON을 classpath 리소스에서 읽어 필드에 캐싱합니다.
-    loadVfsJson();
-  }
-
-  /**
-   * classpath의 Chapter 2 VFS JSON 파일을 읽어 {@code chapter02Vfs}에 저장합니다.
-   *
-   * <p>리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이 적용됩니다.
-   */
-  private void loadVfsJson() {
-    // try-with-resources로 리소스 스트림을 자동 해제합니다.
-    try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
-      // 리소스가 존재하는 경우에만 JSON을 파싱합니다.
-      if (is != null) {
-        // Jackson으로 정적 VFS JSON tree를 읽어 필드에 저장합니다.
-        this.chapter02Vfs = objectMapper.readTree(is);
-        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남깁니다.
-        log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
-      }
-    } catch (Exception e) {
-      // VFS 로딩 실패는 Chapter 2 터미널 기능에 영향을 주므로 error 로그로 기록합니다.
-      log.error("Failed to load Chapter 2 VFS", e);
-    }
-  }
-
   // ──────────────────────────────────────────────
   // 스토리 시작
   // ──────────────────────────────────────────────
@@ -485,94 +451,6 @@ public class StoryServiceImpl implements StoryService {
 
     // 한 줄 JSON 형태로 로거에 쏨
     storyActionLogService.logAction(event);
-  }
-
-  private String resolveSessionId(User user, TransitionRequestDto request) {
-    String sessionId = "sess_user_" + user.getId();
-    if (request.getMeta() != null && request.getMeta().containsKey("sessionId")) {
-      sessionId = String.valueOf(request.getMeta().get("sessionId"));
-    }
-    return sessionId;
-  }
-
-  /**
-   * ELK에 보낼 행동 로깅(command/inspect/click) 처리를 별도 묶음 메서드로 분리.
-   */
-  private void logStoryAction(User user, Chapter chapter, StoryNode currentNode, StoryNode nextNode, 
-                              TransitionRequestDto request, boolean isFail) {
-      
-      String actionType = request.getActionType();
-      // command, inspect, click 외의 액션은 필요시 필터링 가능 (일단 모든 액션을 고려해 적용)
-      if (actionType == null || actionType.isBlank()) {
-          log.warn("ActionType is empty, skipping StoryAction log.");
-          return;
-      }
-      
-      String rawInput = request.getInputValue() == null ? "" : request.getInputValue();
-      String normInput = storyActionLogService.normalizeInputValue(rawInput);
-      
-      String sessionId = resolveSessionId(user, request);
-
-      // Redis fail_count 조회/갱신
-      boolean shouldResetFailCountOnSuccess =
-          isFail || !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
-      int failCountAfterAction =
-          storyActionLogService.updateAndGetFailCount(
-              sessionId, isFail, shouldResetFailCountOnSuccess);
-
-      // hint_requested 여부 추출
-      boolean hintRequested = false;
-      if (request.getMeta() != null && request.getMeta().containsKey("hintRequested")) {
-          hintRequested = Boolean.parseBoolean(String.valueOf(request.getMeta().get("hintRequested")));
-      }
-
-      // state_version 추출
-      int stateVersion = 1;
-      if (request.getMeta() != null && request.getMeta().containsKey("stateVersion")) {
-          try {
-              stateVersion = Integer.parseInt(String.valueOf(request.getMeta().get("stateVersion")));
-          } catch (NumberFormatException ignored) {}
-      }
-
-      String timestamp = storyActionLogService.generateTimestamp();
-      String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
-      String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
-      String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
-      
-      // result 세분화: 성공(SUCCESS), 설계된 오답(FAIL), 예상치 못한 오류/무효 입력(ERROR)
-      String result = isFail ? (nextNode == null ? "ERROR" : "FAIL") : "SUCCESS";
-
-      StoryActionLogEvent event = StoryActionLogEvent.builder()
-          .timestamp(timestamp)
-          .sessionId(sessionId)
-          .userId(user.getId())
-          .chapterId(chapterId)
-          .fromNodeId(fromNodeId)
-          .toNodeId(toNodeId)
-          .actionType(actionType)
-          .inputValue(rawInput)
-          .inputValueNorm(normInput)
-          .result(result)
-          .failCountAfterAction(failCountAfterAction)
-          .hintRequested(hintRequested)
-          .stateVersion(stateVersion)
-          .build();
-
-      storySessionRedisService.recordAction(
-          sessionId,
-          new StorySessionState(user.getId(), chapterId, toNodeId, stateVersion),
-          new StoryRecentEvent(
-              timestamp,
-              actionType,
-              rawInput,
-              normInput,
-              result,
-              fromNodeId,
-              toNodeId,
-              hintRequested));
-          
-      // 한 줄 JSON 형태로 로거에 쏨
-      storyActionLogService.logAction(event);
   }
 
   private String resolveSessionId(User user, TransitionRequestDto request) {
@@ -2243,31 +2121,6 @@ public class StoryServiceImpl implements StoryService {
   /**
    * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다.
    * Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
-   *
-   * @param arg 옵션 토큰
-   * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
-   */
-  private boolean isTarOldStyleOptionToken(String arg) {
-    if (arg == null || arg.isBlank() || arg.startsWith("-")) {
-      return false;
-    }
-    // 생성(c)과 파일지정(f) 옵션이 반드시 포함되어야 함
-    if (!arg.contains("c") || !arg.contains("f")) {
-      return false;
-    }
-    // 허용된 문자(c, v, f) 이외의 문자가 섞여 있으면 실패
-    for (int i = 0; i < arg.length(); i++) {
-      char option = arg.charAt(i);
-      if (option != 'c' && option != 'v' && option != 'f') {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * nc 인자 목록을 전송 검증 구조로 파싱한다.
-   * 다양한 타임아웃 옵션 형식을 지원한다.
    *
    * @param arg 옵션 토큰
    * @return c, v, f로만 구성된 구식 옵션 토큰이면 true

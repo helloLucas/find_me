@@ -243,18 +243,6 @@ function applyStoryNodeOutputBundle(
     );
   }
 
-  if (node.code.startsWith("CH2_") || node.isTerminal) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
-  }
-
-  if (node.code === "CH2_RECOVERED_DOCUMENT") {
-    useWindowStore.getState().openWindow(
-      "document_viewer",
-      "FRAGMENT_RECOVERED_082.PDF",
-      documentId
-    );
-  }
-
   const conversation = normalizeMessengerBundle(outputBundle, node, {
     playerName: getAuthenticatedPlayerName(),
   });
@@ -455,9 +443,6 @@ function getActionSource(meta: Record<string, unknown> | undefined): "terminal" 
 
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
-  
-  // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
-  if (source === "browser") return;
 
   // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
   if (source === "browser") return;
@@ -589,18 +574,6 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       });
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
       const actionSource = getActionSource(meta);
-
-      if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult, actionSource);
-        set({ currentNode, error: null });
-        return;
-      }
-
-      if (!response.nextNode) {
-        throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
-      }
-
-      const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
 
       if (response.result === "stay") {
         applyTerminalResult(response.terminalResult, actionSource);
