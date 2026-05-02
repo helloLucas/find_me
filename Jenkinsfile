@@ -29,33 +29,12 @@ pipeline {
             steps {
                 script {
                     // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
-                    echo "--- [Debug] env.gitlabTargetBranch: ${env.gitlabTargetBranch} ---"
-                    echo "--- [Debug] env.CHANGE_TARGET: ${env.CHANGE_TARGET} ---"
-                    echo "--- [Debug] env.BRANCH_NAME: ${env.BRANCH_NAME} ---"
-                    echo "--- [Debug] env.GIT_BRANCH: ${env.GIT_BRANCH} ---"
-
-                    def rawBranch = ""
-                    
-                    // MR/PR 상황일 경우 '대상(Target) 브랜치'를 최우선으로 선택
-                    if (env.gitlabTargetBranch) {
-                        rawBranch = env.gitlabTargetBranch
-                        echo "--- [Decision] Using gitlabTargetBranch: ${rawBranch} ---"
-                    } else if (env.CHANGE_TARGET) {
-                        rawBranch = env.CHANGE_TARGET
-                        echo "--- [Decision] Using CHANGE_TARGET: ${rawBranch} ---"
-                    } else if (env.BRANCH_NAME) {
-                        rawBranch = env.BRANCH_NAME
-                        echo "--- [Decision] Using BRANCH_NAME: ${rawBranch} ---"
-                    } else {
-                        rawBranch = env.GIT_BRANCH ?: ""
-                        echo "--- [Decision] Fallback to GIT_BRANCH: ${rawBranch} ---"
-                    }
+                    // MR 대상 브랜치를 최우선으로 확인하여 '머지되는 브랜치' 기준 작동 보장
+                    def rawBranch = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ""
 
                     // 2. 'origin/develop' 같이 경로가 포함된 경우를 대비해 순수 이름만 추출
                     def currentBranch = rawBranch.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
                     env.NORMALIZED_BRANCH = currentBranch
-
-                    echo "--- [Final] 현재 인식된 브랜치명: ${currentBranch} ---"
 
                     // 3. 브랜치 검증
                     if (!(currentBranch in ['main', 'develop'])) {
@@ -313,17 +292,7 @@ pipeline {
 
 def isTargetBranch() {
     // 젠킨스가 인식하는 여러 브랜치 변수들 중 하나라도 'main'이나 'develop'을 포함하는지 확인
-    def b = ""
-    if (env.gitlabTargetBranch) {
-        b = env.gitlabTargetBranch
-    } else if (env.CHANGE_TARGET) {
-        b = env.CHANGE_TARGET
-    } else if (env.BRANCH_NAME) {
-        b = env.BRANCH_NAME
-    } else {
-        b = env.GIT_BRANCH ?: ""
-    }
-    
+    def b = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ""
     echo "--- 현재 브랜치 체크: ${b} ---"
     return b.contains('develop') || b.contains('main')
 }
