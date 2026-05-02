@@ -13,21 +13,22 @@ spec:
         app: backend
     spec:
       containers:
-      - name: backend
-        image: shyunnnn/find-me-backend:v2.0.0
-        resources:
-          requests:
-            cpu: 250m
-            memory: 512Mi
-          limits:
-            cpu: "1"
-            memory: 1Gi
-        ports:
-        - containerPort: 8080
-        - containerPort: 18081
-        envFrom:
-        - secretRef:
-            name: backend-secrets
+        - name: backend
+          image: shyunnnn/find-me-backend:164-dev
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          ports:
+            - containerPort: 8080
+            - containerPort: 18081
+          envFrom:
+            - secretRef:
+                name: backend-secrets
       nodeSelector:
         env: prod
 ---
@@ -45,6 +46,6 @@ spec:
       targetPort: 8080
     - name: monitoring
       protocol: TCP
-      port: 18081       # 외부에서 접속할 포트
+      port: 18081 # 외부에서 접속할 포트
       targetPort: 18081 # 컨테이너 내부로 전달할 포트
   type: NodePort
