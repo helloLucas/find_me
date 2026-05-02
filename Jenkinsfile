@@ -37,7 +37,14 @@ pipeline {
                     }
 
                     // 3.5 환경 태그 확정 (prod vs dev)
-                    env.ENV_TAG = (currentBranch == 'main') ? 'prod' : 'dev'
+                    echo "--- 디버그: currentBranch 값 = '${currentBranch}' (길이: ${currentBranch?.length()}) ---"
+                    if (currentBranch.equals('main')) {
+                        env.ENV_TAG = 'prod'
+                        echo "--- main 브랜치 감지: ENV_TAG를 prod로 설정 ---"
+                    } else {
+                        env.ENV_TAG = 'dev'
+                        echo "--- develop 브랜치 감지: ENV_TAG를 dev로 설정 ---"
+                    }
                     echo "--- 확정된 환경 태그: ${env.ENV_TAG} ---"
 
                     // 4. 환경에 따른 처리 (currentBranch 변수 사용)
@@ -284,9 +291,19 @@ pipeline {
 }
 
 def getNormalizedBranch() {
-    // MR 대상 브랜치 -> PR 대상 브랜치 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
-    def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: "develop"
-    if (raw == "null") raw = "develop"
+    // MR 대상 브랜치 -> PR 대상 브랜치 -> git 현재 브랜치 확인 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
+    def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH
+    
+    // 위의 어느 것도 없으면 git에서 직접 확인
+    if (!raw || raw == "null") {
+        try {
+            raw = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+        } catch (Exception e) {
+            raw = "develop"
+        }
+    }
+    
+    if (!raw || raw == "null") raw = "develop"
     return raw.trim().replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
 }
 
