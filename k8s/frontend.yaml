@@ -13,10 +13,11 @@ spec:
         app: frontend
     spec:
       containers:
-      - name: frontend
-        image: shyunnnn/find-me-frontend:v2.0.0
-        ports:
-        - containerPort: 80
+        - name: frontend
+          image: shyunnnn/find-me-frontend:164-dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
       nodeSelector:
         env: prod
 ---
