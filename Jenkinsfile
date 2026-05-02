@@ -96,7 +96,7 @@ pipeline {
 
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
                         // Credentials 파일을 .env로 복사하여 Docker 빌드 시 주입
-                        sh 'cp "$FRONT_ENV_FILE" frontend/.env'
+                        sh "cp ${FRONT_ENV_FILE} frontend/.env"
 
                         try {
                             dir('frontend') {
