@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: shyunnnn/find-me-backend:v1.0.1
+        image: shyunnnn/find-me-backend:null
         resources:
           requests:
             cpu: 250m
@@ -29,7 +29,7 @@ spec:
         - secretRef:
             name: backend-secrets
       nodeSelector:
-        env: prod
+        env: dev
 ---
 apiVersion: v1
 kind: Service
