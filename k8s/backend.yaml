@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: shyunnnn/find-me-backend:164-dev
+          image: shyunnnn/find-me-backend:v2.0.0
           imagePullPolicy: Always
           resources:
             requests:
