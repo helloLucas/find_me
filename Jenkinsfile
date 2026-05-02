@@ -45,15 +45,16 @@ pipeline {
                         echo "--- 운영 환경 ---"
                         withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                             sh '''
-                                # 1. 현재 브랜치 이름을 'main'으로 강제 고정
-                                git checkout -B main
+                                # 1. 원격 URL 재설정 (인증 정보 포함)
+                                git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL}
 
-                                # semantic-release가 'origin/main'이 아닌 'main'으로 인식하도록 환경 변수 강제 설정
+                                # 2. 원격의 최신 상태를 페치하고 로컬 main을 origin/main과 강제로 맞춤
+                                git fetch origin main
+                                git checkout -B main origin/main
+
+                                # semantic-release가 인식하도록 환경 변수 설정
                                 export GIT_BRANCH=main
                                 export BRANCH_NAME=main
-
-                                # 2. Git 인증 정보가 포함되도록 원격 URL 재설정
-                                git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${GITLAB_URL}
 
                                 # 3. PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
                                 export CI_MERGE_REQUEST_IID=""
@@ -286,7 +287,7 @@ def getNormalizedBranch() {
     // MR 대상 브랜치 -> PR 대상 브랜치 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
     def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: "develop"
     if (raw == "null") raw = "develop"
-    return raw.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
+    return raw.trim().replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
 }
 
 def isTargetBranch() {
