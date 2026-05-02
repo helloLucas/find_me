@@ -29,11 +29,7 @@ pipeline {
             steps {
                 script {
                     // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
-                    // MR 대상 브랜치를 최우선으로 확인하여 '머지되는 브랜치' 기준 작동 보장
-                    def rawBranch = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ""
-
-                    // 2. 'origin/develop' 같이 경로가 포함된 경우를 대비해 순수 이름만 추출
-                    def currentBranch = rawBranch.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
+                    def currentBranch = getNormalizedBranch()
                     env.NORMALIZED_BRANCH = currentBranch
 
                     // 3. 브랜치 검증
@@ -204,7 +200,7 @@ pipeline {
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/backend.yaml"
 
                     // 2. 푸시할 브랜치명 확정
-                    env.TARGET_BRANCH = env.NORMALIZED_BRANCH
+                    env.TARGET_BRANCH = env.NORMALIZED_BRANCH ?: getNormalizedBranch()
 
                     // 3. SSAFY GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
@@ -290,9 +286,14 @@ pipeline {
     }
 }
 
+def getNormalizedBranch() {
+    // MR 대상 브랜치 -> PR 대상 브랜치 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
+    def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: "develop"
+    return raw.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
+}
+
 def isTargetBranch() {
-    // 젠킨스가 인식하는 여러 브랜치 변수들 중 하나라도 'main'이나 'develop'을 포함하는지 확인
-    def b = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ""
-    echo "--- 현재 브랜치 체크: ${b} ---"
-    return b.contains('develop') || b.contains('main')
+    def b = getNormalizedBranch()
+    echo "--- 현재 브랜치 체크 : ${b} ---"
+    return (b == 'main' || b == 'develop')
 }
