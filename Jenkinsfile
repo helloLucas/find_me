@@ -55,7 +55,7 @@ pipeline {
                                 # semantic-release가 인식하도록 환경 변수 설정
                                 export GIT_BRANCH=main
                                 export BRANCH_NAME=main
-                                
+
                                 # 3. PR 관련 모든 변수를 빈 값으로 강제 덮어쓰기
                                 export CI_MERGE_REQUEST_IID=""
                                 export CI_MERGE_REQUEST_ID=""
