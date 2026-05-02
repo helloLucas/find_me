@@ -16,9 +16,7 @@ pipeline {
         HINT_IMAGE = "${DOCKER_HUB_ID}/find-me-hint"
         ORCH_IMAGE = "${DOCKER_HUB_ID}/find-me-orchestrator"
 
-        // 초기값 설정 (Initialize 단계에서 업데이트됨)
-        ENV_TAG = 'dev'
-
+        // ENV_TAG는 Initialize 단계에서 동적으로 설정됨
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
     }
 
@@ -37,15 +35,9 @@ pipeline {
                     }
 
                     // 3.5 환경 태그 확정 (prod vs dev)
-                    echo "--- 디버그: currentBranch 값 = '${currentBranch}' (길이: ${currentBranch?.length()}) ---"
-                    if (currentBranch.equals('main')) {
-                        env.ENV_TAG = 'prod'
-                        echo "--- main 브랜치 감지: ENV_TAG를 prod로 설정 ---"
-                    } else {
-                        env.ENV_TAG = 'dev'
-                        echo "--- develop 브랜치 감지: ENV_TAG를 dev로 설정 ---"
-                    }
-                    echo "--- 확정된 환경 태그: ${env.ENV_TAG} ---"
+                    def newEnvTag = (currentBranch == 'main') ? 'prod' : 'dev'
+                    env.ENV_TAG = newEnvTag
+                    echo "--- 확정된 환경 태그: ${env.ENV_TAG} (브랜치: ${currentBranch}) ---"
 
                     // 4. 환경에 따른 처리 (currentBranch 변수 사용)
                     if (currentBranch == 'main') {
