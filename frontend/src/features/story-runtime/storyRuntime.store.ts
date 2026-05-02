@@ -484,7 +484,6 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   error: null,
   initializeStory: async (chapterCode) => {
     if (get().isLoading) return;
-
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
     useBrowserContentStore.getState().resetContent();
@@ -539,7 +538,6 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     if (autoInputValue) {
       const scheduleAutoAction = () => {
         const lucasState = useLucasStore.getState();
-
         // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
         if (lucasState.isDialogueActive) {
           window.setTimeout(scheduleAutoAction, 500);
