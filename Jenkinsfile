@@ -18,7 +18,7 @@ pipeline {
 
         // 초기값 설정 (Initialize 단계에서 업데이트됨)
         ENV_TAG = 'dev'
-        IMAGE_TAG = ''
+        IMAGE_TAG = 'latest'
         NORMALIZED_BRANCH = ''
 
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
@@ -28,14 +28,14 @@ pipeline {
         stage('Initialize & Release') {
             steps {
                 script {
-                    // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
                     def currentBranch = getNormalizedBranch()
                     env.NORMALIZED_BRANCH = currentBranch
+                    echo "--- 인식된 브랜치: ${currentBranch} ---"
 
                     // 3. 브랜치 검증
-                    if (!(currentBranch in ['main', 'develop'])) {
+                    if (currentBranch == null || !(currentBranch in ['main', 'develop'])) {
                         currentBuild.result = 'ABORTED'
-                        error "배포 중단: 대상 브랜치가 아닙니다. (인식된 브랜치: ${currentBranch})"
+                        error "배포 중단: 대상 브랜치가 아닙니다. (인식된 브랜치: ${currentBranch ?: 'unknown'})"
                     }
 
                     // 3.5 환경 태그 확정 (prod vs dev)
@@ -81,8 +81,9 @@ pipeline {
                         env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0 || echo 'v1.0.0'", returnStdout: true).trim()
                     } else {
                         echo "--- 개발 환경 ---"
-                        env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
+                        env.IMAGE_TAG = "${BUILD_NUMBER}-dev"
                     }
+                    echo "--- 결정된 IMAGE_TAG: ${env.IMAGE_TAG} ---"
                 }
             }
         }
@@ -97,7 +98,7 @@ pipeline {
 
                     withCredentials([file(credentialsId: frontendSecretId, variable: 'FRONT_ENV_FILE')]) {
                         // Credentials 파일을 .env로 복사하여 Docker 빌드 시 주입
-                        sh "cp ${FRONT_ENV_FILE} frontend/.env"
+                        sh 'cp "$FRONT_ENV_FILE" frontend/.env'
 
                         try {
                             dir('frontend') {
@@ -286,6 +287,7 @@ pipeline {
 def getNormalizedBranch() {
     // MR 대상 브랜치 -> PR 대상 브랜치 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
     def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: "develop"
+    if (raw == "null") raw = "develop"
     return raw.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
 }
 
