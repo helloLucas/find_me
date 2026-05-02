@@ -15,6 +15,7 @@ spec:
       containers:
       - name: backend
         image: shyunnnn/find-me-backend:164-dev
+        imagePullPolicy: Always
         resources:
           requests:
             cpu: 250m
