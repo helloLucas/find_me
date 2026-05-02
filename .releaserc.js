@@ -6,14 +6,17 @@ module.exports = {
       {
         preset: "conventionalcommits",
         parserOpts: {
+          headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
+          headerCorrespondence: ["type", "scope", "subject"],
           noteKeywords: ["BREAKING CHANGE", "BREAKING"],
           issuePrefixes: ["#"],
         },
         releaseRules: [
+          // Breaking changes -> major
           { breaking: true, release: "major" },
-          { revert: true, release: "patch" },
-          { type: "feat", breaking: true, release: "major" },
-          { type: "feat", release: "minor" },
+          // All feat commits -> major (including feat!)
+          { type: "feat", release: "major" },
+          { type: "revert", release: "patch" },
           { type: "fix", release: "patch" },
           { type: "perf", release: "patch" },
         ],
