@@ -11,6 +11,9 @@
           "noteKeywords": [
             "BREAKING CHANGE",
             "BREAKING"
+          ],
+          "issuePrefixes": [
+            "#"
           ]
         },
         "releaseRules": [
@@ -21,6 +24,11 @@
           {
             "revert": true,
             "release": "patch"
+          },
+          {
+            "type": "feat",
+            "breaking": true,
+            "release": "major"
           },
           {
             "type": "feat",
