@@ -147,7 +147,6 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
 
     try {
       const formData = new FormData();
-
       const requestData = {
         title,
         content,

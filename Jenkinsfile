@@ -16,7 +16,8 @@ pipeline {
         HINT_IMAGE = "${DOCKER_HUB_ID}/find-me-hint"
         ORCH_IMAGE = "${DOCKER_HUB_ID}/find-me-orchestrator"
 
-        ENV_TAG = "${(env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").contains('main') ? 'prod' : 'dev'}"
+        // 초기값 설정 (Initialize 단계에서 업데이트됨)
+        ENV_TAG = 'dev'
 
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
     }
@@ -25,20 +26,19 @@ pipeline {
         stage('Initialize & Release') {
             steps {
                 script {
-                    // 1. 다양한 변수에서 브랜치명을 추출 (일반 Pipeline 호환용)
-                    // env.BRANCH_NAME이 없으면 env.GIT_BRANCH나 GitLab 플러그인 변수를 확인합니다.
-                    def rawBranch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: env.gitlabTargetBranch ?: ""
-
-                    // 2. 'origin/develop' 같이 경로가 포함된 경우를 대비해 순수 이름만 추출
-                    def currentBranch = rawBranch.replace('origin/', '')
-
-                    echo "--- 디버깅: 현재 인식된 브랜치명: ${currentBranch} ---"
+                    def currentBranch = getNormalizedBranch()
+                    env.NORMALIZED_BRANCH = currentBranch
+                    echo "--- 인식된 브랜치: ${currentBranch} ---"
 
                     // 3. 브랜치 검증
-                    if (!(currentBranch in ['main', 'develop'])) {
+                    if (currentBranch == null || !(currentBranch in ['main', 'develop'])) {
                         currentBuild.result = 'ABORTED'
-                        error "배포 중단: 대상 브랜치가 아닙니다. (인식된 브랜치: ${currentBranch})"
+                        error "배포 중단: 대상 브랜치가 아닙니다. (인식된 브랜치: ${currentBranch ?: 'unknown'})"
                     }
+
+                    // 3.5 환경 태그 확정 (prod vs dev)
+                    env.ENV_TAG = (currentBranch == 'main') ? 'prod' : 'dev'
+                    echo "--- 확정된 환경 태그: ${env.ENV_TAG} ---"
 
                     // 4. 환경에 따른 처리 (currentBranch 변수 사용)
                     if (currentBranch == 'main') {
@@ -81,9 +81,7 @@ pipeline {
                         echo "--- 개발 환경 ---"
                         env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
                     }
-
-                    // 5. 이후 단계를 위해 브랜치명을 표준화된 변수로 저장
-                    env.NORMALIZED_BRANCH = currentBranch
+                    echo "--- 결정된 IMAGE_TAG: ${env.IMAGE_TAG} ---"
                 }
             }
         }
@@ -201,8 +199,7 @@ pipeline {
                     sh "sed -i 's|env:.*|env: ${ENV_TAG}|g' k8s/backend.yaml"
 
                     // 2. 푸시할 브랜치명 확정
-                    def targetBranch = (env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: "develop").replace('origin/', '')
-                    env.TARGET_BRANCH = targetBranch
+                    env.TARGET_BRANCH = env.NORMALIZED_BRANCH ?: getNormalizedBranch()
 
                     // 3. SSAFY GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
@@ -228,7 +225,6 @@ pipeline {
 
                     // 네임스페이스가 없으면 생성 (dev/prod)
                     sh "kubectl create namespace ${ENV_TAG} --dry-run=client -o yaml | kubectl apply -f -"
-
                     // 1. 시크릿 업데이트
                     def backendSecretId = "backend-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: backendSecretId, variable: 'BACK_ENV_FILE')]) {
@@ -255,13 +251,11 @@ pipeline {
 
                     // 3. Hint Worker 시크릿 및 배포 (별도 네임스페이스 lucas-elk 사용)
                     sh "kubectl create namespace lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
-
                     def hintSecretId = "hint-env-${ENV_TAG}"
                     withCredentials([file(credentialsId: hintSecretId, variable: 'HINT_ENV_FILE')]) {
                          sh "kubectl create secret generic hint-secrets --from-env-file=${HINT_ENV_FILE} -n lucas-elk --dry-run=client -o yaml | kubectl apply -f -"
                     }
                     sh "kubectl apply -f hint-worker/k8s-hint-cronjob.yaml -n lucas-elk"
-
                     echo "--- 배포 완료! ---"
                 }
             }
@@ -288,9 +282,15 @@ pipeline {
     }
 }
 
+def getNormalizedBranch() {
+    // MR 대상 브랜치 -> PR 대상 브랜치 -> 현재 브랜치 순으로 확인 후 정규화된 이름 반환
+    def raw = env.gitlabTargetBranch ?: env.CHANGE_TARGET ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: "develop"
+    if (raw == "null") raw = "develop"
+    return raw.replaceAll(/^(origin\/|remotes\/origin\/|remotes\/)/, "")
+}
+
 def isTargetBranch() {
-    // 젠킨스가 인식하는 여러 브랜치 변수들 중 하나라도 'main'이나 'develop'을 포함하는지 확인
-    def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.gitlabTargetBranch ?: ""
-    echo "--- 현재 브랜치 체크: ${b} ---"
-    return b.contains('develop') || b.contains('main')
+    def b = getNormalizedBranch()
+    echo "--- 현재 브랜치 체크 : ${b} ---"
+    return (b == 'main' || b == 'develop')
 }
