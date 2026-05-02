@@ -18,8 +18,6 @@ pipeline {
 
         // 초기값 설정 (Initialize 단계에서 업데이트됨)
         ENV_TAG = 'dev'
-        IMAGE_TAG = 'latest'
-        NORMALIZED_BRANCH = ''
 
         GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
     }
@@ -81,7 +79,7 @@ pipeline {
                         env.IMAGE_TAG = sh(script: "git describe --tags --abbrev=0 || echo 'v1.0.0'", returnStdout: true).trim()
                     } else {
                         echo "--- 개발 환경 ---"
-                        env.IMAGE_TAG = "${BUILD_NUMBER}-dev"
+                        env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
                     }
                     echo "--- 결정된 IMAGE_TAG: ${env.IMAGE_TAG} ---"
                 }
