@@ -15,4 +15,3 @@ public class HintEsSignalResponseDto {
   private double hintRequestRate;
   private List<String> topWrongInputs;
 }
-

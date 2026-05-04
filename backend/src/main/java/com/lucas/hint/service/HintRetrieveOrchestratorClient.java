@@ -134,7 +134,8 @@ public class HintRetrieveOrchestratorClient {
       return Map.of();
     }
     Map<String, Object> result = new LinkedHashMap<>();
-    node.fields().forEachRemaining(entry -> result.put(entry.getKey(), objectValue(entry.getValue())));
+    node.fields()
+        .forEachRemaining(entry -> result.put(entry.getKey(), objectValue(entry.getValue())));
     return result;
   }
 

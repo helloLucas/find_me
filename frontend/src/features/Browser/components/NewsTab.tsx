@@ -48,6 +48,10 @@ interface NewsTabProps {
   onFallbackOpenArticle?: (card: NewsCard) => void;
 }
 
+const CORRUPTION_TRIGGER_SCROLL_PX = 24;
+const CORRUPTION_TRIGGER_SCROLL_PROGRESS = 0.05;
+const CORRUPTION_CASCADE_DURATION_MS = 1400;
+
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -59,7 +63,7 @@ function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
     : [];
 
   const intensity = record.intensity === "active" ? "active" : record.intensity === "subtle" ? "subtle" : null;
-  if (paragraphIndexes.length === 0 || !intensity) return null;
+  if (!intensity) return null;
 
   const inspectIndex = Number(record.inspectIndex);
 
@@ -78,6 +82,10 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollCorruptionTriggered, setScrollCorruptionTriggered] = React.useState(false);
+  const [corruptionProgress, setCorruptionProgress] = React.useState(0);
+  const corruptionAnimationFrameRef = useRef<number | null>(null);
+  const corruptionStartTimeRef = useRef<number | null>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
@@ -88,8 +96,14 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   const articleCorruption = normalizeArticleCorruption(content.articleCorruption);
   const corruptedParagraphIndexes = new Set(articleCorruption?.paragraphIndexes ?? []);
   const isScrollTriggeredArticleNode = currentNode?.code === "CH1_DARK_ARTICLE_OPEN";
+  const isArticleScrollCorruptionNode =
+    currentNode?.code === "CH1_ARTICLE_SCROLL_CORRUPTION";
+  const usesScrollCascadeCorruption =
+    showArticle && (isScrollTriggeredArticleNode || isArticleScrollCorruptionNode);
   const articleBodyClassName = [
-    "space-y-4",
+    "flex",
+    "flex-col",
+    "gap-4",
     "story-article-body",
     articleCorruption?.intensity === "active" ? "story-article-body--active" : "",
   ]
@@ -101,7 +115,52 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   useEffect(() => {
     lastScrollTriggeredNodeIdRef.current = null;
-  }, [currentNode?.id]);
+    corruptionStartTimeRef.current = null;
+    setScrollCorruptionTriggered(false);
+    setCorruptionProgress(0);
+
+    if (corruptionAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
+      corruptionAnimationFrameRef.current = null;
+    }
+
+    if (isArticleScrollCorruptionNode) {
+      corruptionStartTimeRef.current =
+        performance.now() - CORRUPTION_CASCADE_DURATION_MS;
+      setScrollCorruptionTriggered(true);
+      setCorruptionProgress(1);
+    }
+  }, [currentNode?.id, isArticleScrollCorruptionNode]);
+
+  useEffect(() => {
+    if (!scrollCorruptionTriggered) return;
+
+    const animateCorruption = (timestamp: number) => {
+      if (corruptionStartTimeRef.current === null) {
+        corruptionStartTimeRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - corruptionStartTimeRef.current;
+      const nextProgress = Math.min(elapsed / CORRUPTION_CASCADE_DURATION_MS, 1);
+      setCorruptionProgress(nextProgress);
+
+      if (nextProgress < 1) {
+        corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+        return;
+      }
+
+      corruptionAnimationFrameRef.current = null;
+    };
+
+    corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+
+    return () => {
+      if (corruptionAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
+        corruptionAnimationFrameRef.current = null;
+      }
+    };
+  }, [scrollCorruptionTriggered]);
 
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;
@@ -118,18 +177,38 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
+      const element = event.currentTarget;
+      const { scrollTop, scrollHeight, clientHeight } = element;
+
+      const maxScroll = Math.max(scrollHeight - clientHeight, 1);
+      const currentProgress = scrollTop / maxScroll;
+
+      if (
+        usesScrollCascadeCorruption &&
+        !scrollCorruptionTriggered &&
+        (scrollTop >= CORRUPTION_TRIGGER_SCROLL_PX ||
+          currentProgress >= CORRUPTION_TRIGGER_SCROLL_PROGRESS)
+      ) {
+        corruptionStartTimeRef.current = null;
+        setScrollCorruptionTriggered(true);
+      }
+
       if (!isScrollTriggeredArticleNode || !showArticle) return;
 
-      const element = event.currentTarget;
-      const scrollThreshold = Math.max(16, element.clientHeight * 0.1);
-      const isAtBottom =
-        element.scrollTop + element.clientHeight >= element.scrollHeight - scrollThreshold;
+      const scrollThreshold = Math.max(16, clientHeight * 0.1);
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - scrollThreshold;
 
       if (isAtBottom) {
         triggerArticleScrollTransition();
       }
     },
-    [isScrollTriggeredArticleNode, showArticle, triggerArticleScrollTransition]
+    [
+      isScrollTriggeredArticleNode,
+      scrollCorruptionTriggered,
+      showArticle,
+      triggerArticleScrollTransition,
+      usesScrollCascadeCorruption,
+    ]
   );
 
   return (
@@ -153,19 +232,33 @@ export const NewsTab: React.FC<NewsTabProps> = ({
             </h2>
             <div className={articleBodyClassName}>
               {articleBody.map((paragraph, index) => {
-                const isCorrupted = corruptedParagraphIndexes.has(index);
+                const total = articleBody.length;
+                const cascadeThreshold =
+                  total <= 1 ? 0 : index / Math.max(total - 1, 1);
+                const isCorruptedByScrollCascade =
+                  usesScrollCascadeCorruption &&
+                  scrollCorruptionTriggered &&
+                  corruptionProgress >= cascadeThreshold;
+                const isCorruptedByMetadata =
+                  !usesScrollCascadeCorruption && corruptedParagraphIndexes.has(index);
+                const isCorrupted = isCorruptedByMetadata || isCorruptedByScrollCascade;
+                const dynamicIntensity =
+                  scrollCorruptionTriggered && corruptionProgress >= 0.65
+                    ? "active"
+                    : (articleCorruption?.intensity ?? "subtle");
+
                 const isInspectable =
                   isCorrupted &&
                   articleCorruption?.inspectIndex === index &&
                   canInspectArticle &&
                   Boolean(inspectTarget);
 
-                if (isCorrupted && articleCorruption) {
+                if (isCorrupted) {
                   return (
                     <CorruptedParagraph
                       key={`${currentNode?.code}-article-${index}`}
                       text={paragraph}
-                      intensity={articleCorruption.intensity}
+                      intensity={dynamicIntensity}
                       inspectable={isInspectable}
                       onInspect={() => {
                         if (isInspectable && inspectTarget) {
@@ -181,13 +274,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                     key={`${currentNode?.code}-article-${index}`}
                     className={[
                       "text-base leading-relaxed text-[#0ff] drop-shadow-[0_0_2px_#00ffff]",
-                      articleCorruption?.intensity === "active"
+                      dynamicIntensity === "active" && isCorrupted
                         ? "story-article-paragraph story-article-paragraph--flicker"
                         : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    data-text={articleCorruption?.intensity === "active" ? paragraph : undefined}
                   >
                     {paragraph}
                   </p>

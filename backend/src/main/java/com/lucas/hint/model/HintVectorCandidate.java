@@ -24,4 +24,3 @@ public class HintVectorCandidate {
   private int priorityRank;
   private int candidateCount;
 }
-
