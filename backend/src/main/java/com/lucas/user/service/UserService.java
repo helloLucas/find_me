@@ -121,7 +121,6 @@ public class UserService {
 
     } else if (pendingInfo.isGuest()) { // 닉네임만 있는 순수 게스트 가입 (닉네임 설정 완료 시점)
       user = User.builder()
-          .oauthName(pendingInfo.getOauthName())
           .nickname(request.getNickname())
           .role(UserRole.GUEST)
           .build();

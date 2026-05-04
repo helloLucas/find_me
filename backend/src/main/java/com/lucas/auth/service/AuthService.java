@@ -150,7 +150,6 @@ public class AuthService {
    */
   public String initGuest() {
     PendingUserInfo guestInfo = PendingUserInfo.builder()
-        .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
         .guest(true)
         .build();
 

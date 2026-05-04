@@ -27,7 +27,7 @@ public class User extends BaseEntity {
   private String email;
 
   /** 소셜 로그인 시 제공받은 원본 이름 */
-  @Column(name = "oauth_name", length = 50, nullable = false)
+  @Column(name = "oauth_name", length = 50, nullable = true)
   private String oauthName;
 
   /** 애플리케이션 내에서 사용하는 유효 닉네임 */
