@@ -3,10 +3,8 @@ package com.lucas.global.service;
 import com.lucas.bugreport.dto.request.BugReportRequest;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-
 import java.io.UnsupportedEncodingException;
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,31 +19,34 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MailService {
 
-    private final JavaMailSender javaMailSender;
+  private final JavaMailSender javaMailSender;
 
-    @Value("${spring.mail.username}")
-    private String adminEmail;
+  @Value("${spring.mail.username}")
+  private String adminEmail;
 
-    public record MailAttachment(String filename, byte[] data) {
-    }
+  public record MailAttachment(String filename, byte[] data) {}
 
-    @Async
-    public void sendBugReport(
-            Long userId, BugReportRequest request, List<MailAttachment> attachments) {
-        try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+  @Async
+  public void sendBugReport(
+      Long userId, BugReportRequest request, List<MailAttachment> attachments) {
+    try {
+      MimeMessage message = javaMailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String subject = "[시스템 로그 접수] " + request.getTitle();
+      String subject = "[시스템 로그 접수] " + request.getTitle();
 
-            // 1. 데이터 사전 가공 (null 처리 및 줄바꿈 변환을 미리 수행하여 가독성 향상)
-            String reportTitle = request.getTitle() != null ? request.getTitle() : "제목 없음"; // ✅ 제목 데이터 추가
-            String nickname = request.getNickname() != null ? request.getNickname() : "알 수 없음";
-            String currentChapter = request.getCurrentChapter() != null ? request.getCurrentChapter() : "N/A";
-            String content = request.getContent() != null ? request.getContent().replace("\n", "<br/>") : "";
+      // 1. 데이터 사전 가공 (null 처리 및 줄바꿈 변환을 미리 수행하여 가독성 향상)
+      String reportTitle = request.getTitle() != null ? request.getTitle() : "제목 없음"; // ✅ 제목 데이터 추가
+      String nickname = request.getNickname() != null ? request.getNickname() : "알 수 없음";
+      String currentChapter =
+          request.getCurrentChapter() != null ? request.getCurrentChapter() : "N/A";
+      String content =
+          request.getContent() != null ? request.getContent().replace("\n", "<br/>") : "";
 
-            // 2. HTML 템플릿 매핑
-            String text = String.format("""
+      // 2. HTML 템플릿 매핑
+      String text =
+          String.format(
+              """
                             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333;">
 
                                 <!-- 헤더 영역 (검은색 두꺼운 밑줄로 강조 및 중앙 정렬) -->
@@ -87,30 +88,29 @@ public class MailService {
                                 </div>
                             </div>
                             """,
-                    userId, nickname, currentChapter, reportTitle, content
-            );
+              userId, nickname, currentChapter, reportTitle, content);
 
-            helper.setTo(adminEmail);
-            helper.setSubject(subject);
-            helper.setText(text, true); // true = HTML 형식 적용
+      helper.setTo(adminEmail);
+      helper.setSubject(subject);
+      helper.setText(text, true); // true = HTML 형식 적용
 
-            try {
-                helper.setFrom(adminEmail, "FIND ME 시스템"); // 관리자 이메일과 발송자 닉네임 설정
-            } catch (UnsupportedEncodingException e) {
-                helper.setFrom(adminEmail);
-            }
+      try {
+        helper.setFrom(adminEmail, "FIND ME 시스템"); // 관리자 이메일과 발송자 닉네임 설정
+      } catch (UnsupportedEncodingException e) {
+        helper.setFrom(adminEmail);
+      }
 
-            if (attachments != null && !attachments.isEmpty()) {
-                for (MailAttachment attachment : attachments) {
-                    helper.addAttachment(attachment.filename(), new ByteArrayResource(attachment.data()));
-                }
-            }
-
-            javaMailSender.send(message);
-            log.info("Bug report email sent successfully from User ID: {}", userId);
-
-        } catch (MessagingException e) {
-            log.error("Failed to send bug report email", e);
+      if (attachments != null && !attachments.isEmpty()) {
+        for (MailAttachment attachment : attachments) {
+          helper.addAttachment(attachment.filename(), new ByteArrayResource(attachment.data()));
         }
+      }
+
+      javaMailSender.send(message);
+      log.info("Bug report email sent successfully from User ID: {}", userId);
+
+    } catch (MessagingException e) {
+      log.error("Failed to send bug report email", e);
     }
+  }
 }

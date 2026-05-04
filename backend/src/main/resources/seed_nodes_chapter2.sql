@@ -5,11 +5,12 @@
 BEGIN;
 
 
-INSERT INTO chapters (code, title, sort_order)
-VALUES ('week02', 'Chapter 2 - Null Point Server', 2)
+INSERT INTO chapters (code, title, sort_order, is_published)
+VALUES ('week02', 'Chapter 2 - Null Point Server', 2, true)
 ON CONFLICT (code) DO UPDATE
 SET title = EXCLUDED.title,
-    sort_order = EXCLUDED.sort_order;
+    sort_order = EXCLUDED.sort_order,
+    is_published = EXCLUDED.is_published;
 
 WITH chapter_row AS (
     SELECT id FROM chapters WHERE code = 'week02'

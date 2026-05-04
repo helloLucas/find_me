@@ -109,25 +109,36 @@ public class HintLlmOrchestratorClient {
   public static class HintGenerationRequest {
     @JsonProperty("session_id")
     private String sessionId;
+
     @JsonProperty("user_id")
     private Long userId;
+
     @JsonProperty("chapter_code")
     private String chapterCode;
+
     @JsonProperty("from_node_code")
     private String fromNodeCode;
+
     @JsonProperty("action_type")
     private String actionType;
+
     @JsonProperty("user_message")
     private String userMessage;
+
     @JsonProperty("fail_count_after_action")
     private int failCountAfterAction;
+
     @JsonProperty("selected_phase")
     private String selectedPhase;
+
     @JsonProperty("low_confidence")
     private boolean lowConfidence;
+
     @JsonProperty("query_text")
     private String queryText;
+
     private List<HintEvidenceResponseDto> evidences;
+
     @JsonProperty("es_signal")
     private HintEsSignalResponseDto esSignal;
   }

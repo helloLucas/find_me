@@ -49,13 +49,13 @@ export const MessengerNotificationCard: React.FC = () => {
       <div
         className={`
           relative w-[320px] rounded-lg overflow-hidden
-          ${isUnread ? "animate-pulse" : ""}
+          transition-[box-shadow,filter] duration-200 ease-out
         `}
         style={{
           padding: "3px",
           background: "linear-gradient(180deg, #ff3ecf 0%, #0ff 30%, #0ff 70%, #ff3ecf 100%)",
           boxShadow: isUnread
-            ? "0 0 25px rgba(255,62,207,0.5), 0 0 50px rgba(0,255,255,0.2), inset 0 0 15px rgba(255,62,207,0.2)"
+            ? "0 0 16px rgba(255,62,207,0.38), 0 0 26px rgba(0,255,255,0.14), inset 0 0 10px rgba(255,62,207,0.14)"
             : "0 0 15px rgba(255,62,207,0.3), 0 0 30px rgba(0,255,255,0.1)",
         }}
       >

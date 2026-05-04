@@ -44,6 +44,10 @@ export const Lucas: React.FC = () => {
     : false;
 
   const currentMessage: LucasMessage | undefined = currentScene?.messages[currentMessageIndex];
+  const promptButtons = Array.isArray(currentNode?.promptMeta?.buttons)
+    ? currentNode.promptMeta.buttons
+    : [];
+  const hasPromptButtons = currentNode?.promptType === 'click' && promptButtons.length > 0;
 
   const persistHintScrollTop = () => {
     const container = hintMessagesRef.current;
@@ -152,6 +156,10 @@ export const Lucas: React.FC = () => {
       return;
     }
 
+    if (isLastMessage && hasPromptButtons) {
+      return;
+    }
+
     nextMessage();
 
     if (isLastMessage) {
@@ -193,7 +201,14 @@ export const Lucas: React.FC = () => {
     }
   };
 
-  if (!isVisible && !isDialogueActive && !isHintMode) return null;
+  const handlePromptActionClick = (value: unknown) => {
+    const inputValue = String(value ?? '');
+    if (!inputValue) return;
+
+    void submitStoryClick(inputValue);
+  };
+
+  if (!isVisible && !isDialogueActive && !isHintMode && !hasPromptButtons) return null;
 
   return (
     <div
@@ -207,16 +222,15 @@ export const Lucas: React.FC = () => {
             <p>{displayText}</p>
             {!isTyping &&
               isLastMessage &&
-              currentNode?.promptType === 'click' &&
-              currentNode.promptMeta?.buttons && (
+              hasPromptButtons && (
                 <div className="lucas-buttons-container">
-                  {currentNode.promptMeta.buttons.map((btn: any) => (
+                  {promptButtons.map((btn: any) => (
                     <button
                       key={btn.value}
                       className="lucas-action-button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        void submitStoryClick(btn.value);
+                        handlePromptActionClick(btn.value);
                       }}
                     >
                       {btn.label}
@@ -250,6 +264,19 @@ export const Lucas: React.FC = () => {
             )}
             <div ref={chatEndRef} />
           </div>
+          {hasPromptButtons && (
+            <div className="lucas-hint-actions">
+              {promptButtons.map((btn: any) => (
+                <button
+                  key={btn.value}
+                  className="lucas-action-button"
+                  onClick={() => handlePromptActionClick(btn.value)}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+          )}
           <form className="hint-input-form" onSubmit={handleHintSubmit}>
             <input
               type="text"
@@ -263,6 +290,20 @@ export const Lucas: React.FC = () => {
               {isHintRequesting ? 'WAIT' : 'SEND'}
             </button>
           </form>
+        </div>
+      )}
+
+      {!isDialogueActive && !isHintMode && hasPromptButtons && (
+        <div className="lucas-prompt-actions">
+          {promptButtons.map((btn: any) => (
+            <button
+              key={btn.value}
+              className="lucas-action-button"
+              onClick={() => handlePromptActionClick(btn.value)}
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
       )}
 

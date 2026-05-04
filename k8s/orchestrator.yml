@@ -14,10 +14,10 @@ spec:
         app: hint-orchestrator
     spec:
       nodeSelector:
-        env: prod
+        env: dev
       containers:
         - name: hint-orchestrator
-          image: shyunnnn/find-me-orchestrator:v2.0.0
+          image: shyunnnn/find-me-orchestrator:182-dev
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8201

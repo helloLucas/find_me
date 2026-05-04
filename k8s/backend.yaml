@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: shyunnnn/find-me-backend:164-dev
+          image: shyunnnn/find-me-backend:182-dev
           imagePullPolicy: Always
           resources:
             requests:
@@ -30,7 +30,7 @@ spec:
             - secretRef:
                 name: backend-secrets
       nodeSelector:
-        env: prod
+        env: dev
 ---
 apiVersion: v1
 kind: Service

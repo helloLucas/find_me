@@ -64,7 +64,11 @@ public class LucasKnowledgeVectorSearchRepository {
   private final ObjectMapper objectMapper;
 
   public List<HintVectorCandidate> searchStrict(
-      String queryVector, String chapterCode, String fromNodeCode, String actionType, int searchTopK) {
+      String queryVector,
+      String chapterCode,
+      String fromNodeCode,
+      String actionType,
+      int searchTopK) {
 
     String where =
         """
@@ -76,14 +80,16 @@ public class LucasKnowledgeVectorSearchRepository {
           )
         """;
 
-    return query(formatSql(where), params(queryVector, chapterCode, fromNodeCode, actionType, searchTopK));
+    return query(
+        formatSql(where), params(queryVector, chapterCode, fromNodeCode, actionType, searchTopK));
   }
 
   public List<HintVectorCandidate> searchFallbackActionRemoved(
       String queryVector, String chapterCode, String fromNodeCode, int searchTopK) {
 
     String where = "  AND lk.metadata->>'from_node_code' = :fromNodeCode";
-    return query(formatSql(where), params(queryVector, chapterCode, fromNodeCode, null, searchTopK));
+    return query(
+        formatSql(where), params(queryVector, chapterCode, fromNodeCode, null, searchTopK));
   }
 
   public List<HintVectorCandidate> searchFallbackChapterOnly(
@@ -101,7 +107,11 @@ public class LucasKnowledgeVectorSearchRepository {
   }
 
   private MapSqlParameterSource params(
-      String queryVector, String chapterCode, String fromNodeCode, String actionType, int searchTopK) {
+      String queryVector,
+      String chapterCode,
+      String fromNodeCode,
+      String actionType,
+      int searchTopK) {
     return new MapSqlParameterSource()
         .addValue("queryVector", queryVector)
         .addValue("chapterCode", chapterCode)

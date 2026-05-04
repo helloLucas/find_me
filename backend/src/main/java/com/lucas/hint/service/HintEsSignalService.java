@@ -9,4 +9,3 @@ public interface HintEsSignalService {
   Optional<HintEsSignalResponseDto> loadSignals(
       String chapterCode, String fromNodeCode, String actionType);
 }
-

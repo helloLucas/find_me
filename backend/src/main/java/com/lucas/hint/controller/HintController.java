@@ -43,4 +43,3 @@ public class HintController {
     return ResponseEntity.ok(BaseResponse.success("실시간 힌트 생성 성공", response));
   }
 }
-
