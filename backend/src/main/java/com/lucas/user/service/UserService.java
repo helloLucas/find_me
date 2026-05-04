@@ -9,6 +9,7 @@ import com.lucas.auth.repository.SocialLoginRepository;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.user.dto.request.UserRegisterRequest;
+import com.lucas.user.dto.response.UserResponseDto;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import java.util.Optional;
@@ -188,14 +189,15 @@ public class UserService {
   }
 
   /**
-   * 특정 사용자의 닉네임을 유효성 검사 후 업데이트합니다.
+   * 특정 사용자의 닉네임을 유효성 검사 후 업데이트하고 DTO로 반환합니다.
    *
    * @param userId 유저 식별값
    * @param nickname 새로운 닉네임 문자열
+   * @return 업데이트된 유저 정보를 담은 DTO
    * @throws CustomException 닉네임이 비어있거나 너무 길 경우 발생
    */
   @Transactional
-  public void updateNickname(Long userId, String nickname) {
+  public UserResponseDto updateNickname(Long userId, String nickname) {
     if (nickname == null || nickname.isBlank()) {
       throw new CustomException(ErrorCode.H1000);
     }
@@ -209,5 +211,41 @@ public class UserService {
 
     user.updateNickname(trimmedNickname);
     log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);
+
+    AuthProvider provider = user.getSocialLogins().isEmpty()
+        ? null
+        : user.getSocialLogins().get(0).getProvider();
+
+    return new UserResponseDto(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getRole().name(),
+        provider
+    );
+  }
+
+  /**
+   * 특정 사용자의 프로필 정보를 조회하여 DTO로 반환합니다.
+   *
+   * @param userId 유저 식별값
+   * @return 유저 정보를 담은 DTO
+   */
+  @Transactional(readOnly = true)
+  public UserResponseDto getUserProfile(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+    AuthProvider provider = user.getSocialLogins().isEmpty()
+        ? null
+        : user.getSocialLogins().get(0).getProvider();
+
+    return new UserResponseDto(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getRole().name(),
+        provider
+    );
   }
 }

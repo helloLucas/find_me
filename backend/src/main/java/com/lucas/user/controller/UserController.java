@@ -1,13 +1,13 @@
 package com.lucas.user.controller;
 
 import com.lucas.auth.dto.response.TokenResponse;
-import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.util.CookieUtil;
 import com.lucas.global.util.JwtUtil;
 import com.lucas.user.dto.request.NicknameRequest;
 import com.lucas.user.dto.request.UserRegisterRequest;
+import com.lucas.user.dto.response.UserResponseDto;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import com.lucas.user.service.UserService;
@@ -67,24 +67,15 @@ public class UserController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody NicknameRequest request) {
 
-    userService.updateNickname(principal.getUserId(), request.getNickname());
-
-    // 최신 정보로 토큰 갱신을 위해 DB 재조회
-    User user = userRepository.findById(principal.getUserId())
-        .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+    UserResponseDto userDto = userService.updateNickname(principal.getUserId(), request.getNickname());
 
     // 새로운 Access Token 생성 (새 닉네임 포함)
-    // SocialLogin 1:N 분리 아키텍처: provider는 SocialLogin 목록에서 조회
-    AuthProvider provider = user.getSocialLogins().isEmpty()
-        ? null
-        : user.getSocialLogins().get(0).getProvider();
-
     String newAccessToken = jwtUtil.createAccessToken(
-        user.getId(),
-        user.getEmail(),
-        user.getNickname(),
-        provider,
-        user.getRole().name(),
+        userDto.id(),
+        userDto.email(),
+        userDto.nickname(),
+        userDto.provider(),
+        userDto.role(),
         accessTokenExpiration);
 
     Map<String, String> data = new HashMap<>();
@@ -102,14 +93,12 @@ public class UserController {
   @GetMapping("/me")
   public ResponseEntity<BaseResponse<Map<String, Object>>> getMe(
       @AuthenticationPrincipal CustomUserPrincipal principal) {
-    User user = userRepository
-        .findById(principal.getUserId())
-        .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+    UserResponseDto userDto = userService.getUserProfile(principal.getUserId());
 
     Map<String, Object> data = new HashMap<>();
-    data.put("id", user.getId());
-    data.put("nickname", user.getNickname());
-    data.put("role", user.getRole().name());
+    data.put("id", userDto.id());
+    data.put("nickname", userDto.nickname());
+    data.put("role", userDto.role());
 
     return ResponseEntity.ok(BaseResponse.success("내 정보를 조회했습니다.", data));
   }
