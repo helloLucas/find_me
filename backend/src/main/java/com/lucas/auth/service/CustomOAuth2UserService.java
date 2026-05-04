@@ -184,7 +184,10 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   }
 
   /**
-   * 현재 HTTP 요청에서 게스트 토큰 정보를 파싱하여 게스트 ID를 반환합니다.
+   * 현재 HTTP 요청의 refresh_token 쿠키를 검증하여 게스트 ID를 반환합니다.
+   *
+   * 토큰 내 role이 ‘GUEST’인 경우에만 guestId를 반환합니다.
+   * 토큰이 만료되었거나 유효하지 않으면 null을 반환합니다.
    *
    * @return 게스트 유저의 식별값 또는 null
    */
@@ -197,7 +200,32 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         for (Cookie cookie : request.getCookies()) {
           // HttpOnly로 발급된 refresh_token을 통해 guest 여부 식별
           if ("refresh_token".equals(cookie.getName())) {
-            return jwtUtil.getUserId(cookie.getValue());
+            String token = cookie.getValue();
+
+            // 1. 토큰 만료 여부 첫 번째 확인 (만료되면 null 반환)
+            if (jwtUtil.isExpired(token)) {
+              log.debug("Refresh 쿠키가 만료되었습니다.");
+              return null;
+            }
+
+            // 2. Refresh 토큰에는 role이 없으므로 Access 토큰에서 role 확인을 합니다.
+            // 대신 userId로 DB에서 User를 조회하여 role 확인을 위해 userRepository 사용
+            Long userId = jwtUtil.getUserId(token);
+            if (userId == null) {
+              return null;
+            }
+
+            // 3. DB에서 해당 유저의 role 확인 -> GUEST인 경우만 guestId 반환
+            return userRepository.findById(userId)
+                .filter(u -> u.getRole() == UserRole.GUEST)
+                .map(u -> {
+                  log.debug("게스트 세션 확인 - guestId={}", u.getId());
+                  return u.getId();
+                })
+                .orElseGet(() -> {
+                  log.debug("유효한 MEMBER 세션이 존재합니다 (userId={}). 게스트로 간주하지 않습니다.", userId);
+                  return null;
+                });
           }
         }
       }

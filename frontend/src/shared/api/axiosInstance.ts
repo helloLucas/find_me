@@ -63,11 +63,14 @@ axiosInstance.interceptors.response.use(
             } catch (refreshError) {
                 // 리프레시 토큰도 만료되었거나 오류 발생 시 인증 정보 초기화 및 로그인 이동
                 console.error('Session expired. Please login again.');
-                tokenManager.clearTokens();
-                
+
+                // authStore.clearAuth() 를 통해 토큰 정리 + 상태 초기화
+                const { useAuthStore } = await import('../../app/store/authStore');
+                useAuthStore.getState().clearAuth();
+
                 // 팝업 알림을 위한 플래그 설정 (AppShell에서 감지)
                 sessionStorage.setItem('show_session_expired_popup', 'true');
-                
+
                 window.location.href = '/';
                 return Promise.reject(refreshError);
             }
