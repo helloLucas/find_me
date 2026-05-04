@@ -51,9 +51,36 @@ public class UserService {
     // 닉네임 누락 (신규 회원 가입 or 순수 게스트 가입일 때는 닉네임 필수)
     // 단, 기존 게스트에서 소셜로 승격하는 경우(guestId != null)는 DB의 기존 닉네임을 사용하므로 예외
     boolean isUpgrade = request.getGuestId() != null;
-    if (!request.isConfirmSwitch() && !isUpgrade && (request.getNickname() == null || request.getNickname().isBlank())) {
+    if (!request.isConfirmSwitch() && !isUpgrade && !request.isConfirmAccountLinking()
+        && (request.getNickname() == null || request.getNickname().isBlank())) {
       log.warn("닉네임 누락 - 가입 제한");
       throw new CustomException(ErrorCode.H1000);
+    }
+
+    // [계정 연동(Account Linking) 확인] 사용자가 팝업에서 확인 버튼을 누른 경우
+    if (request.isConfirmAccountLinking()) {
+      User existingUser = userRepository
+          .findByEmail(pendingInfo.getEmail())
+          .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+
+      // 중복 연동 방지: 이미 연동되어 있으면 그대로 반환
+      boolean alreadyLinked = socialLoginRepository
+          .findByProviderAndProviderUserId(pendingInfo.getProvider(), pendingInfo.getProviderUserId())
+          .isPresent();
+
+      if (!alreadyLinked) {
+        SocialLogin newSocialLogin = SocialLogin.builder()
+            .user(existingUser)
+            .provider(pendingInfo.getProvider())
+            .providerUserId(pendingInfo.getProviderUserId())
+            .build();
+        socialLoginRepository.save(newSocialLogin);
+        log.info("계정 연동(Account Linking) 완료 - userId={}, provider={}",
+            existingUser.getId(), pendingInfo.getProvider());
+      }
+
+      authService.deletePendingUserInfo(request.getTempKey());
+      return issueTokensForUser(existingUser);
     }
 
     // 소셜 정보가 있는 경우에만 DB 조회

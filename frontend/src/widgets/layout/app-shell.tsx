@@ -58,23 +58,94 @@ export default function AppShell({ children }: PropsWithChildren) {
           replace: true,
           state: { tempKey, guestId }
         });
+
+      } else if (event.data?.type === 'AUTH_ACCOUNT_LINKING') {
+        // [계정 연동 확인] 동일 이메일로 이미 가입된 계정이 있는 경우
+        const { tempKey } = event.data;
+        openModal({
+          title: 'ACCOUNT_LINKING',
+          message: '동일한 이메일로 이미 가입된 계정이 존재합니다.\n해당 계정에 현재 소셜 로그인을 연동하시겠습니까?\n\n[확인] 시 하나의 계정으로 두 소셜 로그인을 모두 사용할 수 있습니다.',
+          type: 'confirm',
+          onConfirm: async () => {
+            try {
+              const axiosModule = await import('../../shared/api/axiosInstance');
+              const tokenManagerModule = await import('../../shared/utils/tokenManager');
+              const authStoreModule = await import('../../app/store/authStore');
+              const clientStoreModule = await import('../../app/store/clientStore');
+
+              const response = await axiosModule.default.post('/api/v1/users/register', {
+                tempKey,
+                nickname: '',
+                confirmAccountLinking: true,
+              });
+
+              const newAccessToken = response.data?.data?.accessToken;
+              if (newAccessToken) {
+                tokenManagerModule.tokenManager.setAccessToken(newAccessToken);
+                authStoreModule.useAuthStore.getState().setAuth(newAccessToken);
+              }
+
+              clientStoreModule.useClientStore.getState().setIsAccessing(true);
+              setTimeout(() => {
+                clientStoreModule.useClientStore.getState().setIsAccessing(false);
+                navigate('/lobby', { replace: true });
+              }, 1000);
+            } catch (err) {
+              console.error('Account linking failed:', err);
+              openModal({
+                title: 'SYSTEM_ERROR',
+                message: '계정 연동 처리 중 오류가 발생했습니다.',
+                type: 'alert',
+              });
+            }
+          },
+          onCancel: () => {
+            navigate('/', { replace: true });
+          }
+        });
+
       } else if (event.data?.type === 'AUTH_CONFLICT') {
+        // [계정 전환 확인] 게스트로 접속 중 이미 가입된 소셜 계정 발견
         const { tempKey } = event.data;
         openModal({
           title: 'ACCOUNT_CONFLICT',
           message: '이미 이 소셜 계정으로 가입된 정보가 존재합니다.\n해당 계정으로 전환하시겠습니까?\n(현재 게스트 정보는 사라집니다.)',
           type: 'confirm',
-          onConfirm: () => {
-             // 닉네임 업데이트 훅을 통해 전환 처리 (AppShell 상위에서 mutate를 쓸 수 있게 함)
-             // 실제로는 useNavigate나 별도 이벤트를 통해 처리할 수도 있지만,
-             // 여기서는 /setup-nickname으로 보내되 confirmSwitch 플래그를 실어 보낼 수도 있습니다.
-             // 혹은 AppShell에서 직접 register API를 호출하도록 유도합니다.
-             navigate('/setup-nickname', {
-                replace: true,
-                state: { tempKey, confirmSwitch: true }
-             });
+          onConfirm: async () => {
+            try {
+              const axiosModule = await import('../../shared/api/axiosInstance');
+              const tokenManagerModule = await import('../../shared/utils/tokenManager');
+              const authStoreModule = await import('../../app/store/authStore');
+              const clientStoreModule = await import('../../app/store/clientStore');
+
+              const response = await axiosModule.default.post('/api/v1/users/register', {
+                tempKey,
+                nickname: '',
+                confirmSwitch: true,
+              });
+
+              const newAccessToken = response.data?.data?.accessToken;
+              if (newAccessToken) {
+                tokenManagerModule.tokenManager.setAccessToken(newAccessToken);
+                authStoreModule.useAuthStore.getState().setAuth(newAccessToken);
+              }
+
+              clientStoreModule.useClientStore.getState().setIsAccessing(true);
+              setTimeout(() => {
+                clientStoreModule.useClientStore.getState().setIsAccessing(false);
+                navigate('/lobby', { replace: true });
+              }, 1000);
+            } catch (err) {
+              console.error('Account switch failed:', err);
+              openModal({
+                title: 'SYSTEM_ERROR',
+                message: '계정 전환 처리 중 오류가 발생했습니다.',
+                type: 'alert',
+              });
+            }
           }
         });
+
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
         openModal({
@@ -87,7 +158,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
     window.addEventListener('message', handleAuthMessage);
     return () => window.removeEventListener('message', handleAuthMessage);
-  }, [checkAuth, navigate]);
+  }, [checkAuth, navigate, openModal, setIsAccessing]);
 
   // 우클릭 방지 (보안 및 몰입감 향상) - 운영 환경에서만 활성화
   useEffect(() => {

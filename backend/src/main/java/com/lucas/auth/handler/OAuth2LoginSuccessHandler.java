@@ -51,7 +51,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-        // 닉네임 입력 대기 또는 계정 전환 확인이 필요한 경우
+        // 닉네임 입력 대기, 계정 전환 확인, 계정 연동 확인이 필요한 경우
         if (customOAuth2User.isPendingRegistration()) {
             PendingUserInfo pendingInfo = PendingUserInfo.builder()
                     .email(customOAuth2User.getEmail())
@@ -72,6 +72,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .queryParam("isNewUser", customOAuth2User.isNewUser())
                     .queryParam("isGuest", customOAuth2User.isGuest())
                     .queryParam("isConflict", customOAuth2User.isConflict())
+                    .queryParam("isAccountLinking", customOAuth2User.isAccountLinking())
                     .queryParam("guestId", (customOAuth2User.isGuest() && !customOAuth2User.isConflict()) ? targetId : "")
                     .encode(StandardCharsets.UTF_8)
                     .build().toUriString();

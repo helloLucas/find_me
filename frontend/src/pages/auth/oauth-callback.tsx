@@ -23,6 +23,7 @@ const OAuthCallbackPage = () => {
         const tempKey = searchParams.get('tempKey');
         const guestId = searchParams.get('guestId');
         const isConflict = searchParams.get('isConflict') === 'true';
+        const isAccountLinking = searchParams.get('isAccountLinking') === 'true';
 
         // 1. 이미 가입된 회원이거나 게스트 승격 완료된 경우
         if (accessToken) {
@@ -48,9 +49,44 @@ const OAuthCallbackPage = () => {
             return;
         }
 
-        // 2. 신규 가입 대기 상태 또는 계정 전환 대기 상태
+        // 2. 신규 가입 대기 상태 또는 계정 전환/연동 대기 상태
         if (tempKey) {
             processedRef.current = true;
+
+            // [계정 연동(Account Linking) 케이스]: 동일 이메일로 이미 가입된 계정이 있는 경우
+            if (isAccountLinking) {
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'AUTH_ACCOUNT_LINKING',
+                        tempKey
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
+                import('../../app/store/modalStore').then((module) => {
+                    const openModal = module.useModalStore.getState().openModal;
+                    openModal({
+                        title: 'ACCOUNT_LINKING',
+                        message: '동일한 이메일로 이미 가입된 계정이 존재합니다.\n해당 계정에 현재 소셜 로그인을 연동하시겠습니까?',
+                        type: 'confirm',
+                        onConfirm: () => {
+                            mutate({
+                                tempKey,
+                                nickname: '',
+                                confirmAccountLinking: true
+                            });
+                        },
+                        onCancel: () => {
+                            navigate('/', { replace: true });
+                        }
+                    });
+                }).catch(err => {
+                    console.error('Failed to load modalStore:', err);
+                    navigate('/', { replace: true });
+                });
+                return;
+            }
 
             // [계정 전환(Switch) 케이스]: 이미 가입된 소셜 계정이 있는 경우
             if (isConflict) {

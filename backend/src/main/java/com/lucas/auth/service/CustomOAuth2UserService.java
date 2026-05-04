@@ -93,8 +93,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         role,
         context.isNewUser(),
         context.isGuest(),
-        context.isNewUser() || context.isConflict(), // 가입 또는 전환 대기 시 true
-        context.isConflict());
+        context.isNewUser() || context.isConflict() || context.isAccountLinking(), // 가입, 전환, 연동 대기 시 true
+        context.isConflict(),
+        context.isAccountLinking());
   }
 
   /**
@@ -140,28 +141,23 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
       if (guestId != null) {
         // 현재 게스트로 접속 O -> 전환 의사 확인
         log.info("계정 전환 대기 (충돌) - socialUserId={}, guestId={}", existingUser.getId(), guestId);
-        return new UserContext(existingUser, false, true, true);
+        return new UserContext(existingUser, false, true, true, false);
       }
       // 현재 게스트로 접속 X ->일반 로그인
       log.info("기존 회원 로그인 - userId={}", existingUser.getId());
-      return new UserContext(existingUser, false, false, false);
+      return new UserContext(existingUser, false, false, false, false);
     }
 
-    // ── 2단계: 이메일로 기존 User 조회 → Account Linking ────────────────────────
+    // ── 2단계: 이메일로 기존 User 조회 → Account Linking 확인 대기 ─────────────
     if (email != null && !email.isBlank()) {
       Optional<User> userByEmailOpt = userRepository.findByEmail(email);
       if (userByEmailOpt.isPresent()) {
         User existingUser = userByEmailOpt.get();
-        // 동일 이메일 유저에게 새 SocialLogin 연동
-        SocialLogin newSocialLogin = SocialLogin.builder()
-            .user(existingUser)
-            .provider(provider)
-            .providerUserId(providerUserId)
-            .build();
-        socialLoginRepository.save(newSocialLogin);
+        // 자동 저장하지 않고, 사용자 확인을 위해 pending 상태로 반환
         log.info(
-            "계정 연동(Account Linking) 완료 - userId={}, provider={}", existingUser.getId(), provider);
-        return new UserContext(existingUser, false, false, false);
+            "계정 연동 확인 대기 - userId={}, email={}, provider={}",
+            existingUser.getId(), email, provider);
+        return new UserContext(existingUser, false, false, false, true);
       }
     }
 
@@ -170,16 +166,21 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
       Optional<User> guestOpt = userRepository.findById(guestId);
       if (guestOpt.isPresent() && guestOpt.get().getRole() == UserRole.GUEST) {
         log.info("게스트 승격 대기 (자동) - guestId={}", guestId);
-        return new UserContext(guestOpt.get(), true, true, false);
+        return new UserContext(guestOpt.get(), true, true, false, false);
       }
     }
 
     // ── 4단계: 완전 신규 유저 → 닉네임 설정 후 가입 대기 ──────────────────────
     log.info("신규 회원 가입 대기 - email={}", email);
-    return new UserContext(null, true, false, false);
+    return new UserContext(null, true, false, false, false);
   }
 
-  private record UserContext(User user, boolean isNewUser, boolean isGuest, boolean isConflict) {
+  private record UserContext(
+      User user,
+      boolean isNewUser,
+      boolean isGuest,
+      boolean isConflict,
+      boolean isAccountLinking) {
   }
 
   /**

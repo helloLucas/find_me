@@ -12,6 +12,8 @@ interface UpdateNicknameRequest {
     tempKey?: string;
     guestId?: number | null;
     confirmSwitch?: boolean;
+    /** 동일 이메일 계정 연동(Account Linking) 확인 여부 */
+    confirmAccountLinking?: boolean;
 }
 
 /**
