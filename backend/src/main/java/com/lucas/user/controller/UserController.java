@@ -3,9 +3,11 @@ package com.lucas.user.controller;
 import com.lucas.auth.dto.response.TokenResponse;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
+import com.lucas.global.util.CookieUtil;
 import com.lucas.global.util.JwtUtil;
 import com.lucas.user.dto.request.NicknameRequest;
 import com.lucas.user.dto.request.UserRegisterRequest;
+import com.lucas.user.dto.response.UserResponseDto;
 import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import com.lucas.user.service.UserService;
@@ -15,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -30,13 +30,14 @@ public class UserController {
   private final UserRepository userRepository;
   private final JwtUtil jwtUtil;
   private final UserService userService;
+  private final CookieUtil cookieUtil;
 
   @Value("${spring.jwt.access-token-expiration}")
   private long accessTokenExpiration;
 
   /**
-   * 신규 회원 가입 또는 게스트의 정식 회원 전환을 완료합니다. Redis에 임시 저장된 정보를 기반으로 DB에 유저 데이터를 생성(Insert)하거나
-   * 전환(Update)합니다.
+   * 신규 회원 가입 또는 게스트의 정식 회원 전환을 완료합니다.
+   * Redis에 임시 저장된 정보를 기반으로 DB에 유저 데이터를 생성(Insert)하거나 전환(Update)합니다.
    *
    * @param request 가입 요청 정보 (tempKey, nickname, guestId)
    * @return 가입 완료 성공 메시지와 함께 발급된 토큰 세트 (Access, Refresh)
@@ -48,37 +49,14 @@ public class UserController {
     TokenResponse tokenResponse = userService.register(request);
 
     // Refresh Token을 HttpOnly 쿠키에 저장하여 XSS 방지
-    setRefreshTokenCookie(response, tokenResponse.getRefreshToken(), refreshTokenExpiration / 1000);
+    cookieUtil.setRefreshTokenCookie(response, tokenResponse.getRefreshToken());
 
     return ResponseEntity.ok(BaseResponse.success("회원 가입이 완료되었습니다.", tokenResponse));
   }
 
-  @Value("${spring.jwt.refresh-token-expiration}")
-  private long refreshTokenExpiration;
-
   /**
-   * 공통 쿠키 설정 로직을 담당하는 헬퍼 메서드입니다. 모든 인증 방식에서 동일한 쿠키 속성을 보장합니다.
-   *
-   * @param response HttpServletResponse 객체
-   * @param token 리프레시 토큰 값
-   * @param maxAge 쿠키 유효 기간 (초 단위)
-   */
-  private void setRefreshTokenCookie(HttpServletResponse response, String token, long maxAge) {
-    ResponseCookie cookie =
-        ResponseCookie.from("refresh_token", token)
-            .httpOnly(true)
-            .secure(true) // SameSite=None을 위해 필수 (HTTPS 환경 권장)
-            .path("/")
-            .maxAge(maxAge)
-            .sameSite("None") // 프론트/백엔드 오리진 불일치 시 필수
-            .build();
-
-    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-  }
-
-  /**
-   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다. 수정 성공 시, 변경된 닉네임이 반영된 새로운
-   * Access Token을 반환합니다.
+   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다.
+   * 수정 성공 시, 변경된 닉네임이 반영된 새로운 Access Token을 반환합니다.
    *
    * @param principal 인증된 사용자의 정보
    * @param request 수정할 닉네임 정보가 담긴 DTO
@@ -89,23 +67,16 @@ public class UserController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody NicknameRequest request) {
 
-    userService.updateNickname(principal.getUserId(), request.getNickname());
-
-    // 최신 정보로 토큰 갱신을 위해 DB 재조회
-    User user =
-        userRepository
-            .findById(principal.getUserId())
-            .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+    UserResponseDto userDto = userService.updateNickname(principal.getUserId(), request.getNickname());
 
     // 새로운 Access Token 생성 (새 닉네임 포함)
-    String newAccessToken =
-        jwtUtil.createAccessToken(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            user.getProvider(),
-            user.getRole().name(),
-            accessTokenExpiration);
+    String newAccessToken = jwtUtil.createAccessToken(
+        userDto.id(),
+        userDto.email(),
+        userDto.nickname(),
+        userDto.provider(),
+        userDto.role(),
+        accessTokenExpiration);
 
     Map<String, String> data = new HashMap<>();
     data.put("accessToken", newAccessToken);
@@ -122,15 +93,12 @@ public class UserController {
   @GetMapping("/me")
   public ResponseEntity<BaseResponse<Map<String, Object>>> getMe(
       @AuthenticationPrincipal CustomUserPrincipal principal) {
-    User user =
-        userRepository
-            .findById(principal.getUserId())
-            .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+    UserResponseDto userDto = userService.getUserProfile(principal.getUserId());
 
     Map<String, Object> data = new HashMap<>();
-    data.put("id", user.getId());
-    data.put("nickname", user.getNickname());
-    data.put("role", user.getRole().name());
+    data.put("id", userDto.id());
+    data.put("nickname", userDto.nickname());
+    data.put("role", userDto.role());
 
     return ResponseEntity.ok(BaseResponse.success("내 정보를 조회했습니다.", data));
   }
