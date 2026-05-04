@@ -55,7 +55,8 @@ public class HintEsSignalServiceImpl implements HintEsSignalService {
 
     try {
       String endpoint = resolveEndpointUrl();
-      String payload = objectMapper.writeValueAsString(buildQuery(chapterCode, fromNodeCode, actionType));
+      String payload =
+          objectMapper.writeValueAsString(buildQuery(chapterCode, fromNodeCode, actionType));
 
       HttpRequest request =
           HttpRequest.newBuilder()
@@ -85,7 +86,8 @@ public class HintEsSignalServiceImpl implements HintEsSignalService {
     }
   }
 
-  private Map<String, Object> buildQuery(String chapterCode, String fromNodeCode, String actionType) {
+  private Map<String, Object> buildQuery(
+      String chapterCode, String fromNodeCode, String actionType) {
     List<Map<String, Object>> filters = new ArrayList<>();
     filters.add(Map.of("term", Map.of("chapter_id", chapterCode)));
     filters.add(Map.of("term", Map.of("from_node_id", fromNodeCode)));
@@ -130,7 +132,8 @@ public class HintEsSignalServiceImpl implements HintEsSignalService {
     }
 
     double failRate = totalCount > 0 ? (double) failCount / (double) totalCount : 0.0d;
-    double hintRequestRate = totalCount > 0 ? (double) hintRequestedCount / (double) totalCount : 0.0d;
+    double hintRequestRate =
+        totalCount > 0 ? (double) hintRequestedCount / (double) totalCount : 0.0d;
 
     return HintEsSignalResponseDto.builder()
         .totalActionCount(totalCount)
@@ -142,7 +145,8 @@ public class HintEsSignalServiceImpl implements HintEsSignalService {
   }
 
   private String resolveEndpointUrl() {
-    String base = esBaseUrl.endsWith("/") ? esBaseUrl.substring(0, esBaseUrl.length() - 1) : esBaseUrl;
+    String base =
+        esBaseUrl.endsWith("/") ? esBaseUrl.substring(0, esBaseUrl.length() - 1) : esBaseUrl;
     String encodedPattern = URLEncoder.encode(esIndexPattern, StandardCharsets.UTF_8);
     return base + "/" + encodedPattern + "/_search";
   }

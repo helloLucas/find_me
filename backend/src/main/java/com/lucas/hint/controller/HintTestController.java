@@ -31,8 +31,7 @@ public class HintTestController {
   /**
    * 실시간 세션 기준 벡터 검색 결과를 반환합니다.
    *
-   * <p>override 데이터를 받지 않고 sessionId 기반으로 현재 상태를 읽어오기 때문에 실서비스와 동일한 경로를 검증할
-   * 수 있습니다.
+   * <p>override 데이터를 받지 않고 sessionId 기반으로 현재 상태를 읽어오기 때문에 실서비스와 동일한 경로를 검증할 수 있습니다.
    */
   @PostMapping("/live-retrieve")
   public ResponseEntity<BaseResponse<HintLiveRetrieveResponseDto>> liveRetrieve(
@@ -52,4 +51,3 @@ public class HintTestController {
     return ResponseEntity.ok(BaseResponse.success("RAG 검색 테스트 성공", response));
   }
 }
-
