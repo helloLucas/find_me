@@ -3,6 +3,7 @@ package com.lucas.auth.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lucas.auth.dto.PendingUserInfo;
 import com.lucas.auth.dto.response.RefreshTokenResponse;
+import com.lucas.auth.entity.AuthProvider;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.JwtUtil;
@@ -93,21 +94,22 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user =
-          userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      String newAccessToken =
-          jwtUtil.createAccessToken(
-              user.getId(),
-              user.getEmail(),
-              user.getNickname(),
-              user.getProvider(),
-              user.getRole().name(),
-              accessTokenExpiration);
+      AuthProvider provider = user.getSocialLogins().isEmpty()
+          ? null
+          : user.getSocialLogins().get(0).getProvider();
 
-      String newRefreshToken =
-          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+      String newAccessToken = jwtUtil.createAccessToken(
+          user.getId(),
+          user.getEmail(),
+          user.getNickname(),
+          provider,
+          user.getRole().name(),
+          accessTokenExpiration);
+
+      String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
       // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
@@ -147,11 +149,10 @@ public class AuthService {
    * @return 임시 식별 키 (UUID)
    */
   public String initGuest() {
-    PendingUserInfo guestInfo =
-        PendingUserInfo.builder()
-            .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
-            .guest(true)
-            .build();
+    PendingUserInfo guestInfo = PendingUserInfo.builder()
+        .oauthName("GUEST_" + UUID.randomUUID().toString().substring(0, 8))
+        .guest(true)
+        .build();
 
     return savePendingUserInfo(guestInfo);
   }

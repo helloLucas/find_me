@@ -2,7 +2,10 @@ package com.lucas.user.service;
 
 import com.lucas.auth.dto.PendingUserInfo;
 import com.lucas.auth.dto.response.TokenResponse;
+import com.lucas.auth.entity.AuthProvider;
+import com.lucas.auth.entity.SocialLogin;
 import com.lucas.auth.entity.UserRole;
+import com.lucas.auth.repository.SocialLoginRepository;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.user.dto.request.UserRegisterRequest;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private final UserRepository userRepository;
+  private final SocialLoginRepository socialLoginRepository;
   private final com.lucas.auth.service.AuthService authService;
   private final com.lucas.global.util.JwtUtil jwtUtil;
 
@@ -33,6 +37,8 @@ public class UserService {
 
   /**
    * 가입 대기 중인 사용자의 닉네임을 설정하고 최종적으로 DB에 저장(Insert/Update)합니다.
+   *
+   * User(본체)와 SocialLogin(인증 수단)을 분리하여 저장하므로, 가입 완료 시 두 레코드가 함께 생성됩니다.
    *
    * @param request 가입 요청 정보 (tempKey, nickname, guestId)
    * @return 가입 완료 후 발급된 토큰 정보
@@ -51,9 +57,9 @@ public class UserService {
     }
 
     // 소셜 정보가 있는 경우에만 DB 조회
-    Optional<User> socialUserOpt = Optional.empty();
+    Optional<SocialLogin> socialLoginOpt = Optional.empty();
     if (pendingInfo.getProvider() != null) {
-      socialUserOpt = userRepository.findByProviderAndProviderUserId(
+      socialLoginOpt = socialLoginRepository.findByProviderAndProviderUserId(
           pendingInfo.getProvider(),
           pendingInfo.getProviderUserId());
     }
@@ -61,8 +67,8 @@ public class UserService {
     User user;
 
     // 2. 가입하려는 소셜 계정이 이미 존재하는 경우 처리
-    if (socialUserOpt.isPresent()) {
-      User socialUser = socialUserOpt.get();
+    if (socialLoginOpt.isPresent()) {
+      User socialUser = socialLoginOpt.get().getUser();
 
       if (!request.isConfirmSwitch()) {
         log.warn(
@@ -80,50 +86,65 @@ public class UserService {
 
     // 3. 상황별 유저 엔티티 준비 (승격 또는 신규 생성)
     if (request.getGuestId() != null) { // GUEST -> MEMBER 승격 (신규 소셜 계정 사용)
-      user =
-          userRepository
-              .findById(request.getGuestId())
-              .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      user = userRepository
+          .findById(request.getGuestId())
+          .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
-      user.upgradeToMember(
-          pendingInfo.getEmail(),
-          pendingInfo.getOauthName(),
-          pendingInfo.getProvider(),
-          pendingInfo.getProviderUserId());
+      user.upgradeToMember(pendingInfo.getEmail(), pendingInfo.getOauthName());
+
     } else if (pendingInfo.isGuest()) { // 닉네임만 있는 순수 게스트 가입 (닉네임 설정 완료 시점)
       user = User.builder()
           .oauthName(pendingInfo.getOauthName())
           .nickname(request.getNickname())
           .role(UserRole.GUEST)
           .build();
+
     } else { // 아예 처음인 신규 소셜 회원 가입 (닉네임 설정 완료 시점)
       user = User.builder()
           .email(pendingInfo.getEmail())
           .oauthName(pendingInfo.getOauthName())
           .nickname(request.getNickname())
-          .provider(pendingInfo.getProvider())
-          .providerUserId(pendingInfo.getProviderUserId())
           .role(UserRole.MEMBER)
           .build();
     }
 
     User savedUser = userRepository.save(user);
+
+    // 4. SocialLogin 레코드 생성 (소셜 정보가 있는 경우에만)
+    if (pendingInfo.getProvider() != null && pendingInfo.getProviderUserId() != null) {
+      SocialLogin socialLogin = SocialLogin.builder()
+          .user(savedUser)
+          .provider(pendingInfo.getProvider())
+          .providerUserId(pendingInfo.getProviderUserId())
+          .build();
+      socialLoginRepository.save(socialLogin);
+      log.info(
+          "SocialLogin 레코드 생성 완료: userId={}, provider={}",
+          savedUser.getId(),
+          pendingInfo.getProvider());
+    }
+
     log.info("회원 가입/승격 완료: userId={}, email={}", savedUser.getId(), savedUser.getEmail());
 
-    // 4. Redis 임시 데이터 삭제
+    // 5. Redis 임시 데이터 삭제
     authService.deletePendingUserInfo(request.getTempKey());
 
-    // 5. 토큰 발급
+    // 6. 토큰 발급
     return issueTokensForUser(savedUser);
   }
 
   /** 유저를 위한 토큰 세트를 발급합니다. */
   private TokenResponse issueTokensForUser(User user) {
+    // provider 정보는 SocialLogin에서 첫 번째 연동 수단을 사용하거나 null 허용
+    AuthProvider provider = user.getSocialLogins().isEmpty()
+        ? null
+        : user.getSocialLogins().get(0).getProvider();
+
     String accessToken = jwtUtil.createAccessToken(
         user.getId(),
         user.getEmail(),
         user.getNickname(),
-        user.getProvider(),
+        provider,
         user.getRole().name(),
         accessTokenExpiration);
 

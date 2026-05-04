@@ -1,24 +1,20 @@
 package com.lucas.user.entity;
 
-import com.lucas.auth.entity.AuthProvider;
+import com.lucas.auth.entity.SocialLogin;
 import com.lucas.auth.entity.UserRole;
 import com.lucas.global.util.BaseEntity;
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 시스템의 사용자 정보를 담는 엔티티 클래스입니다. 이메일, 닉네임, 인증 제공자 정보 및 권한 정보를 관리합니다. */
+/** 시스템의 사용자 정보를 담는 엔티티 클래스입니다. 이메일, 닉네임, 권한 정보를 관리합니다. */
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(
-    name = "users",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_users_provider_provider_user_id",
-          columnNames = {"provider", "provider_user_id"})
-    })
+@Table(name = "users")
 public class User extends BaseEntity {
 
   /** 애플리케이션 유저 식별값 (PK) */
@@ -38,43 +34,33 @@ public class User extends BaseEntity {
   @Column(name = "nickname", length = 15)
   private String nickname;
 
-  /** 소셜 로그인 인증 제공자 (GOOGLE 등) */
-  @Enumerated(EnumType.STRING)
-  @Column(name = "provider", length = 30)
-  private AuthProvider provider;
-
-  /** 인증 제공자 측의 고유 유저 식별값 */
-  @Column(name = "provider_user_id", length = 100)
-  private String providerUserId;
-
   /** 사용자의 권한 상태 (GUEST, MEMBER) */
   @Enumerated(EnumType.STRING)
   @Column(name = "role", length = 20, nullable = false)
   private UserRole role;
 
   /**
+   * 이 사용자에 연결된 소셜 로그인 수단 목록입니다.
+   *
+   * {@code CascadeType.ALL}과 {@code orphanRemoval = true}를 사용하여,
+   * User 저장/삭제 시 연관된 SocialLogin 레코드도 함께 관리됩니다.
+   */
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<SocialLogin> socialLogins = new ArrayList<>();
+
+  /**
    * User 엔티티 생성을 위한 빌더 패턴 생성자입니다.
    *
-   * @param email 사용자 이메일
+   * @param email     사용자 이메일
    * @param oauthName 소셜 실명
-   * @param nickname 애플리케이션 닉네임
-   * @param provider 인증 제공자
-   * @param providerUserId 제공자 측 식별값
-   * @param role 유저 권한 (제공되지 않을 경우 기본 GUEST)
+   * @param nickname  애플리케이션 닉네임
+   * @param role      유저 권한 (제공되지 않을 경우 기본 GUEST)
    */
   @Builder
-  public User(
-      String email,
-      String oauthName,
-      String nickname,
-      AuthProvider provider,
-      String providerUserId,
-      UserRole role) {
+  public User(String email, String oauthName, String nickname, UserRole role) {
     this.email = email;
     this.oauthName = oauthName;
     this.nickname = nickname;
-    this.provider = provider;
-    this.providerUserId = providerUserId;
     this.role = role != null ? role : UserRole.GUEST;
   }
 
@@ -88,19 +74,14 @@ public class User extends BaseEntity {
   }
 
   /**
-   * 게스트 사용자를 정식 회원으로 승격시킵니다. 소셜 로그인 연동 정보를 기록하고 상태를 MEMBER로 변경합니다.
+   * 게스트 사용자를 정식 회원으로 승격시킵니다. 소셜 인증 수단(SocialLogin)은 별도로 추가해야 합니다.
    *
-   * @param email 사용자 이메일
+   * @param email     사용자 이메일
    * @param oauthName 소셜 실명
-   * @param provider 인증 제공자
-   * @param providerUserId 제공자 측 식별값
    */
-  public void upgradeToMember(
-      String email, String oauthName, AuthProvider provider, String providerUserId) {
+  public void upgradeToMember(String email, String oauthName) {
     this.email = email;
     this.oauthName = oauthName;
-    this.provider = provider;
-    this.providerUserId = providerUserId;
     this.role = UserRole.MEMBER;
   }
 }

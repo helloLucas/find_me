@@ -1,6 +1,5 @@
 package com.lucas.user.repository;
 
-import com.lucas.auth.entity.AuthProvider;
 import com.lucas.user.entity.User;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,19 +10,12 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
 
   /**
-   * 이메일로 사용자를 조회합니다. (스토리 서비스의 게스트 유저 조회용)
+   * 이메일로 사용자를 조회합니다.
+   *
+   * 소셜 로그인 시 계정 연동(Account Linking) 기준점으로 사용되며, 게스트 유저 조회에도 활용됩니다.
    *
    * @param email 사용자 이메일
    * @return 조회된 유저 정보를 포함한 Optional 객체
    */
   Optional<User> findByEmail(String email);
-
-  /**
-   * 인증 제공자와 제공자 측 유저 식별값을 통해 사용자를 조회합니다.
-   *
-   * @param provider 인증 제공자 (GOOGLE 등)
-   * @param providerUserId 제공자 측 유저 식별값
-   * @return 조회된 유저 정보를 포함한 Optional 객체
-   */
-  Optional<User> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
 }

@@ -63,16 +63,15 @@ public class OAuthAttributes {
   }
 
   /**
-   * 추출된 사용자 정보를 바탕으로 User 엔티티 객체를 생성합니다. 신규 가입 사용자의 초기 상태는 GUEST로 설정됩니다.
+   * 추출된 사용자 정보를 바탕으로 User 엔티티 객체를 생성합니다.
    *
-   * @param provider 소셜 로그인 제공자
+   * 신규 가입 사용자의 초기 역할은 MEMBER이며, 인증 수단(SocialLogin)은 별도로 생성해야 합니다.
+   *
    * @param oauth2UserInfo 소셜 타입별 유저 정보
    * @return 생성된 User 엔티티 객체
    */
-  public User toEntity(AuthProvider provider, OAuth2UserInfo oauth2UserInfo) {
+  public User toEntity(OAuth2UserInfo oauth2UserInfo) {
     return User.builder()
-        .provider(provider)
-        .providerUserId(oauth2UserInfo.getId())
         .email(oauth2UserInfo.getEmail())
         .oauthName(oauth2UserInfo.getName())
         .role(UserRole.MEMBER)

@@ -1,6 +1,7 @@
 package com.lucas.user.controller;
 
 import com.lucas.auth.dto.response.TokenResponse;
+import com.lucas.auth.entity.AuthProvider;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
 import com.lucas.global.util.CookieUtil;
@@ -16,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -75,14 +74,18 @@ public class UserController {
         .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
     // 새로운 Access Token 생성 (새 닉네임 포함)
+    // SocialLogin 1:N 분리 아키텍처: provider는 SocialLogin 목록에서 조회
+    AuthProvider provider = user.getSocialLogins().isEmpty()
+        ? null
+        : user.getSocialLogins().get(0).getProvider();
+
     String newAccessToken = jwtUtil.createAccessToken(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            user.getProvider(),
-            user.getRole().name(),
-            accessTokenExpiration
-    );
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        provider,
+        user.getRole().name(),
+        accessTokenExpiration);
 
     Map<String, String> data = new HashMap<>();
     data.put("accessToken", newAccessToken);
