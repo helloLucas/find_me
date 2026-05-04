@@ -48,6 +48,10 @@ interface NewsTabProps {
   onFallbackOpenArticle?: (card: NewsCard) => void;
 }
 
+const CORRUPTION_TRIGGER_SCROLL_PX = 24;
+const CORRUPTION_TRIGGER_SCROLL_PROGRESS = 0.05;
+const CORRUPTION_CASCADE_DURATION_MS = 1400;
+
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -59,7 +63,7 @@ function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
     : [];
 
   const intensity = record.intensity === "active" ? "active" : record.intensity === "subtle" ? "subtle" : null;
-  if (paragraphIndexes.length === 0 || !intensity) return null;
+  if (!intensity) return null;
 
   const inspectIndex = Number(record.inspectIndex);
 
@@ -78,7 +82,10 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [scrollCorruptionTriggered, setScrollCorruptionTriggered] = React.useState(false);
+  const [corruptionProgress, setCorruptionProgress] = React.useState(0);
+  const corruptionAnimationFrameRef = useRef<number | null>(null);
+  const corruptionStartTimeRef = useRef<number | null>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
@@ -89,8 +96,14 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   const articleCorruption = normalizeArticleCorruption(content.articleCorruption);
   const corruptedParagraphIndexes = new Set(articleCorruption?.paragraphIndexes ?? []);
   const isScrollTriggeredArticleNode = currentNode?.code === "CH1_DARK_ARTICLE_OPEN";
+  const isArticleScrollCorruptionNode =
+    currentNode?.code === "CH1_ARTICLE_SCROLL_CORRUPTION";
+  const usesScrollCascadeCorruption =
+    showArticle && (isScrollTriggeredArticleNode || isArticleScrollCorruptionNode);
   const articleBodyClassName = [
-    "space-y-4",
+    "flex",
+    "flex-col",
+    "gap-4",
     "story-article-body",
     articleCorruption?.intensity === "active" ? "story-article-body--active" : "",
   ]
@@ -102,7 +115,52 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   useEffect(() => {
     lastScrollTriggeredNodeIdRef.current = null;
-  }, [currentNode?.id]);
+    corruptionStartTimeRef.current = null;
+    setScrollCorruptionTriggered(false);
+    setCorruptionProgress(0);
+
+    if (corruptionAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
+      corruptionAnimationFrameRef.current = null;
+    }
+
+    if (isArticleScrollCorruptionNode) {
+      corruptionStartTimeRef.current =
+        performance.now() - CORRUPTION_CASCADE_DURATION_MS;
+      setScrollCorruptionTriggered(true);
+      setCorruptionProgress(1);
+    }
+  }, [currentNode?.id, isArticleScrollCorruptionNode]);
+
+  useEffect(() => {
+    if (!scrollCorruptionTriggered) return;
+
+    const animateCorruption = (timestamp: number) => {
+      if (corruptionStartTimeRef.current === null) {
+        corruptionStartTimeRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - corruptionStartTimeRef.current;
+      const nextProgress = Math.min(elapsed / CORRUPTION_CASCADE_DURATION_MS, 1);
+      setCorruptionProgress(nextProgress);
+
+      if (nextProgress < 1) {
+        corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+        return;
+      }
+
+      corruptionAnimationFrameRef.current = null;
+    };
+
+    corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+
+    return () => {
+      if (corruptionAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
+        corruptionAnimationFrameRef.current = null;
+      }
+    };
+  }, [scrollCorruptionTriggered]);
 
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;
@@ -121,10 +179,19 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
       const { scrollTop, scrollHeight, clientHeight } = element;
-      
-      // 스크롤 진행도 계산 (0 ~ 1)
-      const currentProgress = scrollTop / (scrollHeight - clientHeight || 1);
-      setScrollProgress(currentProgress);
+
+      const maxScroll = Math.max(scrollHeight - clientHeight, 1);
+      const currentProgress = scrollTop / maxScroll;
+
+      if (
+        usesScrollCascadeCorruption &&
+        !scrollCorruptionTriggered &&
+        (scrollTop >= CORRUPTION_TRIGGER_SCROLL_PX ||
+          currentProgress >= CORRUPTION_TRIGGER_SCROLL_PROGRESS)
+      ) {
+        corruptionStartTimeRef.current = null;
+        setScrollCorruptionTriggered(true);
+      }
 
       if (!isScrollTriggeredArticleNode || !showArticle) return;
 
@@ -135,7 +202,13 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         triggerArticleScrollTransition();
       }
     },
-    [isScrollTriggeredArticleNode, showArticle, triggerArticleScrollTransition]
+    [
+      isScrollTriggeredArticleNode,
+      scrollCorruptionTriggered,
+      showArticle,
+      triggerArticleScrollTransition,
+      usesScrollCascadeCorruption,
+    ]
   );
 
   return (
@@ -160,16 +233,19 @@ export const NewsTab: React.FC<NewsTabProps> = ({
             <div className={articleBodyClassName}>
               {articleBody.map((paragraph, index) => {
                 const total = articleBody.length;
-                // 스크롤이 내려갈수록 아래쪽 문단까지 서서히 오염됨
-                // 진행도가 0.2일 때부터 시작해서 0.9일 때 전체가 오염되도록 오프셋 조정
-                const corruptionThreshold = (index / total) * 0.7 + 0.2;
-                const isCorruptedByScroll = scrollProgress > corruptionThreshold;
-                
-                // 백엔드 데이터에 의한 오염 또는 스크롤에 의한 오염
-                const isCorrupted = corruptedParagraphIndexes.has(index) || isCorruptedByScroll;
-                
-                // 스크롤 진행도가 높을수록 강도를 active로 격상
-                const dynamicIntensity = scrollProgress > 0.6 ? "active" : (articleCorruption?.intensity ?? "subtle");
+                const cascadeThreshold =
+                  total <= 1 ? 0 : index / Math.max(total - 1, 1);
+                const isCorruptedByScrollCascade =
+                  usesScrollCascadeCorruption &&
+                  scrollCorruptionTriggered &&
+                  corruptionProgress >= cascadeThreshold;
+                const isCorruptedByMetadata =
+                  !usesScrollCascadeCorruption && corruptedParagraphIndexes.has(index);
+                const isCorrupted = isCorruptedByMetadata || isCorruptedByScrollCascade;
+                const dynamicIntensity =
+                  scrollCorruptionTriggered && corruptionProgress >= 0.65
+                    ? "active"
+                    : (articleCorruption?.intensity ?? "subtle");
 
                 const isInspectable =
                   isCorrupted &&
