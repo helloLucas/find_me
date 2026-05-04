@@ -1009,8 +1009,8 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다.
-   * Chapter 2에서 사용자가 임시 파일들을 찾는 과정을 유연하게 허용하기 위해 도입되었다.
+   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다. Chapter 2에서 사용자가 임시 파일들을 찾는 과정을 유연하게 허용하기 위해
+   * 도입되었다.
    *
    * @param config transition의 validator_config JSON
    * @param request 유저의 transition 요청
@@ -1075,8 +1075,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다.
-   * '.' 또는 워크스페이스의 절대 경로(/home/guest)를 허용한다.
+   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다. '.' 또는 워크스페이스의 절대 경로(/home/guest)를 허용한다.
    *
    * @param rawRoot 사용자가 입력한 경로 문자열
    * @param latestSnapshot 현재 진행 snapshot
@@ -1814,8 +1813,8 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다.
-   * 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고, 디렉토리는 하위 파일 전체 목록으로 확장한다.
+   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다. 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고, 디렉토리는 하위 파일 전체 목록으로
+   * 확장한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @param rawPaths 유저가 입력한 원본 경로 목록 (예: sys/, *.tmp)
@@ -1856,16 +1855,12 @@ public class StoryServiceImpl implements StoryService {
     return new ArrayList<>(resolvedPaths);
   }
 
-  /**
-   * 경로 문자열에 쉘 와일드카드 문자(*, ?)가 포함되어 있는지 확인한다.
-   */
+  /** 경로 문자열에 쉘 와일드카드 문자(*, ?)가 포함되어 있는지 확인한다. */
   private boolean containsShellGlob(String rawPath) {
     return rawPath != null && (rawPath.contains("*") || rawPath.contains("?"));
   }
 
-  /**
-   * VFS 내에서 Glob 패턴에 매칭되는 모든 파일 경로를 찾는다.
-   */
+  /** VFS 내에서 Glob 패턴에 매칭되는 모든 파일 경로를 찾는다. */
   private List<String> expandVfsGlob(JsonNode latestSnapshot, VfsContext vfs, String rawPattern) {
     // 입력 패턴을 절대 경로 패턴으로 변환
     String resolvedPattern = resolveSnapshotPath(latestSnapshot, rawPattern);
@@ -1876,14 +1871,10 @@ public class StoryServiceImpl implements StoryService {
     Set<String> allFiles = new LinkedHashSet<>();
     collectDescendantFilePaths(vfs, vfs.getRootPath(), allFiles);
 
-    return allFiles.stream()
-        .filter(path -> path.matches(regex))
-        .collect(Collectors.toList());
+    return allFiles.stream().filter(path -> path.matches(regex)).collect(Collectors.toList());
   }
 
-  /**
-   * Glob 패턴(*, ?)을 Java 정규표현식(Regex)으로 변환한다.
-   */
+  /** Glob 패턴(*, ?)을 Java 정규표현식(Regex)으로 변환한다. */
   private String toPathGlobRegex(String pattern) {
     StringBuilder regex = new StringBuilder("^");
     for (int i = 0; i < pattern.length(); i++) {
@@ -1891,7 +1882,7 @@ public class StoryServiceImpl implements StoryService {
       if (ch == '*') {
         regex.append("[^/]*"); // 디렉토리 경계(/)를 넘지 않는 와일드카드
       } else if (ch == '?') {
-        regex.append("[^/]");  // 단일 문자 와일드카드
+        regex.append("[^/]"); // 단일 문자 와일드카드
       } else {
         // 특수 문자 이스케이프 처리
         if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
@@ -1904,9 +1895,7 @@ public class StoryServiceImpl implements StoryService {
     return regex.toString();
   }
 
-  /**
-   * 특정 디렉토리 하위의 모든 파일 경로를 재귀적으로 수집한다.
-   */
+  /** 특정 디렉토리 하위의 모든 파일 경로를 재귀적으로 수집한다. */
   private void collectDescendantFilePaths(VfsContext vfs, String directoryPath, Set<String> paths) {
     for (VfsNode child : vfs.listChildren(directoryPath)) {
       if (child.isDirectory()) {
@@ -2119,8 +2108,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다.
-   * Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
+   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다. Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
    *
    * @param arg 옵션 토큰
    * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
@@ -2144,8 +2132,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * nc 인자 목록을 전송 검증 구조로 파싱한다.
-   * 다양한 타임아웃 옵션 형식을 지원한다.
+   * nc 인자 목록을 전송 검증 구조로 파싱한다. 다양한 타임아웃 옵션 형식을 지원한다.
    *
    * @param args nc 명령 뒤의 인자 목록
    * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
@@ -3316,7 +3303,7 @@ public class StoryServiceImpl implements StoryService {
         String parentPart = input.substring(0, inputLastSlash);
         // 부모 경로 조각이 비어있으면(예: "/a") 루트('/')를 부모로 설정합니다.
         if (parentPart.isEmpty()) {
-            parentPart = "/";
+          parentPart = "/";
         }
         searchDir = pathResolver.resolve(safeCwd, parentPart, rootPath);
         prefix = input.substring(inputLastSlash + 1);

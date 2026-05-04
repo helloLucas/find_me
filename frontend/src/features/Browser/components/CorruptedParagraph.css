@@ -8,7 +8,9 @@
   background: transparent;
   text-align: left;
   color: #0ff;
-  line-height: 1.75;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.625;
   isolation: isolate;
 }
 
@@ -142,28 +144,22 @@ button.story-corrupted-paragraph {
   0%,
   82%,
   100% {
-    transform: translate3d(0, 0, 0);
     filter: none;
     opacity: 1;
   }
   85% {
-    transform: translate3d(-1px, 0, 0);
     opacity: 0.98;
   }
   87% {
-    transform: translate3d(1px, 0, 0);
     opacity: 0.92;
   }
   89% {
-    transform: translate3d(0, 0, 0);
     filter: blur(0.2px);
   }
   91% {
-    transform: translate3d(-1px, 0, 0);
     opacity: 0.94;
   }
   93% {
-    transform: translate3d(0, 0, 0);
     filter: none;
     opacity: 1;
   }
@@ -174,22 +170,18 @@ button.story-corrupted-paragraph {
   80%,
   100% {
     opacity: 0.08;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
     filter: none;
   }
   84% {
     opacity: 0.42;
-    transform: translate3d(1px, 0, 0);
     clip-path: inset(8% 0 10% 0);
   }
   87% {
-    transform: translate3d(-2px, 0, 0);
     clip-path: inset(38% 0 20% 0);
   }
   90% {
     opacity: 0.18;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
   }
 }
@@ -199,22 +191,18 @@ button.story-corrupted-paragraph {
   78%,
   100% {
     opacity: 0.06;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
     filter: none;
   }
   83% {
     opacity: 0.36;
-    transform: translate3d(-2px, 0, 0);
     clip-path: inset(18% 0 42% 0);
   }
   86% {
-    transform: translate3d(2px, 0, 0);
     clip-path: inset(52% 0 12% 0);
   }
   89% {
     opacity: 0.14;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
   }
 }
@@ -223,44 +211,34 @@ button.story-corrupted-paragraph {
   0%,
   66%,
   100% {
-    transform: translate3d(0, 0, 0);
     filter: none;
     opacity: 1;
   }
   69% {
-    transform: translate3d(-2px, 0, 0);
     opacity: 0.96;
   }
   71% {
-    transform: translate3d(3px, 0, 0);
     opacity: 0.9;
   }
   73% {
-    transform: translate3d(-1px, 0, 0);
     filter: blur(0.5px);
   }
   75% {
-    transform: translate3d(4px, 0, 0);
     opacity: 0.84;
   }
   77% {
-    transform: translate3d(-5px, 0, 0);
     filter: blur(1px);
   }
   79% {
-    transform: translate3d(2px, 0, 0);
     opacity: 0.76;
   }
   81% {
-    transform: translate3d(-3px, 0, 0);
     filter: blur(1.2px);
   }
   83% {
-    transform: translate3d(1px, 0, 0);
     opacity: 0.9;
   }
   85% {
-    transform: translate3d(0, 0, 0);
     filter: none;
     opacity: 1;
   }
@@ -271,12 +249,10 @@ button.story-corrupted-paragraph {
   65%,
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
     filter: none;
   }
   68% {
     opacity: 0.92;
-    transform: translate3d(1px, 0, 0) skewX(-1deg);
   }
   71% {
     opacity: 0.72;
@@ -284,7 +260,6 @@ button.story-corrupted-paragraph {
   }
   74% {
     opacity: 0.64;
-    transform: translate3d(-2px, 0, 0) skewX(1deg);
   }
   77% {
     opacity: 0.86;
@@ -292,7 +267,6 @@ button.story-corrupted-paragraph {
   }
   80% {
     opacity: 0.58;
-    transform: translate3d(0, 0, 0);
   }
   83% {
     opacity: 0.94;
@@ -305,33 +279,27 @@ button.story-corrupted-paragraph {
   62%,
   100% {
     opacity: 0.08;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
     filter: none;
   }
   67% {
     opacity: 0.82;
-    transform: translate3d(5px, 0, 0);
     clip-path: inset(0 0 64% 0);
   }
   71% {
-    transform: translate3d(-7px, 0, 0);
     clip-path: inset(24% 0 26% 0);
   }
   75% {
     opacity: 0.76;
-    transform: translate3d(6px, 0, 0);
     clip-path: inset(58% 0 8% 0);
     filter: blur(1.2px);
   }
   79% {
     opacity: 0.84;
-    transform: translate3d(-6px, 0, 0);
     clip-path: inset(10% 0 44% 0);
   }
   83% {
     opacity: 0.14;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
   }
 }
@@ -341,33 +309,27 @@ button.story-corrupted-paragraph {
   60%,
   100% {
     opacity: 0.06;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
     filter: none;
   }
   66% {
     opacity: 0.8;
-    transform: translate3d(-6px, 0, 0);
     clip-path: inset(48% 0 12% 0);
   }
   70% {
-    transform: translate3d(7px, 0, 0);
     clip-path: inset(16% 0 52% 0);
   }
   74% {
     opacity: 0.8;
-    transform: translate3d(-5px, 0, 0);
     clip-path: inset(70% 0 2% 0);
     filter: blur(1.35px);
   }
   78% {
     opacity: 0.86;
-    transform: translate3d(6px, 0, 0);
     clip-path: inset(4% 0 68% 0);
   }
   82% {
     opacity: 0.12;
-    transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
   }
 }
@@ -376,19 +338,15 @@ button.story-corrupted-paragraph {
   0%,
   65%,
   100% {
-    transform: translateY(0);
     opacity: 0;
   }
   72% {
-    transform: translateY(2px);
     opacity: 0.24;
   }
   78% {
-    transform: translateY(4px);
     opacity: 0.32;
   }
   84% {
-    transform: translateY(1px);
     opacity: 0.08;
   }
 }

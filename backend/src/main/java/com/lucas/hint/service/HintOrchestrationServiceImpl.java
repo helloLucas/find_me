@@ -77,7 +77,9 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
       String safeHint = sanitizeHintText(llmResult.hintText(), expectedInput);
       String safeInputPattern =
           obfuscateExpectedInput(
-              !isBlank(llmResult.nextInputPattern()) ? llmResult.nextInputPattern() : expectedInput);
+              !isBlank(llmResult.nextInputPattern())
+                  ? llmResult.nextInputPattern()
+                  : expectedInput);
 
       return HintLiveResponseDto.builder()
           .hint(safeHint)
@@ -162,7 +164,9 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
   }
 
   private String composeFallbackHint(
-      String hintLevel, HintLiveRetrieveResponseDto retrieval, HintEvidenceResponseDto topEvidence) {
+      String hintLevel,
+      HintLiveRetrieveResponseDto retrieval,
+      HintEvidenceResponseDto topEvidence) {
     List<String> fallbackMessages =
         List.of(
             "지금 신호가 불안정해서 너의 채팅을 못봤어. 잠시 후 다시 말을 걸어줘.",
@@ -240,9 +244,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
       return text;
     }
     String sanitized = text;
-    sanitized =
-        sanitized.replaceAll(
-            "(?i)\\b(?:open|go_to|reopen)_[a-z0-9_]+\\b", "관련 버튼");
+    sanitized = sanitized.replaceAll("(?i)\\b(?:open|go_to|reopen)_[a-z0-9_]+\\b", "관련 버튼");
     sanitized = sanitized.replaceAll("(?i)\\bdismiss\\b", "닫기 버튼");
     sanitized = sanitized.replaceAll("(?i)\\bauto\\b", "자동 트리거");
     return sanitized;
@@ -339,4 +341,3 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
         .build();
   }
 }
-
