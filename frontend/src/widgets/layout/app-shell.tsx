@@ -64,7 +64,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         const { tempKey } = event.data;
         openModal({
           title: 'ACCOUNT_LINKING',
-          message: '동일한 이메일로 이미 가입된 계정이 존재합니다.\n해당 계정에 현재 소셜 로그인을 연동하시겠습니까?\n\n[확인] 시 하나의 계정으로 두 소셜 로그인을 모두 사용할 수 있습니다.',
+          message: '동일한 이메일로 이미 가입된 계정이 존재합니다.\n해당 계정에 현재 소셜 로그인을 연동하시겠습니까?',
           type: 'confirm',
           onConfirm: async () => {
             try {
