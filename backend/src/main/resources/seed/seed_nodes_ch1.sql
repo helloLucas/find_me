@@ -3,13 +3,14 @@
 BEGIN;
 
 INSERT INTO
-    chapters (code, title, sort_order)
-VALUES ('week01', 'Week 01', 1)
+    chapters (code, title, sort_order, is_published)
+VALUES ('week01', 'Week 01', 1, true)
 ON CONFLICT (code) DO
 UPDATE
 SET
     title = EXCLUDED.title,
-    sort_order = EXCLUDED.sort_order;
+    sort_order = EXCLUDED.sort_order,
+    is_published = EXCLUDED.is_published;
 
 INSERT INTO
     story_nodes (
@@ -250,7 +251,7 @@ VALUES (
           "관계 당국과 넥서스는 아직 범죄, 시설 결함, 환경 이상 가운데 어느 가능성도 확정하지 않은 상태다. 다만 시민들이 공통적으로 제기하는 '주변 인물이나 풍경이 뒤늦게 또렷해지거나, 시선을 돌린 뒤 다시 볼 때 형태가 달라 보였다'는 증언에 대해서는 현재까지 납득할 만한 설명이 제시되지 않고 있다. 본지는 추가 제보와 현장 확인을 바탕으로 해당 현상이 실제로 특정 구역에 집중돼 나타나는지, 또 최근 실종 사건들과 어떤 관련이 있는지 계속 추적할 예정이다."
         ],
         "articleCorruption": {
-          "paragraphIndexes": [9, 10, 11],
+          "paragraphIndexes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
           "inspectIndex": 10,
           "intensity": "active"
         }
