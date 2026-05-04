@@ -41,18 +41,18 @@ const FullscreenEnforcer = () => {
                 <div className="absolute bottom-[-4px] right-[-4px] w-5 h-5 border-b border-r border-white/40" />
 
                 <div className="flex flex-col gap-12 w-full">
-                    <div className="flex items-center justify-between opacity-10 text-[9px] font-pixel text-white tracking-[0.3em] px-1">
+                    <div className="flex items-center justify-between opacity-10 text-[9px] font-system-overlay text-white tracking-[0.3em] px-1">
                         <span>SECURE_ACCESS_PROTOCOL</span>
                         <span>v3.0.42</span>
                     </div>
 
                     <div className="flex flex-col gap-10">
                         <div className="flex flex-col gap-4">
-                            <p className="font-pixel text-[22px] md:text-[28px] text-white tracking-tight leading-relaxed text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)] group-hover/window:text-white transition-all duration-500">
+                            <p className="font-system-overlay text-[22px] md:text-[28px] text-white tracking-tight leading-relaxed text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)] group-hover/window:text-white transition-all duration-500">
                                 시각적 몰입을 위해<br />
                                 전체 화면으로 전환해주세요.
                             </p>
-                            <p className="font-pixel text-[11px] md:text-[16px] text-white/50 tracking-wider text-center animate-pulse">
+                            <p className="font-system-overlay text-[11px] md:text-[16px] text-white/50 tracking-wider text-center animate-pulse">
                                 더 생생한 경험을 위해 소리를 켜주세요.
                             </p>
                         </div>
@@ -65,7 +65,7 @@ const FullscreenEnforcer = () => {
 
                                 {/* Inner Surface (Pops out on hover) */}
                                 <div className="absolute inset-[10px] border-2 border-white/20 group-hover/window:border-white/30 group-hover/key:border-white/50 bg-white/[0.02] group-hover/key:bg-white/[0.08] flex items-center justify-center overflow-hidden rounded-md transition-all duration-500">
-                                    <span className="font-pixel text-2xl text-white/50 group-hover/window:text-white/80 group-hover/key:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/key:drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]">F11</span>
+                                    <span className="font-system-overlay text-2xl text-white/50 group-hover/window:text-white/80 group-hover/key:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/key:drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]">F11</span>
                                     {/* Subtle internal shimmer animation */}
                                     <div className="absolute -inset-x-full top-0 h-full w-full bg-gradient-to-r from-transparent via-white/[0.05] to-transparent animate-[shimmer_3s_infinite]" />
                                 </div>
@@ -76,7 +76,7 @@ const FullscreenEnforcer = () => {
                                 <div className="absolute bottom-[2px] left-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-bottom-left -rotate-45 transition-all duration-500" />
                                 <div className="absolute bottom-[2px] right-[2px] w-[14px] h-[2px] bg-white/10 group-hover/window:bg-white/30 group-hover/key:bg-white/60 origin-bottom-right rotate-45 transition-all duration-500" />
                             </div>
-                            <span className="font-pixel text-[11px] text-white/20 group-hover/window:text-white/40 tracking-[0.6em] uppercase transition-all duration-500">
+                            <span className="font-system-overlay text-[11px] text-white/20 group-hover/window:text-white/40 tracking-[0.6em] uppercase transition-all duration-500">
                                 Click to Engage
                             </span>
                         </div>

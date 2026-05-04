@@ -35,8 +35,11 @@ import com.lucas.user.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +70,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String DISMISS_INPUT = "dismiss";
   private static final String RULE_AUTO_SYSTEM = "AUTO_SYSTEM";
   private static final String RULE_NORMALIZED_COMMAND = "NORMALIZED_COMMAND";
+  private static final String RULE_FIND_TMP_COMMAND = "FIND_TMP_COMMAND";
   private static final String RULE_VIRTUAL_FS_COMMAND = "VIRTUAL_FS_COMMAND";
   private static final String RULE_PARSED_TAR_COMMAND = "PARSED_TAR_COMMAND";
   private static final String RULE_NC_SEND_FILE = "NC_SEND_FILE";
@@ -176,6 +180,9 @@ public class StoryServiceImpl implements StoryService {
     userStoryProgressRepository.save(progress);
     log.info("Story started: User={}, Chapter={}", user.getId(), chapter.getCode());
 
+    String sessionId = "sess_user_" + user.getId();
+    storySessionRedisService.clearRecentCommands(sessionId);
+
     return StoryNodeResponseDto.from(firstNode);
   }
 
@@ -232,104 +239,120 @@ public class StoryServiceImpl implements StoryService {
             .findById(user.getId())
             .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
-    // 현재 유저가 위치한 노드
+    // 현재 유저가 위치한 노드와 챕터 (에러 로그용으로 보관)
     StoryNode currentNode = progress.getLatestNode();
+    Chapter currentChapter = currentNode.getChapter();
 
-    // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
-    List<StoryTransition> transitions =
-        storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+    try {
+      // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
+      List<StoryTransition> transitions =
+          storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
-    // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
-    JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+      // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
+      JsonNode latestSnapshot = progress.getLatestSnapshotJson();
 
-    // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-    StoryTransition matched =
-        transitions.stream()
-            .filter(t -> matchesTransition(t, request, latestSnapshot))
-            .findFirst()
-            .orElse(null);
+      // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
+      StoryTransition matched =
+          transitions.stream()
+              .filter(t -> matchesTransition(t, request, latestSnapshot))
+              .findFirst()
+              .orElse(null);
 
-    if (matched == null) {
-      // ── Step 2: Chapter 2 터미널 Fallback ──
-      // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
-      TransitionResponseDto terminalResponse =
-          handleChapter2TerminalFallback(user, progress, currentNode, request);
-      if (terminalResponse != null) {
-        return terminalResponse;
+      if (matched == null) {
+        // ── Step 2: Chapter 2 터미널 Fallback ──
+        // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
+        TransitionResponseDto terminalResponse =
+            handleChapter2TerminalFallback(user, progress, currentNode, request);
+        if (terminalResponse != null) {
+          return terminalResponse;
+        }
+
+        // 예상치 못한 오류(ERROR)를 ES에 기록
+        logStoryAction(user, progress.getLatestChapter(), currentNode, null, request, "ERROR");
+
+        // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
+        CustomException e = new CustomException(ErrorCode.A1001);
+        recordRejectedTransitionAction(user, progress, currentNode, request, e);
+        // 기존 API 에러 응답 흐름은 유지해야 하므로 원래 예외를 다시 던진다.
+        throw e;
       }
 
-      // 매칭 실패도 힌트 맥락에 필요하므로 기존 진행 상태 기준으로 recent-actions에 남긴다.
-      CustomException e = new CustomException(ErrorCode.A1001);
-      recordRejectedTransitionAction(user, progress, currentNode, request, e);
-      // 기존 API 에러 응답 흐름은 유지해야 하므로 원래 예외를 다시 던진다.
-      throw e;
-    }
+      // 매칭된 전이의 도착 노드 추출
+      StoryNode nextNode = matched.getToNode();
 
-    // 매칭된 전이의 도착 노드 추출
-    StoryNode nextNode = matched.getToNode();
+      // ── FAIL 노드 판별 ──
+      // 코드에 "_FAIL_"이 포함된 노드는 일시적 피드백 전용 노드이다.
+      // FAIL 노드로 이동 시에는 유저 진행 상태를 갱신하지 않고, result=retry로 반환한다.
+      boolean isFailNode = nextNode.getCode().contains("_FAIL_");
 
-    // ── FAIL 노드 판별 ──
-    // 코드에 "_FAIL_"이 포함된 노드는 일시적 피드백 전용 노드이다.
-    // FAIL 노드로 이동 시에는 유저 진행 상태를 갱신하지 않고, result=retry로 반환한다.
-    // 이렇게 해야 플레이어가 오답 입력 후 다시 정답을 입력했을 때 원래 노드 기준으로 전이가 판정된다.
-    boolean isFailNode = nextNode.getCode().contains("_FAIL_");
+      if (isFailNode) {
+        Chapter failChapter = nextNode.getChapter();
+        JsonNode failSnapshot =
+            createTransitionSnapshot(
+                failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+        progress.updateProgress(failChapter, nextNode, failSnapshot);
+        userStoryProgressRepository.save(progress);
 
-    if (isFailNode) {
-      Chapter failChapter = nextNode.getChapter();
-      JsonNode failSnapshot =
+        log.info(
+            "Fail node reached (progress updated): User={}, FailNode={}",
+            user.getId(),
+            nextNode.getCode());
+
+        // ELK/RAG 행동 로깅 (incoming)
+        logStoryAction(user, failChapter, currentNode, nextNode, request, "FAIL");
+
+        // 실패 노드 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
+        recordRecentActionAfterCommit(
+            buildRecentActionEvent(
+                user,
+                failChapter,
+                request,
+                matched,
+                currentNode,
+                nextNode,
+                failSnapshot,
+                "FAIL_RETRY"));
+        // 기존 프론트 응답 result는 retry를 유지한다.
+        return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry", failSnapshot);
+      }
+
+      // 도착 노드가 속한 챕터 정보
+      Chapter chapter = nextNode.getChapter();
+      // 현재 상태 스냅샷 생성
+      JsonNode snapshot =
           createTransitionSnapshot(
-              failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
-      progress.updateProgress(failChapter, nextNode, failSnapshot);
+              chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+
+      // 유저 진행 상태를 다음 노드로 갱신 후 저장
+      progress.updateProgress(chapter, nextNode, snapshot);
       userStoryProgressRepository.save(progress);
 
-      log.info(
-          "Fail node reached (progress updated): User={}, FailNode={}",
-          user.getId(),
-          nextNode.getCode());
+      // ── Step 4: 챕터 완료 및 다음 챕터 해금 처리 ──
+      // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
+      if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
+        handleChapterCompletion(user, chapter);
+      }
 
-      // ELK/RAG 행동 로깅 (incoming)
-      logStoryAction(user, failChapter, currentNode, nextNode, request, true);
-
-      // 실패 노드 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
+      logStoryAction(user, chapter, currentNode, nextNode, request, "SUCCESS");
+      // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
+      // 정상 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
       recordRecentActionAfterCommit(
           buildRecentActionEvent(
-              user,
-              failChapter,
-              request,
-              matched,
-              currentNode,
-              nextNode,
-              failSnapshot,
-              "FAIL_RETRY"));
-      // 기존 프론트 응답 result는 retry를 유지한다.
-      return buildResponseFromNode(nextNode, matched.getEffectBundle(), "retry", failSnapshot);
+              user, chapter, request, matched, currentNode, nextNode, snapshot, "SUCCESS_MOVE"));
+
+      return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success", snapshot);
+    } catch (Exception e) {
+      // 예상치 못한 시스템 에러 발생 시 ERROR 로그를 남기고 예외를 다시 던집니다.
+      if (!(e instanceof CustomException)) {
+        log.error(
+            "Critical error during processTransition: User={}, Action={}",
+            user.getId(),
+            request.getActionType(),
+            e);
+        logStoryAction(user, currentChapter, currentNode, null, request, "ERROR");
+      }
+      throw e;
     }
-
-    // 도착 노드가 속한 챕터 정보
-    Chapter chapter = nextNode.getChapter();
-    // 현재 상태 스냅샷 생성
-    JsonNode snapshot =
-        createTransitionSnapshot(
-            chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
-
-    // 유저 진행 상태를 다음 노드로 갱신 후 저장
-    progress.updateProgress(chapter, nextNode, snapshot);
-    userStoryProgressRepository.save(progress);
-
-    // ── Step 4: 챕터 완료 및 다음 챕터 해금 처리 ──
-    // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
-    if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
-      handleChapterCompletion(user, chapter);
-    }
-
-    logStoryAction(user, chapter, currentNode, nextNode, request, false);
-    // 다음 노드 정보와 전이 효과(effects)를 응답 DTO로 변환하여 반환
-    // 정상 이동 결과를 transaction commit 이후 Redis recent-actions에 반영한다.
-    recordRecentActionAfterCommit(
-        buildRecentActionEvent(
-            user, chapter, request, matched, currentNode, nextNode, snapshot, "SUCCESS_MOVE"));
-
-    return buildResponseFromNode(nextNode, matched.getEffectBundle(), "success", snapshot);
   }
 
   // ──────────────────────────────────────────────
@@ -343,7 +366,7 @@ public class StoryServiceImpl implements StoryService {
       StoryNode currentNode,
       StoryNode nextNode,
       TransitionRequestDto request,
-      boolean isFail) {
+      String result) {
 
     String actionType = request.getActionType();
     // command, inspect, click 외의 액션은 필요시 필터링 가능 (일단 모든 액션을 고려해 적용)
@@ -358,8 +381,12 @@ public class StoryServiceImpl implements StoryService {
     String sessionId = resolveSessionId(user, request);
 
     // Redis fail_count 조회/갱신
+    // FAIL 또는 ERROR일 때 카운트를 올리고, SUCCESS일 때만 리셋합니다.
+    boolean isFail = "FAIL".equals(result) || "ERROR".equals(result);
+    boolean isSuccess = "SUCCESS".equals(result);
     boolean shouldResetFailCountOnSuccess =
-        isFail || !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+        isSuccess && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+
     int failCountAfterAction =
         storyActionLogService.updateAndGetFailCount(
             sessionId, isFail, shouldResetFailCountOnSuccess);
@@ -379,11 +406,16 @@ public class StoryServiceImpl implements StoryService {
       }
     }
 
+    // source 추출 (어디서 요청을 보냈는지: browser, terminal 등)
+    String source = null;
+    if (request.getMeta() != null && request.getMeta().containsKey("source")) {
+      source = String.valueOf(request.getMeta().get("source"));
+    }
+
     String timestamp = storyActionLogService.generateTimestamp();
     String chapterId = chapter != null ? chapter.getCode() : "UNKNOWN";
     String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
     String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
-    String result = isFail ? "FAIL" : "SUCCESS";
 
     StoryActionLogEvent event =
         StoryActionLogEvent.builder()
@@ -400,6 +432,7 @@ public class StoryServiceImpl implements StoryService {
             .failCountAfterAction(failCountAfterAction)
             .hintRequested(hintRequested)
             .stateVersion(stateVersion)
+            .source(source)
             .build();
 
     storySessionRedisService.recordAction(
@@ -413,7 +446,8 @@ public class StoryServiceImpl implements StoryService {
             result,
             fromNodeId,
             toNodeId,
-            hintRequested));
+            hintRequested,
+            source));
 
     // 한 줄 JSON 형태로 로거에 쏨
     storyActionLogService.logAction(event);
@@ -442,7 +476,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   // ══════════════════════════════════════════════
-  //  Private Helper Methods
+  // Private Helper Methods
   // ══════════════════════════════════════════════
 
   /**
@@ -796,11 +830,21 @@ public class StoryServiceImpl implements StoryService {
 
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
-      case "exact" -> request.getInputValue().equals(t.getExpectedInput()); // 완전 일치
+      case "exact" ->
+          matchesExactTransition(t.getExpectedInput(), request.getInputValue()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
+  }
+
+  private boolean matchesExactTransition(String expectedInput, String actualInput) {
+    if (actualInput.equals(expectedInput)) {
+      return true;
+    }
+
+    return "ssh guest@172.22.4.19".equals(expectedInput)
+        && "ssh guest@172.22.4.19:22".equals(actualInput);
   }
 
   /**
@@ -844,6 +888,7 @@ public class StoryServiceImpl implements StoryService {
     return switch (rule) {
       case RULE_AUTO_SYSTEM -> matchesAutoSystemRule(request);
       case RULE_NORMALIZED_COMMAND -> matchesNormalizedCommandRule(config, request, latestSnapshot);
+      case RULE_FIND_TMP_COMMAND -> matchesFindTmpCommandRule(config, request, latestSnapshot);
       case RULE_VIRTUAL_FS_COMMAND -> matchesVirtualFsCommandRule(config, request, latestSnapshot);
       case RULE_PARSED_TAR_COMMAND -> matchesParsedTarCommandRule(config, request, latestSnapshot);
       case RULE_NC_SEND_FILE -> matchesNcSendFileRule(config, request, latestSnapshot);
@@ -964,13 +1009,101 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * VIRTUAL_FS_COMMAND server_rule을 기준으로 파일 경로 기반 명령을 검증한다.
+   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다.
+   * Chapter 2에서 사용자가 임시 파일들을 찾는 과정을 유연하게 허용하기 위해 도입되었다.
    *
    * @param config transition의 validator_config JSON
    * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @return 명령어, resolvedPath, VFS 권한 조건이 모두 맞으면 true
+   * @return 명령어 구조와 검색 대상(루트, 파일 패턴)이 조건에 맞으면 true
    */
+  private boolean matchesFindTmpCommandRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (request == null) {
+      return false;
+    }
+
+    // 선행 플래그나 필수 생성 파일 조건 확인
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    // 입력된 명령어를 파싱하여 'find' 명령어인지 확인
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null || !"find".equals(command.command())) {
+      return false;
+    }
+
+    List<String> args = command.args();
+    // 'find . -name *.tmp' (3개) 또는 'find . -type f -name *.tmp' (5개) 형태 지원
+    if (args.size() != 3 && args.size() != 5) {
+      return false;
+    }
+
+    // 검색 시작 위치가 현재 워크스페이스의 루트(또는 현재 디렉토리)인지 확인
+    if (!isWorkspaceSearchRoot(args.get(0), latestSnapshot)) {
+      return false;
+    }
+
+    boolean nameSeen = false;
+    boolean typeFileSeen = false;
+
+    // 인자들을 순회하며 필수 옵션(-name *.tmp)과 선택 옵션(-type f) 확인
+    for (int i = 1; i < args.size(); i++) {
+      String arg = args.get(i);
+
+      // 파일명 패턴 옵션 확인
+      if ("-name".equals(arg) && i + 1 < args.size() && "*.tmp".equals(args.get(i + 1))) {
+        nameSeen = true;
+        i++; // 옵션 값 건너뜀
+        continue;
+      }
+
+      // 파일 타입 옵션 확인 (선택 사항)
+      if ("-type".equals(arg) && i + 1 < args.size() && "f".equals(args.get(i + 1))) {
+        typeFileSeen = true;
+        i++; // 옵션 값 건너뜀
+        continue;
+      }
+
+      // 허용되지 않은 인자가 섞여 있으면 실패
+      return false;
+    }
+
+    // 최소한 -name *.tmp는 포함되어야 하며, 인자 개수가 5개라면 -type f도 확인되어야 함
+    return nameSeen && (args.size() == 3 || typeFileSeen);
+  }
+
+  /**
+   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다.
+   * '.' 또는 워크스페이스의 절대 경로(/home/guest)를 허용한다.
+   *
+   * @param rawRoot 사용자가 입력한 경로 문자열
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 유효한 루트 경로면 true
+   */
+  private boolean isWorkspaceSearchRoot(String rawRoot, JsonNode latestSnapshot) {
+    if (rawRoot == null || rawRoot.isBlank()) {
+      return false;
+    }
+
+    // 경로 끝의 '/' 제거 및 정규화
+    String normalized =
+        rawRoot.endsWith("/") && rawRoot.length() > 1
+            ? rawRoot.substring(0, rawRoot.length() - 1)
+            : rawRoot;
+
+    // '.'인 경우 현재 작업 디렉토리가 루트인지 확인
+    if (".".equals(normalized)) {
+      String cwd = extractText(latestSnapshot, "/terminal/cwd");
+      return cwd == null || cwd.isBlank() || CHAPTER_02_DEFAULT_CWD.equals(cwd);
+    }
+
+    // 절대/상대 경로를 해소하여 VFS의 루트 경로와 일치하는지 확인
+    String resolvedRoot = resolveSnapshotPath(latestSnapshot, rawRoot);
+    return createVfsContext(latestSnapshot).getRootPath().equals(resolvedRoot);
+  }
+
   private boolean matchesVirtualFsCommandRule(
       JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
     // flags 조건이 붙은 VFS 명령은 먼저 선행 상태를 확인한다.
@@ -1088,7 +1221,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 입력 파일 경로들을 현재 cwd 기준 절대 경로로 변환한다.
-    List<String> resolvedFiles = resolvePaths(latestSnapshot, tarCommand.inputFiles());
+    List<String> resolvedFiles = resolveTarInputPaths(latestSnapshot, tarCommand.inputFiles());
 
     // requiredFiles는 순서와 무관하게 모두 포함되어야 한다.
     if (!containsAllPaths(resolvedFiles, getTextArrayField(config, "requiredFiles"))) {
@@ -1148,7 +1281,8 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // timeoutSeconds가 seed와 일치해야 한다.
-    if (ncCommand.timeoutSeconds() != config.path("timeoutSeconds").asInt()) {
+    if (ncCommand.timeoutSeconds() != null
+        && ncCommand.timeoutSeconds() != config.path("timeoutSeconds").asInt()) {
       // timeout 값이 다르면 전송 command로 인정하지 않는다.
       return false;
     }
@@ -1447,7 +1581,7 @@ public class StoryServiceImpl implements StoryService {
   private record ParsedTarCommand(String outputFile, List<String> inputFiles) {}
 
   /** NC_SEND_FILE 검증에 필요한 nc 명령 구조입니다. */
-  private record ParsedNcCommand(int timeoutSeconds, String host, int port, String stdinFile) {}
+  private record ParsedNcCommand(Integer timeoutSeconds, String host, int port, String stdinFile) {}
 
   /**
    * server_rule 공통 선행 조건을 검사한다.
@@ -1680,12 +1814,111 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 여러 입력 경로를 현재 snapshot 기준 VFS 절대 경로로 정규화한다.
+   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다.
+   * 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고, 디렉토리는 하위 파일 전체 목록으로 확장한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPaths 원문 경로 목록
-   * @return 정규화된 절대 경로 목록
+   * @param rawPaths 유저가 입력한 원본 경로 목록 (예: sys/, *.tmp)
+   * @return 해소된 VFS 절대 경로들의 리스트 (중복 제거)
    */
+  private List<String> resolveTarInputPaths(JsonNode latestSnapshot, List<String> rawPaths) {
+    VfsContext vfs = createVfsContext(latestSnapshot);
+    // 순서를 유지하면서 중복을 제거하기 위해 LinkedHashSet 사용
+    Set<String> resolvedPaths = new LinkedHashSet<>();
+
+    for (String rawPath : rawPaths) {
+      // 1. 와일드카드(*, ?) 패턴인 경우
+      if (containsShellGlob(rawPath)) {
+        List<String> expandedPaths = expandVfsGlob(latestSnapshot, vfs, rawPath);
+        if (expandedPaths.isEmpty()) {
+          // 매칭되는 파일이 없더라도 유효성 검사를 위해 일단 해소된 경로 추가
+          resolvedPaths.add(resolveSnapshotPath(latestSnapshot, rawPath));
+        } else {
+          resolvedPaths.addAll(expandedPaths);
+        }
+        continue;
+      }
+
+      // 2. 일반 경로인 경우 (상대/절대 경로 해소)
+      String resolvedPath = resolveSnapshotPath(latestSnapshot, rawPath);
+      VfsNode node = vfs.resolve(resolvedPath);
+
+      // 디렉토리인 경우 하위의 모든 파일 경로를 수집 (tar의 디렉토리 아카이빙 특성 반영)
+      if (node != null && node.isDirectory()) {
+        collectDescendantFilePaths(vfs, resolvedPath, resolvedPaths);
+        continue;
+      }
+
+      // 일반 파일인 경우 그대로 추가
+      resolvedPaths.add(resolvedPath);
+    }
+
+    return new ArrayList<>(resolvedPaths);
+  }
+
+  /**
+   * 경로 문자열에 쉘 와일드카드 문자(*, ?)가 포함되어 있는지 확인한다.
+   */
+  private boolean containsShellGlob(String rawPath) {
+    return rawPath != null && (rawPath.contains("*") || rawPath.contains("?"));
+  }
+
+  /**
+   * VFS 내에서 Glob 패턴에 매칭되는 모든 파일 경로를 찾는다.
+   */
+  private List<String> expandVfsGlob(JsonNode latestSnapshot, VfsContext vfs, String rawPattern) {
+    // 입력 패턴을 절대 경로 패턴으로 변환
+    String resolvedPattern = resolveSnapshotPath(latestSnapshot, rawPattern);
+    // Glob 패턴을 정규표현식으로 변환
+    String regex = toPathGlobRegex(resolvedPattern);
+
+    // VFS의 모든 파일 경로를 수집하여 정규식과 매칭
+    Set<String> allFiles = new LinkedHashSet<>();
+    collectDescendantFilePaths(vfs, vfs.getRootPath(), allFiles);
+
+    return allFiles.stream()
+        .filter(path -> path.matches(regex))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Glob 패턴(*, ?)을 Java 정규표현식(Regex)으로 변환한다.
+   */
+  private String toPathGlobRegex(String pattern) {
+    StringBuilder regex = new StringBuilder("^");
+    for (int i = 0; i < pattern.length(); i++) {
+      char ch = pattern.charAt(i);
+      if (ch == '*') {
+        regex.append("[^/]*"); // 디렉토리 경계(/)를 넘지 않는 와일드카드
+      } else if (ch == '?') {
+        regex.append("[^/]");  // 단일 문자 와일드카드
+      } else {
+        // 특수 문자 이스케이프 처리
+        if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
+          regex.append('\\');
+        }
+        regex.append(ch);
+      }
+    }
+    regex.append('$');
+    return regex.toString();
+  }
+
+  /**
+   * 특정 디렉토리 하위의 모든 파일 경로를 재귀적으로 수집한다.
+   */
+  private void collectDescendantFilePaths(VfsContext vfs, String directoryPath, Set<String> paths) {
+    for (VfsNode child : vfs.listChildren(directoryPath)) {
+      if (child.isDirectory()) {
+        // 디렉토리면 재귀 호출
+        collectDescendantFilePaths(vfs, child.path(), paths);
+      } else {
+        // 파일이면 경로 추가
+        paths.add(child.path());
+      }
+    }
+  }
+
   private List<String> resolvePaths(JsonNode latestSnapshot, List<String> rawPaths) {
     // 정규화 결과를 입력 순서대로 담는다.
     List<String> resolvedPaths = new ArrayList<>();
@@ -1827,22 +2060,28 @@ public class StoryServiceImpl implements StoryService {
     for (int i = 0; i < command.args().size(); i++) {
       // 현재 인자를 가져온다.
       String arg = command.args().get(i);
+      String optionText = null;
+      if (arg.startsWith("-")) {
+        optionText = arg.substring(1);
+      } else if (i == 0 && isTarOldStyleOptionToken(arg)) {
+        optionText = arg;
+      }
 
       // -cvf, -cf, -f처럼 f 옵션을 포함한 옵션 뒤의 값이 output file이다.
       // 옵션이 아닌 인자는 파일 목록 구간으로 보고 tar 옵션 해석에서 제외한다.
-      if (!arg.startsWith("-")) {
+      if (optionText == null) {
         // 다음 인자로 넘어간다.
         continue;
       }
 
       // c 옵션이 포함되어야 실제 archive 생성 명령으로 인정한다.
-      if (arg.contains("c")) {
+      if (optionText.contains("c")) {
         // 생성 옵션을 확인했다.
         createOptionSeen = true;
       }
 
       // f 옵션이 포함된 옵션 뒤의 값이 output archive 경로다.
-      if (arg.contains("f")) {
+      if (optionText.contains("f")) {
         // output file은 f 옵션 바로 다음 토큰이다.
         outputFileIndex = i + 1;
 
@@ -1880,7 +2119,33 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
+   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다.
+   * Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
+   *
+   * @param arg 옵션 토큰
+   * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
+   */
+  private boolean isTarOldStyleOptionToken(String arg) {
+    if (arg == null || arg.isBlank() || arg.startsWith("-")) {
+      return false;
+    }
+    // 생성(c)과 파일지정(f) 옵션이 반드시 포함되어야 함
+    if (!arg.contains("c") || !arg.contains("f")) {
+      return false;
+    }
+    // 허용된 문자(c, v, f) 이외의 문자가 섞여 있으면 실패
+    for (int i = 0; i < arg.length(); i++) {
+      char option = arg.charAt(i);
+      if (option != 'c' && option != 'v' && option != 'f') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * nc 인자 목록을 전송 검증 구조로 파싱한다.
+   * 다양한 타임아웃 옵션 형식을 지원한다.
    *
    * @param args nc 명령 뒤의 인자 목록
    * @return nc 구조가 맞으면 ParsedNcCommand, 아니면 null
@@ -1900,22 +2165,30 @@ public class StoryServiceImpl implements StoryService {
       // 현재 토큰을 가져온다.
       String arg = args.get(i);
 
-      // -w 다음 토큰은 timeout seconds다.
+      // 1. 공백 분리형 타임아웃 옵션 확인 (예: -w 3)
       if ("-w".equals(arg) && i + 1 < args.size()) {
-        // timeout 값을 정수로 파싱한다.
         timeoutSeconds = parseInteger(args.get(++i));
-
-        // 다음 인자로 이동한다.
+        if (timeoutSeconds == null) {
+          return null;
+        }
         continue;
       }
 
-      // < 다음 토큰은 stdin redirection 파일이다.
-      // Chapter 2 seed에서 허용하지 않은 nc 옵션은 매칭하지 않는다.
+      // 2. 붙임형 타임아웃 옵션 확인 (예: -w3)
+      if (arg.startsWith("-w") && arg.length() > 2) {
+        timeoutSeconds = parseInteger(arg.substring(2));
+        if (timeoutSeconds == null) {
+          return null;
+        }
+        continue;
+      }
+
+      // 3. 기타 옵션 처리 (알 수 없는 옵션은 거부)
       if (arg.startsWith("-")) {
-        // 알 수 없는 옵션이 섞이면 의도한 전송 명령이 아니다.
         return null;
       }
 
+      // 4. 입력 리다이렉션 확인 (예: < decoy.tar)
       if ("<".equals(arg) && i + 1 < args.size()) {
         // stdin 파일 경로를 저장한다.
         stdinFile = args.get(++i);
@@ -1963,7 +2236,7 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // timeout, host, port, stdinFile이 모두 있어야 한다.
-    if (timeoutSeconds == null || positionals.size() != 2 || stdinFile == null) {
+    if (positionals.size() != 2 || stdinFile == null) {
       // nc 전송 명령 구조가 불완전하다.
       return null;
     }
@@ -2845,6 +3118,8 @@ public class StoryServiceImpl implements StoryService {
 
     // decoy.tar 전송 여부는 아직 false다.
     flags.put("decoy_sent", false);
+    flags.put("trace_file_removed", false);
+    flags.put("history_cleared", false);
 
     // 흔적 삭제 완료 여부는 아직 false다.
     flags.put("trace_cleaned", false);
@@ -2913,6 +3188,15 @@ public class StoryServiceImpl implements StoryService {
     progress.updateProgress(currentNode.getChapter(), currentNode, updatedSnapshot);
     userStoryProgressRepository.save(progress);
 
+    // ELK/RAG 행동 로깅 (incoming)
+    logStoryAction(
+        user,
+        currentNode.getChapter(),
+        currentNode,
+        currentNode,
+        request,
+        "SUCCESS".equals(result.resultCode()) ? "SUCCESS" : "FAIL");
+
     // 9. 명령어 실행 결과를 Redis 최근 행동 이력(recent-actions)에 기록합니다.
     // 결과 코드에 따라 성공(SUCCESS_STAY) 또는 실패(FAIL_STAY)로 구분합니다.
     recordRecentActionAfterCommit(
@@ -2979,5 +3263,84 @@ public class StoryServiceImpl implements StoryService {
 
     // 분석된 결과를 객체에 담아 반환합니다.
     return new ParsedCommand(cmd, args, input);
+  }
+
+  /**
+   * 터미널의 VFS 경로 자동완성 후보를 조회합니다.
+   *
+   * @param userId 사용자 식별자
+   * @param cwd 현재 작업 디렉토리
+   * @param input 현재 입력 중인 경로 조각
+   * @return 일치하는 파일 및 디렉토리명 리스트
+   */
+  @Override
+  @Transactional
+  public List<String> getAutocompleteSuggestions(Long userId, String cwd, String input) {
+    // 요청한 유저의 인증 정보를 바탕으로 유저 엔티티를 조회합니다.
+    User user = getAuthenticatedUser(userId);
+    // 해당 유저의 스토리 진행 기록을 조회하며, 없으면 null을 반환합니다.
+    UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
+    // 진행 기록이 존재하면 가장 최근에 저장된 스냅샷(VFS 오버레이 포함)을 가져옵니다.
+    JsonNode latestSnapshot = progress != null ? progress.getLatestSnapshotJson() : null;
+    // 정적 VFS와 유저의 동적 스냅샷을 병합하여 현재 가상 파일 시스템 컨텍스트를 생성합니다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+
+    // VFS의 최상위 루트 경로(예: /home/guest)를 가져옵니다.
+    String rootPath = vfs.getRootPath();
+    // 클라이언트에서 전달받은 현재 경로(cwd)가 비어있으면 루트 경로를 기본값으로 사용합니다.
+    String safeCwd = (cwd == null || cwd.trim().isEmpty()) ? rootPath : cwd;
+    // 사용자가 현재 입력 중인 타겟 문자열이 없으면 빈 문자열로 처리합니다.
+    String target = input == null ? "" : input;
+
+    // 경로 정규화를 위한 리졸버 객체를 생성합니다.
+    PathResolver pathResolver = new PathResolver();
+    // 프론트엔드에서 "~"와 같이 넘겨준 cwd를 실제 절대 경로(/home/guest 등)로 정규화합니다.
+    safeCwd = pathResolver.resolve(rootPath, safeCwd, rootPath);
+
+    String searchDir;
+    String prefix;
+
+    if (input.isEmpty() || input.endsWith("/")) {
+      // 입력이 비어있거나 '/'로 끝나면, 해당 경로 자체를 부모 디렉토리로 간주하고 하위 모든 요소를 대상으로 합니다.
+      searchDir = pathResolver.resolve(safeCwd, input, rootPath);
+      prefix = "";
+    } else {
+      // 입력의 마지막 '/' 위치를 기준으로 부모 디렉토리와 검색 접두사(prefix)를 분리합니다.
+      int inputLastSlash = input.lastIndexOf('/');
+      if (inputLastSlash == -1) {
+        // '/'가 없으면 현재 작업 디렉토리에서 입력을 접두사로 검색합니다.
+        searchDir = safeCwd;
+        prefix = input;
+      } else {
+        // '/'가 있으면 마지막 '/' 이전까지를 부모 경로로, 이후를 접두사로 처리합니다.
+        String parentPart = input.substring(0, inputLastSlash);
+        // 부모 경로 조각이 비어있으면(예: "/a") 루트('/')를 부모로 설정합니다.
+        if (parentPart.isEmpty()) {
+            parentPart = "/";
+        }
+        searchDir = pathResolver.resolve(safeCwd, parentPart, rootPath);
+        prefix = input.substring(inputLastSlash + 1);
+      }
+    }
+
+    // 최종 도출된 부모 디렉토리의 VFS 노드를 조회합니다.
+    VfsNode parentNode = vfs.resolve(searchDir);
+    // 해당 부모 노드가 존재하지 않거나 디렉토리가 아니라면, 자동완성 후보가 없으므로 빈 리스트를 반환합니다.
+    if (parentNode == null || !parentNode.isDirectory()) {
+      return Collections.emptyList();
+    }
+
+    // 부모 디렉토리의 하위 노드 목록을 가져와 스트림으로 처리합니다.
+    return vfs.listChildren(searchDir).stream()
+        // 숨김 처리(hidden)된 파일이나 디렉토리는 자동완성 목록에서 제외합니다.
+        .filter(n -> !n.hidden())
+        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다.
+        .filter(n -> n.name().startsWith(prefix))
+        // 디렉토리일 경우 이름 뒤에 '/'를 붙여 반환하고, 파일이면 이름 그대로 반환합니다.
+        .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
+        // 자동완성 후보군을 알파벳 순으로 정렬합니다.
+        .sorted()
+        // 최종적으로 리스트 형태로 수집하여 반환합니다.
+        .collect(Collectors.toList());
   }
 }

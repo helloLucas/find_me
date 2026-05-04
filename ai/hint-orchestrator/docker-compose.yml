@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  hint-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lucas-hint-orchestrator
+    env_file:
+      - .env
+    ports:
+      - "8201:8201"
+    restart: unless-stopped
+

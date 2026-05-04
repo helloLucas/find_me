@@ -38,12 +38,14 @@ type SetCurrentNodeOptions = {
   transitionSound?: string;
   sourceActionType?: TransitionRequest["actionType"];
   terminalLinesOverride?: string[];
+  source?: "terminal" | "browser";
 };
 
 type ApplyStoryNodeOutputOptions = {
   transitionSound?: string;
   sourceActionType?: TransitionRequest["actionType"];
   terminalLinesOverride?: string[];
+  source?: "terminal" | "browser"; // 명령어가 어디서 시작되었는지 구분
 };
 
 type TerminalPromptContext = {
@@ -74,7 +76,9 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_CONNECT_CORE_SUCCESS: "auto",
   CH1_SSH_CONNECTED: "auto",
   CH2_WORLD_MAP_VIEW: "auto",
+  CH2_RECOVERED_DOCUMENT: "auto",
 };
+const MAPLE_STORY_TERMINAL_SIGNAL = "terminal://maple-story";
 
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
@@ -88,6 +92,12 @@ function resolveChapterCode(chapterCode: string) {
   }
 
   return chapterCode || "week01";
+}
+
+function buildLucasChatScope(chapterCode: string) {
+  const auth = useAuthStore.getState();
+  const actor = auth.isLoggedIn ? auth.nickname || "member" : "guest";
+  return `lucas:${actor}:${chapterCode}`;
 }
 
 function getAuthenticatedPlayerName() {
@@ -214,12 +224,23 @@ function applyStoryNodeOutputBundle(
     browserStore.mergeContent(normalizedOutput.content);
   }
 
+  const content = objectRecord(normalizedOutput.content) ?? {};
+  const documentId = stringValue(content.documentId);
+
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", "chrome");
+    useWindowStore.getState().openWindow("browser", "Web Browser", undefined, "chrome");
   }
 
   if (node.code.startsWith("CH2_") || node.isTerminal) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", "terminal");
+    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
+  }
+
+  if (node.code === "CH2_RECOVERED_DOCUMENT") {
+    useWindowStore.getState().openWindow(
+      "document_viewer",
+      "FRAGMENT_RECOVERED_082.PDF",
+      documentId
+    );
   }
 
   const conversation = normalizeMessengerBundle(outputBundle, node, {
@@ -287,6 +308,11 @@ function applyStoryNodeOutputBundle(
     clientStore.setTerminalContext("guest", "lucas-server", "~");
   }
 
+  // 브라우저에서 실행된 액션이라면 터미널 출력을 건너뜀
+  if (options.source === "browser") {
+    return;
+  }
+
   if (terminalLines.length > 0) {
     const existingSystemLines = new Set(
       clientStore.terminalOutput
@@ -351,11 +377,7 @@ function getRetryTerminalLinesOverride(
 
   if (
     fromNodeCode === "CH1_SSH_AUTH_PROMPT" &&
-    (
-      normalizedInput === "no" ||
-      normalizedInput === "ssh guest@172.22.4.19" ||
-      normalizedInput === "ssh guest@172.22.4.19:22"
-    )
+    normalizedInput === "no"
   ) {
     return [];
   }
@@ -415,8 +437,15 @@ function toTerminalDisplayPath(cwd: string | undefined) {
   return cwd;
 }
 
-function applyTerminalResult(terminalResult: TerminalResult | undefined) {
+function getActionSource(meta: Record<string, unknown> | undefined): "terminal" | "browser" | undefined {
+  return meta?.source === "terminal" || meta?.source === "browser" ? meta.source : undefined;
+}
+
+function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
+
+  // 브라우저에서 보낸 명령어의 결과물(stdout/stderr)은 터미널에 출력하지 않음
+  if (source === "browser") return;
 
   const clientStore = useClientStore.getState();
   const promptContext =
@@ -436,6 +465,11 @@ function applyTerminalResult(terminalResult: TerminalResult | undefined) {
       continue;
     }
 
+    if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
+      useWindowStore.getState().openWindow("terminal2");
+      continue;
+    }
+
     clientStore.appendTerminalOutput("output", String(line));
   }
 
@@ -448,18 +482,18 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   currentNode: null,
   isLoading: false,
   error: null,
-
   initializeStory: async (chapterCode) => {
     if (get().isLoading) return;
-    set({ isLoading: true, error: null });
-    useAuthStore.getState().checkAuth();
-
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
+    get().resetStoryRuntime();
     useBrowserContentStore.getState().resetContent();
     useClientStore.getState().resetClientStore();
     useMessengerStore.getState().resetMessenger();
     useLucasStore.getState().resetLucas();
     useWindowStore.getState().resetWindows();
+
+    set({ isLoading: true, error: null });
+    useAuthStore.getState().checkAuth();
 
     await syncAuthenticatedUserProfile();
 
@@ -493,6 +527,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         transitionSound: options?.transitionSound,
         sourceActionType: options?.sourceActionType,
         terminalLinesOverride: options?.terminalLinesOverride,
+        source: options?.source ?? (options?.sourceActionType === "command" ? "terminal" : undefined),
       }
     );
     if (applyError) {
@@ -501,12 +536,24 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
     const autoInputValue = getAutoSystemInputValue(node);
     if (autoInputValue) {
-      window.setTimeout(() => {
-        const state = get();
-        if (state.currentNode?.id === node.id && !state.isLoading) {
-          void state.submitStoryAction("system", autoInputValue);
+      const scheduleAutoAction = () => {
+        const lucasState = useLucasStore.getState();
+        // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
+        if (lucasState.isDialogueActive) {
+          window.setTimeout(scheduleAutoAction, 500);
+          return;
         }
-      }, 3000);
+
+        // 대화가 끝났거나 없는 경우 0.5초 뒤 액션 실행
+        window.setTimeout(() => {
+          const state = get();
+          if (state.currentNode?.id === node.id && !state.isLoading) {
+            void state.submitStoryAction("system", autoInputValue);
+          }
+        }, 500);
+      };
+
+      scheduleAutoAction();
     }
   },
 
@@ -526,9 +573,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         meta,
       });
       const transitionPlaySound = extractTransitionPlaySound(response.effects);
+      const actionSource = getActionSource(meta);
 
       if (response.result === "stay") {
-        applyTerminalResult(response.terminalResult);
+        applyTerminalResult(response.terminalResult, actionSource);
         set({ currentNode, error: null });
         return;
       }
@@ -554,6 +602,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
             transitionSound: transitionPlaySound,
             sourceActionType: actionType,
             terminalLinesOverride,
+            source: actionSource,
           }
         );
         if (
@@ -617,6 +666,9 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         get().setCurrentNode(normalizedNextNode, {
           transitionSound: transitionPlaySound,
           sourceActionType: actionType,
+          // 성공적인 노드 전이는 게임의 전역 상태 변경을 의미하므로,
+          // 어디서 명령어가 시작되었든 간에 해당 노드의 터미널 출력물을 정상적으로 표시해야 함.
+          // 따라서 source 속성을 명시적으로 브라우저로 넘기지 않음 (기본값 활용).
         });
       }
     } catch (error) {

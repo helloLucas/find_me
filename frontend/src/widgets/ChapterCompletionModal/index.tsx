@@ -38,7 +38,7 @@ export const ChapterCompletionModal: React.FC<ChapterCompletionModalProps> = ({
 
         <div className="flex flex-col gap-12 w-full">
           {/* System Label */}
-          <div className="flex items-center justify-between opacity-30 text-[9px] font-pixel text-green-400 tracking-[0.3em] px-1">
+          <div className="flex items-center justify-between opacity-30 text-[9px] font-system-overlay text-green-400 tracking-[0.3em] px-1">
             <span>SYSTEM_SUCCESS</span>
             <span>CHAPTER_COMPLETED</span>
           </div>
@@ -47,12 +47,12 @@ export const ChapterCompletionModal: React.FC<ChapterCompletionModalProps> = ({
             {/* Success Icon */}
             <div className="flex justify-center">
               <div className="w-16 h-16 border-2 border-green-500/60 rounded-full flex items-center justify-center bg-green-500/10 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-                <span className="font-pixel text-2xl text-green-400">✓</span>
+                <span className="font-system-overlay text-2xl text-green-400">✓</span>
               </div>
             </div>
 
             {/* Main Message */}
-            <p className="font-pixel text-[24px] md:text-[32px] text-green-400 tracking-tight leading-relaxed drop-shadow-[0_0_15px_rgba(34,197,94,0.4)]">
+            <p className="font-system-overlay text-[24px] md:text-[32px] text-green-400 tracking-tight leading-relaxed drop-shadow-[0_0_15px_rgba(34,197,94,0.4)]">
               {message}
             </p>
           </div>
@@ -65,7 +65,7 @@ export const ChapterCompletionModal: React.FC<ChapterCompletionModalProps> = ({
             >
               <div className="absolute inset-0 border border-green-500/40 group-hover/btn:border-green-500/80 group-hover/btn:shadow-[0_0_20px_rgba(34,197,94,0.3)] rounded-md" />
               <div className="absolute inset-[6px] border border-green-500/20 group-hover/btn:border-green-500/50 bg-green-500/[0.05] flex items-center justify-center rounded-sm">
-                <span className="font-pixel text-sm text-green-400/90 group-hover/btn:text-green-300 tracking-wider whitespace-nowrap">
+                <span className="font-system-overlay text-sm text-green-400/90 group-hover/btn:text-green-300 tracking-wider whitespace-nowrap">
                   메인으로 돌아가기
                 </span>
               </div>

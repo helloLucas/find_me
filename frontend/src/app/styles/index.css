@@ -14,9 +14,106 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/web/woff2/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Font area assignments. Change values here to update each UI area. */
+  --lucas-font-app-text: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
+  --lucas-font-auth-flow: var(--lucas-font-app-text);
+  --lucas-font-lobby: var(--lucas-font-app-text);
+  --lucas-font-system-overlay: var(--lucas-font-app-text);
+  --lucas-font-desktop-ui: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-window-title: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-messenger: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-assistant: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --lucas-font-landing-title: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+
+  --lucas-font-terminal: "JetBrains Mono", "Courier New", Courier, monospace;
+  --lucas-font-browser-content: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-browser-chrome: var(--lucas-font-browser-content);
+  --lucas-font-browser-article: var(--lucas-font-browser-content);
+  --lucas-font-browser-game: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
+  --lucas-font-browser-heading: var(--lucas-font-browser-content);
+  --lucas-font-news-title: var(--lucas-font-browser-content);
+  --lucas-font-browser-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --lucas-font-devtools-ui: var(--lucas-font-browser-content);
+  --lucas-font-devtools-code: var(--lucas-font-browser-code);
+}
+
 @theme {
-  --font-pixel: "NeoDunggeunGothicPro", "Press Start 2P", cursive;
-  --font-game: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
+  --font-app-text: var(--lucas-font-app-text);
+  --font-auth-flow: var(--lucas-font-auth-flow);
+  --font-lobby: var(--lucas-font-lobby);
+  --font-system-overlay: var(--lucas-font-system-overlay);
+  --font-desktop-ui: var(--lucas-font-desktop-ui);
+  --font-window-title: var(--lucas-font-window-title);
+  --font-messenger: var(--lucas-font-messenger);
+  --font-browser-chrome: var(--lucas-font-browser-chrome);
+  --font-browser-article: var(--lucas-font-browser-article);
+  --font-browser-game: var(--lucas-font-browser-game);
+  --font-landing-title: var(--lucas-font-landing-title);
+  --font-browser-heading: var(--lucas-font-browser-heading);
+  --font-news-title: var(--lucas-font-news-title);
+  --font-terminal: var(--lucas-font-terminal);
+  --font-browser-content: var(--lucas-font-browser-content);
+  --font-browser-code: var(--lucas-font-browser-code);
+  --font-devtools-ui: var(--lucas-font-devtools-ui);
+  --font-devtools-code: var(--lucas-font-devtools-code);
 }
 
 html,
@@ -28,6 +125,7 @@ body,
   height: 100%;
   overflow: hidden;
   background-color: #0b0216;
+  font-family: var(--lucas-font-app-text);
   /* Fallback deep purple */
 }
 
@@ -149,4 +247,122 @@ img {
   100% {
     transform: translateX(100%);
   }
+}
+
+/* CRT & Scanline Effects for 404 Page */
+.crt-overlay {
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+.scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: rgba(34, 197, 94, 0.1);
+  opacity: 0.4;
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Glitch Effect */
+.glitch-text {
+  position: relative;
+  color: #00D4FF;
+  animation: glitch-skew 1s infinite linear alternate-reverse;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-text::before {
+  left: 2px;
+  text-shadow: -2px 0 #FF00FF;
+  clip: rect(44px, 450px, 56px, 0);
+  animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+  left: -2px;
+  text-shadow: -2px 0 #00ff00;
+  clip: rect(44px, 450px, 56px, 0);
+  animation: glitch-anim2 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(10px, 9999px, 86px, 0); transform: skew(0.5deg); }
+  5% { clip: rect(61px, 9999px, 91px, 0); transform: skew(0.1deg); }
+  10% { clip: rect(82px, 9999px, 38px, 0); transform: skew(0.3deg); }
+  15% { clip: rect(48px, 9999px, 7px, 0); transform: skew(0.8deg); }
+  20% { clip: rect(74px, 9999px, 5px, 0); transform: skew(0.4deg); }
+  25% { clip: rect(51px, 9999px, 98px, 0); transform: skew(0.2deg); }
+  30% { clip: rect(1px, 9999px, 82px, 0); transform: skew(0.9deg); }
+  35% { clip: rect(31px, 9999px, 66px, 0); transform: skew(0.1deg); }
+  40% { clip: rect(56px, 9999px, 95px, 0); transform: skew(0.5deg); }
+  45% { clip: rect(6px, 9999px, 41px, 0); transform: skew(0.4deg); }
+  50% { clip: rect(98px, 9999px, 49px, 0); transform: skew(0.1deg); }
+  55% { clip: rect(41px, 9999px, 13px, 0); transform: skew(0.8deg); }
+  60% { clip: rect(7px, 9999px, 84px, 0); transform: skew(0.3deg); }
+  65% { clip: rect(78px, 9999px, 95px, 0); transform: skew(0.6deg); }
+  70% { clip: rect(21px, 9999px, 62px, 0); transform: skew(0.2deg); }
+  75% { clip: rect(84px, 9999px, 31px, 0); transform: skew(0.7deg); }
+  80% { clip: rect(14px, 9999px, 59px, 0); transform: skew(0.5deg); }
+  85% { clip: rect(92px, 9999px, 17px, 0); transform: skew(0.1deg); }
+  90% { clip: rect(35px, 9999px, 94px, 0); transform: skew(0.8deg); }
+  95% { clip: rect(67px, 9999px, 48px, 0); transform: skew(0.4deg); }
+  100% { clip: rect(28px, 9999px, 73px, 0); transform: skew(0.2deg); }
+}
+
+@keyframes glitch-anim2 {
+  0% { clip: rect(65px, 9999px, 100px, 0); transform: skew(0.3deg); }
+  5% { clip: rect(12px, 9999px, 58px, 0); transform: skew(0.7deg); }
+  10% { clip: rect(89px, 9999px, 24px, 0); transform: skew(0.1deg); }
+  15% { clip: rect(45px, 9999px, 79px, 0); transform: skew(0.5deg); }
+  20% { clip: rect(2px, 9999px, 11px, 0); transform: skew(0.8deg); }
+  25% { clip: rect(71px, 9999px, 42px, 0); transform: skew(0.4deg); }
+  30% { clip: rect(33px, 9999px, 96px, 0); transform: skew(0.2deg); }
+  35% { clip: rect(97px, 9999px, 5px, 0); transform: skew(0.6deg); }
+  40% { clip: rect(18px, 9999px, 83px, 0); transform: skew(0.1deg); }
+  45% { clip: rect(54px, 9999px, 39px, 0); transform: skew(0.9deg); }
+  50% { clip: rect(8px, 9999px, 72px, 0); transform: skew(0.5deg); }
+  55% { clip: rect(86px, 9999px, 21px, 0); transform: skew(0.3deg); }
+  60% { clip: rect(24px, 9999px, 68px, 0); transform: skew(0.7deg); }
+  65% { clip: rect(62px, 9999px, 91px, 0); transform: skew(0.4deg); }
+  70% { clip: rect(95px, 9999px, 15px, 0); transform: skew(0.2deg); }
+  75% { clip: rect(3px, 9999px, 55px, 0); transform: skew(0.8deg); }
+  80% { clip: rect(49px, 9999px, 88px, 0); transform: skew(0.6deg); }
+  85% { clip: rect(77px, 9999px, 6px, 0); transform: skew(0.1deg); }
+  90% { clip: rect(11px, 9999px, 44px, 0); transform: skew(0.5deg); }
+  95% { clip: rect(38px, 9999px, 79px, 0); transform: skew(0.9deg); }
+  100% { clip: rect(82px, 9999px, 32px, 0); transform: skew(0.3deg); }
+}
+
+@keyframes glitch-skew {
+  0% { transform: skew(0deg); }
+  10% { transform: skew(2deg); }
+  20% { transform: skew(-2deg); }
+  30% { transform: skew(1deg); }
+  40% { transform: skew(-1deg); }
+  50% { transform: skew(3deg); }
+  60% { transform: skew(-3deg); }
+  70% { transform: skew(1deg); }
+  80% { transform: skew(-1deg); }
+  90% { transform: skew(2deg); }
+  100% { transform: skew(0deg); }
 }

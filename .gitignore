@@ -3,6 +3,15 @@
 .agents
 **/.env*
 !.env.example
+!**/.env.example
+
+### Python ###
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+**/.pytest_cache/
+**/pip-wheel-metadata/
 
 ### IntelliJ IDEA (Root & Global) ###
 .idea/

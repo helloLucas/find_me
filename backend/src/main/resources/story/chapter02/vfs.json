@@ -64,6 +64,18 @@
       "storyKey": "LAPLACE_FRAGMENT",
       "contentKey": "LAPLACE_FRAGMENT_01"
     },
+    "/home/guest/maple_story.sh": {
+      "type": "file",
+      "name": "maple_story.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "storyKey": "MAPLE_STORY_LAUNCHER",
+      "metadata": {
+        "launcher": "maple_story"
+      }
+    },
     "/home/guest/trash": {
       "type": "directory",
       "name": "trash",
@@ -79,7 +91,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/sys/temp": {
       "type": "directory",
@@ -109,7 +121,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/cache/User_Behavior_88.tmp": {
       "type": "file",
@@ -131,7 +143,7 @@
       "readable": true,
       "executable": true,
       "protected": false,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/tmp/System_Temp_File.tmp": {
       "type": "file",
@@ -153,7 +165,7 @@
       "readable": false,
       "executable": false,
       "protected": true,
-      "hidden": true
+      "hidden": false
     },
     "/home/guest/root/hidden": {
       "type": "directory",

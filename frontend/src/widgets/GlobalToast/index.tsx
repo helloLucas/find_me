@@ -20,7 +20,7 @@ export const GlobalToast = () => {
     <div className="pointer-events-none fixed bottom-16 left-1/2 z-[99998] -translate-x-1/2 px-4">
       <div
         key={toast.id}
-        className="lucas-toast rounded-md border border-white/10 bg-gray-700/95 px-4 py-2 text-center font-pixel text-xs leading-relaxed text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+        className="lucas-toast rounded-md border border-white/10 bg-gray-700/95 px-4 py-2 text-center font-system-overlay text-xs leading-relaxed text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       >
         {toast.message}
       </div>

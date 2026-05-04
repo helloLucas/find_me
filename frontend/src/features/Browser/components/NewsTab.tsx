@@ -17,6 +17,30 @@ type NewsCard = {
   thumbnail?: string;
 };
 
+const DEFAULT_NEWS_CARDS: NewsCard[] = [
+  {
+    id: "good_article",
+    title: "넥서스, 인류의 삶을 바꾼 완전 연결 시스템",
+    summary: "도시 운영부터 개인 건강관리까지, 넥서스 플랫폼이 바꾼 일상의 변화.",
+    publisher: "Nexus Daily",
+    thumbnail: "news_good_01",
+  },
+  {
+    id: "missing_people_article",
+    title: "최근 늘어나는 실종 사례, 단순 통계 이상인가?",
+    summary: "최근 세 달간 보고된 실종 건수가 예년 대비 급증하며 원인 분석이 이어지고 있다.",
+    publisher: "Central News",
+    thumbnail: "news_missing_01",
+  },
+  {
+    id: "dark_article",
+    title: "넥서스의 어두운 면: 사라진 기록들에 대한 제보",
+    summary: "삭제된 문서와 누락된 기록을 추적한 익명 제보가 공개됐다.",
+    publisher: "Unknown Archive",
+    thumbnail: "news_dark_01",
+  },
+];
+
 type NewsViewMode = "auto" | "list" | "article";
 
 interface NewsTabProps {
@@ -55,7 +79,8 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
-  const newsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
+  const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
+  const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
   const articleTitle = typeof content.articleTitle === "string" ? content.articleTitle : null;
   const hasArticle = Boolean(articleTitle);
   const showArticle = viewMode === "list" ? false : viewMode === "article" ? hasArticle : hasArticle;
@@ -110,12 +135,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   return (
     <div
       ref={scrollContainerRef}
-      className="w-full h-full p-4 overflow-y-auto bg-[#0a0514] font-pixel selection:bg-[#a48cff] selection:text-[#0a0514]"
+      className="w-full h-full p-4 overflow-y-auto bg-[#0a0514] font-browser-article selection:bg-[#a48cff] selection:text-[#0a0514]"
       onScroll={handleScroll}
     >
-      <div className="max-w-[680px] border-2 border-[#543ab7] p-6 rounded-sm bg-[#110a26] shadow-[inset_0_0_20px_rgba(84,58,183,0.3)]">
+      <div className="mx-auto w-full max-w-[680px] border-2 border-[#543ab7] p-6 rounded-sm bg-[#110a26] shadow-[inset_0_0_20px_rgba(84,58,183,0.3)]">
         <h1
-          className="text-4xl text-[#c7b3ff] drop-shadow-[0_0_8px_#c7b3ff] mb-4 border-b-2 border-[#543ab7] pb-2 font-serif font-bold tracking-wide"
+          className="text-4xl text-[#c7b3ff] drop-shadow-[0_0_8px_#c7b3ff] mb-4 border-b-2 border-[#543ab7] pb-2 font-news-title font-bold tracking-wide"
           style={{ textShadow: "0 0 10px #c7b3ff, 0 0 20px #8b5cf6" }}
         >
           Void City News
@@ -173,36 +198,56 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         ) : (
           <div className="flex flex-col gap-5 mt-6">
             {newsCards.length > 0 ? (
-              newsCards.map((card) => (
-                <article
-                  key={card.id}
-                  className="border border-[#543ab7] bg-[#0a0514]/70 p-4 rounded-sm hover:border-[#0ff] transition-colors"
-                >
-                  <button
-                    className="block w-full text-left"
-                    onClick={() => {
-                      if (canSubmitStoryAction(currentNode, "click", card.id)) {
-                        void submitStoryClick(card.id);
-                        return;
-                      }
+              newsCards.map((card) => {
+                const canSubmitCardClick = canSubmitStoryAction(currentNode, "click", card.id);
+                const canFallbackOpenArticle = card.id === "dark_article" && hasArticle;
+                const isCardClickable = canSubmitCardClick || canFallbackOpenArticle;
 
-                      onFallbackOpenArticle?.(card);
-                    }}
+                return (
+                  <article
+                    key={card.id}
+                    className={[
+                      "border border-[#543ab7] bg-[#0a0514]/70 p-4 rounded-sm transition-colors",
+                      isCardClickable ? "hover:border-[#0ff]" : "opacity-70",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.25em] text-[#a48cff] mb-2">
-                      {card.publisher ?? "Unknown Archive"}
-                    </p>
-                    <h2 className="text-[#ff9d76] text-xl mb-2 drop-shadow-[0_0_5px_#ff9d76]">
-                      {card.title}
-                    </h2>
-                    {card.summary && (
-                      <p className="text-[#0ff] text-base leading-relaxed drop-shadow-[0_0_2px_#00ffff]">
-                        {card.summary}
+                    <button
+                      type="button"
+                      disabled={!isCardClickable}
+                      className={[
+                        "block w-full text-left",
+                        isCardClickable ? "cursor-pointer" : "cursor-default",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() => {
+                        if (canSubmitCardClick) {
+                          void submitStoryClick(card.id);
+                          return;
+                        }
+
+                        if (canFallbackOpenArticle) {
+                          onFallbackOpenArticle?.(card);
+                        }
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.25em] text-[#a48cff] mb-2">
+                        {card.publisher ?? "Unknown Archive"}
                       </p>
-                    )}
-                  </button>
-                </article>
-              ))
+                      <h2 className="text-[#ff9d76] text-xl mb-2 drop-shadow-[0_0_5px_#ff9d76]">
+                        {card.title}
+                      </h2>
+                      {card.summary && (
+                        <p className="text-[#0ff] text-base leading-relaxed drop-shadow-[0_0_2px_#00ffff]">
+                          {card.summary}
+                        </p>
+                      )}
+                    </button>
+                  </article>
+                );
+              })
             ) : (
               <p className="text-[#0ff] text-base leading-relaxed">
                 No story news data loaded.
