@@ -21,4 +21,3 @@ public class HintEvidenceResponseDto {
   private String content;
   private Map<String, Object> metadata;
 }
-

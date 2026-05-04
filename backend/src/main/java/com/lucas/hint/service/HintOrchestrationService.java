@@ -8,4 +8,3 @@ public interface HintOrchestrationService {
 
   HintLiveResponseDto generateLiveHint(Long userId, HintLiveRetrieveRequestDto request);
 }
-

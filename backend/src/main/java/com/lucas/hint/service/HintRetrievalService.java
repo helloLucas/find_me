@@ -9,4 +9,3 @@ public interface HintRetrievalService {
   /** 실시간 세션 기준으로 벡터 검색을 수행해 evidence를 반환합니다. */
   HintLiveRetrieveResponseDto retrieveLive(Long userId, HintLiveRetrieveRequestDto request);
 }
-
