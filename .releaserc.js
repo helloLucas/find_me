@@ -14,8 +14,7 @@ module.exports = {
         releaseRules: [
           // Breaking changes -> major
           { breaking: true, release: "major" },
-          // All feat commits -> major (including feat!)
-          { type: "feat", release: "major" },
+          { type: "feat", release: "minor" },
           { type: "revert", release: "patch" },
           { type: "fix", release: "patch" },
           { type: "perf", release: "patch" },

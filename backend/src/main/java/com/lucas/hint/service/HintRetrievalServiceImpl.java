@@ -22,8 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 온디맨드 힌트 검색 오케스트레이터입니다.
  *
- * <p>백엔드는 런타임 컨텍스트만 수집하고, 실제 임베딩+벡터검색은 hint-orchestrator(`/v1/hints/retrieve`)에
- * 위임합니다.
+ * <p>백엔드는 런타임 컨텍스트만 수집하고, 실제 임베딩+벡터검색은 hint-orchestrator(`/v1/hints/retrieve`)에 위임합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -65,14 +64,16 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
     int evidenceLimit = resolveEvidenceLimit(request.getEvidenceLimit(), searchTopK);
     double minSimilarity = resolveMinSimilarity(request.getMinSimilarity());
 
-    List<StoryRecentEvent> recentEvents = storySessionRedisService.getRecentEvents(sessionId, resolveRecentLimit());
+    List<StoryRecentEvent> recentEvents =
+        storySessionRedisService.getRecentEvents(sessionId, resolveRecentLimit());
     int failCount = storySessionRedisService.getFailCount(sessionId);
 
     StoryRecentEvent latestEvent = recentEvents.isEmpty() ? null : recentEvents.get(0);
     String actionType = latestEvent != null ? latestEvent.actionType() : null;
     String currentInput = latestEvent != null ? latestEvent.inputValueNorm() : null;
 
-    TransitionExpectation expectation = resolveTransitionExpectation(progress.getLatestNode().getId());
+    TransitionExpectation expectation =
+        resolveTransitionExpectation(progress.getLatestNode().getId());
 
     HintRetrieveOrchestratorClient.HintRetrieveResult result =
         hintRetrieveOrchestratorClient.retrieve(
