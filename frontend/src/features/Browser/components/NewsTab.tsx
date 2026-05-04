@@ -78,6 +78,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = React.useState(0);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
@@ -118,12 +119,17 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
+      const element = event.currentTarget;
+      const { scrollTop, scrollHeight, clientHeight } = element;
+      
+      // 스크롤 진행도 계산 (0 ~ 1)
+      const currentProgress = scrollTop / (scrollHeight - clientHeight || 1);
+      setScrollProgress(currentProgress);
+
       if (!isScrollTriggeredArticleNode || !showArticle) return;
 
-      const element = event.currentTarget;
-      const scrollThreshold = Math.max(16, element.clientHeight * 0.1);
-      const isAtBottom =
-        element.scrollTop + element.clientHeight >= element.scrollHeight - scrollThreshold;
+      const scrollThreshold = Math.max(16, clientHeight * 0.1);
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - scrollThreshold;
 
       if (isAtBottom) {
         triggerArticleScrollTransition();
@@ -153,19 +159,30 @@ export const NewsTab: React.FC<NewsTabProps> = ({
             </h2>
             <div className={articleBodyClassName}>
               {articleBody.map((paragraph, index) => {
-                const isCorrupted = corruptedParagraphIndexes.has(index);
+                const total = articleBody.length;
+                // 스크롤이 내려갈수록 아래쪽 문단까지 서서히 오염됨
+                // 진행도가 0.2일 때부터 시작해서 0.9일 때 전체가 오염되도록 오프셋 조정
+                const corruptionThreshold = (index / total) * 0.7 + 0.2;
+                const isCorruptedByScroll = scrollProgress > corruptionThreshold;
+                
+                // 백엔드 데이터에 의한 오염 또는 스크롤에 의한 오염
+                const isCorrupted = corruptedParagraphIndexes.has(index) || isCorruptedByScroll;
+                
+                // 스크롤 진행도가 높을수록 강도를 active로 격상
+                const dynamicIntensity = scrollProgress > 0.6 ? "active" : (articleCorruption?.intensity ?? "subtle");
+
                 const isInspectable =
                   isCorrupted &&
                   articleCorruption?.inspectIndex === index &&
                   canInspectArticle &&
                   Boolean(inspectTarget);
 
-                if (isCorrupted && articleCorruption) {
+                if (isCorrupted) {
                   return (
                     <CorruptedParagraph
                       key={`${currentNode?.code}-article-${index}`}
                       text={paragraph}
-                      intensity={articleCorruption.intensity}
+                      intensity={dynamicIntensity}
                       inspectable={isInspectable}
                       onInspect={() => {
                         if (isInspectable && inspectTarget) {
@@ -181,13 +198,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                     key={`${currentNode?.code}-article-${index}`}
                     className={[
                       "text-base leading-relaxed text-[#0ff] drop-shadow-[0_0_2px_#00ffff]",
-                      articleCorruption?.intensity === "active"
+                      dynamicIntensity === "active" && isCorrupted
                         ? "story-article-paragraph story-article-paragraph--flicker"
                         : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    data-text={articleCorruption?.intensity === "active" ? paragraph : undefined}
                   >
                     {paragraph}
                   </p>
