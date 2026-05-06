@@ -61,7 +61,7 @@ public class UserService {
     // [계정 연동(Account Linking) 확인] 사용자가 팝업에서 확인 버튼을 누른 경우
     if (request.isConfirmAccountLinking()) {
       User existingUser = userRepository
-          .findByEmail(pendingInfo.getEmail())
+          .findByEmailWithSocialLogins(pendingInfo.getEmail())
           .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 중복 연동 방지: 이미 연동되어 있으면 그대로 반환
@@ -207,7 +207,8 @@ public class UserService {
       throw new CustomException(ErrorCode.H1000);
     }
 
-    User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    // socialLogins를 Fetch Join으로 함께 로드하여 LazyInitializationException 및 N+1 방지
+    User user = userRepository.findByIdWithSocialLogins(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     user.updateNickname(trimmedNickname);
     log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);
@@ -233,7 +234,8 @@ public class UserService {
    */
   @Transactional(readOnly = true)
   public UserResponseDto getUserProfile(Long userId) {
-    User user = userRepository.findById(userId)
+    // socialLogins를 Fetch Join으로 함께 로드하여 LazyInitializationException 및 N+1 방지
+    User user = userRepository.findByIdWithSocialLogins(userId)
         .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
     AuthProvider provider = user.getSocialLogins().isEmpty()

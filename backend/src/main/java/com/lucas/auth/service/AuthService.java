@@ -16,8 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
+/**
+ * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -59,6 +62,7 @@ public class AuthService {
    * @return 발급된 새로운 토큰 정보를 담은 객체
    * @throws CustomException 토큰이 유효하지 않거나 일치하지 않을 경우 발생
    */
+  @Transactional
   public RefreshTokenResponse refresh(String refreshToken) {
     if (refreshToken == null || refreshToken.isBlank()) {
       throw new CustomException(ErrorCode.H1000);
@@ -94,7 +98,7 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user = userRepository.findByIdWithSocialLogins(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
       AuthProvider provider = user.getSocialLogins().isEmpty()
