@@ -256,6 +256,9 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                     onClick={() => {
                       if (canClickAction) {
                         void submitStoryClick(action.actionType);
+                        if (action.actionType === "friend_message_link") {
+                          useBrowserContentStore.getState().triggerNewsTabClick();
+                        }
                       } else if (isAlwaysClickable) {
                         openWindow("chrome");
                         useBrowserContentStore.getState().triggerNewsTabClick();

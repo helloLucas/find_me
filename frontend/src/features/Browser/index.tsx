@@ -52,6 +52,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     }
   }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
 
+  // 브라우저가 종료될 때(언마운트 시) 메신저 기사 추가 클릭 트리거 상태를 0으로 초기화
+  useEffect(() => {
+    return () => {
+      useBrowserContentStore.getState().resetNewsTabClickTrigger();
+    };
+  }, []);
+
   const [tabs, setTabs] = useState<Tab[]>(() => {
     if (windowId === "terminal2") {
       return [{
@@ -60,6 +67,23 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         url: "system://terminal2/starforce",
         component: "starforce",
         history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
+        historyIndex: 0,
+      }];
+    }
+
+    // 메신저 기사 클릭 트리거가 활성화된 경우, 기사 탭을 기본 첫 탭으로 노출하여 중복 생성 방지
+    const initialTrigger = useBrowserContentStore.getState().newsTabClickTrigger;
+    if (initialTrigger > 0) {
+      const snapshot = resolveNewsSnapshot(currentNode?.code, typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined) || {
+        url: "https://voidcity-news/recent/1",
+        title: "News",
+      };
+      return [{
+        id: "tab1",
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
         historyIndex: 0,
       }];
     }
@@ -75,19 +99,6 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         historyIndex: 0,
       }];
     }
-    
-    // 기본값 (챕터 1 등)
-    if (currentNode?.code === "CH1_NEWS_PORTAL" || currentNode?.code?.includes("ARTICLE")) {
-      return [{
-        id: "tab1",
-        title: "News",
-        url: "https://voidcity-news/recent/1",
-        component: "news",
-        history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "News" }],
-        historyIndex: 0,
-      }];
-    }
-
     return [{
       id: "tab1",
       title: "Search",
@@ -339,11 +350,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   useEffect(() => {
     if (!currentNode || !activeTab) return;
-    if (
-      activeTab.component !== "news" &&
-      activeTab.component !== "search" &&
-      activeTab.component !== "home"
-    ) return;
+    if (activeTab.component !== "news") return;
 
     const skipNodeId = skipAutoSyncNodeIdByTabRef.current[activeTab.id];
     if (typeof skipNodeId === "number") {
@@ -371,18 +378,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
       setTabs((prev) => {
         const hasNewsTab = prev.some((tab) => tab.component === "news");
-        if (!hasNewsTab && (currentNode.code === "CH1_NEWS_PORTAL" || currentNode.code.includes("ARTICLE"))) {
-          const newId = `tab_news_${Date.now()}`;
-          const newTab = {
-            id: newId,
-            title: snapshot.title,
-            url: snapshot.url,
-            component: "news" as const,
-            history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
-            historyIndex: 0,
-          };
-          queueMicrotask(() => setActiveTabId(newId));
-          return [...prev, newTab];
+        if (!hasNewsTab) {
+          return prev;
         }
 
         let changed = false;
