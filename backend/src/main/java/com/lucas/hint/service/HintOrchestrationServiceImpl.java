@@ -84,9 +84,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .selectedPhase(retrieval.getSelectedPhase())
           .lowConfidence(retrieval.isLowConfidence())
           .failCountAfterAction(retrieval.getFailCountAfterAction())
-          .whyThisHint(llmResult.whyThisHint())
-          .nextActionType(llmResult.nextActionType())
-          .usedTransitionIds(llmResult.usedTransitionIds())
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
           .retrieval(sanitizedRetrieval)
@@ -103,9 +100,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .selectedPhase(retrieval.getSelectedPhase())
           .lowConfidence(retrieval.isLowConfidence())
           .failCountAfterAction(retrieval.getFailCountAfterAction())
-          .whyThisHint("llm_orchestrator_unavailable_fallback")
-          .nextActionType(topEvidence != null ? topEvidence.getActionType() : null)
-          .usedTransitionIds(extractUsedTransitionIds(rawTopEvidence))
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
           .retrieval(sanitizedRetrieval)
@@ -146,9 +140,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
         .selectedPhase(retrieval.getSelectedPhase())
         .lowConfidence(true)
         .failCountAfterAction(retrieval.getFailCountAfterAction())
-        .whyThisHint("non_hint_blocked")
-        .nextActionType(null)
-        .usedTransitionIds(List.of())
         .topEvidence(null)
         .esSignal(null)
         .retrieval(retrieval)
@@ -248,13 +239,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
 
   private String safeText(String value) {
     return isBlank(value) ? "action" : value;
-  }
-
-  private List<Long> extractUsedTransitionIds(HintEvidenceResponseDto topEvidence) {
-    if (topEvidence == null || topEvidence.getTransitionId() == null) {
-      return List.of();
-    }
-    return List.of(topEvidence.getTransitionId());
   }
 
   private String fallbackText(String value, String fallback) {

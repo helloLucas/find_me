@@ -30,8 +30,7 @@ def build_prompt(request: HintGenerateRequest) -> str:
         "반드시 JSON 객체 하나만 출력해라. 마크다운 금지.\n"
         "{\n"
         '  "hint_text": "string",\n'
-        '  "hint_level": "LOW_CONFIDENCE|LIGHT|MEDIUM|STRONG",\n'
-        '  "next_action_check": {"action_type":"string|null"}\n'
+        '  "hint_level": "LOW_CONFIDENCE|LIGHT|MEDIUM|STRONG"\n'
         "}"
     )
 

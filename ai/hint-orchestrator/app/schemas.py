@@ -56,16 +56,9 @@ class HintGenerateRequest(BaseModel):
     es_signal: EsSignalInput | None = Field(default=None, validation_alias=AliasChoices("es_signal", "esSignal"))
 
 
-class NextActionCheck(BaseModel):
-    action_type: str | None = None
-
-
 class HintGenerateResponse(BaseModel):
     hint_text: str
     hint_level: str
-    why_this_hint: str
-    next_action_check: NextActionCheck
-    used_transition_ids: list[int] = Field(default_factory=list)
     model: str
 
 

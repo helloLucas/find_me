@@ -28,15 +28,8 @@ const resolveApiBaseUrl = () => {
   return rawApiBaseUrl.replace(/\/+$/, "");
 };
 
-const resolvedApiBaseUrl = resolveApiBaseUrl();
-
-export const resolveApiUrl = (path: string) => {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return resolvedApiBaseUrl ? `${resolvedApiBaseUrl}${normalizedPath}` : normalizedPath;
-};
-
 export const env = {
-  apiBaseUrl: resolvedApiBaseUrl,
+  apiBaseUrl: resolveApiBaseUrl(),
   cdnUrl: import.meta.env.VITE_CDN_URL ?? "https://djbod0nv85jx9.cloudfront.net",
   ga4MeasurementId: rawGa4MeasurementId,
   clarityProjectId: rawClarityProjectId,

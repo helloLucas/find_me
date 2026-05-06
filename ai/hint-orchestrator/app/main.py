@@ -16,7 +16,6 @@ from app.schemas import (
     HintGenerateResponse,
     HintRetrieveRequest,
     HintRetrieveResponse,
-    NextActionCheck,
 )
 from app.vector_search import VectorSearchRepository
 
@@ -82,13 +81,9 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
         )
 
     try:
-        parsed_used_transition_ids = [int(x) for x in parsed.get("used_transition_ids", []) if x is not None]
         response = HintGenerateResponse(
             hint_text=parsed["hint_text"],
             hint_level=parsed["hint_level"],
-            why_this_hint=parsed.get("why_this_hint", ""),
-            next_action_check=NextActionCheck(**(parsed.get("next_action_check") or {})),
-            used_transition_ids=_derive_used_transition_ids(request.evidences, parsed_used_transition_ids),
             model=selected_model.removeprefix("models/"),
         )
     except Exception:
@@ -254,17 +249,6 @@ def _to_text(value) -> str | None:
     return None if value is None else str(value)
 
 
-def _derive_used_transition_ids(
-    evidences: list[EvidenceItem], parsed_used_transition_ids: list[int]
-) -> list[int]:
-    if parsed_used_transition_ids:
-        return parsed_used_transition_ids
-    for evidence in evidences:
-        if evidence.transition_id is not None:
-            return [int(evidence.transition_id)]
-    return []
-
-
 def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
     hint_level = resolve_hint_level(request.fail_count_after_action, request.low_confidence)
     top = request.evidences[0] if request.evidences else None
@@ -275,13 +259,10 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
 
     if top is None:
         hint_text = "현재 노드에서 가능한 행동 유형을 다시 확인하고 직전 행동을 한 단계씩 복기해보세요."
-        action_type = request.action_type
     elif hint_level == "LOW_CONFIDENCE":
         hint_text = "근거 신뢰도가 낮아 정답 단정은 어렵습니다. 같은 행동 타입으로 입력 형식을 점검해보세요."
-        action_type = top.action_type or request.action_type
     elif hint_level == "LIGHT":
         hint_text = f"핵심 행동 타입은 {top.action_type or 'action'} 입니다. 입력 대상과 형식을 먼저 다시 확인해보세요."
-        action_type = top.action_type or request.action_type
     elif hint_level == "MEDIUM":
         if expected_input:
             hint_text = (
@@ -290,24 +271,15 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
             )
         else:
             hint_text = f"지금 노드는 {top.action_type or 'action'} 동작이 핵심입니다. 입력 형식을 더 정확히 맞춰보세요."
-        action_type = top.action_type or request.action_type
     else:
         if expected_input:
             hint_text = f"정답 행동은 {top.action_type or 'action'} 이고, 시도할 값은 `{expected_input}` 입니다."
         else:
             hint_text = f"정답 행동은 {top.action_type or 'action'} 입니다."
-        action_type = top.action_type or request.action_type
-
-    used_transition_ids = [top.transition_id] if top and top.transition_id is not None else []
 
     return HintGenerateResponse(
         hint_text=hint_text,
         hint_level=hint_level,
-        why_this_hint="fallback_generated",
-        next_action_check=NextActionCheck(
-            action_type=action_type,
-        ),
-        used_transition_ids=used_transition_ids,
         model=settings.gms_llm_model.removeprefix("models/"),
     )
 
