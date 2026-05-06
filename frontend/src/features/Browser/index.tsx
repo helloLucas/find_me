@@ -43,7 +43,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger } = useBrowserContentStore();
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -109,6 +109,59 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const articleTitleFromContent =
     typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined;
+
+  // 기사 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 갱신
+  useEffect(() => {
+    if (newsTabClickTrigger === 0) return;
+
+    const snapshot = resolveNewsSnapshot(currentNode?.code, articleTitleFromContent) || {
+      url: "https://voidcity-news/recent/1",
+      title: "News",
+    };
+
+    setTabs((prev) => {
+      const existingNewsTab = prev.find((tab) => tab.component === "news");
+      if (existingNewsTab) {
+        queueMicrotask(() => setActiveTabId(existingNewsTab.id));
+        
+        return prev.map((tab) => {
+          if (tab.id !== existingNewsTab.id) return tab;
+          
+          if (tab.url !== snapshot.url) {
+            const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
+            const nextHistory = [
+              ...truncatedHistory,
+              {
+                url: snapshot.url,
+                title: snapshot.title,
+                component: "news" as const,
+              },
+            ];
+            return {
+              ...tab,
+              url: snapshot.url,
+              title: snapshot.title,
+              history: nextHistory,
+              historyIndex: nextHistory.length - 1,
+            };
+          }
+          return tab;
+        });
+      }
+
+      const newId = `tab_news_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [newsTabClickTrigger, currentNode, articleTitleFromContent]);
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
@@ -608,7 +661,14 @@ function resolveNewsSnapshot(nodeCode: string | undefined, articleTitle?: string
   }
 
   if (nodeCode.includes("ARTICLE")) {
-    const title = articleTitle?.trim() || "Article";
+    let title = articleTitle?.trim();
+    if (!title) {
+      if (nodeCode.includes("DARK_ARTICLE") || nodeCode.includes("SCROLL_CORRUPTION")) {
+        title = "넥서스의 어두운 면: 사라진 기록들에 대한 제보";
+      } else {
+        title = "Article";
+      }
+    }
     return {
       url: `https://voidcity-news/article/${encodeURIComponent(title)}`,
       title,

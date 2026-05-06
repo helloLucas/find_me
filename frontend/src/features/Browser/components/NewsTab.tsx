@@ -212,6 +212,20 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     };
   }, [isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
 
+  useEffect(() => {
+    if (showArticle && scrollContainerRef.current) {
+      const savedScrollTop = useBrowserContentStore.getState().newsScrollTop;
+      if (savedScrollTop > 0) {
+        const timeoutId = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = savedScrollTop;
+          }
+        }, 30);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [showArticle]);
+
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;
     if (lastScrollTriggeredNodeIdRef.current === currentNode.id) return;
@@ -229,6 +243,9 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
       const { scrollTop, scrollHeight, clientHeight } = element;
+
+      useBrowserContentStore.getState().setNewsScrollTop(scrollTop);
+
       const isAtBottom =
         scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
 
