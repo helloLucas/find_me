@@ -121,9 +121,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const articleTitleFromContent =
     typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined;
 
+  const lastNewsTabClickTriggerRef = useRef(0);
+
   // 기사 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 갱신
   useEffect(() => {
     if (newsTabClickTrigger === 0) return;
+    if (newsTabClickTrigger === lastNewsTabClickTriggerRef.current) return;
+    lastNewsTabClickTriggerRef.current = newsTabClickTrigger;
 
     const snapshot = resolveNewsSnapshot(currentNode?.code, articleTitleFromContent) || {
       url: "https://voidcity-news/recent/1",
