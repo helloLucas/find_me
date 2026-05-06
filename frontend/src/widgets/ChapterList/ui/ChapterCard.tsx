@@ -1,5 +1,6 @@
 import { CHAPTER_STATUS, type ChapterStatusValue } from '../../../entities/Chapter/hooks/useChapterStatus';
 import { useModalStore } from '../../../app/store/modalStore';
+import { trackAnalyticsEvent } from '../../../shared/analytics';
 
 interface ChapterCardProps {
     code: string;
@@ -110,7 +111,14 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
     return (
         <div
-            onClick={() => config.action(onClick, openModal)}
+            onClick={() => {
+                trackAnalyticsEvent('chapter_card_clicked', {
+                    chapter_code: code,
+                    chapter_number: chapterId,
+                    chapter_status: status,
+                });
+                config.action(onClick, openModal);
+            }}
             className={`flex-1 border px-6 py-6 flex flex-col justify-center relative overflow-hidden rounded-sm transition-all duration-300 ${config.containerClass}`}
         >
             <div className="z-10">

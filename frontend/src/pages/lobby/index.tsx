@@ -5,6 +5,8 @@ import { ChapterList } from '../../widgets/ChapterList';
 import { GuestWarningBar } from '../../shared/ui/GuestWarningBar';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
 import { useAuthStore } from '../../app/store/authStore';
+import { trackAnalyticsEvent } from '../../shared/analytics';
+import { useTrackVisible } from '../../shared/analytics/useTrackVisible';
 
 /**
  * Lobby 메인 페이지 (Unified Dark Gray Theme)
@@ -15,6 +17,11 @@ const LobbyPage = () => {
     const { nickname, sessionMode, isGuest, isLoading } = useAuthStatus();
     const navigate = useNavigate();
     const { mutate: updateNickname, isPending: isUpdating } = useUpdateNickname();
+    const lobbyViewRef = useTrackVisible<HTMLDivElement>({
+        eventName: 'lobby_visible_5s',
+        params: { page: 'lobby' },
+        minVisibleMs: 5000,
+    });
 
     // 닉네임 인라인 편집 상태
     const [isEditing, setIsEditing] = useState(false);
@@ -25,6 +32,7 @@ const LobbyPage = () => {
     // 편집 모드 진입
     const handleEditStart = () => {
         if (isGuest) return; // 게스트는 닉네임 변경 불가
+        trackAnalyticsEvent('nickname_edit_started');
         setInputValue(nickname || '');
         setEditError('');
         setIsEditing(true);
@@ -64,6 +72,7 @@ const LobbyPage = () => {
             { nickname: trimmed },
             {
                 onSuccess: (response) => {
+                    trackAnalyticsEvent('nickname_updated');
                     const newAccessToken = response.data?.accessToken;
                     if (newAccessToken) {
                         useAuthStore.getState().setAuth(newAccessToken);
@@ -108,7 +117,7 @@ const LobbyPage = () => {
 
     // 레이아웃 흔들림(Layout Shift) 방지를 위한 공통 쉘 컴포넌트 렌더러
     const renderShell = (content: React.ReactNode, warningBar?: React.ReactNode) => (
-        <div className="select-none h-screen w-screen overflow-hidden flex flex-col relative p-4 md:p-8 bg-darkbg text-white font-lobby">
+        <div ref={lobbyViewRef} className="select-none h-screen w-screen overflow-hidden flex flex-col relative p-4 md:p-8 bg-darkbg text-white font-lobby">
             {/* Header */}
             <header className="shrink-0 flex justify-between items-center w-full max-w-5xl mx-auto tracking-widest border-b border-gray-800 pb-3 mb-4 transition-opacity duration-300">
                 <div className="flex gap-6 items-center">
@@ -136,6 +145,7 @@ const LobbyPage = () => {
                             <div className="flex flex-col items-end gap-0.5">
                                 <button
                                     onClick={handleEditStart}
+                                    data-clarity-mask="true"
                                     title={isGuest ? '소셜 로그인 후 닉네임 변경 가능' : '클릭하여 닉네임 변경'}
                                     className={`text-white font-bold border-b pb-1 tracking-[0.1em] flex items-center gap-2 group/nick transition-all ${isGuest
                                             ? 'border-white cursor-default'
@@ -193,6 +203,7 @@ const LobbyPage = () => {
                         <div className="flex flex-col gap-2">
                             <input
                                 ref={inputRef}
+                                data-clarity-mask="true"
                                 type="text"
                                 value={inputValue}
                                 onChange={e => { setInputValue(e.target.value); setEditError(''); }}

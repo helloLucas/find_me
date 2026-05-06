@@ -16,6 +16,7 @@ import {
   UNAVAILABLE_COMMAND_TOAST_MESSAGE,
 } from "./terminalCommandFeedback";
 import { AnimatedTerminalLine } from "./AnimatedTerminalLine";
+import { trackAnalyticsEvent } from "../../shared/analytics";
 
 interface TerminalSceneProps {
   windowId: DesktopWindowId;
@@ -201,6 +202,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     if (
       shouldBlockUnavailableTerminalCommand(activeNode?.code, rawCommand)
     ) {
+      trackAnalyticsEvent("terminal_command_blocked", {
+        node_code: activeNode?.code ?? "unknown",
+        reason: "unavailable_command",
+      });
       showToast(UNAVAILABLE_COMMAND_TOAST_MESSAGE);
       setInputValue("");
       setTimeout(() => inputRef.current?.focus(), 10);
@@ -219,15 +224,25 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     setInputValue("");
 
     setIsProcessing(true);
+    trackAnalyticsEvent("terminal_command_submitted", {
+      node_code: activeNode?.code ?? "unknown",
+    });
 
     try {
       if (!canSubmitStoryAction(activeNode, "command", command)) {
+        trackAnalyticsEvent("terminal_command_rejected", {
+          node_code: activeNode?.code ?? "unknown",
+          reason: "story_guard",
+        });
         const firstWord = rawCommand.split(" ")[0];
         appendTerminalOutput("error", `${firstWord}: command not found`);
         return;
       }
 
       await submitStoryCommand(command, { directory: terminalPath });
+      trackAnalyticsEvent("terminal_command_accepted", {
+        node_code: activeNode?.code ?? "unknown",
+      });
 
       const runtimeError = useStoryRuntimeStore.getState().error;
       if (runtimeError) {
@@ -322,6 +337,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
     if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
       event.preventDefault();
+      trackAnalyticsEvent("terminal_paste_blocked");
       showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
     }
   };
@@ -349,6 +365,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     >
       <div
         ref={scrollContainerRef}
+        data-clarity-mask="true"
         className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-xs leading-tight terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
@@ -395,6 +412,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                   >
                     <input
                       ref={inputRef}
+                      data-clarity-mask="true"
                       type="text"
                       value={inputValue}
                       onChange={(event) => setInputValue(event.target.value)}
@@ -448,6 +466,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
               <form onSubmit={handleCommandSubmit} className="flex-1 flex items-center">
                 <input
                   ref={inputRef}
+                  data-clarity-mask="true"
                   type="text"
                   value={inputValue}
                   onChange={(event) => {

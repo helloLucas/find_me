@@ -16,10 +16,17 @@ import {
   DESKTOP_WINDOW_DEFINITIONS,
 } from "../../shared/config/desktopWindows";
 import { BugReportModal } from "../BugReportModal";
+import { trackAnalyticsEvent } from "../../shared/analytics";
+import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const desktopViewRef = useTrackVisible<HTMLDivElement>({
+    eventName: "desktop_visible_10s",
+    params: { page: "play" },
+    minVisibleMs: 10000,
+  });
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
     startY: number;
@@ -51,6 +58,10 @@ export const Desktop: React.FC = () => {
   ];
 
   const handleIconDoubleClick = (id: string) => {
+    trackAnalyticsEvent("desktop_icon_opened", {
+      icon_id: id,
+    });
+
     if (id === "terminal") {
       openWindow("terminal");
       if (canSubmitStoryAction(currentNode, "click", "open_terminal")) {
@@ -102,6 +113,7 @@ export const Desktop: React.FC = () => {
 
   return (
     <div
+      ref={desktopViewRef}
       className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none font-desktop-ui"
       style={{ backgroundImage: 'url("/display_background.png")' }}
       onContextMenu={(event) => event.preventDefault()}

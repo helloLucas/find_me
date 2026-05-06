@@ -4,6 +4,7 @@ import { WindowFrame } from "../../shared/ui/WindowFrame";
 import { bugReportApi } from "../../shared/api/bugReportApi";
 import { useAuthStore } from "../../app/store/authStore";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
+import { trackAnalyticsEvent } from "../../shared/analytics";
 
 interface BugReportModalProps {
   isOpen: boolean;
@@ -166,6 +167,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       });
 
       await bugReportApi.sendBugReport(formData);
+      trackAnalyticsEvent("bug_report_submitted", {
+        current_chapter: currentChapter,
+        file_count: files.length,
+      });
 
       setSuccess(true);
     } catch (err: any) {
@@ -198,7 +203,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       defaultSize={{ w: 500, h: 650 }}
       minSize={{ w: 400, h: 500 }}
     >
-      <div className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-mono overflow-y-auto terminal-scrollbar relative">
+      <div
+        data-clarity-mask="true"
+        className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-mono overflow-y-auto terminal-scrollbar relative"
+      >
         {/* Compression Overlay */}
         {isCompressing && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] border border-[#00D4FF]/30">
