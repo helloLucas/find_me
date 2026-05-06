@@ -1,15 +1,75 @@
--- 용도: week03(Chapter 3) story_transitions를 초기화 후 재시드하는 스크립트.
--- Chapter 3 seed_transitions_ch3.sql
--- Run after seed_nodes_ch3.sql.
+-- seed_transitions_ch3_corrected.sql
+-- 용도: Chapter 3 수정본 전이 전체를 삽입/갱신합니다.
+-- 실행 순서: seed_nodes_ch3_corrected.sql 실행 후 이 파일을 실행하십시오.
+-- 핵심 수정: CH3_FRIEND_CALL -> CH3_SERVER_AFTER_DECOY 전이를 추가하고, 기존 첫 터미널 전이는 CH3_SERVER_AFTER_DECOY -> CH3_HOME_RECHECK로 유지합니다.
 
 BEGIN;
 
-DELETE FROM story_transitions t
-USING story_nodes n, chapters c
-WHERE t.from_node_id = n.id
-  AND n.chapter_id = c.id
-  AND c.code = 'week03';
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM chapters WHERE code = 'week03') THEN
+        RAISE EXCEPTION 'chapter week03 does not exist. Run seed_nodes_ch3_corrected.sql first.';
+    END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM story_nodes n
+        JOIN chapters c ON c.id = n.chapter_id
+        WHERE c.code = 'week03'
+          AND n.code = 'CH3_FRIEND_CALL'
+    ) THEN
+        RAISE EXCEPTION 'CH3_FRIEND_CALL does not exist. Run seed_nodes_ch3_corrected.sql first.';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM story_nodes n
+        JOIN chapters c ON c.id = n.chapter_id
+        WHERE c.code = 'week03'
+          AND n.code = 'CH3_SERVER_AFTER_DECOY'
+    ) THEN
+        RAISE EXCEPTION 'CH3_SERVER_AFTER_DECOY does not exist. Run seed_nodes_ch3_corrected.sql first.';
+    END IF;
+END $$;
+
+-- 3. Chapter 3 전이 전체 재구성
+DELETE FROM story_transitions t
+USING story_nodes from_node, story_nodes to_node, chapters c_from, chapters c_to
+WHERE t.from_node_id = from_node.id
+  AND t.to_node_id = to_node.id
+  AND from_node.chapter_id = c_from.id
+  AND to_node.chapter_id = c_to.id
+  AND (c_from.code = 'week03' OR c_to.code = 'week03');
+
+
+-- 3-1. 도입 통화 -> 서버 진입
+INSERT INTO story_transitions (
+    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
+)
+SELECT
+    from_node.id,
+    to_node.id,
+    'click',
+    'continue',
+    'exact',
+    $json${
+  "acceptedValues": ["continue"]
+}$json$::jsonb,
+    $json${
+  "setFlags": {
+    "friend_deleted_event_seen": true
+  },
+  "snapshotPatch": {
+    "flags.friend_deleted_event_seen": true,
+    "nodeCode": "CH3_SERVER_AFTER_DECOY"
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+JOIN story_nodes to_node ON to_node.code = 'CH3_SERVER_AFTER_DECOY'
+WHERE from_node.code = 'CH3_FRIEND_CALL';
+
+
+-- 3-2. 기존 Chapter 3 전이 전체
 INSERT INTO story_transitions (
     from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
 )
@@ -21,40 +81,19 @@ SELECT
     'server_rule',
     $json${
   "rule": "NORMALIZED_COMMAND",
-  "command": "ls",
-  "args": [
-    "-al"
-  ],
-  "cwd": "/home/guest"
-}$json$::jsonb,
-    $json${
-  "setFlags": {
-    "home_rechecked": true
-  },
-  "snapshotPatch": {
-    "flags.home_rechecked": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-    100
-FROM story_nodes from_node
-JOIN story_nodes to_node ON to_node.code = 'CH3_HOME_RECHECK'
-WHERE from_node.code = 'CH3_SERVER_AFTER_DECOY';
-
-INSERT INTO story_transitions (
-    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
-)
-SELECT
-    from_node.id,
-    to_node.id,
-    'command',
-    'list_home_with_hidden_la',
-    'server_rule',
-    $json${
-  "rule": "NORMALIZED_COMMAND",
-  "command": "ls",
-  "args": [
-    "-la"
+  "acceptedForms": [
+    {
+      "command": "ls",
+      "argsAnyOrder": [
+        "-al"
+      ]
+    },
+    {
+      "command": "ls",
+      "argsAnyOrder": [
+        "-la"
+      ]
+    }
   ],
   "cwd": "/home/guest"
 }$json$::jsonb,
@@ -4018,7 +4057,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4053,7 +4091,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4088,7 +4125,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4123,7 +4159,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4158,7 +4193,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4193,7 +4227,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4228,7 +4261,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4263,7 +4295,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4298,7 +4329,6 @@ SELECT
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "requiredReadable": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "fragment02_dumped"
   ]
@@ -4681,7 +4711,6 @@ SELECT
   "resolvedPath": "/home/guest/sever_external_nodes.sh",
   "allowRelativePath": true,
   "allowAbsolutePath": true,
-  "requiredExecutable": true,
   "requiredFlags": [
     "safe_zone_registered"
   ]

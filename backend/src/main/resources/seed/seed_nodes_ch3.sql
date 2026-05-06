@@ -1,6 +1,7 @@
--- 용도: week03(Chapter 3) story_nodes 데이터를 시드하는 스크립트.
--- Chapter 3 seed_nodes_ch3.sql
--- Generated from Chapter 3 node specification.
+-- seed_nodes_ch3_corrected.sql
+-- 용도: Chapter 3 수정본 노드 전체를 삽입/갱신합니다.
+-- 실행 순서: 이 파일 실행 후 seed_transitions_ch3_corrected.sql을 실행하십시오.
+-- 핵심 수정: CH3_FRIEND_CALL 도입 통화 노드를 별도로 추가하고, CH3_SERVER_AFTER_DECOY는 서버 알림/루카스 안내 노드로 분리합니다.
 
 BEGIN;
 
@@ -13,6 +14,110 @@ SET title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order,
     is_published = EXCLUDED.is_published;
 
+
+-- 1. Chapter 3 도입 통화 노드
+WITH chapter_row AS (
+    SELECT id FROM chapters WHERE code = 'week03'
+)
+INSERT INTO story_nodes (
+    chapter_id, code, node_type, output_bundle, prompt_type, prompt_meta, is_checkpoint, is_terminal
+)
+SELECT
+    chapter_row.id,
+    'CH3_FRIEND_CALL',
+    'narrative',
+    $json${
+  "scene": {
+    "id": "CH3_FRIEND_CALL",
+    "mode": "call",
+    "bgm": "server_hum_dark",
+    "glitchLevel": 2,
+    "scanPercent": null,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": []
+  },
+  "messages": [
+    {
+      "speaker": "FRIEND",
+      "channel": "call",
+      "text": "{플레이어 이름}... 너 지금 뉴스 보고 있어?",
+      "blocking": true
+    },
+    {
+      "speaker": "FRIEND",
+      "channel": "call",
+      "text": "여기 이상해. 사람들이 멈춘 것처럼 서 있다가... 하나씩 화면에서 지워지고 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "FRIEND",
+      "channel": "call",
+      "text": "방금 내 앞에 있던 사람이 사라졌는데, 아무도 그 사람을 기억 못 해.",
+      "blocking": true
+    },
+    {
+      "speaker": "FRIEND",
+      "channel": "call",
+      "text": "잠깐만... 나도 이름이 생각이 안 나.",
+      "blocking": true
+    },
+    {
+      "speaker": "FRIEND",
+      "channel": "call",
+      "text": "내가 누구한테 전화한 거였지?",
+      "blocking": true
+    },
+    {
+      "speaker": "SYSTEM",
+      "channel": "terminal_notice",
+      "text": "[Disconnected: Node_Deleted]",
+      "blocking": true
+    }
+  ],
+  "notifications": [
+    {
+      "type": "call",
+      "title": "통화 종료",
+      "body": "Disconnected: Node_Deleted",
+      "priority": "critical"
+    }
+  ],
+  "uiMarkers": {
+    "showCallOverlay": true,
+    "callStatus": "disconnected"
+  },
+  "effects": {
+    "showDogAvatar": false,
+    "playSound": "session_deleted",
+    "glitchLevel": 2
+  }
+}$json$::jsonb,
+    'click',
+    $json${
+  "allowedActions": ["click"],
+  "buttons": [
+    {
+      "label": "계속",
+      "value": "continue"
+    }
+  ]
+}$json$::jsonb,
+    TRUE,
+    FALSE
+FROM chapter_row
+ON CONFLICT (code) DO UPDATE
+SET node_type = EXCLUDED.node_type,
+    output_bundle = EXCLUDED.output_bundle,
+    prompt_type = EXCLUDED.prompt_type,
+    prompt_meta = EXCLUDED.prompt_meta,
+    is_checkpoint = EXCLUDED.is_checkpoint,
+    is_terminal = EXCLUDED.is_terminal,
+    updated_at = NOW();
+
+
+-- 2. Chapter 3 기존 노드 전체
 WITH chapter_row AS (
     SELECT id FROM chapters WHERE code = 'week03'
 )
