@@ -38,14 +38,37 @@ axiosInstance.interceptors.response.use(
     },
     async (error) => {
         const originalRequest = error.config;
+        const errorCode = error.response?.data?.code;
+        const status = error.response?.status;
+
+        // E1002: Redis 임시 세션 만료 (register 등 인증 불필요 엔드포인트에서 발생)
+        // 토큰 리프레시를 시도하지 않고 바로 세션 만료 팝업을 표시한다.
+        if (status === 401 && errorCode === 'E1002') {
+            const { useModalStore } = await import('../../app/store/modalStore');
+            useModalStore.getState().openModal({
+                title: 'SESSION_EXPIRED',
+                message: '세션이 만료되었습니다.\n다시 로그인해 주세요.',
+                type: 'alert',
+                onConfirm: () => {
+                    // 1. 상태 초기화 생략 (하드 리다이렉트 시 메모리가 날아가므로 불필요)
+                    // 2. 인증 토큰만 디스크 상에서 안전하게 삭제
+                    tokenManager.clearTokens();
+                    // 3. 즉시 메인 페이지로 이동 (화면이 전환될 때까지 모달이 기존 배경을 가려줌)
+                    window.location.href = '/';
+                    // 4. true를 반환하여 GlobalModal의 closeModal() 작동을 생략 (시각적 방패 유지)
+                    return true;
+                },
+            });
+            return Promise.reject(error);
+        }
 
         // 401 에러이고, 이미 재시도를 한 요청이 아닐 경우에만 리프레시 시도
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
 
             try {
                 // Refresh API 호출 (백엔드 명세: POST /api/v1/auth/refresh)
-                // HttpOnly 쿠키 방식을 사용하므로 바디에 토큰을 실어 보낼 필요가 없으며, 
+                // HttpOnly 쿠키 방식을 사용하므로 바디에 토큰을 실어 보낼 필요가 없으며,
                 // withCredentials: true를 설정하여 브라우저가 쿠키를 서버로 보내도록 합니다.
                 const response = await axios.post<BaseResponse<{ accessToken: string }>>(
                     `${axiosInstance.defaults.baseURL}/api/v1/auth/refresh`,
