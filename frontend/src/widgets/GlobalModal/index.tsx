@@ -13,12 +13,14 @@ export const GlobalModal = () => {
 
     const handleConfirm = () => {
         if (onConfirm) {
-            const preventClose = onConfirm();
-            if (preventClose === true) {
-                return; // 모달을 닫지 않고(closeModal 방지) 흐린 배경(backdrop)을 그대로 유지
+            const preventClose: boolean | void = onConfirm();
+            // 명시적으로 true를 반환하여 닫기를 차단한 경우가 아니라면 항상 모달을 안전하게 닫습니다.
+            if (preventClose !== true) {
+                closeModal();
             }
+        } else {
+            closeModal();
         }
-        closeModal();
     };
 
     const handleCancel = () => {
