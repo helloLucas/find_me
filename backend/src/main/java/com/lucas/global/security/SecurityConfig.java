@@ -2,6 +2,7 @@ package com.lucas.global.security;
 
 import com.lucas.auth.handler.OAuth2LoginFailureHandler;
 import com.lucas.auth.handler.OAuth2LoginSuccessHandler;
+import com.lucas.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.lucas.auth.service.CustomOAuth2UserService;
 import com.lucas.global.config.JwtProperties;
 import com.lucas.global.util.JwtAuthenticationFilter;
@@ -32,6 +33,7 @@ public class SecurityConfig {
   private final CustomOAuth2UserService customOAuth2UserService;
   private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
   private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+  private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthRequestRepository;
   private final JwtUtil jwtUtil;
 
   @Value("${app.cors.allowed-origins}")
@@ -65,6 +67,8 @@ public class SecurityConfig {
             oauth2 ->
                 oauth2
                     .loginPage("/")
+                    .authorizationEndpoint(authEndpoint ->
+                        authEndpoint.authorizationRequestRepository(cookieAuthRequestRepository))
                     .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler)
                     .failureHandler(oAuth2LoginFailureHandler));
