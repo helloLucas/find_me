@@ -2,7 +2,7 @@ import { useModalStore } from '../../app/store/modalStore';
 
 /**
  * GlobalModal
- * 
+ *
  * 전역 상태(useModalStore)에 따라 렌더링되는 사이버펑크 스타일의 공통 모달입니다.
  * alert(확인) 및 confirm(확인/취소) 타입을 지원합니다.
  */
@@ -11,12 +11,16 @@ export const GlobalModal = () => {
 
     if (!isOpen) return null;
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (onConfirm) {
-            const preventClose: boolean | void = onConfirm();
-            // 명시적으로 true를 반환하여 닫기를 차단한 경우가 아니라면 항상 모달을 안전하게 닫습니다.
-            if (preventClose !== true) {
-                closeModal();
+            try {
+                const preventClose: boolean | void = await onConfirm();
+                // 명시적으로 true를 반환하여 닫기를 차단한 경우가 아니라면 항상 모달을 안전하게 닫습니다.
+                if (preventClose !== true) {
+                    closeModal();
+                }
+            } catch (error) {
+                console.error('Error occurred during modal confirm callback execution:', error);
             }
         } else {
             closeModal();
@@ -81,7 +85,7 @@ export const GlobalModal = () => {
                     </button>
                 </div>
             </div>
-            
+
             <style>{`
                 @keyframes hud-fade-in {
                     0% { opacity: 0; transform: scale(0.95) translateY(10px); }
