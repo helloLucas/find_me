@@ -90,8 +90,10 @@ export default function AppShell({ children }: PropsWithChildren) {
                 clientStoreModule.useClientStore.getState().setIsAccessing(false);
                 navigate('/lobby', { replace: true });
               }, 1000);
-            } catch (err) {
+            } catch (err: any) {
               console.error('Account linking failed:', err);
+              // E1002(세션 만료)는 인터셉터에서 이미 팝업을 표시했으므로 중복 방지
+              if (err.response?.data?.code === 'E1002') return;
               openModal({
                 title: 'SYSTEM_ERROR',
                 message: '계정 연동 처리 중 오류가 발생했습니다.',
@@ -135,8 +137,10 @@ export default function AppShell({ children }: PropsWithChildren) {
                 clientStoreModule.useClientStore.getState().setIsAccessing(false);
                 navigate('/lobby', { replace: true });
               }, 1000);
-            } catch (err) {
+            } catch (err: any) {
               console.error('Account switch failed:', err);
+              // E1002(세션 만료)는 인터셉터에서 이미 팝업을 표시했으므로 중복 방지
+              if (err.response?.data?.code === 'E1002') return;
               openModal({
                 title: 'SYSTEM_ERROR',
                 message: '계정 전환 처리 중 오류가 발생했습니다.',

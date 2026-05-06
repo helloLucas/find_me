@@ -15,6 +15,12 @@ public enum ErrorCode {
       "/problems/invalid-request"),
   E1000("E1000", HttpStatus.UNAUTHORIZED, "Unauthorized", "인증이 필요합니다.", "/problems/unauthorized"),
   E1001("E1001", HttpStatus.FORBIDDEN, "Forbidden", "접근 권한이 없습니다.", "/problems/forbidden"),
+  E1002(
+      "E1002",
+      HttpStatus.UNAUTHORIZED,
+      "Session expired",
+      "인증 세션이 만료되었습니다. 다시 로그인해 주세요.",
+      "/problems/session-expired"),
   E3000(
       "E3000",
       HttpStatus.NOT_FOUND,

@@ -12,7 +12,12 @@ export const GlobalModal = () => {
     if (!isOpen) return null;
 
     const handleConfirm = () => {
-        if (onConfirm) onConfirm();
+        if (onConfirm) {
+            const preventClose = onConfirm();
+            if (preventClose === true) {
+                return; // 모달을 닫지 않고(closeModal 방지) 흐린 배경(backdrop)을 그대로 유지
+            }
+        }
         closeModal();
     };
 

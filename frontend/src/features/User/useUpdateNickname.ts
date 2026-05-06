@@ -71,6 +71,10 @@ export const useUpdateNickname = () => {
         },
         onError: (error: any) => {
             console.error('Failed to update nickname:', error);
+
+            // E1002(세션 만료)는 Axios 인터셉터에서 이미 팝업을 표시했으므로 중복 방지
+            if (error.response?.data?.code === 'E1002') return;
+
             const detail = error.response?.data?.detail || '초기 닉네임 설정 중 오류가 발생했습니다.';
             useModalStore.getState().openModal({
                 title: 'SYSTEM_ERROR',

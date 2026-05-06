@@ -190,13 +190,13 @@ public class AuthService {
     String value = redisTemplate.opsForValue().get(PENDING_USER_PREFIX + tempKey);
     if (value == null) {
       log.warn("임시 가입 정보를 찾을 수 없거나 만료되었습니다. tempKey: {}", tempKey);
-      throw new CustomException(ErrorCode.H1000); // 401 혹은 인증 만료 에러
+      throw new CustomException(ErrorCode.E1002); // 401: Redis TTL 만료 → 재인증 필요
     }
     try {
       return objectMapper.readValue(value, PendingUserInfo.class);
     } catch (Exception e) {
       log.error("임시 가입 정보 파싱 실패", e);
-      throw new CustomException(ErrorCode.G1000);
+      throw new CustomException(ErrorCode.G1000); // 500: 서버 내부 파싱 오류
     }
   }
 
