@@ -13,9 +13,10 @@ public interface SocialLoginRepository extends JpaRepository<SocialLogin, Long> 
   /**
    * 소셜 제공자와 제공자 측 유저 식별값으로 소셜 로그인 레코드를 조회합니다.
    *
-   * @param provider       인증 제공자 (GOOGLE, SSAFY 등)
+   * @param provider 인증 제공자 (GOOGLE, SSAFY 등)
    * @param providerUserId 제공자 측 유저 식별값
    * @return 조회된 SocialLogin 정보를 포함한 Optional 객체
    */
-  Optional<SocialLogin> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
+  Optional<SocialLogin> findByProviderAndProviderUserId(
+      AuthProvider provider, String providerUserId);
 }

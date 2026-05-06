@@ -39,7 +39,7 @@ public class UserService {
   /**
    * 가입 대기 중인 사용자의 닉네임을 설정하고 최종적으로 DB에 저장(Insert/Update)합니다.
    *
-   * User(본체)와 SocialLogin(인증 수단)을 분리하여 저장하므로, 가입 완료 시 두 레코드가 함께 생성됩니다.
+   * <p>User(본체)와 SocialLogin(인증 수단)을 분리하여 저장하므로, 가입 완료 시 두 레코드가 함께 생성됩니다.
    *
    * @param request 가입 요청 정보 (tempKey, nickname, guestId)
    * @return 가입 완료 후 발급된 토큰 정보
@@ -52,7 +52,9 @@ public class UserService {
     // 닉네임 누락 (신규 회원 가입 or 순수 게스트 가입일 때는 닉네임 필수)
     // 단, 기존 게스트에서 소셜로 승격하는 경우(guestId != null)는 DB의 기존 닉네임을 사용하므로 예외
     boolean isUpgrade = request.getGuestId() != null;
-    if (!request.isConfirmSwitch() && !isUpgrade && !request.isConfirmAccountLinking()
+    if (!request.isConfirmSwitch()
+        && !isUpgrade
+        && !request.isConfirmAccountLinking()
         && (request.getNickname() == null || request.getNickname().isBlank())) {
       log.warn("닉네임 누락 - 가입 제한");
       throw new CustomException(ErrorCode.H1000);
@@ -159,24 +161,26 @@ public class UserService {
       // 6. 성공/실패 여부와 무관하게 Redis 임시 데이터 반드시 삭제
       authService.deletePendingUserInfo(request.getTempKey());
     }
+
   }
 
   /** 유저를 위한 토큰 세트를 발급합니다. */
   private TokenResponse issueTokensForUser(User user) {
     // provider 정보는 SocialLogin에서 첫 번째 연동 수단을 사용하거나 null 허용
-    AuthProvider provider = user.getSocialLogins().isEmpty()
-        ? null
-        : user.getSocialLogins().get(0).getProvider();
+    AuthProvider provider =
+        user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
-    String accessToken = jwtUtil.createAccessToken(
-        user.getId(),
-        user.getEmail(),
-        user.getNickname(),
-        provider,
-        user.getRole().name(),
-        accessTokenExpiration);
+    String accessToken =
+        jwtUtil.createAccessToken(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            provider,
+            user.getRole().name(),
+            accessTokenExpiration);
 
-    String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+    String refreshToken =
+        jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
     authService.replaceRefreshToken(user.getId(), refreshToken);
 
     return TokenResponse.builder()
@@ -209,14 +213,16 @@ public class UserService {
     }
 
     // socialLogins를 Fetch Join으로 함께 로드하여 LazyInitializationException 및 N+1 방지
-    User user = userRepository.findByIdWithSocialLogins(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user =
+        userRepository
+            .findByIdWithSocialLogins(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     user.updateNickname(trimmedNickname);
     log.info("유저 닉네임 업데이트 완료 - userId: {}, nickname: {}", userId, trimmedNickname);
 
-    AuthProvider provider = user.getSocialLogins().isEmpty()
-        ? null
-        : user.getSocialLogins().get(0).getProvider();
+    AuthProvider provider =
+        user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
     return new UserResponseDto(
         user.getId(),
@@ -235,12 +241,13 @@ public class UserService {
   @Transactional(readOnly = true)
   public UserResponseDto getUserProfile(Long userId) {
     // socialLogins를 Fetch Join으로 함께 로드하여 LazyInitializationException 및 N+1 방지
-    User user = userRepository.findByIdWithSocialLogins(userId)
-        .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+    User user =
+        userRepository
+            .findByIdWithSocialLogins(userId)
+            .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
-    AuthProvider provider = user.getSocialLogins().isEmpty()
-        ? null
-        : user.getSocialLogins().get(0).getProvider();
+    AuthProvider provider =
+        user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
     return new UserResponseDto(
         user.getId(),
