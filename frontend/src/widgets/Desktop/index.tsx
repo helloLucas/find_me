@@ -9,6 +9,7 @@ import { Browser } from "../../features/Browser";
 import { MessengerNotificationCard, MessengerWindow } from "../../features/messenger";
 import { Lucas } from "../../features/Lucas/Lucas";
 import { DocumentViewer } from "../../features/DocumentViewer/DocumentViewer";
+import { CallOverlay } from "../../features/story-runtime/ui/CallOverlay";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import {
@@ -220,6 +221,7 @@ export const Desktop: React.FC = () => {
         })}
 
         <MessengerNotificationCard />
+        <CallOverlay />
         <Lucas />
       </div>
 

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useAuthStore } from "../../app/store/authStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
+import { useCallOverlayStore } from "../../app/store/callOverlayStore";
 import { useClientStore } from "../../app/store/clientStore";
 import { useToastStore } from "../../app/store/toastStore";
 import { useLucasStore } from "../../app/store/lucasStore";
@@ -202,14 +203,80 @@ function isTerminalRuntimeNode(
   );
 }
 
+function shouldOpenCallOverlay(normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>) {
+  return (
+    normalizedOutput.scene.mode === "call" ||
+    normalizedOutput.uiMarkers.showCallOverlay === true
+  );
+}
+
+function getCallOverlayButtons(node: StoryNode) {
+  if (node.promptType !== "click") return [];
+
+  const promptMeta = objectRecord(node.promptMeta) ?? {};
+  const buttons = Array.isArray(promptMeta.buttons) ? promptMeta.buttons : [];
+
+  return buttons
+    .map((button) => {
+      const buttonRecord = objectRecord(button);
+      if (!buttonRecord) return undefined;
+
+      const value = stringValue(buttonRecord.value);
+      if (!value) return undefined;
+
+      return {
+        label: stringValue(buttonRecord.label) ?? value,
+        value,
+      };
+    })
+    .filter((button): button is { label: string; value: string } => Boolean(button));
+}
+
+function applyCallOverlayOutput(
+  node: StoryNode,
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>
+) {
+  if (!shouldOpenCallOverlay(normalizedOutput)) {
+    useCallOverlayStore.getState().closeCallOverlay();
+    return;
+  }
+
+  const playerName = getAuthenticatedPlayerName();
+  const callMessages = normalizedOutput.messages.filter((message) => {
+    const channel = stringValue(message.channel);
+    return channel === "call" || channel === "terminal_notice";
+  });
+  const callNotification = normalizedOutput.notifications.find(
+    (notification) => stringValue(notification.type) === "call"
+  );
+
+  useCallOverlayStore.getState().openCallOverlay({
+    nodeCode: node.code,
+    title: stringValue(callNotification?.title) ?? "INCOMING CALL",
+    status:
+      stringValue(normalizedOutput.uiMarkers.callStatus) ??
+      stringValue(callNotification?.body),
+    messages: callMessages.map((message) => ({
+      speaker: stringValue(message.speaker) ?? "UNKNOWN",
+      channel: stringValue(message.channel) ?? "call",
+      text: resolveStoryText(message.text, { playerName }),
+    })),
+    buttons: getCallOverlayButtons(node),
+  });
+}
+
 function applyStoryNodeOutputBundle(
   node: StoryNode,
   options: ApplyStoryNodeOutputOptions = {}
 ) {
   const outputBundle = node.outputBundle;
-  if (!outputBundle) return;
+  if (!outputBundle) {
+    useCallOverlayStore.getState().closeCallOverlay();
+    return;
+  }
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
+  applyCallOverlayOutput(node, normalizedOutput);
 
   const entrySfx = resolveNodeEntrySfx(
     normalizedOutput,
@@ -513,6 +580,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     useClientStore.getState().resetClientStore();
     useMessengerStore.getState().resetMessenger();
     useLucasStore.getState().resetLucas();
+    useCallOverlayStore.getState().resetCallOverlay();
     useWindowStore.getState().resetWindows();
 
     set({ isLoading: true, error: null });
@@ -716,9 +784,12 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     await get().submitStoryAction("command", inputValue, meta);
   },
 
-  resetStoryRuntime: () => set({
-    currentNode: null,
-    isLoading: false,
-    error: null,
-  }),
+  resetStoryRuntime: () => {
+    useCallOverlayStore.getState().resetCallOverlay();
+    set({
+      currentNode: null,
+      isLoading: false,
+      error: null,
+    });
+  },
 }));

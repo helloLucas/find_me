@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
 import { DESKTOP_LAYER } from '../../shared/config/desktopWindows';
@@ -25,6 +26,9 @@ export const Lucas: React.FC = () => {
   } = useLucasStore();
 
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const isCallOverlayPromptOwner = useCallOverlayStore(
+    (state) => state.isVisible && state.nodeCode === currentNode?.code
+  );
 
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -47,7 +51,8 @@ export const Lucas: React.FC = () => {
   const promptButtons = Array.isArray(currentNode?.promptMeta?.buttons)
     ? currentNode.promptMeta.buttons
     : [];
-  const hasPromptButtons = currentNode?.promptType === 'click' && promptButtons.length > 0;
+  const hasPromptButtons =
+    currentNode?.promptType === 'click' && promptButtons.length > 0 && !isCallOverlayPromptOwner;
 
   const persistHintScrollTop = () => {
     const container = hintMessagesRef.current;
