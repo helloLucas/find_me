@@ -14,8 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Chapter 2 가상 터미널의 핵심 명령어를 처리하는 서비스 클래스입니다. pwd, ls, cd, cat, sh, clear 등의 표준 쉘 명령어를 가상 파일
- * 시스템(VFS) 상에서 시뮬레이션합니다.
+ * 터미널/VFS 기반 챕터의 핵심 명령어를 처리하는 서비스 클래스입니다.
+ *
+ * <p>{@code pwd}, {@code ls}, {@code cd}, {@code cat}, {@code sh}, {@code clear} 등의 표준 쉘 명령어를 현재
+ * 챕터의 가상 파일 시스템(VFS) 상에서 시뮬레이션합니다.
  */
 @Slf4j
 @Service
@@ -43,8 +45,8 @@ public class TerminalCommandService {
   public TerminalResult execute(ParsedCommand command, JsonNode snapshot, VfsContext vfs) {
     // 명령어 이름을 소문자로 정규화합니다.
     String cmd = command.command().toLowerCase();
-    // 스냅샷에서 현재 작업 디렉토리(CWD)를 가져오며, 없을 경우 VFS 루트를 기본값으로 합니다.
-    String cwd = snapshot.path("cwd").asText(vfs.getRootPath());
+    // 스냅샷에서 현재 작업 디렉토리(CWD)를 가져오며, 없을 경우 챕터별 기본 cwd를 사용합니다.
+    String cwd = snapshot.path("cwd").asText(vfs.getDefaultCwd());
 
     // 위험 명령어가 입력되었는지 먼저 검증합니다.
     if (DANGEROUS_COMMANDS.contains(cmd)) {
@@ -96,9 +98,7 @@ public class TerminalCommandService {
 
     // 인자가 없으면 현재 디렉토리, 있으면 해당 경로를 대상으로 결정합니다.
     String targetPath =
-        command.args().isEmpty()
-            ? cwd
-            : pathResolver.resolve(cwd, command.args().get(0), vfs.getRootPath());
+        command.args().isEmpty() ? cwd : pathResolver.resolve(cwd, command.args().get(0), vfs);
     // 대상 경로의 VFS 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -177,7 +177,7 @@ public class TerminalCommandService {
     List<String> output = new ArrayList<>();
     boolean multipleTargets = rawTargets.size() > 1;
     for (String rawTarget : rawTargets) {
-      String targetPath = pathResolver.resolve(cwd, rawTarget, vfs.getRootPath());
+      String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
       VfsNode node = vfs.resolve(targetPath);
       if (node == null) {
         return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
@@ -268,7 +268,7 @@ public class TerminalCommandService {
     Set<String> matches = new LinkedHashSet<>();
 
     for (String rawRoot : query.roots()) {
-      String targetPath = pathResolver.resolve(cwd, rawRoot, vfs.getRootPath());
+      String targetPath = pathResolver.resolve(cwd, rawRoot, vfs);
       VfsNode node = vfs.resolve(targetPath);
       if (node == null) {
         return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
@@ -399,7 +399,7 @@ public class TerminalCommandService {
     }
 
     // 이동할 대상 경로를 계산합니다.
-    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs.getRootPath());
+    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
     // 대상 경로의 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -446,7 +446,7 @@ public class TerminalCommandService {
     }
 
     // 파일의 경로를 해석합니다.
-    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs.getRootPath());
+    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
     // 노드를 확인합니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -466,8 +466,8 @@ public class TerminalCommandService {
       return buildErrorResult(cwd, vfs, "cat: " + command.args().get(0) + ": Permission denied");
     }
 
-    // FileContentService를 통해 contents.json에서 실제 텍스트 내용을 가져옵니다.
-    List<String> content = fileContentService.getContent(node.contentKey());
+    // FileContentService를 통해 현재 챕터의 contents.json에서 실제 텍스트 내용을 가져옵니다.
+    List<String> content = fileContentService.getContent(vfs.getChapterCode(), node.contentKey());
     return TerminalResult.builder()
         .stdout(content) // 가져온 내용을 표준 출력에 설정
         .cwd(cwd)
@@ -491,7 +491,7 @@ public class TerminalCommandService {
     }
 
     // 경로를 해석합니다.
-    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs.getRootPath());
+    String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
     VfsNode node = vfs.resolve(targetPath);
 
     // 파일이 없으면 에러를 반환합니다.
@@ -574,6 +574,6 @@ public class TerminalCommandService {
     // 현재 경로가 루트면 ~, 아니면 루트 경로 문자열을 ~로 바꾼 상대적 느낌의 경로를 생성합니다.
     String displayCwd = cwd.equals(vfs.getRootPath()) ? "~" : cwd.replace(vfs.getRootPath(), "~");
     // 설정된 유저명과 호스트명을 조합하여 표준적인 Bash 형태의 프롬프트를 완성합니다.
-    return "guest@lucas-server:" + displayCwd + "$";
+    return vfs.getPromptUser() + "@" + vfs.getPromptHost() + ":" + displayCwd + "$";
   }
 }

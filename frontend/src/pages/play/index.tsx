@@ -16,7 +16,7 @@ function getIsFullscreen() {
 
 export default function PlayPage() {
   const { chapterCode } = useParams();
-  const { error, initializeStory, currentNode } = useStoryRuntimeStore();
+  const { initializeStory, currentNode } = useStoryRuntimeStore();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -90,6 +90,9 @@ export default function PlayPage() {
     }
   };
 
+  const shouldShowCompletionModal =
+    currentNode?.nodeType === "ending" && currentNode.code.endsWith("_COMPLETE");
+
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
       {isPlayingVideo && currentPreVideoUrl ? (
@@ -101,7 +104,7 @@ export default function PlayPage() {
 
 
 
-      {currentNode?.isTerminal && (
+      {shouldShowCompletionModal && (
         <ChapterCompletionModal />
       )}
 

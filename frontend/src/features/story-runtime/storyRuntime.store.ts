@@ -94,12 +94,6 @@ function resolveChapterCode(chapterCode: string) {
   return chapterCode || "week01";
 }
 
-function buildLucasChatScope(chapterCode: string) {
-  const auth = useAuthStore.getState();
-  const actor = auth.isLoggedIn ? auth.nickname || "member" : "guest";
-  return `lucas:${actor}:${chapterCode}`;
-}
-
 function getAuthenticatedPlayerName() {
   const nickname = useAuthStore.getState().nickname;
   if (!nickname || nickname === "ANONYMOUS" || nickname === "UNKNOWN_AGENT") return undefined;
@@ -186,6 +180,28 @@ function parseTerminalPromptContext(line: string): TerminalPromptContext | undef
   };
 }
 
+function getTerminalProfile(node: StoryNode | null | undefined) {
+  const promptMeta = objectRecord(node?.promptMeta) ?? {};
+  return stringValue(promptMeta.terminalProfile);
+}
+
+function getPromptPlaceholderContext(node: StoryNode) {
+  const promptMeta = objectRecord(node.promptMeta) ?? {};
+  const placeholder = stringValue(promptMeta.placeholder);
+  return placeholder ? parseTerminalPromptContext(placeholder) : undefined;
+}
+
+function isTerminalRuntimeNode(
+  node: StoryNode,
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>
+) {
+  return (
+    normalizedOutput.scene.mode === "terminal" ||
+    Boolean(getTerminalProfile(node)) ||
+    node.isTerminal
+  );
+}
+
 function applyStoryNodeOutputBundle(
   node: StoryNode,
   options: ApplyStoryNodeOutputOptions = {}
@@ -231,7 +247,10 @@ function applyStoryNodeOutputBundle(
     useWindowStore.getState().openWindow("browser", "Web Browser", undefined, "chrome");
   }
 
-  if (node.code.startsWith("CH2_") || node.isTerminal) {
+  const terminalProfile = getTerminalProfile(node);
+  const isTerminalContext = isTerminalRuntimeNode(node, normalizedOutput);
+
+  if (isTerminalContext) {
     useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
   }
 
@@ -283,7 +302,7 @@ function applyStoryNodeOutputBundle(
   const completionText = normalizedOutput.content.completionText;
   const terminalOutputLines = Array.isArray(terminalOutput) ? terminalOutput.map(String) : [];
   const connectedPromptContext =
-    node.code === "CH1_SSH_CONNECTED" || node.code === "CH2_SERVER_HOME"
+    isTerminalContext || node.code === "CH1_SSH_CONNECTED"
       ? terminalOutputLines.map(parseTerminalPromptContext).find(Boolean)
       : undefined;
   const visibleTerminalOutputLines = connectedPromptContext
@@ -303,9 +322,13 @@ function applyStoryNodeOutputBundle(
       connectedPromptContext.host,
       connectedPromptContext.path
     );
-  } else if (node.code.startsWith("CH2_")) {
-    // Automatically switch to lucas-server context when in Chapter 2
-    clientStore.setTerminalContext("guest", "lucas-server", "~");
+  } else if (terminalProfile) {
+    const placeholderContext = getPromptPlaceholderContext(node);
+    clientStore.setTerminalContext(
+      placeholderContext?.user ?? "guest",
+      placeholderContext?.host ?? "lucas-server",
+      placeholderContext?.path ?? "~"
+    );
   }
 
   // 브라우저에서 실행된 액션이라면 터미널 출력을 건너뜀

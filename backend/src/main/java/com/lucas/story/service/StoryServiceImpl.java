@@ -36,6 +36,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,10 +77,56 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_NC_SEND_FILE = "NC_SEND_FILE";
   private static final String RULE_CHAINED_COMMAND = "CHAINED_COMMAND";
   private static final String CHAPTER_02_CODE = "week02";
+  private static final String CHAPTER_03_CODE = "week03";
+  private static final String CHAPTER_02_TERMINAL_PROFILE = "chapter2";
+  private static final String CHAPTER_03_TERMINAL_PROFILE = "chapter3";
   private static final String CHAPTER_02_VFS_VERSION = "chapter02-v1";
+  private static final String CHAPTER_03_VFS_VERSION = "chapter03-v1";
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
-  private static final String CHAPTER_02_PROMPT_USER = "guest";
-  private static final String CHAPTER_02_PROMPT_HOST = "lucas-server";
+  private static final String TERMINAL_PROMPT_USER = "guest";
+  private static final String TERMINAL_PROMPT_HOST = "lucas-server";
+
+  /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
+  private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
+      Map.of(
+          CHAPTER_02_CODE,
+          new TerminalChapterProfile(
+              CHAPTER_02_CODE,
+              CHAPTER_02_TERMINAL_PROFILE,
+              CHAPTER_02_VFS_VERSION,
+              "/story/chapter02/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST),
+          CHAPTER_03_CODE,
+          new TerminalChapterProfile(
+              CHAPTER_03_CODE,
+              CHAPTER_03_TERMINAL_PROFILE,
+              CHAPTER_03_VFS_VERSION,
+              "/story/chapter03/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST));
+
+  /**
+   * 터미널 챕터별 런타임 프로필입니다.
+   *
+   * @param chapterCode DB chapters.code와 snapshot.chapterCode에 저장되는 챕터 코드
+   * @param terminalProfile story_nodes.prompt_meta.terminalProfile과 매칭되는 프론트/백엔드 식별자
+   * @param vfsVersion snapshot에 기록할 VFS 리소스 버전
+   * @param vfsResourcePath classpath 기준 vfs.json 리소스 경로
+   * @param defaultCwd 새 스냅샷과 상대 경로 해석에 사용할 기본 작업 디렉터리
+   * @param promptUser 터미널 프롬프트에 표시할 사용자명
+   * @param promptHost 터미널 프롬프트에 표시할 호스트명
+   */
+  private record TerminalChapterProfile(
+      String chapterCode,
+      String terminalProfile,
+      String vfsVersion,
+      String vfsResourcePath,
+      String defaultCwd,
+      String promptUser,
+      String promptHost) {}
 
   private final UserRepository userRepository;
   private final ChapterRepository chapterRepository;
@@ -94,37 +141,51 @@ public class StoryServiceImpl implements StoryService {
   private final ObjectMapper objectMapper;
   private final PathResolver pathResolver = new PathResolver();
 
-  private JsonNode chapter02Vfs;
+  private final Map<String, JsonNode> vfsByChapterCode = new HashMap<>();
 
   /**
-   * Bean 초기화 시 Chapter 2 정적 VFS 리소스를 메모리에 로드합니다.
+   * Bean 초기화 시 터미널 챕터의 정적 VFS 리소스를 메모리에 로드합니다.
    *
    * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
    */
   @PostConstruct
   public void init() {
-    // Chapter 2 VFS JSON을 classpath 리소스에서 읽어 필드에 캐싱합니다.
+    // 등록된 터미널 챕터들의 VFS JSON을 classpath 리소스에서 읽어 캐싱합니다.
     loadVfsJson();
   }
 
   /**
-   * classpath의 Chapter 2 VFS JSON 파일을 읽어 {@code chapter02Vfs}에 저장합니다.
+   * classpath의 터미널 챕터 VFS JSON 파일들을 읽어 챕터 코드별로 캐싱합니다.
    *
-   * <p>리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이 적용됩니다.
+   * <p>개별 챕터의 VFS 리소스가 없거나 파싱에 실패해도 서버 기동은 유지하고, 해당 챕터만 빈 VFS fallback이 적용되도록 로그만 남깁니다.
    */
   private void loadVfsJson() {
-    // try-with-resources로 리소스 스트림을 자동 해제합니다.
-    try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
-      // 리소스가 존재하는 경우에만 JSON을 파싱합니다.
-      if (is != null) {
-        // Jackson으로 정적 VFS JSON tree를 읽어 필드에 저장합니다.
-        this.chapter02Vfs = objectMapper.readTree(is);
-        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남깁니다.
-        log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
+    // 재초기화 상황에서도 이전 캐시가 남지 않도록 먼저 비운다.
+    vfsByChapterCode.clear();
+
+    // 등록된 터미널 챕터 프로필을 순회하며 각자의 vfs.json을 로드한다.
+    for (TerminalChapterProfile profile : TERMINAL_CHAPTER_PROFILES.values()) {
+      // try-with-resources로 classpath 리소스 스트림을 자동 해제한다.
+      try (InputStream is = getClass().getResourceAsStream(profile.vfsResourcePath())) {
+        // 리소스가 없으면 해당 챕터는 건너뛰고 다음 프로필을 계속 처리한다.
+        if (is == null) {
+          log.warn(
+              "VFS resource not found. chapter={}, path={}",
+              profile.chapterCode(),
+              profile.vfsResourcePath());
+          continue;
+        }
+
+        // Jackson으로 정적 VFS JSON tree를 읽어 챕터 코드 기준으로 저장한다.
+        vfsByChapterCode.put(profile.chapterCode(), objectMapper.readTree(is));
+
+        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남긴다.
+        log.info(
+            "Loaded VFS. chapter={}, path={}", profile.chapterCode(), profile.vfsResourcePath());
+      } catch (Exception e) {
+        // 특정 챕터 VFS 로딩 실패는 해당 챕터 기능에 영향을 주므로 error 로그로 기록한다.
+        log.error("Failed to load VFS. chapter={}", profile.chapterCode(), e);
       }
-    } catch (Exception e) {
-      // VFS 로딩 실패는 Chapter 2 터미널 기능에 영향을 주므로 error 로그로 기록합니다.
-      log.error("Failed to load Chapter 2 VFS", e);
     }
   }
 
@@ -259,10 +320,10 @@ public class StoryServiceImpl implements StoryService {
               .orElse(null);
 
       if (matched == null) {
-        // ── Step 2: Chapter 2 터미널 Fallback ──
-        // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
+        // ── Step 2: 터미널 챕터 Fallback ──
+        // DB 전이에 실패했을 때, 터미널 프로필 노드라면 가상 파일 시스템 로직으로 처리한다.
         TransitionResponseDto terminalResponse =
-            handleChapter2TerminalFallback(user, progress, currentNode, request);
+            handleTerminalFallback(user, progress, currentNode, request);
         if (terminalResponse != null) {
           return terminalResponse;
         }
@@ -1095,7 +1156,8 @@ public class StoryServiceImpl implements StoryService {
     // '.'인 경우 현재 작업 디렉토리가 루트인지 확인
     if (".".equals(normalized)) {
       String cwd = extractText(latestSnapshot, "/terminal/cwd");
-      return cwd == null || cwd.isBlank() || CHAPTER_02_DEFAULT_CWD.equals(cwd);
+      String defaultCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+      return cwd == null || cwd.isBlank() || defaultCwd.equals(cwd);
     }
 
     // 절대/상대 경로를 해소하여 VFS의 루트 경로와 일치하는지 확인
@@ -1799,17 +1861,16 @@ public class StoryServiceImpl implements StoryService {
     // snapshot에서 현재 cwd를 읽는다.
     String cwd = extractText(latestSnapshot, "/terminal/cwd");
 
-    // cwd가 없으면 Chapter 2 기본 cwd를 사용한다.
+    // cwd가 없으면 현재 챕터 프로필의 기본 cwd를 사용한다.
     if (cwd == null || cwd.isBlank()) {
       // 초기 snapshot 또는 잘못된 snapshot에 대한 fallback이다.
-      cwd = CHAPTER_02_DEFAULT_CWD;
+      cwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
     }
 
-    // 정적 VFS의 rootPath를 가져온다.
-    String rootPath = createVfsContext(latestSnapshot).getRootPath();
+    VfsContext vfs = createVfsContext(latestSnapshot);
 
     // PathResolver를 사용해 루트 이탈을 막은 절대 경로로 변환한다.
-    return pathResolver.resolve(cwd, rawPath, rootPath);
+    return pathResolver.resolve(cwd, rawPath, vfs);
   }
 
   /**
@@ -1935,11 +1996,89 @@ public class StoryServiceImpl implements StoryService {
             ? objectMapper.createObjectNode()
             : latestSnapshot.path("vfsOverlay");
 
-    // chapter02Vfs가 로드되지 않았을 때도 NPE가 나지 않도록 빈 객체를 fallback으로 둔다.
-    JsonNode staticVfs = chapter02Vfs == null ? objectMapper.createObjectNode() : chapter02Vfs;
+    String chapterCode = extractText(latestSnapshot, "/chapterCode");
+    JsonNode staticVfs = getStaticVfs(chapterCode);
 
     // VfsContext가 정적 VFS와 overlay를 함께 보도록 구성한다.
     return VfsContext.of(staticVfs, overlay);
+  }
+
+  /**
+   * 챕터 코드에 맞는 정적 VFS JSON을 조회합니다.
+   *
+   * <p>진행 중인 snapshot이 오래되었거나 챕터 코드가 비어 있으면 기존 Chapter 2 VFS를 fallback으로 사용해 기존 저장 데이터와의 호환성을
+   * 유지합니다.
+   *
+   * @param chapterCode snapshot 또는 Chapter 엔티티에서 확인한 챕터 코드
+   * @return 챕터별 vfs.json 루트 노드, 없으면 비어 있는 JSON object
+   */
+  private JsonNode getStaticVfs(String chapterCode) {
+    // 명시적인 챕터 코드가 있고 해당 VFS가 로드되어 있으면 그 리소스를 우선 사용한다.
+    if (chapterCode != null && vfsByChapterCode.containsKey(chapterCode)) {
+      return vfsByChapterCode.get(chapterCode);
+    }
+
+    // 챕터 정보가 없는 오래된 snapshot은 Chapter 2 리소스로 해석한다.
+    JsonNode fallback = vfsByChapterCode.get(CHAPTER_02_CODE);
+    return fallback == null ? objectMapper.createObjectNode() : fallback;
+  }
+
+  /**
+   * 지정한 챕터가 터미널/VFS 공통 런타임을 사용하는지 확인합니다.
+   *
+   * @param chapterCode DB chapters.code 값
+   * @return 터미널 프로필이 등록된 챕터이면 true
+   */
+  private boolean isTerminalChapter(String chapterCode) {
+    // 프로필 맵에 등록된 챕터만 확장 snapshot과 터미널 fallback을 사용한다.
+    return chapterCode != null && TERMINAL_CHAPTER_PROFILES.containsKey(chapterCode);
+  }
+
+  /**
+   * 챕터 코드로 터미널 런타임 프로필을 조회합니다.
+   *
+   * @param chapterCode DB chapters.code 값
+   * @return 등록된 프로필, 없으면 null
+   */
+  private TerminalChapterProfile getTerminalChapterProfile(String chapterCode) {
+    // Map 조회만 수행해 호출부가 null 여부로 지원 챕터를 판단하게 한다.
+    return TERMINAL_CHAPTER_PROFILES.get(chapterCode);
+  }
+
+  /**
+   * prompt_meta.terminalProfile 값으로 터미널 런타임 프로필을 조회합니다.
+   *
+   * @param terminalProfile story_nodes.prompt_meta.terminalProfile 값
+   * @return 등록된 프로필, 없으면 null
+   */
+  private TerminalChapterProfile getTerminalChapterProfileByTerminalProfile(
+      String terminalProfile) {
+    // prompt_meta가 없거나 빈 값이면 fallback을 수행하지 않는다.
+    if (terminalProfile == null || terminalProfile.isBlank()) {
+      return null;
+    }
+
+    // chapter2, chapter3 같은 프론트/백엔드 프로필명을 기준으로 프로필을 찾는다.
+    return TERMINAL_CHAPTER_PROFILES.values().stream()
+        .filter(profile -> profile.terminalProfile().equals(terminalProfile))
+        .findFirst()
+        .orElse(null);
+  }
+
+  /**
+   * snapshot의 chapterCode를 기준으로 터미널 런타임 프로필을 결정합니다.
+   *
+   * <p>기존 Chapter 2 데이터는 snapshot에 chapterCode가 없을 수 있으므로, 확인할 수 없는 경우 Chapter 2 프로필을 기본값으로 사용합니다.
+   *
+   * @param latestSnapshot 최신 진행 snapshot
+   * @return snapshot에 대응하는 터미널 프로필
+   */
+  private TerminalChapterProfile resolveTerminalChapterProfile(JsonNode latestSnapshot) {
+    // snapshot에 기록된 chapterCode를 읽어 현재 챕터의 프로필을 찾는다.
+    String chapterCode = extractText(latestSnapshot, "/chapterCode");
+    TerminalChapterProfile profile = getTerminalChapterProfile(chapterCode);
+    // 구버전 snapshot 또는 비정상 데이터는 Chapter 2 기준으로 해석해 기존 흐름을 유지한다.
+    return profile == null ? getTerminalChapterProfile(CHAPTER_02_CODE) : profile;
   }
 
   /**
@@ -2014,13 +2153,10 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 기대값이 파일명인 경우 정규화 경로의 마지막 세그먼트와 비교한다.
-    // 상대 파일명 기대값은 Chapter 2 기본 cwd에서 생성되는 실제 절대 경로와 비교합니다.
-    return pathResolver
-        .resolve(
-            CHAPTER_02_DEFAULT_CWD,
-            expectedOutputFile,
-            createVfsContext(latestSnapshot).getRootPath())
-        .equals(resolvedOutputFile);
+    // 상대 파일명 기대값은 현재 챕터 기본 cwd에서 생성되는 실제 절대 경로와 비교한다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+    String defaultCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+    return pathResolver.resolve(defaultCwd, expectedOutputFile, vfs).equals(resolvedOutputFile);
   }
 
   /**
@@ -2468,18 +2604,19 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 시작 또는 전이 시 사용할 빈 스냅샷(JSON)을 생성한다.
    *
-   * <p>Chapter 2는 결정 문서의 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
+   * <p>터미널/VFS 기반 챕터는 공통 확장 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
    */
   private JsonNode createEmptySnapshot(Chapter chapter, StoryNode node) {
     // 빈 JSON 객체 생성
     ObjectNode snapshot = objectMapper.createObjectNode();
 
-    // Chapter 2는 VFS/terminal 기반 진행 상태를 담는 확장 snapshot을 사용한다.
-    if (CHAPTER_02_CODE.equals(chapter.getCode())) {
-      // Chapter 2 전용 기본 snapshot 구조를 채운다.
-      populateChapter2Snapshot(snapshot, chapter, node);
+    // 터미널/VFS 기반 챕터는 챕터별 프로필에 맞춘 확장 snapshot을 사용한다.
+    if (isTerminalChapter(chapter.getCode())) {
+      // 등록된 프로필을 기준으로 vfsVersion, terminal, flags, overlay 기본 구조를 채운다.
+      populateTerminalSnapshot(
+          snapshot, chapter, node, getTerminalChapterProfile(chapter.getCode()));
 
-      // Chapter 2 snapshot은 전용 구조 생성이 끝났으므로 바로 반환한다.
+      // 확장 snapshot은 여기서 필요한 필드를 모두 채웠으므로 바로 반환한다.
       return snapshot;
     }
 
@@ -2511,17 +2648,17 @@ public class StoryServiceImpl implements StoryService {
     // 먼저 챕터에 맞는 기본 snapshot 구조를 생성한다.
     ObjectNode snapshot = (ObjectNode) createEmptySnapshot(chapter, node);
 
-    // Chapter 2가 아니면 기존 챕터 호환성을 위해 별도 병합 없이 반환한다.
-    if (!CHAPTER_02_CODE.equals(chapter.getCode())) {
+    // 터미널/VFS 챕터가 아니면 기존 챕터 호환성을 위해 별도 상태 병합 없이 반환한다.
+    if (!isTerminalChapter(chapter.getCode())) {
       // 기존 챕터 snapshot은 위치 식별 정보만 유지한다.
       return snapshot;
     }
 
-    // Chapter 2 snapshotVersion은 이전 버전에서 1 증가시킨다.
+    // 터미널 snapshotVersion은 이전 버전에서 1 증가시켜 상태 변경 순서를 추적한다.
     snapshot.put("snapshotVersion", resolveNextSnapshotVersion(previousSnapshot));
 
     // 이전 terminal 상태를 새 snapshot으로 이어받는다.
-    carryChapter2Terminal(snapshot, previousSnapshot, request);
+    carryTerminal(snapshot, previousSnapshot, request);
 
     // 이전 vfsOverlay 상태를 새 snapshot으로 이어받는다.
     carryObjectField(snapshot, previousSnapshot, "vfsOverlay");
@@ -2535,7 +2672,7 @@ public class StoryServiceImpl implements StoryService {
     // transition effect_bundle의 상태 변경 지시를 snapshot에 병합한다.
     applyEffectBundleToSnapshot(snapshot, effectBundle);
 
-    // 이전 상태를 반영한 Chapter 2 transition snapshot을 반환한다.
+    // 이전 상태를 반영한 터미널 transition snapshot을 반환한다.
     return snapshot;
   }
 
@@ -2551,7 +2688,7 @@ public class StoryServiceImpl implements StoryService {
 
     // 이전 버전이 없으면 신규 snapshot의 최초 버전 1을 사용한다.
     if (previousVersion == null) {
-      // 새로 시작한 Chapter 2 snapshot은 1부터 시작한다.
+      // 새로 시작한 터미널 snapshot은 1부터 시작한다.
       return 1;
     }
 
@@ -2560,13 +2697,13 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 이전 snapshot의 terminal 상태를 새 Chapter 2 snapshot으로 이어받는다.
+   * 이전 snapshot의 terminal 상태를 새 터미널 snapshot으로 이어받는다.
    *
    * @param snapshot 값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
    * @param request 유저의 transition 요청
    */
-  private void carryChapter2Terminal(
+  private void carryTerminal(
       ObjectNode snapshot, JsonNode previousSnapshot, TransitionRequestDto request) {
     // 새 snapshot의 terminal 객체를 가져온다.
     ObjectNode terminal = (ObjectNode) snapshot.get("terminal");
@@ -2677,9 +2814,9 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * transition effect_bundle의 상태 변경 지시를 Chapter 2 snapshot에 반영한다.
+   * transition effect_bundle의 상태 변경 지시를 터미널 snapshot에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param effectBundle transition의 effect_bundle JSON
    */
   private void applyEffectBundleToSnapshot(ObjectNode snapshot, JsonNode effectBundle) {
@@ -2702,7 +2839,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.setFlags를 snapshot.flags에 병합한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param setFlags setFlags JSON object
    */
   private void applySetFlags(ObjectNode snapshot, JsonNode setFlags) {
@@ -2728,7 +2865,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.setScanPercent를 snapshot.scanPercent에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param setScanPercent scanPercent JSON value
    */
   private void applySetScanPercent(ObjectNode snapshot, JsonNode setScanPercent) {
@@ -2745,7 +2882,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param overlayEffect vfsOverlay effect JSON object
    */
   private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
@@ -2979,13 +3116,15 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 결정 문서에 맞는 기본 snapshot 필드를 채운다.
+   * 터미널/VFS 기반 챕터에 공통으로 필요한 기본 snapshot 필드를 채운다.
    *
    * @param snapshot 값을 채울 빈 snapshot JSON
-   * @param chapter Chapter 2 챕터 엔티티
+   * @param chapter 현재 챕터 엔티티
    * @param node 현재 스토리 노드 엔티티
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Snapshot(ObjectNode snapshot, Chapter chapter, StoryNode node) {
+  private void populateTerminalSnapshot(
+      ObjectNode snapshot, Chapter chapter, StoryNode node, TerminalChapterProfile profile) {
     // snapshot 구조 자체의 버전을 저장한다.
     snapshot.put("schemaVersion", 1);
 
@@ -2993,7 +3132,7 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("snapshotVersion", 1);
 
     // 현재 snapshot이 기준으로 삼는 VFS JSON 버전을 저장한다.
-    snapshot.put("vfsVersion", CHAPTER_02_VFS_VERSION);
+    snapshot.put("vfsVersion", profile.vfsVersion());
 
     // 현재 챕터 코드를 snapshot에 저장한다.
     snapshot.put("chapterCode", chapter.getCode());
@@ -3008,46 +3147,47 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("nodeCode", node.getCode());
 
     // 가상 터미널의 현재 세션 상태를 채운다.
-    populateChapter2Terminal(snapshot);
+    populateTerminal(snapshot, profile);
 
     // 유저별 동적 VFS 변경 영역을 빈 구조로 초기화한다.
-    populateChapter2VfsOverlay(snapshot);
+    populateTerminalVfsOverlay(snapshot);
 
-    // Chapter 2 진행 플래그를 기본값으로 초기화한다.
-    populateChapter2Flags(snapshot);
+    // 챕터별 진행 플래그를 기본값으로 초기화한다.
+    populateTerminalFlags(snapshot, profile);
 
     // GC 스캔율은 top-level 숫자로 저장하며 초기값은 0이다.
     snapshot.put("scanPercent", 0);
   }
 
   /**
-   * Chapter 2 snapshot의 terminal 객체를 기본값으로 채운다.
+   * snapshot의 terminal 객체를 챕터 프로필 기본값으로 채운다.
    *
    * @param snapshot terminal 객체를 추가할 snapshot JSON
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Terminal(ObjectNode snapshot) {
+  private void populateTerminal(ObjectNode snapshot, TerminalChapterProfile profile) {
     // terminal 객체를 snapshot 하위에 생성한다.
     ObjectNode terminal = snapshot.putObject("terminal");
 
-    // Chapter 2 기본 cwd를 VFS 결정 문서의 defaultCwd와 맞춘다.
-    terminal.put("cwd", CHAPTER_02_DEFAULT_CWD);
+    // 기본 cwd를 챕터별 VFS 결정 문서의 defaultCwd와 맞춘다.
+    terminal.put("cwd", profile.defaultCwd());
 
     // 터미널 프롬프트 사용자명을 저장한다.
-    terminal.put("promptUser", CHAPTER_02_PROMPT_USER);
+    terminal.put("promptUser", profile.promptUser());
 
     // 터미널 프롬프트 호스트명을 저장한다.
-    terminal.put("promptHost", CHAPTER_02_PROMPT_HOST);
+    terminal.put("promptHost", profile.promptHost());
 
     // 아직 처리한 명령이 없으므로 lastCommand는 null로 둔다.
     terminal.putNull("lastCommand");
   }
 
   /**
-   * Chapter 2 snapshot의 vfsOverlay 객체를 빈 변경 목록으로 초기화한다.
+   * snapshot의 vfsOverlay 객체를 빈 변경 목록으로 초기화한다.
    *
    * @param snapshot vfsOverlay 객체를 추가할 snapshot JSON
    */
-  private void populateChapter2VfsOverlay(ObjectNode snapshot) {
+  private void populateTerminalVfsOverlay(ObjectNode snapshot) {
     // vfsOverlay 객체를 snapshot 하위에 생성한다.
     ObjectNode vfsOverlay = snapshot.putObject("vfsOverlay");
 
@@ -3062,13 +3202,95 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 snapshot의 flags 객체를 결정 문서의 기본값으로 초기화한다.
+   * snapshot의 flags 객체를 챕터별 기본 진행 상태로 초기화한다.
    *
    * @param snapshot flags 객체를 추가할 snapshot JSON
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Flags(ObjectNode snapshot) {
+  private void populateTerminalFlags(ObjectNode snapshot, TerminalChapterProfile profile) {
     // flags 객체를 snapshot 하위에 생성한다.
     ObjectNode flags = snapshot.putObject("flags");
+
+    // Chapter 3가 시작된 snapshot이므로 시작 플래그는 true로 둔다.
+    if (CHAPTER_03_CODE.equals(profile.chapterCode())) {
+      flags.put("chapter3_started", true);
+
+      // 홈 디렉터리 재확인 여부는 아직 false다.
+      flags.put("home_rechecked", false);
+
+      // .bash_history 확인 여부는 아직 false다.
+      flags.put("bash_history_checked", false);
+
+      // 9091 포트 발견 여부는 아직 false다.
+      flags.put("port_9091_discovered", false);
+
+      // relay 접속 여부는 아직 false다.
+      flags.put("relay_contacted", false);
+
+      // relay 상태 확인 여부는 아직 false다.
+      flags.put("relay_status_checked", false);
+
+      // people 데이터 조회 여부는 아직 false다.
+      flags.put("people_viewed", false);
+
+      // people 덤프 파일 생성 여부는 아직 false다.
+      flags.put("people_dumped", false);
+
+      // monitor 데이터 조회 여부는 아직 false다.
+      flags.put("monitor_viewed", false);
+
+      // monitor 덤프 파일 생성 여부는 아직 false다.
+      flags.put("monitor_dumped", false);
+
+      // fragment 02 확인 여부는 아직 false다.
+      flags.put("fragment02_viewed", false);
+
+      // fragment 02 덤프 파일 생성 여부는 아직 false다.
+      flags.put("fragment02_dumped", false);
+
+      // relay route 확인 여부는 아직 false다.
+      flags.put("relay_route_checked", false);
+
+      // relay policy 확인 여부는 아직 false다.
+      flags.put("relay_policy_checked", false);
+
+      // social isolation 준비 여부는 아직 false다.
+      flags.put("social_isolation_ready", false);
+
+      // core group 생성 여부는 아직 false다.
+      flags.put("core_group_created", false);
+
+      // core group 검증 여부는 아직 false다.
+      flags.put("core_group_validated", false);
+
+      // core group 암호화 여부는 아직 false다.
+      flags.put("core_group_encrypted", false);
+
+      // safe zone 등록 여부는 아직 false다.
+      flags.put("safe_zone_registered", false);
+
+      // 외부 노드 sever 시도 여부는 아직 false다.
+      flags.put("external_sever_attempted", false);
+
+      // ghost mode 활성화 여부는 아직 false다.
+      flags.put("ghost_mode_enabled", false);
+
+      // fragment 03 발견 여부는 아직 false다.
+      flags.put("fragment03_found", false);
+
+      // fragment 03 복사 여부는 아직 false다.
+      flags.put("fragment03_copied", false);
+
+      // laplace.qasm 생성 여부는 아직 false다.
+      flags.put("laplace_qasm_created", false);
+
+      // core 접근 차단 확인 여부는 아직 false다.
+      flags.put("core_access_blocked", false);
+
+      // Chapter 3 완료 여부는 아직 false다.
+      flags.put("chapter3_completed", false);
+      return;
+    }
 
     // Chapter 2가 시작된 snapshot이므로 시작 플래그는 true로 둔다.
     flags.put("chapter2_started", true);
@@ -3119,8 +3341,9 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다. DB 전이 검색에 실패한 경우 호출되며, VFS 로직을
-   * 통해 결과를 생성합니다.
+   * 터미널 프로필 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다.
+   *
+   * <p>DB 전이 검색에 실패한 경우 호출되며, 현재 챕터의 VFS 로직을 통해 STAY 결과를 생성합니다.
    *
    * @param user 요청을 보낸 인증 유저 객체
    * @param progress 유저의 현재 스토리 진행 상태 기록
@@ -3128,13 +3351,17 @@ public class StoryServiceImpl implements StoryService {
    * @param request 전이 요청 데이터 (입력된 명령어 포함)
    * @return STAY 타입의 전이 결과 응답 (터미널 출력값 포함) 또는 처리 불가 시 null
    */
-  private TransitionResponseDto handleChapter2TerminalFallback(
+  private TransitionResponseDto handleTerminalFallback(
       User user, UserStoryProgress progress, StoryNode currentNode, TransitionRequestDto request) {
 
-    // 1. 현재 노드의 메타데이터를 확인하여 Chapter 2 터미널 프로필인지 검증합니다.
+    // 1. 현재 노드의 메타데이터를 확인하여 지원하는 터미널 프로필인지 검증합니다.
     JsonNode promptMeta = currentNode.getPromptMeta();
-    // 프로필 정보가 없거나 chapter2가 아니면 폴백 처리를 하지 않습니다.
-    if (promptMeta == null || !"chapter2".equals(promptMeta.path("terminalProfile").asText())) {
+    // prompt_meta.terminalProfile 값으로 챕터별 런타임 프로필을 찾는다.
+    String terminalProfile =
+        promptMeta == null ? null : promptMeta.path("terminalProfile").asText(null);
+    TerminalChapterProfile profile = getTerminalChapterProfileByTerminalProfile(terminalProfile);
+    // 프로필 정보가 없거나 현재 노드의 챕터와 불일치하면 폴백 처리를 하지 않는다.
+    if (profile == null || !profile.chapterCode().equals(currentNode.getChapter().getCode())) {
       return null;
     }
 
@@ -3153,7 +3380,7 @@ public class StoryServiceImpl implements StoryService {
     // 4. 유저 진행 상태에서 최신 스냅샷을 꺼내고, 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
     JsonNode latestSnapshot = progress.getLatestSnapshotJson();
     // 정적 VFS 구조와 스냅샷 내의 동적 변경사항(vfsOverlay)을 병합합니다.
-    VfsContext vfs = VfsContext.of(chapter02Vfs, latestSnapshot.path("vfsOverlay"));
+    VfsContext vfs = createVfsContext(latestSnapshot);
 
     // 5. TerminalCommandService를 통해 명령어를 실행하고 결과를 받아옵니다.
     // 스냅샷 내의 terminal 섹션 데이터(현재 CWD 등)를 함께 전달합니다.
