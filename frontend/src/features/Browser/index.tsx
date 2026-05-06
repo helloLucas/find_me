@@ -3,6 +3,7 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
 import { HomeTab } from "./components/HomeTab";
+import { SearchTab } from "./components/SearchTab";
 import { PacmanTab } from "./components/PacmanTab";
 import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
@@ -20,10 +21,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
     title: string;
   }>;
   historyIndex: number;
@@ -76,12 +77,23 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     }
     
     // 기본값 (챕터 1 등)
+    if (currentNode?.code === "CH1_NEWS_PORTAL" || currentNode?.code?.includes("ARTICLE")) {
+      return [{
+        id: "tab1",
+        title: "News",
+        url: "https://voidcity-news/recent/1",
+        component: "news",
+        history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "News" }],
+        historyIndex: 0,
+      }];
+    }
+
     return [{
       id: "tab1",
-      title: "Home",
-      url: "https://voidcity-news/recent/1",
-      component: "news",
-      history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "Home" }],
+      title: "Search",
+      url: "https://void-search.net",
+      component: "search",
+      history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
       historyIndex: 0,
     }];
   });
@@ -92,6 +104,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastAutoInspectNodeIdRef = useRef<number | null>(null);
   const skipAutoSyncNodeIdByTabRef = useRef<Record<string, number>>({});
+  const lastSynchronizedNodeIdRef = useRef<number | null>(null);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const articleTitleFromContent =
@@ -273,7 +286,11 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   useEffect(() => {
     if (!currentNode || !activeTab) return;
-    if (activeTab.component !== "news") return;
+    if (
+      activeTab.component !== "news" &&
+      activeTab.component !== "search" &&
+      activeTab.component !== "home"
+    ) return;
 
     const skipNodeId = skipAutoSyncNodeIdByTabRef.current[activeTab.id];
     if (typeof skipNodeId === "number") {
@@ -284,11 +301,37 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     const snapshot = resolveNewsSnapshot(currentNode.code, articleTitleFromContent);
     if (!snapshot) return;
 
+    if (lastSynchronizedNodeIdRef.current === currentNode.id) {
+      if (activeTab.component !== "news") {
+        return;
+      }
+    }
+
+    if (activeTab.url?.includes("/article/") && snapshot.url?.includes("/recent/")) {
+      return;
+    }
+
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
+      lastSynchronizedNodeIdRef.current = currentNode.id;
 
       setTabs((prev) => {
+        const hasNewsTab = prev.some((tab) => tab.component === "news");
+        if (!hasNewsTab && (currentNode.code === "CH1_NEWS_PORTAL" || currentNode.code.includes("ARTICLE"))) {
+          const newId = `tab_news_${Date.now()}`;
+          const newTab = {
+            id: newId,
+            title: snapshot.title,
+            url: snapshot.url,
+            component: "news" as const,
+            history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
+            historyIndex: 0,
+          };
+          queueMicrotask(() => setActiveTabId(newId));
+          return [...prev, newTab];
+        }
+
         let changed = false;
 
         const nextTabs = prev.map((tab) => {
@@ -348,8 +391,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const newsViewMode: "auto" | "list" | "article" =
     activeTab?.url?.includes("/recent/") ? "list" : activeTab?.url?.includes("/article/") ? "article" : "auto";
 
-  const handleFallbackOpenArticle = () => {
-    const fallbackTitle = articleTitleFromContent?.trim();
+  const handleFallbackOpenArticle = (card?: { id: string; title: string }) => {
+    const fallbackTitle = card?.title || articleTitleFromContent?.trim();
     if (!fallbackTitle) return;
 
     const fallbackUrl = `https://voidcity-news/article/${encodeURIComponent(fallbackTitle)}`;
@@ -479,13 +522,19 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === "news" && (
             <NewsTab
               viewMode={newsViewMode}
-              onFallbackOpenArticle={() => handleFallbackOpenArticle()}
+              activeTabTitle={activeTab?.title}
+              onFallbackOpenArticle={(card) => handleFallbackOpenArticle(card)}
             />
           )}
           {activeTab?.component === "home" && (
             <HomeTab 
               onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} 
               isChapter2Mode={isChapter2Mode}
+            />
+          )}
+          {activeTab?.component === "search" && (
+            <SearchTab
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
@@ -554,7 +603,7 @@ function resolveNewsSnapshot(nodeCode: string | undefined, articleTitle?: string
   if (nodeCode === "CH1_NEWS_PORTAL") {
     return {
       url: "https://voidcity-news/recent/1",
-      title: "Home",
+      title: "News",
     };
   }
 
