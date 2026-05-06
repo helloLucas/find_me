@@ -11,9 +11,9 @@ export const GlobalModal = () => {
 
     if (!isOpen) return null;
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (onConfirm) {
-            const preventClose: boolean | void = onConfirm();
+            const preventClose: boolean | void = await onConfirm();
             // 명시적으로 true를 반환하여 닫기를 차단한 경우가 아니라면 항상 모달을 안전하게 닫습니다.
             if (preventClose !== true) {
                 closeModal();
