@@ -76,8 +76,21 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_PARSED_TAR_COMMAND = "PARSED_TAR_COMMAND";
   private static final String RULE_NC_SEND_FILE = "NC_SEND_FILE";
   private static final String RULE_CHAINED_COMMAND = "CHAINED_COMMAND";
+  private static final String RULE_DISCOVER_OPEN_PORT = "DISCOVER_OPEN_PORT";
+  private static final String RULE_CONNECT_RELAY = "CONNECT_RELAY";
+  private static final String RULE_RELAY_REQUEST = "RELAY_REQUEST";
+  private static final String RULE_RELAY_REQUEST_TO_FILE = "RELAY_REQUEST_TO_FILE";
+  private static final String RULE_VALIDATE_CORE_GROUP_DAT = "VALIDATE_CORE_GROUP_DAT";
+  private static final String RULE_GPG_OUTPUT_EXISTS = "GPG_OUTPUT_EXISTS";
+  private static final String RULE_FILE_EQUIVALENCE = "FILE_EQUIVALENCE";
+  private static final String RULE_CONFIRMATION_STREAM_TO_SCRIPT = "CONFIRMATION_STREAM_TO_SCRIPT";
+  private static final String RULE_DISCOVER_FILE = "DISCOVER_FILE";
+  private static final String RULE_CREATE_FILE_EQUIVALENT = "CREATE_FILE_EQUIVALENT";
+  private static final String RULE_FILE_COMPOSITION = "FILE_COMPOSITION";
+  private static final String RULE_HASH_FILE_CHECK = "HASH_FILE_CHECK";
   private static final String CHAPTER_02_CODE = "week02";
   private static final String CHAPTER_03_CODE = "week03";
+  private static final String CHAPTER_03_START_NODE_CODE = "CH3_FRIEND_CALL";
   private static final String CHAPTER_02_TERMINAL_PROFILE = "chapter2";
   private static final String CHAPTER_03_TERMINAL_PROFILE = "chapter3";
   private static final String CHAPTER_02_VFS_VERSION = "chapter02-v1";
@@ -85,6 +98,8 @@ public class StoryServiceImpl implements StoryService {
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
   private static final String TERMINAL_PROMPT_USER = "guest";
   private static final String TERMINAL_PROMPT_HOST = "lucas-server";
+  private static final Map<String, String> CHAPTER_START_NODE_CODES =
+      Map.of(CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE);
 
   /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
   private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
@@ -210,10 +225,7 @@ public class StoryServiceImpl implements StoryService {
             .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode =
-        storyNodeRepository
-            .findFirstByChapter_CodeOrderByIdAsc(request.getChapterCode())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3002));
+    StoryNode firstNode = findStartNode(request.getChapterCode());
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
@@ -245,6 +257,47 @@ public class StoryServiceImpl implements StoryService {
     storySessionRedisService.clearRecentCommands(sessionId);
 
     return StoryNodeResponseDto.from(firstNode);
+  }
+
+  /**
+   * 챕터 시작 시 사용할 첫 노드를 조회한다.
+   *
+   * <p>Chapter 3처럼 뒤늦게 도입부 노드가 추가된 챕터는 DB id 순서만으로 시작점을 정할 수 없으므로, 명시 시작 노드 코드를 먼저 조회하고 기존 정렬 기준을
+   * fallback으로 유지한다.
+   *
+   * @param chapterCode 시작할 챕터 코드
+   * @return 챕터 시작 노드
+   * @throws CustomException E3002 - 시작 가능한 노드가 없을 때
+   */
+  private StoryNode findStartNode(String chapterCode) {
+    // Optional helper가 비어 있으면 호출부의 기존 예외 규약에 맞춰 E3002를 던진다.
+    return findStartNodeOptional(chapterCode)
+        .orElseThrow(() -> new CustomException(ErrorCode.E3002));
+  }
+
+  /**
+   * 챕터 시작 노드를 Optional로 조회한다.
+   *
+   * @param chapterCode 시작할 챕터 코드
+   * @return 명시 시작 노드 또는 기존 id 순서 첫 노드
+   */
+  private java.util.Optional<StoryNode> findStartNodeOptional(String chapterCode) {
+    // Chapter 3는 새 도입 통화 노드를 항상 첫 노드로 사용해야 한다.
+    String configuredStartNodeCode = CHAPTER_START_NODE_CODES.get(chapterCode);
+
+    // 명시 시작 노드가 있으면 같은 챕터 안의 노드인지까지 함께 검증한다.
+    if (configuredStartNodeCode != null) {
+      java.util.Optional<StoryNode> configuredStartNode =
+          storyNodeRepository.findByChapter_CodeAndCode(chapterCode, configuredStartNodeCode);
+
+      // seed가 아직 갱신되지 않은 환경에서는 기존 id 순서 fallback으로 기동 가능성을 유지한다.
+      if (configuredStartNode.isPresent()) {
+        return configuredStartNode;
+      }
+    }
+
+    // 별도 시작 노드 정책이 없는 챕터는 기존 구현과 같은 id 순서 첫 노드를 사용한다.
+    return storyNodeRepository.findFirstByChapter_CodeOrderByIdAsc(chapterCode);
   }
 
   // ──────────────────────────────────────────────
@@ -849,8 +902,7 @@ public class StoryServiceImpl implements StoryService {
                         .build());
 
                 // 2. 해당 챕터의 첫 번째 노드 조회
-                storyNodeRepository
-                    .findFirstByChapter_CodeOrderByIdAsc(firstChapter.getCode())
+                findStartNodeOptional(firstChapter.getCode())
                     .ifPresent(
                         firstNode -> {
                           // 3. 최초 스토리 진행 레코드(UserStoryProgress) 생성
@@ -892,15 +944,22 @@ public class StoryServiceImpl implements StoryService {
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
       case "exact" ->
-          matchesExactTransition(t.getExpectedInput(), request.getInputValue()); // 완전 일치
+          matchesExactTransition(
+              t.getExpectedInput(), request.getInputValue(), t.getValidatorConfig()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
   }
 
-  private boolean matchesExactTransition(String expectedInput, String actualInput) {
+  private boolean matchesExactTransition(
+      String expectedInput, String actualInput, JsonNode validatorConfig) {
     if (actualInput.equals(expectedInput)) {
+      return true;
+    }
+
+    // exact validator도 acceptedValues 배열이 있으면 같은 click/action의 별칭으로 인정한다.
+    if (getTextArrayField(validatorConfig, "acceptedValues").contains(actualInput)) {
       return true;
     }
 
@@ -954,6 +1013,22 @@ public class StoryServiceImpl implements StoryService {
       case RULE_PARSED_TAR_COMMAND -> matchesParsedTarCommandRule(config, request, latestSnapshot);
       case RULE_NC_SEND_FILE -> matchesNcSendFileRule(config, request, latestSnapshot);
       case RULE_CHAINED_COMMAND -> matchesChainedCommandRule(config, request, latestSnapshot);
+      case RULE_DISCOVER_OPEN_PORT -> matchesDiscoverOpenPortRule(config, request, latestSnapshot);
+      case RULE_CONNECT_RELAY -> matchesConnectRelayRule(config, request, latestSnapshot);
+      case RULE_RELAY_REQUEST -> matchesRelayRequestRule(config, request, latestSnapshot, false);
+      case RULE_RELAY_REQUEST_TO_FILE ->
+          matchesRelayRequestRule(config, request, latestSnapshot, true);
+      case RULE_VALIDATE_CORE_GROUP_DAT ->
+          matchesValidateCoreGroupDatRule(config, request, latestSnapshot);
+      case RULE_GPG_OUTPUT_EXISTS -> matchesGpgOutputExistsRule(config, request, latestSnapshot);
+      case RULE_FILE_EQUIVALENCE -> matchesFileEquivalenceRule(config, request, latestSnapshot);
+      case RULE_CONFIRMATION_STREAM_TO_SCRIPT ->
+          matchesConfirmationStreamToScriptRule(config, request, latestSnapshot);
+      case RULE_DISCOVER_FILE -> matchesDiscoverFileRule(config, request, latestSnapshot);
+      case RULE_CREATE_FILE_EQUIVALENT ->
+          matchesCreateFileEquivalentRule(config, request, latestSnapshot);
+      case RULE_FILE_COMPOSITION -> matchesFileCompositionRule(config, request, latestSnapshot);
+      case RULE_HASH_FILE_CHECK -> matchesHashFileCheckRule(config, request, latestSnapshot);
       default -> false;
     };
   }
@@ -1018,6 +1093,29 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // validator_config.command에는 기대하는 첫 번째 명령어 토큰이 들어 있다.
+    // cwd 조건이 있으면 현재 snapshot의 터미널 위치와 먼저 비교한다.
+    if (!matchesCwdRequirement(config, latestSnapshot)) {
+      return false;
+    }
+
+    // 사용자가 입력한 명령어를 공통 tokenizer로 분해한다.
+    List<String> normalizedTokens = tokenizeCommand(input);
+    if (normalizedTokens.isEmpty()) {
+      return false;
+    }
+
+    // Chapter 3 seed는 acceptedForms로 여러 허용 명령 형태를 표현한다.
+    JsonNode acceptedForms = config.get("acceptedForms");
+    if (acceptedForms != null && acceptedForms.isArray()) {
+      for (JsonNode acceptedForm : acceptedForms) {
+        if (matchesCommandForm(acceptedForm, normalizedTokens)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     String expectedCommand = getTextField(config, "command");
 
     // command 설정이 없으면 비교 기준이 없으므로 실패로 처리한다.
@@ -1454,6 +1552,432 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
+   * DISCOVER_OPEN_PORT rule을 검증한다.
+   *
+   * <p>Chapter 3 seed는 nmap, ss, netstat, nc 중 하나로 9091 relay 포트를 발견하는 입력을 허용한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 허용된 포트 탐색 명령이면 true
+   */
+  private boolean matchesDiscoverOpenPortRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // 선행 flags 조건이 있으면 먼저 확인한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    // 입력을 일반 명령 구조로 파싱한다.
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null) {
+      return false;
+    }
+
+    // acceptedMethods 중 하나라도 현재 입력과 맞으면 포트 발견으로 인정한다.
+    JsonNode acceptedMethods = config.get("acceptedMethods");
+    if (acceptedMethods == null || !acceptedMethods.isArray()) {
+      return false;
+    }
+
+    for (JsonNode method : acceptedMethods) {
+      if (matchesDiscoverOpenPortMethod(method, command, config.path("targetPort").asInt())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * DISCOVER_OPEN_PORT의 개별 허용 방식을 검증한다.
+   *
+   * @param method acceptedMethods의 단일 method 설정
+   * @param command 사용자 입력 명령
+   * @param targetPort 찾아야 하는 relay 포트
+   * @return 해당 method가 입력과 일치하면 true
+   */
+  private boolean matchesDiscoverOpenPortMethod(
+      JsonNode method, ParsedCommand command, int targetPort) {
+    // command 이름이 seed의 허용 command와 같아야 한다.
+    String expectedCommand = getTextField(method, "command");
+    if (expectedCommand == null || !expectedCommand.equals(command.command())) {
+      return false;
+    }
+
+    // nmap처럼 순서가 의미 있는 필수 인자는 모두 포함되어야 한다.
+    if (!containsRequiredArgs(command.args(), getTextArrayField(method, "requiredArgs"))) {
+      return false;
+    }
+
+    // ss/netstat/nc처럼 순서가 중요하지 않은 필수 인자도 모두 포함되어야 한다.
+    if (!containsRequiredArgs(command.args(), getTextArrayField(method, "requiredArgsAnyOrder"))) {
+      return false;
+    }
+
+    // acceptedTargets는 nmap 대상 host를 검증한다.
+    List<String> acceptedTargets = getTextArrayField(method, "acceptedTargets");
+    if (!acceptedTargets.isEmpty() && !containsAnyToken(command.args(), acceptedTargets)) {
+      return false;
+    }
+
+    // acceptedHosts/acceptedPorts는 nc -zv host port 형식을 검증한다.
+    if (method.has("acceptedHosts") || method.has("acceptedPorts")) {
+      ParsedNetcatCommand ncCommand = parseNetcatCommand(command.args());
+      return ncCommand != null
+          && matchesHostAlias(ncCommand.host(), getTextArrayField(method, "acceptedHosts"))
+          && matchesPort(ncCommand.port(), method.get("acceptedPorts"), targetPort);
+    }
+
+    return true;
+  }
+
+  /**
+   * CONNECT_RELAY rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return nc host port 형식이 relay 접속 조건과 맞으면 true
+   */
+  private boolean matchesConnectRelayRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // relay 접속은 포트 발견 등 선행 플래그가 맞아야 한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null
+        || !getTextArrayField(config, "acceptedCommands").contains(command.command())) {
+      return false;
+    }
+
+    ParsedNetcatCommand ncCommand = parseNetcatCommand(command.args());
+    if (ncCommand == null) {
+      return false;
+    }
+
+    // host alias와 port가 seed 설정과 같아야 한다.
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return false;
+    }
+
+    // stdinRequired가 true일 때만 입력 리다이렉션을 필수로 본다.
+    boolean stdinRequired = config.path("stdinRequired").asBoolean(false);
+    return !stdinRequired || ncCommand.stdinFile() != null;
+  }
+
+  /**
+   * RELAY_REQUEST 및 RELAY_REQUEST_TO_FILE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param outputFileRequired 파일 저장형 요청이면 true
+   * @return relay 요청 payload와 nc 대상, 출력 파일 조건이 맞으면 true
+   */
+  private boolean matchesRelayRequestRule(
+      JsonNode config,
+      TransitionRequestDto request,
+      JsonNode latestSnapshot,
+      boolean outputFileRequired) {
+    // relay 요청은 접속 완료 등 선행 조건이 맞아야 한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    ParsedRelayInvocation invocation = parseRelayInvocation(input);
+    if (invocation == null) {
+      return false;
+    }
+
+    // 요청 payload는 STATUS, PEOPLE 같은 seed request 값과 정확히 맞아야 한다.
+    String expectedRequest = getTextField(config, "request");
+    if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
+      return false;
+    }
+
+    // relay host/port는 config가 허용한 localhost alias와 9091이어야 한다.
+    ParsedNetcatCommand ncCommand = invocation.netcatCommand();
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return false;
+    }
+
+    // 파일 저장형 요청은 redirect 또는 tee 출력 대상이 outputFile과 같아야 한다.
+    if (outputFileRequired) {
+      String expectedOutputFile = getTextField(config, "outputFile");
+      String actualOutputFile = invocation.outputFile();
+      return actualOutputFile != null
+          && expectedOutputFile != null
+          && expectedOutputFile.equals(resolveSnapshotPath(latestSnapshot, actualOutputFile));
+    }
+
+    return true;
+  }
+
+  /**
+   * VALIDATE_CORE_GROUP_DAT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return core_group.dat 작성 내용이 성공/실패 branch 조건과 맞으면 true
+   */
+  private boolean matchesValidateCoreGroupDatRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // fragment 실행 및 relay 지식 조건이 맞아야 검증을 시작할 수 있다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)
+        || !matchesKnowledgeRequirements(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null
+        || targetFile == null
+        || !targetsOutputFile(input, targetFile, latestSnapshot)) {
+      return false;
+    }
+
+    // 명령 문자열에서 ACTIVE/DELETED/UNKNOWN 상태 라인을 추출해 seed 정책으로 검증한다.
+    List<String> statusLines = extractStatusLines(input, config);
+    if (statusLines.isEmpty()) {
+      return false;
+    }
+
+    boolean valid = isValidCoreGroupDat(statusLines, config);
+    boolean expectFailure = config.path("expectFailure").asBoolean(false);
+    return expectFailure ? !valid : valid;
+  }
+
+  /**
+   * GPG_OUTPUT_EXISTS rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return gpg symmetric 출력 경로가 기대값과 맞으면 true
+   */
+  private boolean matchesGpgOutputExistsRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null || !"gpg".equals(command.command())) {
+      return false;
+    }
+
+    if (!containsAnyToken(command.args(), List.of("-c", "--symmetric"))) {
+      return false;
+    }
+
+    String expectedInput = getTextField(config, "inputFile");
+    String expectedOutput = getTextField(config, "expectedOutput");
+    String actualOutput = resolveSnapshotPath(latestSnapshot, resolveGpgOutputFile(command.args()));
+    String actualInput = resolveSnapshotPath(latestSnapshot, resolveGpgInputFile(command.args()));
+
+    return expectedInput != null
+        && expectedOutput != null
+        && expectedInput.equals(actualInput)
+        && expectedOutput.equals(actualOutput);
+  }
+
+  /**
+   * FILE_EQUIVALENCE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cp/mv/cat로 기대 파일을 targetFile에 복제하려는 입력이면 true
+   */
+  private boolean matchesFileEquivalenceRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    if (copyCommand == null) {
+      return false;
+    }
+
+    List<String> acceptedCommands = getTextArrayField(config, "acceptedCommands");
+    String expectedSource = getTextField(config, "equivalentTo");
+    String expectedTarget = getTextField(config, "targetFile");
+
+    return acceptedCommands.contains(copyCommand.command())
+        && expectedSource != null
+        && expectedTarget != null
+        && expectedSource.equals(copyCommand.sourceFile())
+        && expectedTarget.equals(copyCommand.targetFile());
+  }
+
+  /**
+   * CONFIRMATION_STREAM_TO_SCRIPT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 충분한 확인 토큰을 script로 stream하는 입력이면 true
+   */
+  private boolean matchesConfirmationStreamToScriptRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    if (input == null
+        || !targetsShellScript(input, getTextField(config, "scriptPath"), latestSnapshot)) {
+      return false;
+    }
+
+    List<String> acceptedTokens = getTextArrayField(config, "acceptedConfirmationTokens");
+    int minimumConfirmations = config.path("minimumConfirmations").asInt(1);
+    return countConfirmationTokens(input, acceptedTokens) >= minimumConfirmations
+        || streamsInfiniteConfirmation(input, acceptedTokens);
+  }
+
+  /**
+   * DISCOVER_FILE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return ls/find/cd 후 ls로 targetFile을 찾는 입력이면 true
+   */
+  private boolean matchesDiscoverFileRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null || targetFile == null) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(input);
+    if (command == null) {
+      return false;
+    }
+
+    if ("find".equals(command.command())) {
+      return command.args().contains("-name")
+          && command.args().contains(fileNameOf(targetFile))
+          && command.args().stream()
+              .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
+              .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+    }
+
+    if ("ls".equals(command.command())) {
+      return command.args().isEmpty()
+          ? parentPathOf(targetFile).equals(extractText(latestSnapshot, "/terminal/cwd"))
+          : command.args().stream()
+              .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
+              .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+    }
+
+    return input.contains("cd " + parentPathOf(targetFile))
+        && input.contains("&&")
+        && input.contains("ls");
+  }
+
+  /**
+   * CREATE_FILE_EQUIVALENT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return sourceFile을 targetFile로 복사하는 입력이면 true
+   */
+  private boolean matchesCreateFileEquivalentRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    if (copyCommand == null) {
+      return false;
+    }
+
+    return getTextArrayField(config, "acceptedCommands").contains(copyCommand.command())
+        && getTextField(config, "sourceFile").equals(copyCommand.sourceFile())
+        && getTextField(config, "targetFile").equals(copyCommand.targetFile());
+  }
+
+  /**
+   * FILE_COMPOSITION rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return orderedSources를 targetFile로 합치는 입력이면 true
+   */
+  private boolean matchesFileCompositionRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null
+        || targetFile == null
+        || !targetsOutputFile(input, targetFile, latestSnapshot)) {
+      return false;
+    }
+
+    List<String> actualSources = resolveCatSourcePaths(input, latestSnapshot);
+    List<String> orderedSources = getTextArrayField(config, "orderedSources");
+    return containsAllPaths(actualSources, orderedSources)
+        && appearsInOrder(actualSources, orderedSources);
+  }
+
+  /**
+   * HASH_FILE_CHECK rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return sha256sum 또는 shasum -a 256 대상이 targetFile이면 true
+   */
+  private boolean matchesHashFileCheckRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null) {
+      return false;
+    }
+
+    JsonNode acceptedCommands = config.get("acceptedCommands");
+    if (acceptedCommands == null || !acceptedCommands.isArray()) {
+      return false;
+    }
+
+    for (JsonNode acceptedCommand : acceptedCommands) {
+      if (matchesHashCommand(acceptedCommand, command, config, latestSnapshot)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * validator_config에서 문자열 필드를 안전하게 읽는다.
    *
    * @param node 값을 읽을 JSON node
@@ -1537,6 +2061,527 @@ public class StoryServiceImpl implements StoryService {
    * @param input 사용자가 입력한 명령어 문자열
    * @return 토큰화된 명령어/인자 목록
    */
+  /**
+   * validator_config.cwd 조건이 현재 snapshot의 terminal.cwd와 맞는지 확인한다.
+   *
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cwd 조건이 없거나 현재 cwd와 같으면 true
+   */
+  private boolean matchesCwdRequirement(JsonNode config, JsonNode latestSnapshot) {
+    // cwd 조건이 없는 rule은 디렉터리와 무관하게 매칭한다.
+    String expectedCwd = getTextField(config, "cwd");
+    if (expectedCwd == null || expectedCwd.isBlank()) {
+      return true;
+    }
+
+    // snapshot에 cwd가 없으면 챕터 프로필의 기본 cwd를 사용한다.
+    String actualCwd = extractText(latestSnapshot, "/terminal/cwd");
+    if (actualCwd == null || actualCwd.isBlank()) {
+      actualCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+    }
+
+    // seed가 지정한 cwd와 현재 cwd가 같아야 한다.
+    return expectedCwd.equals(actualCwd);
+  }
+
+  /**
+   * command form 설정과 실제 token 목록을 비교한다.
+   *
+   * @param form command/args 또는 command/argsAnyOrder 설정
+   * @param actualTokens tokenizer로 분해한 실제 입력
+   * @return command와 args 조건이 맞으면 true
+   */
+  private boolean matchesCommandForm(JsonNode form, List<String> actualTokens) {
+    // 빈 token은 어떤 command form에도 매칭할 수 없다.
+    if (actualTokens == null || actualTokens.isEmpty()) {
+      return false;
+    }
+
+    // 첫 token은 명령어 이름이어야 한다.
+    String expectedCommand = getTextField(form, "command");
+    if (expectedCommand == null || !expectedCommand.equals(actualTokens.get(0))) {
+      return false;
+    }
+
+    // command 뒤의 token만 인자 목록으로 비교한다.
+    List<String> actualArgs = actualTokens.subList(1, actualTokens.size());
+    List<String> expectedArgs = getTextArrayField(form, "args");
+    if (!expectedArgs.isEmpty()) {
+      return actualArgs.equals(expectedArgs);
+    }
+
+    // argsAnyOrder는 순서만 무시하고 인자 개수는 동일해야 한다.
+    List<String> expectedArgsAnyOrder = getTextArrayField(form, "argsAnyOrder");
+    if (!expectedArgsAnyOrder.isEmpty()) {
+      return actualArgs.size() == expectedArgsAnyOrder.size()
+          && containsRequiredArgs(actualArgs, expectedArgsAnyOrder);
+    }
+
+    // 인자 조건이 없으면 command 단독 입력만 통과시킨다.
+    return actualArgs.isEmpty();
+  }
+
+  private boolean containsRequiredArgs(List<String> actualArgs, List<String> requiredArgs) {
+    if (requiredArgs == null || requiredArgs.isEmpty()) {
+      return true;
+    }
+    for (String requiredArg : requiredArgs) {
+      if (!containsCliArg(actualArgs, requiredArg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean containsCliArg(List<String> actualArgs, String expectedArg) {
+    if (actualArgs.contains(expectedArg)) {
+      return true;
+    }
+    if (expectedArg == null || !expectedArg.startsWith("-") || expectedArg.startsWith("--")) {
+      return false;
+    }
+
+    String requiredOptions = expectedArg.substring(1);
+    for (String actualArg : actualArgs) {
+      if (actualArg == null || !actualArg.startsWith("-") || actualArg.startsWith("--")) {
+        continue;
+      }
+
+      String actualOptions = actualArg.substring(1);
+      boolean allPresent = true;
+      for (int i = 0; i < requiredOptions.length(); i++) {
+        if (actualOptions.indexOf(requiredOptions.charAt(i)) < 0) {
+          allPresent = false;
+          break;
+        }
+      }
+      if (allPresent) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean containsAnyToken(List<String> actualTokens, List<String> acceptedTokens) {
+    for (String acceptedToken : acceptedTokens) {
+      if (containsCliArg(actualTokens, acceptedToken) || actualTokens.contains(acceptedToken)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** nc host/port 명령에서 추출한 구조입니다. */
+  private record ParsedNetcatCommand(
+      String host, int port, String stdinFile, List<String> trailingValues) {}
+
+  /** relay 요청 입력에서 추출한 payload, nc 대상, 출력 파일 구조입니다. */
+  private record ParsedRelayInvocation(
+      String payload, ParsedNetcatCommand netcatCommand, String outputFile) {}
+
+  /** 파일 복사/동등성 rule에서 사용하는 source/target 구조입니다. */
+  private record ParsedFileCopyCommand(String command, String sourceFile, String targetFile) {}
+
+  private ParsedNetcatCommand parseNetcatCommand(List<String> args) {
+    List<String> positionals = new ArrayList<>();
+    String stdinFile = null;
+
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-w".equals(arg) && i + 1 < args.size()) {
+        i++;
+        continue;
+      }
+      if (arg != null && arg.startsWith("-w") && arg.length() > 2) {
+        continue;
+      }
+      if (arg != null && arg.startsWith("-")) {
+        continue;
+      }
+      if ("<".equals(arg) && i + 1 < args.size()) {
+        stdinFile = args.get(++i);
+        continue;
+      }
+      if (arg != null && arg.startsWith("<") && arg.length() > 1) {
+        stdinFile = arg.substring(1);
+        continue;
+      }
+      if ("|".equals(arg) || ">".equals(arg) || ">>".equals(arg)) {
+        break;
+      }
+      positionals.add(arg);
+    }
+
+    for (int i = 0; i + 1 < positionals.size(); i++) {
+      Integer port = parseInteger(positionals.get(i + 1));
+      if (port == null) {
+        continue;
+      }
+
+      List<String> trailingValues =
+          i + 2 >= positionals.size()
+              ? List.of()
+              : new ArrayList<>(positionals.subList(i + 2, positionals.size()));
+      return new ParsedNetcatCommand(positionals.get(i), port, stdinFile, trailingValues);
+    }
+    return null;
+  }
+
+  private boolean matchesHostAlias(String actualHost, List<String> hostAliases) {
+    return hostAliases.isEmpty() || hostAliases.contains(actualHost);
+  }
+
+  private boolean matchesPort(int actualPort, JsonNode acceptedPorts, int fallbackPort) {
+    if (acceptedPorts == null || !acceptedPorts.isArray()) {
+      return actualPort == fallbackPort;
+    }
+    for (JsonNode acceptedPort : acceptedPorts) {
+      if (acceptedPort.canConvertToInt() && acceptedPort.asInt() == actualPort) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private ParsedRelayInvocation parseRelayInvocation(String input) {
+    if (input == null || input.isBlank()) {
+      return null;
+    }
+
+    List<String> tokens = tokenizeCommand(input);
+    int ncIndex = tokens.indexOf("nc");
+    if (ncIndex < 0) {
+      return null;
+    }
+
+    List<String> ncArgs = new ArrayList<>();
+    for (int i = ncIndex + 1; i < tokens.size(); i++) {
+      String token = tokens.get(i);
+      if ("|".equals(token)
+          || ">".equals(token)
+          || ">>".equals(token)
+          || token.startsWith(">")
+          || "<<<".equals(token)
+          || "<<".equals(token)) {
+        break;
+      }
+      ncArgs.add(token);
+    }
+
+    ParsedNetcatCommand ncCommand = parseNetcatCommand(ncArgs);
+    if (ncCommand == null) {
+      return null;
+    }
+
+    String payload = extractRelayPayload(input, tokens, ncIndex, ncCommand.trailingValues());
+    if (payload == null || payload.isBlank()) {
+      return null;
+    }
+
+    return new ParsedRelayInvocation(payload, ncCommand, extractOutputFile(input));
+  }
+
+  private String extractRelayPayload(
+      String input, List<String> tokens, int ncIndex, List<String> trailingValues) {
+    int pipeIndex = tokens.indexOf("|");
+    if (pipeIndex >= 0 && pipeIndex < ncIndex) {
+      return joinPayloadTokens(tokens.subList(0, pipeIndex));
+    }
+
+    int hereStringIndex = tokens.indexOf("<<<");
+    if (hereStringIndex >= 0 && hereStringIndex + 1 < tokens.size()) {
+      return joinPayloadTokens(tokens.subList(hereStringIndex + 1, tokens.size()));
+    }
+
+    if (trailingValues != null && !trailingValues.isEmpty()) {
+      return joinPayloadTokens(trailingValues);
+    }
+
+    return input.contains("<<") ? input : null;
+  }
+
+  private String joinPayloadTokens(List<String> tokens) {
+    if (tokens.isEmpty()) {
+      return "";
+    }
+    int start = ("echo".equals(tokens.get(0)) || "printf".equals(tokens.get(0))) ? 1 : 0;
+    return String.join(" ", tokens.subList(start, tokens.size()))
+        .replace("\\n", "\n")
+        .replace("\\r", "\r")
+        .trim();
+  }
+
+  private boolean matchesRelayPayload(String payload, String expectedRequest) {
+    if (payload == null || expectedRequest == null) {
+      return false;
+    }
+    return java.util.regex.Pattern.compile(
+            "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b")
+        .matcher(payload)
+        .find();
+  }
+
+  private String extractOutputFile(String input) {
+    List<String> tokens = tokenizeCommand(input);
+    for (int i = 0; i < tokens.size(); i++) {
+      String token = tokens.get(i);
+      if ((">".equals(token) || ">>".equals(token)) && i + 1 < tokens.size()) {
+        return tokens.get(i + 1);
+      }
+      if (token != null && token.startsWith(">") && token.length() > 1) {
+        return token.replaceFirst("^>+", "");
+      }
+      if ("tee".equals(token) && i + 1 < tokens.size()) {
+        int targetIndex = i + 1;
+        if (tokens.get(targetIndex).startsWith("-") && targetIndex + 1 < tokens.size()) {
+          targetIndex++;
+        }
+        return tokens.get(targetIndex);
+      }
+    }
+    return null;
+  }
+
+  private boolean matchesKnowledgeRequirements(JsonNode config, JsonNode latestSnapshot) {
+    JsonNode requiredKnowledge = config.get("requiredKnowledge");
+    if (requiredKnowledge == null || !requiredKnowledge.isObject()) {
+      return true;
+    }
+
+    JsonNode flags = latestSnapshot == null ? null : latestSnapshot.path("flags");
+    var fields = requiredKnowledge.fields();
+    while (fields.hasNext()) {
+      Map.Entry<String, JsonNode> entry = fields.next();
+      JsonNode alternatives = entry.getValue();
+      if (alternatives == null || !alternatives.isArray()) {
+        continue;
+      }
+
+      boolean anySatisfied = false;
+      for (JsonNode alternative : alternatives) {
+        if (alternative.isTextual()
+            && flags != null
+            && flags.path(alternative.asText()).asBoolean(false)) {
+          anySatisfied = true;
+          break;
+        }
+      }
+      if (!anySatisfied) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean targetsOutputFile(String input, String expectedFile, JsonNode latestSnapshot) {
+    String outputFile = extractOutputFile(input);
+    if (outputFile != null
+        && expectedFile.equals(resolveSnapshotPath(latestSnapshot, outputFile))) {
+      return true;
+    }
+    return input.contains(expectedFile) || input.contains(fileNameOf(expectedFile));
+  }
+
+  private List<String> extractStatusLines(String input, JsonNode config) {
+    List<String> lines = new ArrayList<>();
+    String normalized = input.replace("\\n", "\n").replace("\\r", "\r");
+
+    for (String canonicalLine : getTextArrayField(config, "canonicalAllowedLines")) {
+      if (normalized.contains(canonicalLine)) {
+        lines.add(canonicalLine);
+      }
+    }
+
+    java.util.regex.Matcher matcher =
+        java.util.regex.Pattern.compile("\\b[\\w_]+\\s+(ACTIVE|DELETED|UNKNOWN)\\b")
+            .matcher(normalized);
+    while (matcher.find()) {
+      String line = matcher.group().trim();
+      if (!lines.contains(line)) {
+        lines.add(line);
+      }
+    }
+    return lines;
+  }
+
+  private boolean isValidCoreGroupDat(List<String> statusLines, JsonNode config) {
+    List<String> canonicalLines = getTextArrayField(config, "canonicalAllowedLines");
+    List<String> rejectStatuses = getTextArrayField(config, "rejectStatuses");
+    Set<String> uniqueLines = new LinkedHashSet<>(statusLines);
+
+    if (!config.path("allowDuplicateLines").asBoolean(true)
+        && uniqueLines.size() != statusLines.size()) {
+      return false;
+    }
+
+    for (String line : statusLines) {
+      for (String rejectStatus : rejectStatuses) {
+        if (line.endsWith(" " + rejectStatus)) {
+          return false;
+        }
+      }
+      if (!canonicalLines.contains(line)) {
+        return false;
+      }
+    }
+    return config.path("allowMissingActiveNode").asBoolean(false)
+        || uniqueLines.containsAll(canonicalLines);
+  }
+
+  private String resolveGpgOutputFile(List<String> args) {
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if (("-o".equals(arg) || "--output".equals(arg)) && i + 1 < args.size()) {
+        return args.get(i + 1);
+      }
+    }
+    String inputFile = resolveGpgInputFile(args);
+    return inputFile == null ? "" : inputFile + ".gpg";
+  }
+
+  private String resolveGpgInputFile(List<String> args) {
+    String inputFile = null;
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if (("-o".equals(arg) || "--output".equals(arg)) && i + 1 < args.size()) {
+        i++;
+        continue;
+      }
+      if (arg.startsWith("-")) {
+        continue;
+      }
+      inputFile = arg;
+    }
+    return inputFile;
+  }
+
+  private ParsedFileCopyCommand parseFileCopyCommand(String input, JsonNode latestSnapshot) {
+    ParsedCommand command = parseCommand(input);
+    if (command == null) {
+      return null;
+    }
+
+    if (("cp".equals(command.command()) || "mv".equals(command.command()))
+        && command.args().size() >= 2) {
+      String source = resolveSnapshotPath(latestSnapshot, command.args().get(0));
+      String target = resolveSnapshotPath(latestSnapshot, command.args().get(1));
+      return new ParsedFileCopyCommand(command.command(), source, target);
+    }
+
+    if ("cat".equals(command.command())) {
+      String outputFile = extractOutputFile(input);
+      if (outputFile == null || command.args().isEmpty()) {
+        return null;
+      }
+      String source = resolveSnapshotPath(latestSnapshot, command.args().get(0));
+      String target = resolveSnapshotPath(latestSnapshot, outputFile);
+      return new ParsedFileCopyCommand("cat", source, target);
+    }
+    return null;
+  }
+
+  private boolean targetsShellScript(String input, String scriptPath, JsonNode latestSnapshot) {
+    if (scriptPath == null) {
+      return false;
+    }
+
+    List<String> tokens = tokenizeCommand(input);
+    for (int i = 0; i + 1 < tokens.size(); i++) {
+      if ("sh".equals(tokens.get(i))
+          && scriptPath.equals(resolveSnapshotPath(latestSnapshot, tokens.get(i + 1)))) {
+        return true;
+      }
+    }
+    return input.contains(scriptPath);
+  }
+
+  private int countConfirmationTokens(String input, List<String> acceptedTokens) {
+    String normalized = input.replace("\\n", "\n").replace(";", "\n");
+    int count = 0;
+    for (String token : normalized.split("\\s+")) {
+      String cleaned = token.replaceAll("[^A-Za-z]", "").toLowerCase();
+      if (acceptedTokens.contains(cleaned)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private boolean streamsInfiniteConfirmation(String input, List<String> acceptedTokens) {
+    String normalized = input.toLowerCase();
+    return (normalized.startsWith("yes ")
+            || normalized.startsWith("yes|")
+            || normalized.startsWith("yes |"))
+        || (normalized.contains("while") && acceptedTokens.stream().anyMatch(normalized::contains));
+  }
+
+  private String fileNameOf(String path) {
+    int index = path.lastIndexOf('/');
+    return index < 0 ? path : path.substring(index + 1);
+  }
+
+  private String parentPathOf(String path) {
+    int index = path.lastIndexOf('/');
+    return index <= 0 ? "/" : path.substring(0, index);
+  }
+
+  private List<String> resolveCatSourcePaths(String input, JsonNode latestSnapshot) {
+    List<String> sources = new ArrayList<>();
+    for (String rawCommand : input.split("\\s*&&\\s*")) {
+      ParsedCommand command = parseCommand(rawCommand);
+      if (command == null || !"cat".equals(command.command())) {
+        continue;
+      }
+
+      for (String arg : command.args()) {
+        if (arg.startsWith(">") || ">".equals(arg) || ">>".equals(arg)) {
+          break;
+        }
+        if (containsShellGlob(arg)) {
+          sources.addAll(expandVfsGlob(latestSnapshot, createVfsContext(latestSnapshot), arg));
+        } else {
+          sources.add(resolveSnapshotPath(latestSnapshot, arg));
+        }
+      }
+    }
+    return sources;
+  }
+
+  private boolean appearsInOrder(List<String> actual, List<String> required) {
+    int searchIndex = 0;
+    for (String requiredPath : required) {
+      int foundIndex = actual.subList(searchIndex, actual.size()).indexOf(requiredPath);
+      if (foundIndex < 0) {
+        return false;
+      }
+      searchIndex += foundIndex + 1;
+    }
+    return true;
+  }
+
+  private boolean matchesHashCommand(
+      JsonNode acceptedCommand, ParsedCommand command, JsonNode config, JsonNode latestSnapshot) {
+    String expectedCommand = getTextField(acceptedCommand, "command");
+    if (expectedCommand == null || !expectedCommand.equals(command.command())) {
+      return false;
+    }
+    if (!containsRequiredArgs(command.args(), getTextArrayField(acceptedCommand, "requiredArgs"))) {
+      return false;
+    }
+
+    String targetFile = getTextField(config, "targetFile");
+    for (String arg : command.args()) {
+      if (arg.startsWith("-") || "256".equals(arg)) {
+        continue;
+      }
+      if (targetFile.equals(resolveSnapshotPath(latestSnapshot, arg))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private List<String> tokenizeCommand(String input) {
     // 결과 토큰을 순서대로 담을 목록을 생성한다.
     List<String> tokens = new ArrayList<>();
@@ -2834,6 +3879,9 @@ public class StoryServiceImpl implements StoryService {
 
     // vfsOverlay 변경 지시를 snapshot.vfsOverlay에 병합한다.
     applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"));
+
+    // dotted path 기반 snapshotPatch를 마지막에 반영해 terminal.cwd 등 세부 상태를 갱신한다.
+    applySnapshotPatch(snapshot, effectBundle.get("snapshotPatch"));
   }
 
   /**
@@ -2885,6 +3933,60 @@ public class StoryServiceImpl implements StoryService {
    * @param snapshot 값을 갱신할 터미널 snapshot
    * @param overlayEffect vfsOverlay effect JSON object
    */
+  /**
+   * effect_bundle.snapshotPatch를 dotted path 기준으로 snapshot에 반영한다.
+   *
+   * @param snapshot 값을 갱신할 snapshot
+   * @param snapshotPatch dotted path를 key로 가진 patch JSON object
+   */
+  private void applySnapshotPatch(ObjectNode snapshot, JsonNode snapshotPatch) {
+    // snapshotPatch가 object가 아니면 적용할 세부 patch가 없다.
+    if (snapshotPatch == null || !snapshotPatch.isObject()) {
+      return;
+    }
+
+    // 각 dotted path를 순회하며 필요한 중간 object를 생성한다.
+    snapshotPatch
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              // key가 비어 있으면 잘못된 patch이므로 건너뛴다.
+              if (entry.getKey() == null || entry.getKey().isBlank()) {
+                return;
+              }
+
+              // nodeCode처럼 dot이 없는 key도 top-level field로 그대로 반영한다.
+              applySnapshotPatchValue(snapshot, entry.getKey().split("\\."), 0, entry.getValue());
+            });
+  }
+
+  /**
+   * dotted path의 특정 위치에 patch 값을 저장한다.
+   *
+   * @param current 현재 object node
+   * @param pathParts dotted path를 분해한 배열
+   * @param index 현재 처리 중인 path index
+   * @param value 저장할 JSON 값
+   */
+  private void applySnapshotPatchValue(
+      ObjectNode current, String[] pathParts, int index, JsonNode value) {
+    // 마지막 path 조각이면 값을 deep copy로 저장한다.
+    if (index >= pathParts.length - 1) {
+      current.set(pathParts[index], value == null ? objectMapper.nullNode() : value.deepCopy());
+      return;
+    }
+
+    // 중간 path는 object여야 하므로 없거나 object가 아니면 새 object로 교체한다.
+    JsonNode child = current.get(pathParts[index]);
+    ObjectNode childObject =
+        child != null && child.isObject()
+            ? (ObjectNode) child
+            : current.putObject(pathParts[index]);
+
+    // 다음 path 조각을 재귀적으로 처리한다.
+    applySnapshotPatchValue(childObject, pathParts, index + 1, value);
+  }
+
   private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
     // overlay effect가 object가 아니면 병합할 VFS 변경이 없다.
     if (overlayEffect == null || !overlayEffect.isObject()) {
@@ -3214,6 +4316,9 @@ public class StoryServiceImpl implements StoryService {
     // Chapter 3가 시작된 snapshot이므로 시작 플래그는 true로 둔다.
     if (CHAPTER_03_CODE.equals(profile.chapterCode())) {
       flags.put("chapter3_started", true);
+
+      // Chapter 3 도입 통화 이벤트 확인 여부는 아직 false다.
+      flags.put("friend_deleted_event_seen", false);
 
       // 홈 디렉터리 재확인 여부는 아직 false다.
       flags.put("home_rechecked", false);
