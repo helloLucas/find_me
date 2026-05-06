@@ -48,8 +48,7 @@ interface NewsTabProps {
   onFallbackOpenArticle?: (card: NewsCard) => void;
 }
 
-const CORRUPTION_TRIGGER_SCROLL_PX = 24;
-const CORRUPTION_TRIGGER_SCROLL_PROGRESS = 0.05;
+const SCROLL_BOTTOM_TOLERANCE_PX = 2;
 const CORRUPTION_CASCADE_DURATION_MS = 1400;
 
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
@@ -82,7 +81,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollCorruptionTriggered, setScrollCorruptionTriggered] = React.useState(false);
+  const [scrollCorruptionNodeId, setScrollCorruptionNodeId] = React.useState<number | null>(null);
   const [corruptionProgress, setCorruptionProgress] = React.useState(0);
   const corruptionAnimationFrameRef = useRef<number | null>(null);
   const corruptionStartTimeRef = useRef<number | null>(null);
@@ -100,6 +99,15 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     currentNode?.code === "CH1_ARTICLE_SCROLL_CORRUPTION";
   const usesScrollCascadeCorruption =
     showArticle && (isScrollTriggeredArticleNode || isArticleScrollCorruptionNode);
+  const isCurrentNodeScrollCorruptionTriggered =
+    currentNode != null && scrollCorruptionNodeId === currentNode.id;
+  const scrollCorruptionTriggered =
+    isArticleScrollCorruptionNode || isCurrentNodeScrollCorruptionTriggered;
+  const displayedCorruptionProgress = isArticleScrollCorruptionNode
+    ? 1
+    : isCurrentNodeScrollCorruptionTriggered
+      ? corruptionProgress
+      : 0;
   const articleBodyClassName = [
     "flex",
     "flex-col",
@@ -116,24 +124,15 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   useEffect(() => {
     lastScrollTriggeredNodeIdRef.current = null;
     corruptionStartTimeRef.current = null;
-    setScrollCorruptionTriggered(false);
-    setCorruptionProgress(0);
 
     if (corruptionAnimationFrameRef.current !== null) {
       window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
       corruptionAnimationFrameRef.current = null;
     }
-
-    if (isArticleScrollCorruptionNode) {
-      corruptionStartTimeRef.current =
-        performance.now() - CORRUPTION_CASCADE_DURATION_MS;
-      setScrollCorruptionTriggered(true);
-      setCorruptionProgress(1);
-    }
-  }, [currentNode?.id, isArticleScrollCorruptionNode]);
+  }, [currentNode?.id]);
 
   useEffect(() => {
-    if (!scrollCorruptionTriggered) return;
+    if (!scrollCorruptionTriggered || isArticleScrollCorruptionNode) return;
 
     const animateCorruption = (timestamp: number) => {
       if (corruptionStartTimeRef.current === null) {
@@ -160,7 +159,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         corruptionAnimationFrameRef.current = null;
       }
     };
-  }, [scrollCorruptionTriggered]);
+  }, [isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
 
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;
@@ -179,30 +178,27 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
       const { scrollTop, scrollHeight, clientHeight } = element;
-
-      const maxScroll = Math.max(scrollHeight - clientHeight, 1);
-      const currentProgress = scrollTop / maxScroll;
+      const isAtBottom =
+        scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
 
       if (
         usesScrollCascadeCorruption &&
         !scrollCorruptionTriggered &&
-        (scrollTop >= CORRUPTION_TRIGGER_SCROLL_PX ||
-          currentProgress >= CORRUPTION_TRIGGER_SCROLL_PROGRESS)
+        isAtBottom
       ) {
         corruptionStartTimeRef.current = null;
-        setScrollCorruptionTriggered(true);
+        setCorruptionProgress(0);
+        setScrollCorruptionNodeId(currentNode?.id ?? null);
       }
 
       if (!isScrollTriggeredArticleNode || !showArticle) return;
-
-      const scrollThreshold = Math.max(16, clientHeight * 0.1);
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - scrollThreshold;
 
       if (isAtBottom) {
         triggerArticleScrollTransition();
       }
     },
     [
+      currentNode?.id,
       isScrollTriggeredArticleNode,
       scrollCorruptionTriggered,
       showArticle,
@@ -238,12 +234,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                 const isCorruptedByScrollCascade =
                   usesScrollCascadeCorruption &&
                   scrollCorruptionTriggered &&
-                  corruptionProgress >= cascadeThreshold;
+                  displayedCorruptionProgress >= cascadeThreshold;
                 const isCorruptedByMetadata =
                   !usesScrollCascadeCorruption && corruptedParagraphIndexes.has(index);
                 const isCorrupted = isCorruptedByMetadata || isCorruptedByScrollCascade;
                 const dynamicIntensity =
-                  scrollCorruptionTriggered && corruptionProgress >= 0.65
+                  scrollCorruptionTriggered && displayedCorruptionProgress >= 0.65
                     ? "active"
                     : (articleCorruption?.intensity ?? "subtle");
 
