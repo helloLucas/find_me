@@ -29,7 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class HintRetrievalServiceImpl implements HintRetrievalService {
 
-  private static final int DEFAULT_RECENT_ACTION_LIMIT = 5;
+  private static final int DEFAULT_RECENT_ACTION_LIMIT = 3;
+  private static final int MAX_SEARCH_TOP_K = 5;
+  private static final int MAX_EVIDENCE_LIMIT = 2;
+  private static final int MAX_RECENT_ACTION_LIMIT = 3;
   private static final int REQUIRED_VECTOR_DIMENSION = 1536;
 
   private final UserStoryProgressRepository userStoryProgressRepository;
@@ -160,11 +163,13 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
   }
 
   private int resolveSearchTopK(Integer requested) {
-    return requested != null ? requested : defaultSearchTopK;
+    int value = requested != null ? requested : defaultSearchTopK;
+    return Math.max(1, Math.min(value, MAX_SEARCH_TOP_K));
   }
 
   private int resolveEvidenceLimit(Integer requested, int searchTopK) {
     int limit = requested != null ? requested : defaultEvidenceLimit;
+    limit = Math.max(1, Math.min(limit, MAX_EVIDENCE_LIMIT));
     return Math.min(limit, searchTopK);
   }
 
@@ -173,7 +178,8 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
   }
 
   private int resolveRecentLimit() {
-    return Math.max(1, recentActionLimit > 0 ? recentActionLimit : DEFAULT_RECENT_ACTION_LIMIT);
+    int value = recentActionLimit > 0 ? recentActionLimit : DEFAULT_RECENT_ACTION_LIMIT;
+    return Math.max(1, Math.min(value, MAX_RECENT_ACTION_LIMIT));
   }
 
   private record TransitionExpectation(String expectedActionType, String expectedInputHint) {}

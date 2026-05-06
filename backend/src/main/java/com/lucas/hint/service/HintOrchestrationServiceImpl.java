@@ -75,11 +75,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
 
       String expectedInput = extractExpectedInput(rawTopEvidence);
       String safeHint = sanitizeHintText(llmResult.hintText(), expectedInput);
-      String safeInputPattern =
-          obfuscateExpectedInput(
-              !isBlank(llmResult.nextInputPattern())
-                  ? llmResult.nextInputPattern()
-                  : expectedInput);
 
       return HintLiveResponseDto.builder()
           .hint(safeHint)
@@ -91,7 +86,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .failCountAfterAction(retrieval.getFailCountAfterAction())
           .whyThisHint(llmResult.whyThisHint())
           .nextActionType(llmResult.nextActionType())
-          .nextInputPattern(safeInputPattern)
           .usedTransitionIds(llmResult.usedTransitionIds())
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
@@ -111,7 +105,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .failCountAfterAction(retrieval.getFailCountAfterAction())
           .whyThisHint("llm_orchestrator_unavailable_fallback")
           .nextActionType(topEvidence != null ? topEvidence.getActionType() : null)
-          .nextInputPattern(obfuscateExpectedInput(extractExpectedInput(rawTopEvidence)))
           .usedTransitionIds(extractUsedTransitionIds(rawTopEvidence))
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
@@ -155,7 +148,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
         .failCountAfterAction(retrieval.getFailCountAfterAction())
         .whyThisHint("non_hint_blocked")
         .nextActionType(null)
-        .nextInputPattern(null)
         .usedTransitionIds(List.of())
         .topEvidence(null)
         .esSignal(null)

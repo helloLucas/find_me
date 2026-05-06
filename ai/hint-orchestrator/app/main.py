@@ -50,11 +50,15 @@ async def health() -> dict[str, str]:
 
 @app.post("/v1/hints/generate", response_model=HintGenerateResponse)
 async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
+    hint_level = resolve_hint_level(request.fail_count_after_action, request.low_confidence)
     prompt = build_prompt(request)
     llm: GmsLlmClient = app.state.gms_client
+    selected_model = (
+        settings.gms_light_llm_model if hint_level == "LIGHT" else settings.gms_llm_model
+    )
 
     try:
-        raw_text = await llm.generate_text(prompt)
+        raw_text = await llm.generate_text(prompt, model_name=selected_model)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(
             status_code=502,
@@ -78,13 +82,14 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
         )
 
     try:
+        parsed_used_transition_ids = [int(x) for x in parsed.get("used_transition_ids", []) if x is not None]
         response = HintGenerateResponse(
             hint_text=parsed["hint_text"],
             hint_level=parsed["hint_level"],
             why_this_hint=parsed.get("why_this_hint", ""),
             next_action_check=NextActionCheck(**(parsed.get("next_action_check") or {})),
-            used_transition_ids=[int(x) for x in parsed.get("used_transition_ids", []) if x is not None],
-            model=settings.gms_llm_model.removeprefix("models/"),
+            used_transition_ids=_derive_used_transition_ids(request.evidences, parsed_used_transition_ids),
+            model=selected_model.removeprefix("models/"),
         )
     except Exception:
         raise HTTPException(
@@ -146,8 +151,9 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
             )
 
     output_dim = request.output_dimensionality or settings.gms_embedding_output_dimensionality
-    search_top_k = request.search_top_k or settings.retrieve_default_search_top_k
-    evidence_limit = request.evidence_limit or settings.retrieve_default_evidence_limit
+    search_top_k = min(request.search_top_k or settings.retrieve_default_search_top_k, 5)
+    evidence_limit = min(request.evidence_limit or settings.retrieve_default_evidence_limit, 2)
+    evidence_limit = min(evidence_limit, search_top_k)
     min_similarity = request.min_similarity or settings.retrieve_default_min_similarity
 
     query_text = render_query_text(
@@ -248,6 +254,17 @@ def _to_text(value) -> str | None:
     return None if value is None else str(value)
 
 
+def _derive_used_transition_ids(
+    evidences: list[EvidenceItem], parsed_used_transition_ids: list[int]
+) -> list[int]:
+    if parsed_used_transition_ids:
+        return parsed_used_transition_ids
+    for evidence in evidences:
+        if evidence.transition_id is not None:
+            return [int(evidence.transition_id)]
+    return []
+
+
 def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
     hint_level = resolve_hint_level(request.fail_count_after_action, request.low_confidence)
     top = request.evidences[0] if request.evidences else None
@@ -289,7 +306,6 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
         why_this_hint="fallback_generated",
         next_action_check=NextActionCheck(
             action_type=action_type,
-            input_pattern=expected_input,
         ),
         used_transition_ids=used_transition_ids,
         model=settings.gms_llm_model.removeprefix("models/"),

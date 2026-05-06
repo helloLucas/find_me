@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../app/store/authStore";
+import { resolveApiUrl } from "../../shared/config/env";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function NotFoundPage() {
     // 실제 운영 시에는 해당 엔드포인트가 존재하는지 확인 후 사용합니다.
     const log404Error = async () => {
       try {
-        await fetch("/api/v1/logs/404", {
+        await fetch(resolveApiUrl("/api/v1/logs/404"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

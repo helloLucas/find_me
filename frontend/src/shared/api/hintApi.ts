@@ -18,7 +18,6 @@ export interface HintLiveResponseData {
   failCountAfterAction?: number;
   whyThisHint?: string;
   nextActionType?: string | null;
-  nextInputPattern?: string | null;
 }
 
 export const hintApi = {

@@ -70,7 +70,6 @@ public class HintLlmOrchestratorClient {
       String hintLevel = body.path("hint_level").asText(null);
       String whyThisHint = body.path("why_this_hint").asText("");
       String nextActionType = body.path("next_action_check").path("action_type").asText(null);
-      String nextInputPattern = body.path("next_action_check").path("input_pattern").asText(null);
 
       if (hintText == null || hintText.isBlank() || hintLevel == null || hintLevel.isBlank()) {
         throw new CustomException(ErrorCode.G1000);
@@ -87,7 +86,7 @@ public class HintLlmOrchestratorClient {
       }
 
       return new HintGenerationResult(
-          hintText, hintLevel, whyThisHint, nextActionType, nextInputPattern, transitionIds);
+          hintText, hintLevel, whyThisHint, nextActionType, transitionIds);
     } catch (CustomException e) {
       throw e;
     } catch (Exception e) {
@@ -148,6 +147,5 @@ public class HintLlmOrchestratorClient {
       String hintLevel,
       String whyThisHint,
       String nextActionType,
-      String nextInputPattern,
       List<Long> usedTransitionIds) {}
 }

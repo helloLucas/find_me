@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     gms_llm_provider: str = Field(default="openai", alias="GMS_LLM_PROVIDER")
     gms_router_provider: str = Field(default="openai", alias="GMS_ROUTER_PROVIDER")
     gms_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LLM_MODEL")
+    gms_light_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LIGHT_LLM_MODEL")
     gms_router_model: str = Field(default="gpt-5-mini", alias="GMS_ROUTER_MODEL")
     gms_openai_chat_path: str = Field(
         default="api.openai.com/v1/chat/completions", alias="GMS_OPENAI_CHAT_PATH"

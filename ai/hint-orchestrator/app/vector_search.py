@@ -134,7 +134,12 @@ class VectorSearchRepository:
             (1 - (lk.embedding <=> q.v)) AS similarity,
             COALESCE((lk.metadata->>'priority')::int, 0) AS priority,
             COALESCE((lk.metadata->>'priority_rank')::int, 9999) AS priority_rank,
-            COALESCE((lk.metadata->>'candidate_count')::int, 1) AS candidate_count
+            COALESCE((lk.metadata->>'candidate_count')::int, 1) AS candidate_count,
+            CASE
+              WHEN (lk.metadata->>'transition_id') ~ '^[0-9]+$'
+              THEN (lk.metadata->>'transition_id')::bigint
+              ELSE NULL
+            END AS transition_id_num
           FROM lucas_knowledge lk
           CROSS JOIN q
           WHERE lk.embedding IS NOT NULL
@@ -143,8 +148,14 @@ class VectorSearchRepository:
             AND lk.metadata->>'chapter_code' = %(chapter_code)s
             {extra_where}
         )
-        SELECT *
+        SELECT
+          scored.*,
+          st.expected_input AS transition_expected_input,
+          st.action_type AS transition_action_type,
+          st.validator_config AS transition_validator_config
         FROM scored
+        LEFT JOIN story_transitions st
+          ON st.id = scored.transition_id_num
         ORDER BY cosine_distance ASC, priority_rank ASC, priority DESC, id ASC
         LIMIT %(search_top_k)s
         """
@@ -161,13 +172,31 @@ class VectorSearchRepository:
                 rows = cur.fetchall()
         result: list[VectorCandidate] = []
         for row in rows:
+            metadata = row.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+
+            transition_id_num = row.get("transition_id_num")
+            transition_expected_input = row.get("transition_expected_input")
+            transition_action_type = row.get("transition_action_type")
+            transition_validator_config = row.get("transition_validator_config")
+
+            if metadata.get("transition_id") is None and transition_id_num is not None:
+                metadata["transition_id"] = transition_id_num
+            if metadata.get("expected_input") is None and transition_expected_input is not None:
+                metadata["expected_input"] = transition_expected_input
+            if metadata.get("action_type") is None and transition_action_type is not None:
+                metadata["action_type"] = transition_action_type
+            if metadata.get("validator_config") is None and transition_validator_config is not None:
+                metadata["validator_config"] = transition_validator_config
+
             result.append(
                 VectorCandidate(
                     id=int(row["id"]),
                     chapter=row.get("chapter"),
                     puzzle_id=row.get("puzzle_id"),
                     content=row.get("content"),
-                    metadata=row.get("metadata") or {},
+                    metadata=metadata,
                     cosine_distance=float(row.get("cosine_distance") or 0.0),
                     similarity=float(row.get("similarity") or 0.0),
                     priority=int(row.get("priority") or 0),
@@ -187,8 +216,49 @@ class VectorSearchRepository:
             return []
         enough = [c for c in candidates if c.similarity >= min_similarity]
         base = enough if enough else candidates
+
+        # Keep priority_rank as a soft preference, not a hard gate.
+        # This increases flexibility so semantically closer alternatives can surface.
+        def rank_penalty(rank: int) -> float:
+            if rank <= 1:
+                return 0.0
+            if rank == 2:
+                return 0.015
+            if rank == 3:
+                return 0.03
+            return 0.05
+
         sorted_items = sorted(
             base,
-            key=lambda x: (x.priority_rank, x.cosine_distance, -x.priority, x.id),
+            key=lambda x: (
+                x.cosine_distance + rank_penalty(x.priority_rank),
+                -x.priority,
+                x.priority_rank,
+                x.id,
+            ),
         )
-        return sorted_items[:evidence_limit]
+        selected: list[VectorCandidate] = []
+        seen_keys: set[tuple[str | None, str | None]] = set()
+        for item in sorted_items:
+            action = item.metadata.get("action_type")
+            action_key = str(action).strip().lower() if action is not None else None
+            expected_input = item.metadata.get("expected_input")
+            if expected_input is None:
+                expected_input = item.content
+            expected_key = str(expected_input).strip().lower() if expected_input is not None else None
+            dedupe_key = (action_key, expected_key)
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            selected.append(item)
+            if len(selected) >= evidence_limit:
+                return selected
+
+        if len(selected) < evidence_limit:
+            for item in sorted_items:
+                if item in selected:
+                    continue
+                selected.append(item)
+                if len(selected) >= evidence_limit:
+                    break
+        return selected

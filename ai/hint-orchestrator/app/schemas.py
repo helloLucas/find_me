@@ -58,7 +58,6 @@ class HintGenerateRequest(BaseModel):
 
 class NextActionCheck(BaseModel):
     action_type: str | None = None
-    input_pattern: str | None = None
 
 
 class HintGenerateResponse(BaseModel):
