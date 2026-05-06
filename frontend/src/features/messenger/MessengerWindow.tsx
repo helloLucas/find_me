@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
+import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
@@ -20,7 +21,7 @@ interface MessengerWindowProps {
 export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) => {
   const { conversations, activeRoomId, setActiveRoom, markMessengerSeen } = useMessengerStore();
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
-  const { closeWindow, focusWindow } = useWindowStore();
+  const { closeWindow, focusWindow, openWindow } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -244,6 +245,8 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                 "click",
                 action.actionType
               );
+              const isAlwaysClickable = action.actionType === "friend_message_link";
+              const isEnabled = canClickAction || isAlwaysClickable;
 
               return (
                 <div key={`${action.actionType}-${idx}`} className="flex items-end gap-2">
@@ -253,9 +256,15 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                     onClick={() => {
                       if (canClickAction) {
                         void submitStoryClick(action.actionType);
+                        if (action.actionType === "friend_message_link") {
+                          useBrowserContentStore.getState().triggerNewsTabClick();
+                        }
+                      } else if (isAlwaysClickable) {
+                        openWindow("chrome");
+                        useBrowserContentStore.getState().triggerNewsTabClick();
                       }
                     }}
-                    disabled={!canClickAction}
+                    disabled={!isEnabled}
                   >
                     <span className="block text-[10px] tracking-wide text-pink-300">{LINK_LABEL}</span>
                     <span className="mt-1 block text-[13px] text-cyan-100">&lt;{action.label}&gt;</span>

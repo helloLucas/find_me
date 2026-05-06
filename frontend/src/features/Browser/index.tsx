@@ -3,6 +3,7 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
 import { HomeTab } from "./components/HomeTab";
+import { SearchTab } from "./components/SearchTab";
 import { PacmanTab } from "./components/PacmanTab";
 import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
@@ -20,10 +21,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
     title: string;
   }>;
   historyIndex: number;
@@ -42,7 +43,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger } = useBrowserContentStore();
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -50,6 +51,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       setIsChapter2Mode(true);
     }
   }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
+
+  // 브라우저가 종료될 때(언마운트 시) 메신저 기사 추가 클릭 트리거 상태를 0으로 초기화
+  useEffect(() => {
+    return () => {
+      useBrowserContentStore.getState().resetNewsTabClickTrigger();
+    };
+  }, []);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
     if (windowId === "terminal2") {
@@ -59,6 +67,23 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         url: "system://terminal2/starforce",
         component: "starforce",
         history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
+        historyIndex: 0,
+      }];
+    }
+
+    // 메신저 기사 클릭 트리거가 활성화된 경우, 기사 탭을 기본 첫 탭으로 노출하여 중복 생성 방지
+    const initialTrigger = useBrowserContentStore.getState().newsTabClickTrigger;
+    if (initialTrigger > 0) {
+      const snapshot = resolveNewsSnapshot(currentNode?.code, typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined) || {
+        url: "https://voidcity-news/recent/1",
+        title: "News",
+      };
+      return [{
+        id: "tab1",
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
         historyIndex: 0,
       }];
     }
@@ -74,14 +99,12 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         historyIndex: 0,
       }];
     }
-    
-    // 기본값 (챕터 1 등)
     return [{
       id: "tab1",
-      title: "Home",
-      url: "https://voidcity-news/recent/1",
-      component: "news",
-      history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "Home" }],
+      title: "Search",
+      url: "https://void-search.net",
+      component: "search",
+      history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
       historyIndex: 0,
     }];
   });
@@ -92,10 +115,64 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastAutoInspectNodeIdRef = useRef<number | null>(null);
   const skipAutoSyncNodeIdByTabRef = useRef<Record<string, number>>({});
+  const lastSynchronizedNodeIdRef = useRef<number | null>(null);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const articleTitleFromContent =
     typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined;
+
+  // 기사 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 갱신
+  useEffect(() => {
+    if (newsTabClickTrigger === 0) return;
+
+    const snapshot = resolveNewsSnapshot(currentNode?.code, articleTitleFromContent) || {
+      url: "https://voidcity-news/recent/1",
+      title: "News",
+    };
+
+    setTabs((prev) => {
+      const existingNewsTab = prev.find((tab) => tab.component === "news");
+      if (existingNewsTab) {
+        queueMicrotask(() => setActiveTabId(existingNewsTab.id));
+        
+        return prev.map((tab) => {
+          if (tab.id !== existingNewsTab.id) return tab;
+          
+          if (tab.url !== snapshot.url) {
+            const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
+            const nextHistory = [
+              ...truncatedHistory,
+              {
+                url: snapshot.url,
+                title: snapshot.title,
+                component: "news" as const,
+              },
+            ];
+            return {
+              ...tab,
+              url: snapshot.url,
+              title: snapshot.title,
+              history: nextHistory,
+              historyIndex: nextHistory.length - 1,
+            };
+          }
+          return tab;
+        });
+      }
+
+      const newId = `tab_news_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [newsTabClickTrigger, currentNode, articleTitleFromContent]);
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
@@ -284,11 +361,27 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     const snapshot = resolveNewsSnapshot(currentNode.code, articleTitleFromContent);
     if (!snapshot) return;
 
+    if (lastSynchronizedNodeIdRef.current === currentNode.id) {
+      if (activeTab.component !== "news") {
+        return;
+      }
+    }
+
+    if (activeTab.url?.includes("/article/") && snapshot.url?.includes("/recent/")) {
+      return;
+    }
+
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
+      lastSynchronizedNodeIdRef.current = currentNode.id;
 
       setTabs((prev) => {
+        const hasNewsTab = prev.some((tab) => tab.component === "news");
+        if (!hasNewsTab) {
+          return prev;
+        }
+
         let changed = false;
 
         const nextTabs = prev.map((tab) => {
@@ -348,8 +441,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const newsViewMode: "auto" | "list" | "article" =
     activeTab?.url?.includes("/recent/") ? "list" : activeTab?.url?.includes("/article/") ? "article" : "auto";
 
-  const handleFallbackOpenArticle = () => {
-    const fallbackTitle = articleTitleFromContent?.trim();
+  const handleFallbackOpenArticle = (card?: { id: string; title: string }) => {
+    const fallbackTitle = card?.title || articleTitleFromContent?.trim();
     if (!fallbackTitle) return;
 
     const fallbackUrl = `https://voidcity-news/article/${encodeURIComponent(fallbackTitle)}`;
@@ -479,13 +572,19 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === "news" && (
             <NewsTab
               viewMode={newsViewMode}
-              onFallbackOpenArticle={() => handleFallbackOpenArticle()}
+              activeTabTitle={activeTab?.title}
+              onFallbackOpenArticle={(card) => handleFallbackOpenArticle(card)}
             />
           )}
           {activeTab?.component === "home" && (
             <HomeTab 
               onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} 
               isChapter2Mode={isChapter2Mode}
+            />
+          )}
+          {activeTab?.component === "search" && (
+            <SearchTab
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
@@ -554,12 +653,19 @@ function resolveNewsSnapshot(nodeCode: string | undefined, articleTitle?: string
   if (nodeCode === "CH1_NEWS_PORTAL") {
     return {
       url: "https://voidcity-news/recent/1",
-      title: "Home",
+      title: "News",
     };
   }
 
   if (nodeCode.includes("ARTICLE")) {
-    const title = articleTitle?.trim() || "Article";
+    let title = articleTitle?.trim();
+    if (!title) {
+      if (nodeCode.includes("DARK_ARTICLE") || nodeCode.includes("SCROLL_CORRUPTION")) {
+        title = "넥서스의 어두운 면: 사라진 기록들에 대한 제보";
+      } else {
+        title = "Article";
+      }
+    }
     return {
       url: `https://voidcity-news/article/${encodeURIComponent(title)}`,
       title,
