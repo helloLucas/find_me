@@ -1,0 +1,146 @@
+{
+  "CH3_BASH_HISTORY": [
+    "tar -cvf decoy.tar ./sys/temp/Memory_Dump_082.tmp ./cache/User_Behavior_88.tmp ./tmp/System_Temp_File.tmp",
+    "nc -w 3 127.0.0.1 8080 < decoy.tar",
+    "rm decoy.tar",
+    "nmap -sV 127.0.0.1",
+    "nc -w 3 127.0.0.1 9091"
+  ],
+  "CH3_GATE_04_TRACE": [
+    "[GATE_04 TRACE]",
+    "decoy accepted",
+    "unexpected local socket opened",
+    "watcher response observed after relay shift",
+    "status: unstable"
+  ],
+  "CH3_OBSERVER_STATUS": [
+    "[OBSERVER STATUS LOG]",
+    "Observer ID        : GH-0104",
+    "Observer Class     : Abnormal",
+    "Session Link       : ACTIVE",
+    "Detection Risk     : RISING",
+    "Privilege Level    : guest",
+    "Social Graph       : exposed"
+  ],
+  "CH3_WORLD_MAP_AFTER_GC": [
+    "[SESSION MAP : NULL POINT / YEAR 2088]",
+    "",
+    "             [Deleted] [Deleted] [Deleted]",
+    "        [Deleted] [Null]    [Null]    [Deleted]",
+    "   [Deleted] [Null]   [PLAYER_ZONE]   [Null] [Deleted]",
+    "        [Deleted] [Null]    [Null]    [Deleted]",
+    "             [Deleted] [Deleted] [Deleted]",
+    "",
+    "Active Observer Region: PLAYER_ZONE",
+    "External Region Integrity: collapsing..."
+  ],
+  "LUCAS_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# lucas_fragment_01.sh",
+    "# observer relay attempt :: partial",
+    "echo \"[TRACE FOUND]\"",
+    "echo \"[RELAY STATE: OPEN_PENDING]\""
+  ],
+  "LAPLACE_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# laplace_fragment_01.sh",
+    "# LAPLACE FRAGMENT 01 :: DECOY PACKET",
+    "qreg q[4];",
+    "creg c[4];",
+    "h q[0];"
+  ],
+  "LAPLACE_FRAGMENT_02": [
+    "#!/bin/sh",
+    "# laplace_fragment_02.sh",
+    "# LAPLACE FRAGMENT 02 :: SOCIAL ISOLATION",
+    "echo \"[LAPLACE FRAGMENT 02 :: SOCIAL ISOLATION]\"",
+    "echo \"[NODE SCAN] Total Connected Nodes: 7,904,213,001\"",
+    "echo \"\"",
+    "echo \"Target:\"",
+    "echo \"- Create core_group.dat.\"",
+    "echo \"- core_group.dat must contain protectable nodes only.\"",
+    "echo \"- DELETED nodes require root permission.\"",
+    "echo \"- UNKNOWN nodes may expose observer route.\"",
+    "echo \"\"",
+    "echo \"Output:\"",
+    "echo \"./core_group.dat\""
+  ],
+  "LAPLACE_FRAGMENT_03": [
+    "#!/bin/sh",
+    "# laplace_fragment_03.sh",
+    "# LAPLACE FRAGMENT 03 :: CORE ACCESS GATE",
+    "cx q[0],q[1];",
+    "cx q[1],q[2];",
+    "measure q -> c;"
+  ],
+  "SEVER_EXTERNAL_NODES": [
+    "#!/bin/sh",
+    "# sever_external_nodes.sh",
+    "echo \"[SEVERING] External social graph links...\"",
+    "echo \"[CONFIRMATION REQUIRED]\"",
+    "echo \"This operation will sever all nodes outside safe zone.\""
+  ],
+  "NXR_RUNTIME": [
+    "NXR/0.3",
+    "mode: ro",
+    "origin: gate_04",
+    "session: redirected",
+    "window: unstable"
+  ],
+  "GC_CONTROLLER": [
+    "<binary: gc_controller>"
+  ],
+  "NEXUS_ENGINE": [
+    "<binary: nexus_engine>"
+  ],
+  "CH3_MY_PEOPLE_LIST": [
+    "[MY PEOPLE / OBSERVER GH-0104]",
+    "",
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "CH3_NEXUS_MONITOR_LOG": [
+    "[NEXUS_MONITOR_LOG_DUMP_2088]",
+    "[2088-04-14 23:08] [INFO] Global Session Memory at 98.4%. Triggering Auto-Optimization.",
+    "[2088-04-14 23:09] [WARN] GC_Priority_Queue updated. Targeting Low-Activity Nodes.",
+    "[2088-04-14 23:10] [EXEC] Node_Group(Seoul_Sector_4) : 4,021 Connections Severed. Status -> DELETED",
+    "[2088-04-14 23:11] [CRITICAL] Observer(Player) anomaly detected. Allocating extra memory to local render.",
+    "[2088-04-14 23:11] [EXEC] Reclaiming memory from surrounding nodes to sustain Observer render.",
+    "[2088-04-14 23:11] [EXEC] Node(Friend_04) status changed: ACTIVE -> DELETED",
+    "[2088-04-14 23:11] [EXEC] Node(Friend_04) deallocation approved.",
+    "[2088-04-14 23:12] [WARN] DELETED nodes cannot be protected by guest permission.",
+    "[2088-04-14 23:12] [WARN] UNKNOWN nodes may expose observer route.",
+    "[2088-04-14 23:12] [INFO] Optimization complete. 1.2PB memory freed."
+  ],
+  "CH3_CORE_GROUP_DAT": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Classmate_21 ACTIVE"
+  ],
+  "CH3_CORE_GROUP_GPG": [
+    "<encrypted: core_group.dat.gpg>"
+  ],
+  "CH3_SAFE_ZONE_GPG": [
+    "<encrypted: safe_zone.dat.gpg>"
+  ],
+  "LAPLACE_QASM": [
+    "#!/bin/sh",
+    "# laplace_fragment_01.sh",
+    "# LAPLACE FRAGMENT 01 :: DECOY PACKET",
+    "qreg q[4];",
+    "creg c[4];",
+    "h q[0];",
+    "#!/bin/sh",
+    "# laplace_fragment_02.sh",
+    "# LAPLACE FRAGMENT 02 :: SOCIAL ISOLATION",
+    "#!/bin/sh",
+    "# laplace_fragment_03.sh",
+    "# LAPLACE FRAGMENT 03 :: CORE ACCESS GATE",
+    "cx q[0],q[1];",
+    "cx q[1],q[2];",
+    "measure q -> c;"
+  ]
+}
