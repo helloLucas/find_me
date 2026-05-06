@@ -9,9 +9,11 @@ type ClarityFunction = ((command: string, ...args: unknown[]) => void) & {
   q?: unknown[][];
 };
 
+type DataLayerCommand = IArguments | Record<string, unknown>;
+
 declare global {
   interface Window {
-    dataLayer?: unknown[][];
+    dataLayer?: DataLayerCommand[];
     gtag?: (...args: unknown[]) => void;
     clarity?: ClarityFunction;
   }
@@ -48,8 +50,10 @@ const ensureGtag = () => {
   window.dataLayer = window.dataLayer ?? [];
   window.gtag =
     window.gtag ??
-    function gtag(...args: unknown[]) {
-      window.dataLayer?.push(args);
+    function gtag() {
+      // gtag.js expects the command queue shape used by the official snippet.
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer?.push(arguments);
     };
 };
 
