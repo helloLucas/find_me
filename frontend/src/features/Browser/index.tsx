@@ -134,10 +134,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       const existingNewsTab = prev.find((tab) => tab.component === "news");
       if (existingNewsTab) {
         queueMicrotask(() => setActiveTabId(existingNewsTab.id));
-        
+
         return prev.map((tab) => {
           if (tab.id !== existingNewsTab.id) return tab;
-          
+
           if (tab.url !== snapshot.url) {
             const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
             const nextHistory = [
@@ -258,7 +258,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const openDevTools = () => {
     setShowDevTools(true);
-    
+
     // DevTools 너비가 브라우저 전체 너비의 70%를 넘지 않도록 제한
     if (containerRef.current) {
       const maxAllowedWidth = containerRef.current.offsetWidth * 0.7;
@@ -299,7 +299,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   useEffect(() => {
     const keyboard = (navigator as KeyboardLockNavigator).keyboard;
     if (keyboard?.lock) {
-      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
+      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => { });
     }
 
     const handleCaptureKeyDown = (event: KeyboardEvent) => {
@@ -546,11 +546,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       <div className="flex bg-[#0f0c29] p-1.5 border-b-2 border-[#543ab7]">
         <button
           type="button"
-          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${
-            canGoBack
+          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${canGoBack
               ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
               : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
-          }`}
+            }`}
           onClick={handleBack}
           disabled={!canGoBack}
           aria-label="Back"
@@ -577,8 +576,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             />
           )}
           {activeTab?.component === "home" && (
-            <HomeTab 
-              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} 
+            <HomeTab
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
               isChapter2Mode={isChapter2Mode}
             />
           )}

@@ -65,7 +65,11 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   const useFallback = Boolean(activeFallbackArticle && (!content.articleTitle || content.articleTitle !== activeTabTitle));
 
-  const articleTitle = useFallback ? activeFallbackArticle!.title : (typeof content.articleTitle === "string" ? content.articleTitle : null);
+  const articleTitle = useFallback 
+    ? activeFallbackArticle!.title 
+    : (typeof content.articleTitle === "string" && content.articleTitle.trim() !== "" 
+      ? content.articleTitle 
+      : activeTabTitle);
   const hasArticle = Boolean(articleTitle);
   const showArticle = viewMode === "list" ? false : viewMode === "article" ? hasArticle : hasArticle;
   const articleBody: string[] = useFallback
