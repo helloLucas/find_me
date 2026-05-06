@@ -4,6 +4,7 @@ import { useAuthActions } from '../features/Auth/useAuthActions';
 import MainMenu from '../widgets/MainMenu/MainMenu';
 import { useModalStore } from '../app/store/modalStore';
 import { AuthSelectionModal } from '../widgets/AuthSelection';
+import { useTrackVisible } from '../shared/analytics/useTrackVisible';
 
 const Home = () => {
     const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -11,6 +12,11 @@ const Home = () => {
 
     const openModal = useModalStore((state) => state.openModal);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const landingViewRef = useTrackVisible<HTMLDivElement>({
+        eventName: 'home_landing_visible_5s',
+        params: { page: 'home' },
+        minVisibleMs: 5000,
+    });
 
     const handleLoginClick = () => {
         setIsAuthModalOpen(true);
@@ -64,6 +70,7 @@ const Home = () => {
 
     return (
         <div
+            ref={landingViewRef}
             className="min-h-screen w-full relative overflow-hidden bg-[#0a1118] flex flex-col justify-center select-none pixel-crisp"
             style={{
                 backgroundImage: `linear-gradient(to right, #000 0%, #000 30%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImageUrl})`,

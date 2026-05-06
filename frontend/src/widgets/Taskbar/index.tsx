@@ -11,6 +11,7 @@ import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGu
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
 import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
+import { trackAnalyticsEvent } from "../../shared/analytics";
 
 export const Taskbar: React.FC = () => {
   const navigate = useNavigate();
@@ -35,6 +36,9 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleExitConfirm = () => {
+    trackAnalyticsEvent("game_exit_confirmed", {
+      chapter_code: currentNode?.code ?? "unknown",
+    });
     setShowExitOverlay(false);
 
     // 게임 관련 전역 상태 모두 초기화 (처음부터 다시 시작하기 위해)
@@ -49,6 +53,8 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleTerminalTaskbarClick = () => {
+    trackAnalyticsEvent("taskbar_terminal_clicked");
+
     const canOpenTerminalTransition =
       !isLoading && canSubmitStoryAction(currentNode, "click", "open_terminal");
 
@@ -81,6 +87,9 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleMessengerTaskbarClick = () => {
+    trackAnalyticsEvent("taskbar_messenger_clicked", {
+      has_conversations: hasConversations,
+    });
     if (!hasConversations) return;
 
     if (!messengerWindow) {
@@ -100,6 +109,8 @@ export const Taskbar: React.FC = () => {
   };
 
   const handleBrowserTaskbarClick = () => {
+    trackAnalyticsEvent("taskbar_browser_clicked");
+
     // CH1_FRIEND_CHAT_OPEN 구간에서는 브라우저 직접 오픈도 기사 보기 전이로 인정한다.
     if (
       !isLoading &&
@@ -121,7 +132,10 @@ export const Taskbar: React.FC = () => {
         <div className="flex h-full items-center gap-1">
           <button
             className="flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-red-900/40 active:bg-red-900/60 hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]"
-            onClick={() => setShowExitOverlay(true)}
+            onClick={() => {
+              trackAnalyticsEvent("game_exit_prompt_opened");
+              setShowExitOverlay(true);
+            }}
           >
             <img
               src="/pixel_power_icon.svg"
@@ -207,7 +221,10 @@ export const Taskbar: React.FC = () => {
       {showExitOverlay && (
         <ExitGameOverlay
           onConfirm={handleExitConfirm}
-          onCancel={() => setShowExitOverlay(false)}
+          onCancel={() => {
+            trackAnalyticsEvent("game_exit_cancelled");
+            setShowExitOverlay(false);
+          }}
           subMessage="종료 후 처음부터 다시 시작해야 합니다"
         />
       )}

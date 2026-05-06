@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuthStore } from '../../app/store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { trackAnalyticsEvent } from '../../shared/analytics';
 
 interface MainMenuProps {
   onLoginClick?: () => void;
@@ -24,13 +25,19 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
       {isLoggedIn ? (
         <>
           <div
-            onClick={() => navigate('/lobby')}
+            onClick={() => {
+              trackAnalyticsEvent('main_menu_select_chapter_clicked');
+              navigate('/lobby');
+            }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
             Select Chapter
           </div>
           <div
-            onClick={onLogoutClick}
+            onClick={() => {
+              trackAnalyticsEvent('main_menu_logout_clicked');
+              onLogoutClick?.();
+            }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
             Logout
@@ -39,13 +46,19 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
       ) : (
         <>
           <div
-            onClick={onLoginClick}
+            onClick={() => {
+              trackAnalyticsEvent('main_menu_login_clicked');
+              onLoginClick?.();
+            }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
             Login
           </div>
           <div
-            onClick={onGuestClick}
+            onClick={() => {
+              trackAnalyticsEvent('main_menu_guest_clicked');
+              onGuestClick?.();
+            }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
             Guest

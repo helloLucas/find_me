@@ -7,6 +7,8 @@ import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputB
 import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
+import { trackAnalyticsEvent } from "../../shared/analytics";
+import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 
 function getIsFullscreen() {
   return !!document.fullscreenElement || (window.innerHeight === screen.height);
@@ -19,6 +21,11 @@ export default function PlayPage() {
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const processedNodeIdRef = useRef<number | string | null>(null);
+  const playViewRef = useTrackVisible<HTMLElement>({
+    eventName: "play_screen_visible_10s",
+    params: { chapter_code: chapterCode ?? "unknown" },
+    minVisibleMs: 10000,
+  });
 
   useEffect(() => {
     const syncFullscreenState = () => {
@@ -60,10 +67,20 @@ export default function PlayPage() {
         audioManager.setStoryVideoPlaying(false);
         audioManager.playBgm(output.scene.bgm);
       }
+      trackAnalyticsEvent("story_node_entered", {
+        chapter_code: chapterCode ?? "unknown",
+        node_code: currentNode.code,
+        has_pre_video: Boolean(output.scene.preVideo),
+        is_terminal: Boolean(currentNode.isTerminal),
+      });
     }
-  }, [currentNode, isFullscreen]);
+  }, [chapterCode, currentNode, isFullscreen]);
 
   const handleVideoFinish = () => {
+    trackAnalyticsEvent("pre_video_finished", {
+      chapter_code: chapterCode ?? "unknown",
+      node_code: currentNode?.code ?? "unknown",
+    });
     audioManager.setStoryVideoPlaying(false);
     setIsPlayingVideo(false);
     setCurrentPreVideoUrl(null);
@@ -74,7 +91,7 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="h-screen w-screen overflow-hidden">
+    <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
       {isPlayingVideo && currentPreVideoUrl ? (
         <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
       ) : (
