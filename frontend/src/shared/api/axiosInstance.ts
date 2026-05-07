@@ -41,6 +41,35 @@ axiosInstance.interceptors.response.use(
         const errorCode = error.response?.data?.code;
         const status = error.response?.status;
 
+        // 네트워크 에러 또는 500번대 서버 에러 글로벌 핸들링
+        const isNetworkError = !error.response;
+        const isServerError = status && status >= 500 && status < 600;
+
+        if (isNetworkError || isServerError) {
+            console.error('Network or Server error occurred:', error);
+            try {
+                const { useModalStore } = await import('../../app/store/modalStore');
+                useModalStore.getState().openModal({
+                    title: 'CONNECTION_FAILED',
+                    message: '서버와 연결할 수 없습니다. \n네트워크 상태를 확인해 주세요.',
+                    type: 'alert',
+                    onConfirm: async () => {
+                        // 1. 토큰 삭제
+                        tokenManager.clearTokens();
+                        // 2. 인증 상태 완전 초기화
+                        const { useAuthStore } = await import('../../app/store/authStore');
+                        useAuthStore.getState().clearAuth();
+                        // 3. 루트 페이지로 리다이렉트
+                        window.location.href = '/';
+                        return true;
+                    }
+                });
+            } catch (modalError) {
+                console.error('Failed to open global connection error modal:', modalError);
+            }
+            return Promise.reject(error);
+        }
+
         // E1002: Redis 임시 세션 만료 (register 등 인증 불필요 엔드포인트에서 발생)
         // 토큰 리프레시를 시도하지 않고 바로 세션 만료 팝업을 표시한다.
         if (status === 401 && errorCode === 'E1002') {

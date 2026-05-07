@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
 import { useClientStore } from "../../app/store/clientStore";
@@ -7,12 +7,43 @@ import { tokenManager } from "../../shared/utils/tokenManager";
 import { useModalStore } from "../../app/store/modalStore";
 import { GlobalModal } from "../GlobalModal";
 import { GlobalToast } from "../GlobalToast";
+import { jwtDecode } from "jwt-decode";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
+  const location = useLocation();
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const openModal = useModalStore((state) => state.openModal);
   const { isAccessing, setIsAccessing } = useClientStore();
+
+  const isAtRoot = location.pathname === "/";
+
+  // 선제적 토큰 만료 여부 판별 (백엔드 API 호출 사전 차단용)
+  const isExpired = (() => {
+    const accessToken = tokenManager.getAccessToken();
+    if (!accessToken) return false;
+    try {
+      const decoded: any = jwtDecode(accessToken);
+      return !!(decoded && decoded.exp && decoded.exp * 1000 < Date.now());
+    } catch {
+      return true; // 디코딩 오류 시 유효하지 않은 토큰으로 간주하여 만료 처리
+    }
+  })();
+
+  // 선제적 토큰 만료 검사 및 처리
+  useEffect(() => {
+    if (isExpired) {
+      console.warn("Access token has expired. Clearing session...");
+      clearAuth();
+      if (!isAtRoot) {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [isExpired, isAtRoot, clearAuth, navigate]);
+
+  // 토큰이 만료되었고 로그인 페이지가 아니면 자식 렌더링 차단 (백엔드 요청 선제 차단)
+  const shouldRenderChildren = !(isExpired && !isAtRoot);
 
   // 세션 만료 팝업 감지 (axiosInstance에서 보낸 신호)
   useEffect(() => {
@@ -227,7 +258,13 @@ export default function AppShell({ children }: PropsWithChildren) {
         </div>
       )}
 
-      {children}
+      {shouldRenderChildren ? children : (
+        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black">
+          <div className="font-system-overlay text-[#a3e635] text-lg animate-pulse tracking-widest">
+            RE-AUTHENTICATING...
+          </div>
+        </div>
+      )}
       <GlobalToast />
       <GlobalModal />
     </div>
