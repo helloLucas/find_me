@@ -22,7 +22,7 @@ const FullscreenEnforcer = () => {
     if (isFullscreen) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#05080a]/70 backdrop-blur-[24px] transition-all duration-1000 select-none">
+        <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-[#05080a]/70 backdrop-blur-[24px] transition-all duration-1000 select-none">
             <div
                 onClick={toggleFullscreen}
                 className="hud-fade-in relative text-center p-16 max-w-xl w-full mx-6 flex flex-col items-center gap-14 cursor-pointer group/window bg-white/[0.01] border border-white/5"
