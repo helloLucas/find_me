@@ -29,6 +29,7 @@ export interface TokenResponse {
  */
 export const useInitGuest = () => {
   const navigate = useNavigate();
+
   return useMutation({
     // 401 Interceptor에 영향을 받지 않기 위해 기본 axios 인스턴스 사용
     mutationFn: async () => {
@@ -59,9 +60,9 @@ export const useInitGuest = () => {
 
       useModalStore.getState().openModal({
         title: 'CRITICAL_SYSTEM_ERROR',
-                message: '>> CRITICAL ERROR: GUEST PROTOCOL INITIALIZATION FAILED.\n>> REASON: REMOTE CONNECTION TERMINATED.',
-                type: 'alert'
-            });
-        }
-    });
+        message: '>> CRITICAL ERROR: GUEST PROTOCOL INITIALIZATION FAILED.\n>> REASON: REMOTE CONNECTION TERMINATED.',
+        type: 'alert'
+      });
+    }
+  });
 };

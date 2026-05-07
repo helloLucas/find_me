@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), "");
   const frontendPort = Number(env.VITE_APP_PORT ?? 5173);
