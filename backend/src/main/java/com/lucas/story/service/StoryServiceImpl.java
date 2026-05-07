@@ -4551,19 +4551,64 @@ public class StoryServiceImpl implements StoryService {
     String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
     if (nudgeMessage != null) {
       String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+
+      // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
+      // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
+      ObjectNode customOutputBundle = (ObjectNode) currentNode.getOutputBundle().deepCopy();
+
+      // 1. 말풍선 덮어쓰기
+      ArrayNode messages = (ArrayNode) customOutputBundle.path("messages");
+      if (messages != null && messages.isArray()) {
+        messages.removeAll();
+        ObjectNode msg = messages.addObject();
+        msg.put("speaker", "LUCAS");
+        msg.put("channel", "bubble");
+        msg.put("text", nudgeMessage);
+      }
+
+      // 2. 컷씬 제거 및 터미널 이력에서 방금 입력한 명령어 지우기 (__REMOVE_LAST_INPUT__)
+      ObjectNode content = (ObjectNode) customOutputBundle.path("content");
+      if (content == null || !content.isObject()) {
+        content = customOutputBundle.putObject("content");
+      }
+      content.remove("consoleLogs");
+      content.remove("completionTitle");
+      content.remove("completionText");
+
+      ArrayNode termOut = content.putArray("terminalOutput");
+      termOut.add("__REMOVE_LAST_INPUT__");
+
+      ObjectNode scene = (ObjectNode) customOutputBundle.path("scene");
+      if (scene != null && scene.isObject()) {
+        scene.remove("preVideo");
+      }
+
       return TransitionResponseDto.builder()
-          .result("stay")
-          .terminalResult(
-              TransitionResponseDto.TerminalResultDto.builder()
-                  .stderr(List.of("[LUCAS] " + nudgeMessage))
-                  .cwd(cwd)
-                  .prompt("guest@lucas-server:" + cwd + "$ ")
-                  .resultCode("NUDGE")
+          .result("move") // 말풍선 갱신을 위해 move로 응답
+          .nextNode(
+              TransitionResponseDto.NextNodeDto.builder()
+                  .id(currentNode.getId())
+                  .code(currentNode.getCode())
+                  .nodeType(currentNode.getNodeType())
+                  .outputBundle(customOutputBundle)
+                  .promptType(currentNode.getPromptType())
+                  .promptMeta(currentNode.getPromptMeta())
+                  .isCheckpoint(currentNode.isCheckpoint())
+                  .isTerminal(currentNode.isTerminal())
                   .build())
           .snapshot(
               objectMapper.convertValue(
                   latestSnapshot,
                   new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+          // 터미널에는 별다른 에러 없이 프롬프트만 갱신
+          .terminalResult(
+              TransitionResponseDto.TerminalResultDto.builder()
+                  .stdout(List.of())
+                  .stderr(List.of())
+                  .cwd(cwd)
+                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .resultCode("NUDGE")
+                  .build())
           .build();
     }
 
@@ -4655,7 +4700,25 @@ public class StoryServiceImpl implements StoryService {
       JsonNode config = t.getValidatorConfig();
       if (config == null || config.isNull()) continue;
 
-      // nudgeOnFlagMiss가 없는 transition은 넛지 대상이 아니다.
+      String rule = getTextField(config, "rule");
+
+      if ("PARSED_TAR_COMMAND".equals(rule)) {
+        if (!"tar".equals(command.command())) continue;
+
+        // tar 생성 옵션(-c)이 있는지 확인
+        boolean isCreate =
+            command.args().stream().anyMatch(arg -> arg.startsWith("-") && arg.contains("c"));
+        if (!isCreate) continue;
+
+        // DB 트랜지션을 수정하지 않고 하드코딩으로 안전하게 넛지를 생성
+        String expectedFile = getTextField(config, "outputFile");
+        if (expectedFile != null) {
+          return "명령어 형식은 완벽해! 하지만 추적을 분산시키려면 파일 이름을 정확히 '" + expectedFile + "'로 지정해야 해.";
+        }
+        continue;
+      }
+
+      // nudgeOnFlagMiss가 없는 일반 transition은 넛지 대상이 아니다.
       String nudge = getTextField(config, "nudgeOnFlagMiss");
       if (nudge == null || nudge.isBlank()) continue;
 

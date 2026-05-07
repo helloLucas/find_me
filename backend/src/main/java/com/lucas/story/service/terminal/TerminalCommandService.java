@@ -66,40 +66,221 @@ public class TerminalCommandService {
       case "clear" -> handleClear(cwd, vfs); // 터미널 초기화 시그널 전송
       case "echo" -> handleEcho(command, cwd, vfs); // 텍스트 출력
       case "printf" -> handlePrintf(command, cwd, vfs); // 포맷 텍스트 출력
-      default -> handleUnknownOrMisusedCommand(cmd, cwd, vfs); // 알 수 없는 명령어 또는 잘못된 사용 처리
+      default -> handleUnknownOrMisusedCommand(command, cwd, vfs); // 알 수 없는 명령어 또는 잘못된 사용 처리
     };
   }
 
   /**
    * 알려진 명령어의 오용이거나 완전히 모르는 명령어인 경우 실제 쉘과 유사한 에러를 반환합니다.
    *
-   * @param cmd 입력된 명령어
+   * @param command 파싱된 명령어 객체
    * @param cwd 현재 경로
    * @param vfs VFS 컨텍스트
    * @return 에러 메시지가 담긴 결과
    */
-  private TerminalResult handleUnknownOrMisusedCommand(String cmd, String cwd, VfsContext vfs) {
-    // switch 문을 사용하여 명령어별로 실제 터미널 환경과 유사한 표준 에러 메시지를 생성합니다.
-    String errorMsg =
-        switch (cmd) {
-            // nmap은 인자가 부족할 때 도움말 안내를 출력합니다.
-          case "nmap" -> "nmap: missing host or network. Try \"nmap -h\" for help";
-            // ss는 사용법(Usage)을 간략히 출력합니다.
-          case "ss" -> "Usage: ss [ OPTIONS ]";
-            // netstat도 옵션이 틀리거나 누락되었을 때 상세한 Usage를 보여줍니다.
-          case "netstat" ->
-              "usage: netstat [-vWeenNcCF] [<Af>] -r         netstat {-V|--version|-h|--help}";
-            // nc는 목적지 누락 에러를 반환합니다.
-          case "nc" -> "nc: missing or invalid destination";
-            // 해시 계산 명령어들은 피연산자 누락 에러를 반환합니다.
-          case "sha256sum", "shasum" -> cmd + ": missing operand";
-            // history 명령어의 경우 잘못된 옵션을 방어하기 위해 invalid usage를 반환합니다.
-          case "history" -> cmd + ": invalid usage";
-            // 위 목록에 없는, 정말로 등록되지 않은 명령어는 command not found 처리합니다.
-          default -> cmd + ": command not found";
-        };
-    // 생성된 에러 메시지를 stderr로 담아 TerminalResult로 반환합니다.
-    return buildErrorResult(cwd, vfs, errorMsg);
+  private TerminalResult handleUnknownOrMisusedCommand(
+      ParsedCommand command, String cwd, VfsContext vfs) {
+    String cmd = command.command().toLowerCase();
+    List<String> args = command.args();
+
+    // switch 문을 사용하여 명령어별로 실제 터미널 환경과 유사한 표준 에러 메시지나 더미 결과를 생성합니다.
+    switch (cmd) {
+      case "nmap":
+        if (args.isEmpty()) {
+          return buildErrorResult(
+              cwd, vfs, "nmap: missing host or network. Try \"nmap -h\" for help");
+        }
+        return TerminalResult.builder()
+            .stdout(
+                Arrays.asList(
+                    "Starting Nmap 7.93 ( https://nmap.org )",
+                    "Note: Host seems down. If it is really up, but blocking our ping probes, try -Pn",
+                    "Nmap done: 1 IP address (0 hosts up) scanned in 3.02 seconds"))
+            .cwd(cwd)
+            .prompt(buildPrompt(cwd, vfs))
+            .resultCode("SUCCESS")
+            .build();
+
+      case "tar":
+        if (args.isEmpty()) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: You must specify one of the '-Acdtrux', '--delete' or '--test-label' options\n"
+                  + "Try 'tar --help' or 'tar --usage' for more information.");
+        }
+
+        if (args.contains("--usage")) {
+          // 게임 진행에 필요한 핵심 옵션들만 남긴 축약형 usage를 제공합니다.
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "Usage: tar [-cxtv?] [-f ARCHIVE] [--create] [--list] [--extract] [--get]",
+                      "            [--file=ARCHIVE] [--verbose] [--help] [--usage] [FILE]..."))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
+
+        if (args.contains("--help")) {
+          // 게임 진행에 필요한 핵심 옵션들만 남긴 축약형 도움말을 제공합니다.
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "Usage: tar [OPTION...] [FILE]...",
+                      "GNU 'tar' saves many files together into a single archive.",
+                      "",
+                      "Examples:",
+                      "  tar -cf archive.tar foo bar  # Create archive.tar from files foo and bar.",
+                      "  tar -tvf archive.tar         # List all files in archive.tar verbosely.",
+                      "  tar -xf archive.tar          # Extract all files from archive.tar.",
+                      "",
+                      " Main operation mode:",
+                      "  -c, --create               create a new archive",
+                      "  -x, --extract, --get       extract files from an archive",
+                      "  -t, --list                 list the contents of an archive",
+                      "",
+                      " Device selection and switching:",
+                      "  -f, --file=ARCHIVE         use archive file or device ARCHIVE",
+                      "",
+                      " Informative output:",
+                      "  -v, --verbose              verbosely list files processed",
+                      "",
+                      " Other options:",
+                      "  -?, --help                 give this help list",
+                      "      --usage                give a short usage message"))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
+
+        // 사용자가 실제로 입력한 명령어가 tar --lzma 같은 실제 존재하는 보조 옵션일 수 있으므로
+        // unrecognized option을 띄우기보다는, 필수 액션(-c, -x 등)이 없다는 에러를 먼저 내보내는 것이 실제 tar와
+        // 유사합니다.
+
+        String lastArg = args.get(args.size() - 1);
+        if (lastArg.endsWith("f") && (lastArg.startsWith("-") || args.size() == 1)) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: option requires an argument -- 'f'\n"
+                  + "Try 'tar --help' or 'tar --usage' for more information.");
+        }
+
+        boolean hasAction = false;
+        boolean isCreate = false;
+        boolean isExtract = false;
+        List<String> nonOptions = new java.util.ArrayList<>();
+
+        for (int i = 0; i < args.size(); i++) {
+          String arg = args.get(i);
+          if (arg.startsWith("--")) {
+            if (arg.matches(
+                "--(create|catenate|concatenate|append|update|diff|compare|delete|extract|get|list|test-label|A|c|d|t|r|u|x)")) {
+              hasAction = true;
+            }
+            if (arg.equals("--create")) isCreate = true;
+            if (arg.equals("--extract") || arg.equals("--get")) {
+              hasAction = true;
+              isExtract = true;
+            }
+          } else if (arg.startsWith("-")) {
+            if (arg.matches(".*[Acdtrux].*")) hasAction = true;
+            if (arg.contains("c")) isCreate = true;
+            if (arg.contains("x")) isExtract = true;
+          } else if (i == 0 && arg.matches("^[AcdtruxzvfjJpwkOmsMBiG]+$")) {
+            if (arg.matches(".*[Acdtrux].*")) hasAction = true;
+            if (arg.contains("c")) isCreate = true;
+            if (arg.contains("x")) isExtract = true;
+          } else {
+            nonOptions.add(arg);
+          }
+        }
+
+        if (!hasAction) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: You must specify one of the '-Acdtrux', '--delete' or '--test-label' options\n"
+                  + "Try 'tar --help' or 'tar --usage' for more information.");
+        }
+
+        // 대상(파일/디렉토리)이 부족한 경우 (-cv, -c 등)
+        if (isCreate
+            && (nonOptions.isEmpty() || (nonOptions.size() == 1 && args.get(0).contains("f")))) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: Cowardly refusing to create an empty archive\n"
+                  + "Try 'tar --help' or 'tar --usage' for more information.");
+        }
+
+        String target = nonOptions.isEmpty() ? args.get(args.size() - 1) : nonOptions.get(0);
+
+        if (isCreate && nonOptions.size() > 1) {
+          // 아카이브 생성(-c) 중인데 실패한 경우, 원본 파일(첫 번째 대상)이 없다고 에러를 내는 것이 자연스럽습니다.
+          String sourceFile = nonOptions.get(1);
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: "
+                  + sourceFile
+                  + ": Cannot stat: No such file or directory\n"
+                  + "tar: Exiting with failure status due to previous errors");
+        } else {
+          // 압축 풀기(-x) 등인 경우, 아카이브 파일 자체를 열 수 없다고 하는 것이 자연스럽습니다.
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "tar: "
+                  + target
+                  + ": Cannot open: No such file or directory\n"
+                  + "tar: Error is not recoverable: exiting now");
+        }
+
+      case "ss":
+      case "netstat":
+        if (args.isEmpty() || !args.get(0).startsWith("-")) {
+          return buildErrorResult(cwd, vfs, "Usage: " + cmd + " [ OPTIONS ]");
+        }
+        return TerminalResult.builder()
+            .stdout(
+                Collections.singletonList(
+                    cmd.equals("ss")
+                        ? "State       Recv-Q Send-Q  Local Address:Port   Peer Address:Port   Process"
+                        : "Active Internet connections (w/o servers)\nProto Recv-Q Send-Q Local Address           Foreign Address         State"))
+            .cwd(cwd)
+            .prompt(buildPrompt(cwd, vfs))
+            .resultCode("SUCCESS")
+            .build();
+
+      case "nc":
+        if (args.size() < 2) {
+          return buildErrorResult(cwd, vfs, "nc: missing or invalid destination");
+        }
+        String host = args.get(args.size() - 2);
+        String port = args.get(args.size() - 1);
+        return buildErrorResult(
+            cwd,
+            vfs,
+            "nc: connect to " + host + " port " + port + " (tcp) failed: Connection refused");
+
+      case "sha256sum":
+      case "shasum":
+        if (args.isEmpty()) {
+          return buildErrorResult(cwd, vfs, cmd + ": missing operand");
+        }
+        String file = args.get(args.size() - 1);
+        return buildErrorResult(cwd, vfs, cmd + ": " + file + ": No such file or directory");
+
+      case "history":
+        return buildErrorResult(cwd, vfs, "history: invalid usage");
+
+      default:
+        return buildErrorResult(cwd, vfs, cmd + ": command not found");
+    }
   }
 
   /**
