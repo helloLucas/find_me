@@ -4543,8 +4543,31 @@ public class StoryServiceImpl implements StoryService {
       return null;
     }
 
-    // 4. 유저 진행 상태에서 최신 스냅샷을 꺼내고, 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
+    // 3-1. 유저 진행 상태에서 최신 스냅샷을 꺼냅니다.
     JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+
+    // 3-2. Near-miss 감지: 커맨드 패턴은 맞지만 플래그 조건이 불충족한 transition이 있는지 확인합니다.
+    // 있다면 터미널 실행 대신 LUCAS 넛지 메시지를 반환합니다.
+    String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
+    if (nudgeMessage != null) {
+      String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+      return TransitionResponseDto.builder()
+          .result("stay")
+          .terminalResult(
+              TransitionResponseDto.TerminalResultDto.builder()
+                  .stderr(List.of("[LUCAS] " + nudgeMessage))
+                  .cwd(cwd)
+                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .resultCode("NUDGE")
+                  .build())
+          .snapshot(
+              objectMapper.convertValue(
+                  latestSnapshot,
+                  new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+          .build();
+    }
+
+    // 4. 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
     // 정적 VFS 구조와 스냅샷 내의 동적 변경사항(vfsOverlay)을 병합합니다.
     VfsContext vfs = createVfsContext(latestSnapshot);
 
@@ -4606,6 +4629,57 @@ public class StoryServiceImpl implements StoryService {
                 updatedSnapshot,
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
         .build();
+  }
+
+  /**
+   * 현재 노드의 transition 중 커맨드 패턴은 매칭되지만 플래그 조건만 불충족한 "near-miss"를 감지한다.
+   *
+   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만
+   * requiredFlags를 만족하지 못하면 해당 넛지 메시지를 반환한다.
+   *
+   * @param currentNode 유저가 현재 위치한 스토리 노드
+   * @param command 유저가 입력한 파싱된 커맨드 객체
+   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @return 넛지 메시지 (near-miss가 없으면 null)
+   */
+  private String findNudgeForCommand(
+      StoryNode currentNode, ParsedCommand command, JsonNode latestSnapshot) {
+    // 현재 노드에서 출발하는 모든 transition을 우선순위 순으로 조회한다.
+    List<StoryTransition> transitions =
+        storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+
+    for (StoryTransition t : transitions) {
+      // server_rule 이외의 validator는 near-miss 감지 대상이 아니다.
+      if (!"server_rule".equals(t.getValidatorType())) continue;
+
+      JsonNode config = t.getValidatorConfig();
+      if (config == null || config.isNull()) continue;
+
+      // nudgeOnFlagMiss가 없는 transition은 넛지 대상이 아니다.
+      String nudge = getTextField(config, "nudgeOnFlagMiss");
+      if (nudge == null || nudge.isBlank()) continue;
+
+      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+      String expectedCommand = getTextField(config, "command");
+      if (expectedCommand == null || !command.command().equals(expectedCommand)) continue;
+
+      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+      String expectedPath = getTextField(config, "resolvedPath");
+      if (expectedPath != null) {
+        String rawPath = firstNonOptionArgument(command.args());
+        if (rawPath == null) continue;
+        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+        if (!expectedPath.equals(actualPath)) continue;
+      }
+
+      // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
+      if (!matchesFlagRequirements(config, latestSnapshot)) {
+        return nudge;
+      }
+    }
+
+    // near-miss가 없으면 일반 터미널 실행으로 진행한다.
+    return null;
   }
 
   /**
