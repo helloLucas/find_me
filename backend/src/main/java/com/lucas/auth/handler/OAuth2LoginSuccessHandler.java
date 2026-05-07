@@ -101,8 +101,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     String refreshToken = jwtUtil.createRefreshToken(userId, email, refreshTokenExpiration);
 
-    // refresh token 을 Redis에 저장
-    authService.replaceRefreshToken(userId, refreshToken);
+    // 성공 로그인 시각 갱신 및 refresh token 저장
+    authService.completeSuccessfulLogin(userId, refreshToken);
 
     // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어 및 Cross-Origin 통신 허용)
     cookieUtil.setRefreshTokenCookie(response, refreshToken);

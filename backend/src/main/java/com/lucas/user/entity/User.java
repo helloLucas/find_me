@@ -4,6 +4,7 @@ import com.lucas.auth.entity.SocialLogin;
 import com.lucas.auth.entity.UserRole;
 import com.lucas.global.util.BaseEntity;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
@@ -38,6 +39,10 @@ public class User extends BaseEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "role", length = 20, nullable = false)
   private UserRole role;
+
+  /** 사용자가 성공적으로 로그인한 마지막 시각 */
+  @Column(name = "last_login_at")
+  private LocalDateTime lastLoginAt;
 
   /**
    * 이 사용자에 연결된 소셜 로그인 수단 목록입니다.

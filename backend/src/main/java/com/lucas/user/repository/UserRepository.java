@@ -3,6 +3,7 @@ package com.lucas.user.repository;
 import com.lucas.user.entity.User;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -42,4 +43,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
    */
   @Query("SELECT u FROM User u LEFT JOIN FETCH u.socialLogins WHERE u.email = :email")
   Optional<User> findByEmailWithSocialLogins(@Param("email") String email);
+
+  /**
+   * 성공 로그인 시점에만 lastLoginAt을 갱신합니다.
+   *
+   * @param userId 유저 식별값
+   * @return 갱신된 행 수
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("UPDATE User u SET u.lastLoginAt = CURRENT_TIMESTAMP WHERE u.id = :userId")
+  int updateLastLoginAt(@Param("userId") Long userId);
 }
