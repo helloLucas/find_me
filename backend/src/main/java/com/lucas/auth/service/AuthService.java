@@ -18,9 +18,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다.
- */
+/** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,6 +51,25 @@ public class AuthService {
         .opsForValue()
         .set(key, refreshToken, refreshTokenExpiration, TimeUnit.MILLISECONDS);
     log.info("Refresh Token 저장 완료 - userId: {}", userId);
+  }
+
+  /**
+   * 성공 로그인 처리를 완료합니다.
+   *
+   * <p>lastLoginAt은 이 메서드를 통해서만 갱신하여 일반 API 액션, 토큰 재발급, 로그아웃과 분리합니다.
+   *
+   * @param userId 유저 식별값
+   * @param refreshToken 저장할 Refresh Token
+   */
+  @Transactional
+  public void completeSuccessfulLogin(Long userId, String refreshToken) {
+    int updatedRows = userRepository.updateLastLoginAt(userId);
+    if (updatedRows == 0) {
+      throw new CustomException(ErrorCode.E3000);
+    }
+
+    replaceRefreshToken(userId, refreshToken);
+    log.info("마지막 로그인 시각 갱신 완료 - userId: {}", userId);
   }
 
   /**
@@ -98,22 +115,26 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user = userRepository.findByIdWithSocialLogins(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user =
+          userRepository
+              .findByIdWithSocialLogins(userId)
+              .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      AuthProvider provider = user.getSocialLogins().isEmpty()
-          ? null
-          : user.getSocialLogins().get(0).getProvider();
+      AuthProvider provider =
+          user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
-      String newAccessToken = jwtUtil.createAccessToken(
-          user.getId(),
-          user.getEmail(),
-          user.getNickname(),
-          provider,
-          user.getRole().name(),
-          accessTokenExpiration);
+      String newAccessToken =
+          jwtUtil.createAccessToken(
+              user.getId(),
+              user.getEmail(),
+              user.getNickname(),
+              provider,
+              user.getRole().name(),
+              accessTokenExpiration);
 
-      String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+      String newRefreshToken =
+          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
       // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
@@ -153,9 +174,7 @@ public class AuthService {
    * @return 임시 식별 키 (UUID)
    */
   public String initGuest() {
-    PendingUserInfo guestInfo = PendingUserInfo.builder()
-        .guest(true)
-        .build();
+    PendingUserInfo guestInfo = PendingUserInfo.builder().guest(true).build();
 
     return savePendingUserInfo(guestInfo);
   }
@@ -190,13 +209,13 @@ public class AuthService {
     String value = redisTemplate.opsForValue().get(PENDING_USER_PREFIX + tempKey);
     if (value == null) {
       log.warn("임시 가입 정보를 찾을 수 없거나 만료되었습니다. tempKey: {}", tempKey);
-      throw new CustomException(ErrorCode.H1000); // 401 혹은 인증 만료 에러
+      throw new CustomException(ErrorCode.E1002); // 401: Redis TTL 만료 → 재인증 필요
     }
     try {
       return objectMapper.readValue(value, PendingUserInfo.class);
     } catch (Exception e) {
       log.error("임시 가입 정보 파싱 실패", e);
-      throw new CustomException(ErrorCode.G1000);
+      throw new CustomException(ErrorCode.G1000); // 500: 서버 내부 파싱 오류
     }
   }
 

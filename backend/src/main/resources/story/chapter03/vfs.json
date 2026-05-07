@@ -1,0 +1,166 @@
+{
+  "vfsVersion": "chapter03-v1",
+  "chapterCode": "week03",
+  "rootPath": "/home/guest",
+  "defaultCwd": "/home/guest",
+  "prompt": {
+    "user": "guest",
+    "host": "lucas-server"
+  },
+  "policies": {
+    "allowAbsolutePath": true,
+    "allowRelativePath": true,
+    "allowParentPath": true,
+    "denyOutsideRoot": false,
+    "allowedExternalPaths": [
+      "/tmp",
+      "/usr/bin/local"
+    ],
+    "defaultListSort": "alphabetical",
+    "showHiddenFiles": false
+  },
+  "nodes": {
+    "/home/guest": {
+      "type": "directory",
+      "name": "guest",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home/guest/.bash_history": {
+      "type": "file",
+      "name": ".bash_history",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": true,
+      "contentKey": "CH3_BASH_HISTORY",
+      "storyKey": "BASH_HISTORY"
+    },
+    "/home/guest/gate_04.trace": {
+      "type": "file",
+      "name": "gate_04.trace",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_GATE_04_TRACE",
+      "storyKey": "GATE_TRACE"
+    },
+    "/home/guest/observer_status.log": {
+      "type": "file",
+      "name": "observer_status.log",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_OBSERVER_STATUS",
+      "storyKey": "OBSERVER_STATUS"
+    },
+    "/home/guest/world_map.map": {
+      "type": "file",
+      "name": "world_map.map",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_WORLD_MAP_AFTER_GC",
+      "storyKey": "WORLD_MAP"
+    },
+    "/home/guest/lucas_fragment_01.sh": {
+      "type": "file",
+      "name": "lucas_fragment_01.sh",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LUCAS_FRAGMENT_01",
+      "storyKey": "LUCAS_FRAGMENT"
+    },
+    "/home/guest/laplace_fragment_01.sh": {
+      "type": "file",
+      "name": "laplace_fragment_01.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_01",
+      "storyKey": "LAPLACE_FRAGMENT"
+    },
+    "/home/guest/sever_external_nodes.sh": {
+      "type": "file",
+      "name": "sever_external_nodes.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "SEVER_EXTERNAL_NODES",
+      "storyKey": "SEVER_SCRIPT"
+    },
+    "/home/guest/trash": {
+      "type": "directory",
+      "name": "trash",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/tmp": {
+      "type": "directory",
+      "name": "tmp",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/tmp/.nxr_runtime": {
+      "type": "file",
+      "name": ".nxr_runtime",
+      "readable": false,
+      "executable": false,
+      "protected": false,
+      "hidden": true,
+      "contentKey": "NXR_RUNTIME",
+      "storyKey": "NXR_RUNTIME"
+    },
+    "/usr/bin/local": {
+      "type": "directory",
+      "name": "local",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/usr/bin/local/gc_controller": {
+      "type": "file",
+      "name": "gc_controller",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "GC_CONTROLLER",
+      "storyKey": "CORE_BINARY"
+    },
+    "/usr/bin/local/nexus_engine": {
+      "type": "file",
+      "name": "nexus_engine",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "NEXUS_ENGINE",
+      "storyKey": "CORE_BINARY"
+    },
+    "/usr/bin/local/laplace_fragment_03.sh": {
+      "type": "file",
+      "name": "laplace_fragment_03.sh",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_03",
+      "storyKey": "LAPLACE_FRAGMENT"
+    }
+  }
+}

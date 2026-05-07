@@ -8,7 +8,6 @@ import com.lucas.global.util.JwtUtil;
 import com.lucas.user.dto.request.NicknameRequest;
 import com.lucas.user.dto.request.UserRegisterRequest;
 import com.lucas.user.dto.response.UserResponseDto;
-import com.lucas.user.entity.User;
 import com.lucas.user.repository.UserRepository;
 import com.lucas.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,8 +35,8 @@ public class UserController {
   private long accessTokenExpiration;
 
   /**
-   * 신규 회원 가입 또는 게스트의 정식 회원 전환을 완료합니다.
-   * Redis에 임시 저장된 정보를 기반으로 DB에 유저 데이터를 생성(Insert)하거나 전환(Update)합니다.
+   * 신규 회원 가입 또는 게스트의 정식 회원 전환을 완료합니다. Redis에 임시 저장된 정보를 기반으로 DB에 유저 데이터를 생성(Insert)하거나
+   * 전환(Update)합니다.
    *
    * @param request 가입 요청 정보 (tempKey, nickname, guestId)
    * @return 가입 완료 성공 메시지와 함께 발급된 토큰 세트 (Access, Refresh)
@@ -55,8 +54,8 @@ public class UserController {
   }
 
   /**
-   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다.
-   * 수정 성공 시, 변경된 닉네임이 반영된 새로운 Access Token을 반환합니다.
+   * 현재 로그인한 사용자의 닉네임을 수정합니다. GUEST와 MEMBER 권한을 가진 모든 인증된 사용자가 접근 가능합니다. 수정 성공 시, 변경된 닉네임이 반영된 새로운
+   * Access Token을 반환합니다.
    *
    * @param principal 인증된 사용자의 정보
    * @param request 수정할 닉네임 정보가 담긴 DTO
@@ -67,16 +66,18 @@ public class UserController {
       @AuthenticationPrincipal CustomUserPrincipal principal,
       @Valid @RequestBody NicknameRequest request) {
 
-    UserResponseDto userDto = userService.updateNickname(principal.getUserId(), request.getNickname());
+    UserResponseDto userDto =
+        userService.updateNickname(principal.getUserId(), request.getNickname());
 
     // 새로운 Access Token 생성 (새 닉네임 포함)
-    String newAccessToken = jwtUtil.createAccessToken(
-        userDto.id(),
-        userDto.email(),
-        userDto.nickname(),
-        userDto.provider(),
-        userDto.role(),
-        accessTokenExpiration);
+    String newAccessToken =
+        jwtUtil.createAccessToken(
+            userDto.id(),
+            userDto.email(),
+            userDto.nickname(),
+            userDto.provider(),
+            userDto.role(),
+            accessTokenExpiration);
 
     Map<String, String> data = new HashMap<>();
     data.put("accessToken", newAccessToken);
@@ -99,6 +100,7 @@ public class UserController {
     data.put("id", userDto.id());
     data.put("nickname", userDto.nickname());
     data.put("role", userDto.role());
+    data.put("lastLoginAt", userDto.lastLoginAt());
 
     return ResponseEntity.ok(BaseResponse.success("내 정보를 조회했습니다.", data));
   }

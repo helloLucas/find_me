@@ -30,11 +30,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 /**
  * OAuth2 인증 완료 후, 사용자 정보를 DB와 대조하여 [로그인 / 계정 연동 / 게스트 -> 멤버 전환 / 신규 가입] 중 하나를 처리하는 서비스 클래스입니다.
  *
- * 인증 수단(SocialLogin)과 유저 본체(User)를 1:N으로 분리한 아키텍처를 기반으로 동작합니다.
+ * <p>인증 수단(SocialLogin)과 유저 본체(User)를 1:N으로 분리한 아키텍처를 기반으로 동작합니다.
  *
- * 동일 이메일이 존재하면 기존 User에 새 SocialLogin을 연동(Account Linking)합니다.
- * 게스트 세션이 있으면 GUEST → MEMBER 전환 흐름으로 연결됩니다.
- * 완전 신규 유저라면 User + SocialLogin을 함께 생성합니다.
+ * <p>동일 이메일이 존재하면 기존 User에 새 SocialLogin을 연동(Account Linking)합니다. 게스트 세션이 있으면 GUEST → MEMBER 전환
+ * 흐름으로 연결됩니다. 완전 신규 유저라면 User + SocialLogin을 함께 생성합니다.
  */
 @Slf4j
 @Service
@@ -62,16 +61,19 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     String registrationId = userRequest.getClientRegistration().getRegistrationId();
     AuthProvider provider = getAuthProvider(registrationId);
-    String userNameAttributeName = userRequest
-        .getClientRegistration()
-        .getProviderDetails()
-        .getUserInfoEndpoint()
-        .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
+    String userNameAttributeName =
+        userRequest
+            .getClientRegistration()
+            .getProviderDetails()
+            .getUserInfoEndpoint()
+            .getUserNameAttributeName(); // OAuth2 로그인 시 키(PK)가 되는 값
 
-    Map<String, Object> attributes = oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
+    Map<String, Object> attributes =
+        oAuth2User.getAttributes(); // 소셜 로그인에서 API가 제공하는 userInfo의 Json 값
 
     // provider에 따라 유저 정보를 통해 OAuthAttributes 객체 생성
-    OAuthAttributes extractAttributes = OAuthAttributes.of(provider, userNameAttributeName, attributes);
+    OAuthAttributes extractAttributes =
+        OAuthAttributes.of(provider, userNameAttributeName, attributes);
 
     UserContext context = getUser(extractAttributes, provider);
     User user = context.user();
@@ -93,7 +95,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         role,
         context.isNewUser(),
         context.isGuest(),
-        context.isNewUser() || context.isConflict() || context.isAccountLinking(), // 가입, 전환, 연동 대기 시 true
+        context.isNewUser()
+            || context.isConflict()
+            || context.isAccountLinking(), // 가입, 전환, 연동 대기 시 true
         context.isConflict(),
         context.isAccountLinking());
   }
@@ -117,15 +121,13 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   /**
    * 소셜 정보와 현재 게스트 세션을 조합하여 사용자 상태를 판별합니다.
    *
-   * 판별 우선순위:
+   * <p>판별 우선순위:
    *
-   * 이미 동일 provider + providerUserId 로 가입된 SocialLogin 존재 → 기존 유저 로그인 or 충돌
-   * 이메일 기반으로 기존 User 존재 → Account Linking (새 SocialLogin 연동)
-   * 게스트 세션 존재 → GUEST → MEMBER 전환 대기
-   * 모두 없음 → 신규 가입 대기
+   * <p>이미 동일 provider + providerUserId 로 가입된 SocialLogin 존재 → 기존 유저 로그인 or 충돌 이메일 기반으로 기존 User 존재 →
+   * Account Linking (새 SocialLogin 연동) 게스트 세션 존재 → GUEST → MEMBER 전환 대기 모두 없음 → 신규 가입 대기
    *
    * @param attributes 추출된 OAuth 사용자 속성
-   * @param provider   소셜 로그인 제공자
+   * @param provider 소셜 로그인 제공자
    * @return 조회되거나 가입 대기 중인 정보를 담은 UserContext
    */
   private UserContext getUser(OAuthAttributes attributes, AuthProvider provider) {
@@ -134,7 +136,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     Long guestId = getCurrentGuestId();
 
     // ── 1단계: SocialLogin 레코드로 정확히 일치하는 기존 유저 조회 ──────────────
-    Optional<SocialLogin> socialLoginOpt = socialLoginRepository.findByProviderAndProviderUserId(provider, providerUserId);
+    Optional<SocialLogin> socialLoginOpt =
+        socialLoginRepository.findByProviderAndProviderUserId(provider, providerUserId);
 
     if (socialLoginOpt.isPresent()) {
       User existingUser = socialLoginOpt.get().getUser();
@@ -156,7 +159,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         // 자동 저장하지 않고, 사용자 확인을 위해 pending 상태로 반환
         log.info(
             "계정 연동 확인 대기 - userId={}, email={}, provider={}",
-            existingUser.getId(), email, provider);
+            existingUser.getId(),
+            email,
+            provider);
         return new UserContext(existingUser, false, false, false, true);
       }
     }
@@ -180,21 +185,19 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
       boolean isNewUser,
       boolean isGuest,
       boolean isConflict,
-      boolean isAccountLinking) {
-  }
+      boolean isAccountLinking) {}
 
   /**
    * 현재 HTTP 요청의 refresh_token 쿠키를 검증하여 게스트 ID를 반환합니다.
    *
-   * 토큰 내 role이 ‘GUEST’인 경우에만 guestId를 반환합니다.
-   * 토큰이 만료되었거나 유효하지 않으면 null을 반환합니다.
+   * <p>토큰 내 role이 ‘GUEST’인 경우에만 guestId를 반환합니다. 토큰이 만료되었거나 유효하지 않으면 null을 반환합니다.
    *
    * @return 게스트 유저의 식별값 또는 null
    */
   private Long getCurrentGuestId() {
     try {
-      HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
-          .getRequest();
+      HttpServletRequest request =
+          ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
       if (request.getCookies() != null) {
         for (Cookie cookie : request.getCookies()) {
@@ -216,16 +219,19 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             }
 
             // 3. DB에서 해당 유저의 role 확인 -> GUEST인 경우만 guestId 반환
-            return userRepository.findById(userId)
+            return userRepository
+                .findById(userId)
                 .filter(u -> u.getRole() == UserRole.GUEST)
-                .map(u -> {
-                  log.debug("게스트 세션 확인 - guestId={}", u.getId());
-                  return u.getId();
-                })
-                .orElseGet(() -> {
-                  log.debug("유효한 MEMBER 세션이 존재합니다 (userId={}). 게스트로 간주하지 않습니다.", userId);
-                  return null;
-                });
+                .map(
+                    u -> {
+                      log.debug("게스트 세션 확인 - guestId={}", u.getId());
+                      return u.getId();
+                    })
+                .orElseGet(
+                    () -> {
+                      log.debug("유효한 MEMBER 세션이 존재합니다 (userId={}). 게스트로 간주하지 않습니다.", userId);
+                      return null;
+                    });
           }
         }
       }

@@ -9,14 +9,21 @@ import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
+import type { StoryNode } from "../../shared/types/story";
 
 function getIsFullscreen() {
   return !!document.fullscreenElement || (window.innerHeight === screen.height);
 }
 
+function isChapterCompletionNode(node: StoryNode | null) {
+  if (!node?.code.endsWith("_COMPLETE")) return false;
+
+  return node.nodeType === "ending" || node.isTerminal;
+}
+
 export default function PlayPage() {
   const { chapterCode } = useParams();
-  const { error, initializeStory, currentNode } = useStoryRuntimeStore();
+  const { initializeStory, currentNode } = useStoryRuntimeStore();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -90,6 +97,8 @@ export default function PlayPage() {
     }
   };
 
+  const shouldShowCompletionModal = !isPlayingVideo && isChapterCompletionNode(currentNode);
+
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
       {isPlayingVideo && currentPreVideoUrl ? (
@@ -101,7 +110,7 @@ export default function PlayPage() {
 
 
 
-      {currentNode?.isTerminal && (
+      {shouldShowCompletionModal && (
         <ChapterCompletionModal />
       )}
 

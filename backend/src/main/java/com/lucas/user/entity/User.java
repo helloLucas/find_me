@@ -4,6 +4,7 @@ import com.lucas.auth.entity.SocialLogin;
 import com.lucas.auth.entity.UserRole;
 import com.lucas.global.util.BaseEntity;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
@@ -39,11 +40,15 @@ public class User extends BaseEntity {
   @Column(name = "role", length = 20, nullable = false)
   private UserRole role;
 
+  /** 사용자가 성공적으로 로그인한 마지막 시각 */
+  @Column(name = "last_login_at")
+  private LocalDateTime lastLoginAt;
+
   /**
    * 이 사용자에 연결된 소셜 로그인 수단 목록입니다.
    *
-   * {@code CascadeType.ALL}과 {@code orphanRemoval = true}를 사용하여,
-   * User 저장/삭제 시 연관된 SocialLogin 레코드도 함께 관리됩니다.
+   * <p>{@code CascadeType.ALL}과 {@code orphanRemoval = true}를 사용하여, User 저장/삭제 시 연관된 SocialLogin
+   * 레코드도 함께 관리됩니다.
    */
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<SocialLogin> socialLogins = new ArrayList<>();
@@ -51,10 +56,10 @@ public class User extends BaseEntity {
   /**
    * User 엔티티 생성을 위한 빌더 패턴 생성자입니다.
    *
-   * @param email     사용자 이메일
+   * @param email 사용자 이메일
    * @param oauthName 소셜 실명
-   * @param nickname  애플리케이션 닉네임
-   * @param role      유저 권한 (제공되지 않을 경우 기본 GUEST)
+   * @param nickname 애플리케이션 닉네임
+   * @param role 유저 권한 (제공되지 않을 경우 기본 GUEST)
    */
   @Builder
   public User(String email, String oauthName, String nickname, UserRole role) {
@@ -76,7 +81,7 @@ public class User extends BaseEntity {
   /**
    * 게스트 사용자를 정식 회원으로 승격시킵니다. 소셜 인증 수단(SocialLogin)은 별도로 추가해야 합니다.
    *
-   * @param email     사용자 이메일
+   * @param email 사용자 이메일
    * @param oauthName 소셜 실명
    */
   public void upgradeToMember(String email, String oauthName) {

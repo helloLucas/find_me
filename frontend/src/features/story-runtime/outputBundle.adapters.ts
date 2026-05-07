@@ -20,6 +20,7 @@ export type NormalizedStoryOutputBundle = {
   messages: StoryOutputBundleRecord[];
   notifications: StoryOutputBundleRecord[];
   actions: StoryOutputBundleRecord[];
+  uiMarkers: StoryOutputBundleRecord;
 };
 
 export function normalizeStoryOutputBundle(
@@ -41,6 +42,7 @@ export function normalizeStoryOutputBundle(
     messages: recordArray(raw.messages),
     notifications: recordArray(raw.notifications),
     actions: recordArray(raw.actions),
+    uiMarkers: objectRecord(raw.uiMarkers) ?? {},
   };
 }
 

@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useModalStore } from '../../app/store/modalStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { env } from '../../shared/config/env';
+import { resolveApiUrl } from '../../shared/config/env';
 import type { BaseResponse } from '../../shared/types/api';
 
 /**
@@ -33,9 +33,9 @@ export const useInitGuest = () => {
     return useMutation({
         // 401 Interceptor에 영향을 받지 않기 위해 기본 axios 인스턴스 사용
         mutationFn: async () => {
-            // [수정] env.apiBaseUrl을 제거하고 상대 경로를 사용하여 Vite Proxy를 타게 함
+            // [수정] 공통 URL 빌더(resolveApiUrl) 기반으로 API 경로 구성
             const response = await axios.get<BaseResponse<{ tempKey: string }>>(
-                `/api/v1/auth/guest-init`,
+                resolveApiUrl('/api/v1/auth/guest-init'),
                 { withCredentials: true }
             );
 

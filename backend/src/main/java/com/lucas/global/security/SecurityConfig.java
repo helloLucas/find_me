@@ -67,8 +67,10 @@ public class SecurityConfig {
             oauth2 ->
                 oauth2
                     .loginPage("/")
-                    .authorizationEndpoint(authEndpoint ->
-                        authEndpoint.authorizationRequestRepository(cookieAuthRequestRepository))
+                    .authorizationEndpoint(
+                        authEndpoint ->
+                            authEndpoint.authorizationRequestRepository(
+                                cookieAuthRequestRepository))
                     .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler)
                     .failureHandler(oAuth2LoginFailureHandler));

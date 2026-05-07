@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
 import { DESKTOP_LAYER } from '../../shared/config/desktopWindows';
@@ -39,6 +40,9 @@ export const Lucas: React.FC = () => {
   } = useLucasStore();
 
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const isCallOverlayPromptOwner = useCallOverlayStore(
+    (state) => state.isVisible && state.nodeCode === currentNode?.code
+  );
 
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -64,45 +68,8 @@ export const Lucas: React.FC = () => {
   const promptButtons = Array.isArray(currentNode?.promptMeta?.buttons)
     ? currentNode.promptMeta.buttons
     : [];
-  const hasPromptButtons = currentNode?.promptType === 'click' && promptButtons.length > 0;
-  const pickRandom = (messages: string[]) =>
-    messages[Math.floor(Math.random() * messages.length)] ?? messages[0];
-
-  const clearInterferenceTimer = () => {
-    if (interferenceTimerRef.current !== null) {
-      window.clearTimeout(interferenceTimerRef.current);
-      interferenceTimerRef.current = null;
-    }
-  };
-
-  const triggerInterferenceFx = (durationMs = 1700) => {
-    if (!ENABLE_INTERFERENCE_FX) return;
-
-    clearInterferenceTimer();
-    if (!isInterferenceFxActive) {
-      baseGlitchLevelRef.current = glitchLevel;
-    }
-
-    setIsInterferenceFxActive(true);
-    setGlitchLevel(Math.max(glitchLevel, 10));
-
-    interferenceTimerRef.current = window.setTimeout(() => {
-      setIsInterferenceFxActive(false);
-      setGlitchLevel(baseGlitchLevelRef.current);
-      interferenceTimerRef.current = null;
-    }, durationMs);
-  };
-
-  const shouldTriggerInterferenceFx = (
-    hintText: string,
-    routeDecision?: string,
-    lowConfidence?: boolean,
-  ) => {
-    if (routeDecision === 'BLOCKED_NON_HINT' && lowConfidence) {
-      return true;
-    }
-    return INTERFERENCE_TEXT_PATTERN.test(hintText);
-  };
+  const hasPromptButtons =
+    currentNode?.promptType === 'click' && promptButtons.length > 0 && !isCallOverlayPromptOwner;
 
   const persistHintScrollTop = () => {
     const container = hintMessagesRef.current;

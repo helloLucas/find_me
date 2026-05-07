@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
+import { useWindowStore } from "../../../app/store/windowStore";
 import { useBrowserContentStore } from "../../../app/store/browserContentStore";
 import type { ArticleCorruption } from "../../../shared/types/story";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
@@ -65,7 +66,11 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   const useFallback = Boolean(activeFallbackArticle && (!content.articleTitle || content.articleTitle !== activeTabTitle));
 
-  const articleTitle = useFallback ? activeFallbackArticle!.title : (typeof content.articleTitle === "string" ? content.articleTitle : null);
+  const articleTitle = useFallback 
+    ? activeFallbackArticle!.title 
+    : (typeof content.articleTitle === "string" && content.articleTitle.trim() !== "" 
+      ? content.articleTitle 
+      : activeTabTitle);
   const hasArticle = Boolean(articleTitle);
   const showArticle = viewMode === "list" ? false : viewMode === "article" ? hasArticle : hasArticle;
   const articleBody: string[] = useFallback
@@ -140,10 +145,13 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     };
   }, [isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
 
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
+
   useEffect(() => {
-    if (showArticle && scrollContainerRef.current) {
+    if (showArticle && activeWindowId === "chrome" && scrollContainerRef.current) {
       const savedScrollTop = useBrowserContentStore.getState().newsScrollTop;
       if (savedScrollTop > 0) {
+        // 창 포커스가 변경될 때 DOM이 재배치되며 스크롤이 초기화되는 현상 방지
         const timeoutId = setTimeout(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = savedScrollTop;
@@ -152,7 +160,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [showArticle]);
+  }, [showArticle, activeWindowId]);
 
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;

@@ -3,6 +3,7 @@ package com.lucas.user.repository;
 import com.lucas.user.entity.User;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
   /**
    * 이메일로 사용자를 조회합니다.
    *
-   * 소셜 로그인 시 계정 연동(Account Linking) 기준점으로 사용되며, 게스트 유저 조회에도 활용됩니다.
+   * <p>소셜 로그인 시 계정 연동(Account Linking) 기준점으로 사용되며, 게스트 유저 조회에도 활용됩니다.
    *
    * @param email 사용자 이메일
    * @return 조회된 유저 정보를 포함한 Optional 객체
@@ -24,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
   /**
    * ID로 사용자를 조회하면서 socialLogins를 LEFT JOIN FETCH로 함께 로드합니다.
    *
-   * LazyInitializationException 방지 및 N+1 쿼리 제거를 위해 사용합니다.
+   * <p>LazyInitializationException 방지 및 N+1 쿼리 제거를 위해 사용합니다.
    *
    * @param userId 유저 식별값
    * @return socialLogins가 포함된 유저 Optional 객체
@@ -35,11 +36,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
   /**
    * 이메일로 사용자를 조회하면서 socialLogins를 LEFT JOIN FETCH로 함께 로드합니다.
    *
-   * LazyInitializationException 방지 및 N+1 쿼리 제거를 위해 사용합니다.
+   * <p>LazyInitializationException 방지 및 N+1 쿼리 제거를 위해 사용합니다.
    *
    * @param email 사용자 이메일
    * @return socialLogins가 포함된 유저 Optional 객체
    */
   @Query("SELECT u FROM User u LEFT JOIN FETCH u.socialLogins WHERE u.email = :email")
   Optional<User> findByEmailWithSocialLogins(@Param("email") String email);
+
+  /**
+   * 성공 로그인 시점에만 lastLoginAt을 갱신합니다.
+   *
+   * @param userId 유저 식별값
+   * @return 갱신된 행 수
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("UPDATE User u SET u.lastLoginAt = CURRENT_TIMESTAMP WHERE u.id = :userId")
+  int updateLastLoginAt(@Param("userId") Long userId);
 }

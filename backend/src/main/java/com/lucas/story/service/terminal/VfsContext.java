@@ -54,6 +54,134 @@ public class VfsContext {
   }
 
   /**
+   * VFS가 속한 챕터 코드를 반환합니다.
+   *
+   * @return vfs.json의 chapterCode 값, 없으면 기존 Chapter 2 코드
+   */
+  public String getChapterCode() {
+    // 정적 VFS가 없으면 기존 Chapter 2 동작과의 호환을 위해 week02를 반환한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return "week02";
+    }
+
+    // vfs.json의 chapterCode를 우선 사용하고, 없으면 week02로 보정한다.
+    return staticVfs.path("chapterCode").asText("week02");
+  }
+
+  /**
+   * VFS 리소스 버전을 반환합니다.
+   *
+   * @return vfs.json의 vfsVersion 값, 없으면 빈 문자열
+   */
+  public String getVfsVersion() {
+    // 정적 VFS가 없으면 버전 정보를 알 수 없으므로 빈 문자열을 반환한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return "";
+    }
+
+    // vfs.json의 vfsVersion 값을 반환한다.
+    return staticVfs.path("vfsVersion").asText("");
+  }
+
+  /**
+   * 기본 작업 디렉터리를 반환합니다.
+   *
+   * @return vfs.json의 defaultCwd 값, 없으면 VFS 루트 경로
+   */
+  public String getDefaultCwd() {
+    // 정적 VFS가 없으면 안전하게 루트 경로를 기본 cwd로 사용한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return getRootPath();
+    }
+
+    // defaultCwd가 없으면 rootPath를 기본 작업 디렉터리로 사용한다.
+    return staticVfs.path("defaultCwd").asText(getRootPath());
+  }
+
+  /**
+   * 터미널 프롬프트 사용자명을 반환합니다.
+   *
+   * @return vfs.json의 prompt.user 값, 없으면 guest
+   */
+  public String getPromptUser() {
+    // 정적 VFS가 없으면 기존 프롬프트 사용자명을 반환한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return "guest";
+    }
+
+    // prompt.user가 없으면 guest를 기본값으로 사용한다.
+    return staticVfs.path("prompt").path("user").asText("guest");
+  }
+
+  /**
+   * 터미널 프롬프트 호스트명을 반환합니다.
+   *
+   * @return vfs.json의 prompt.host 값, 없으면 lucas-server
+   */
+  public String getPromptHost() {
+    // 정적 VFS가 없으면 기존 프롬프트 호스트명을 반환한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return "lucas-server";
+    }
+
+    // prompt.host가 없으면 lucas-server를 기본값으로 사용한다.
+    return staticVfs.path("prompt").path("host").asText("lucas-server");
+  }
+
+  /**
+   * 루트 밖 경로를 차단해야 하는지 반환합니다.
+   *
+   * @return policies.denyOutsideRoot 값, 없으면 true
+   */
+  public boolean denyOutsideRoot() {
+    // 정적 VFS가 없으면 루트 밖 접근을 차단하는 보수적인 정책을 적용한다.
+    if (staticVfs == null || staticVfs.isNull()) {
+      return true;
+    }
+
+    // vfs.json 정책값이 없으면 차단을 기본값으로 사용한다.
+    return staticVfs.path("policies").path("denyOutsideRoot").asBoolean(true);
+  }
+
+  /**
+   * 루트 밖이어도 접근 가능한 외부 경로인지 확인합니다.
+   *
+   * @param path 정규화된 절대 경로
+   * @return policies.allowedExternalPaths 하위 경로이면 true
+   */
+  public boolean isAllowedExternalPath(String path) {
+    // 비교할 경로 또는 정적 VFS가 없으면 외부 경로를 허용하지 않는다.
+    if (path == null || staticVfs == null || staticVfs.isNull()) {
+      return false;
+    }
+
+    // vfs.json 정책에서 허용 외부 경로 목록을 읽는다.
+    JsonNode allowedPaths = staticVfs.path("policies").path("allowedExternalPaths");
+
+    // 허용 목록이 배열이 아니면 외부 경로를 허용하지 않는다.
+    if (!allowedPaths.isArray()) {
+      return false;
+    }
+
+    // 허용된 prefix를 순회하며 현재 경로가 그 하위인지 확인한다.
+    for (JsonNode allowedPath : allowedPaths) {
+      // 문자열이 아닌 정책 항목은 무시한다.
+      if (!allowedPath.isTextual()) {
+        continue;
+      }
+
+      // 허용 prefix와 정확히 같거나 그 하위 경로인 경우만 허용한다.
+      String prefix = allowedPath.asText();
+      if (path.equals(prefix) || path.startsWith(prefix + "/")) {
+        return true;
+      }
+    }
+
+    // 어떤 허용 prefix에도 포함되지 않으면 차단 대상이다.
+    return false;
+  }
+
+  /**
    * 특정 절대 경로에 해당하는 파일 또는 디렉토리 노드를 찾습니다. 동적 오버레이에 변경사항이 있으면 이를 우선적으로 반영합니다.
    *
    * @param path 조회할 절대 경로
