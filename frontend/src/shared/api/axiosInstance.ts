@@ -45,7 +45,10 @@ axiosInstance.interceptors.response.use(
     const isNetworkError = !error.response;
     const isServerError = status && status >= 500 && status < 600;
 
-    if (isNetworkError || isServerError) {
+    const isSilentRefreshing = sessionStorage.getItem('is_silent_refreshing') === 'true';
+
+    // 진행 중인 조용한 리프레시(AppShell)가 있다면 전역 모달 띄우기와 강제 로그아웃을 무시(Bypass)
+    if ((isNetworkError || isServerError) && !isSilentRefreshing) {
       console.error('Network or Server error occurred:', error);
       try {
         const { useModalStore } = await import('../../app/store/modalStore');
