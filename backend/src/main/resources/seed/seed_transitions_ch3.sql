@@ -691,6 +691,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -709,6 +710,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -757,6 +759,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -775,6 +778,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -823,6 +827,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -841,6 +846,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -889,6 +895,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -907,6 +914,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -955,6 +963,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -973,6 +982,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1021,6 +1031,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1039,6 +1050,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1087,6 +1099,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1105,6 +1118,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1153,6 +1167,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1171,6 +1186,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1579,6 +1595,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1597,6 +1614,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1645,6 +1663,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1663,6 +1682,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1711,6 +1731,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1729,6 +1750,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1777,6 +1799,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1795,6 +1818,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1843,6 +1867,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1861,6 +1886,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1909,6 +1935,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1927,6 +1954,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1975,6 +2003,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -1993,6 +2022,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -2041,6 +2071,7 @@ SELECT
     "TEE"
   ],
   "outputFile": "/home/guest/nexus_monitor.log",
+  "allowAnyOutputFile": true,
   "allowRelativeOutputFile": true,
   "allowOverwrite": true
 }$json$::jsonb,
@@ -2059,6 +2090,7 @@ SELECT
     "createdNodes": [
       {
         "path": "/home/guest/nexus_monitor.log",
+        "pathFromOutputFile": true,
         "type": "file",
         "readable": true,
         "executable": false,
@@ -4060,8 +4092,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4094,8 +4128,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4128,8 +4164,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4230,8 +4268,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4264,8 +4304,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4298,8 +4340,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {
@@ -4332,8 +4376,10 @@ SELECT
   "allowAbsolutePath": true,
   "requiredReadable": true,
   "requiredFlags": [
-    "fragment02_dumped"
-  ]
+    "fragment02_dumped",
+    "monitor_viewed"
+  ],
+  "nudgeOnFlagMiss": "서두르지 마. 릴레이에서 아직 확인하지 않은 데이터가 남아 있어. 충분히 파악한 다음에 움직여."
 }$json$::jsonb,
     $json${
   "setFlags": {

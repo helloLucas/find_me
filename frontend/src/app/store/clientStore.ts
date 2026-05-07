@@ -8,6 +8,7 @@ interface ClientState {
 
   terminalOutput: Array<{ type: "input" | "output" | "error" | "system"; text: string; id: string }>;
   appendTerminalOutput: (type: "input" | "output" | "error" | "system", text: string) => void;
+  removeLastTerminalOutput: () => void;
   clearTerminalOutput: () => void;
 
   isAccessing: boolean;
@@ -37,6 +38,10 @@ export const useClientStore = create<ClientState>((set) => ({
         ...state.terminalOutput,
         { type, text, id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` },
       ],
+    })),
+  removeLastTerminalOutput: () =>
+    set((state) => ({
+      terminalOutput: state.terminalOutput.slice(0, -1),
     })),
   clearTerminalOutput: () => set({ terminalOutput: [] }),
 

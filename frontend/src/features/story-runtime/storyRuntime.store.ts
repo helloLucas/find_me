@@ -410,6 +410,10 @@ function applyStoryNodeOutputBundle(
         .map((line) => line.text)
     );
     const filteredTerminalLines = terminalLines.filter((line) => {
+      if (line === "__REMOVE_LAST_INPUT__") {
+        clientStore.removeLastTerminalOutput();
+        return false;
+      }
       if (!line.startsWith("terminal://")) return true;
       return !existingSystemLines.has(line);
     });
