@@ -4,110 +4,145 @@ import { DESKTOP_LAYER } from "../../../shared/config/desktopWindows";
 import { useStoryRuntimeStore } from "../storyRuntime.store";
 
 export const CallOverlay: React.FC = () => {
-  const {
-    isVisible,
-    nodeCode,
-    title,
-    status,
-    messages,
-    buttons,
-  } = useCallOverlayStore();
+  const { isVisible, nodeCode, messages, buttons } = useCallOverlayStore();
   const { isLoading, submitStoryClick } = useStoryRuntimeStore();
-  const [visibleMessageCount, setVisibleMessageCount] = useState(1);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
-    setVisibleMessageCount(messages.length > 0 ? 1 : 0);
+    setMessageIndex(0);
   }, [nodeCode, messages.length]);
 
-  const visibleMessages = useMemo(
-    () => messages.slice(0, visibleMessageCount),
-    [messages, visibleMessageCount]
-  );
-  const hasMoreMessages = visibleMessageCount < messages.length;
-  const canShowButtons = !hasMoreMessages && buttons.length > 0;
+  const currentMessage = useMemo(() => messages[messageIndex], [messages, messageIndex]);
+  const hasMoreMessages = messageIndex < messages.length - 1;
+  const primaryButton = buttons[0];
+  const canCompleteCall = !hasMoreMessages && Boolean(primaryButton);
 
   if (!isVisible) return null;
 
   const handleAdvance = () => {
+    if (isLoading) return;
+
     if (hasMoreMessages) {
-      setVisibleMessageCount((count) => Math.min(count + 1, messages.length));
+      setMessageIndex((index) => Math.min(index + 1, messages.length - 1));
+      return;
+    }
+
+    if (primaryButton) {
+      void submitStoryClick(primaryButton.value);
     }
   };
 
-  const handlePromptAction = (value: string) => {
-    if (!value || isLoading) return;
-    void submitStoryClick(value);
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleAdvance();
   };
+
+  const isNotice = currentMessage?.channel === "terminal_notice";
+  const speaker = currentMessage?.speaker || "LUCAS";
+  const line = currentMessage?.text ?? "";
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/70 px-4 font-desktop-ui"
+      className="fixed inset-0 overflow-hidden bg-black/80 font-desktop-ui text-cyan-50"
       style={{ zIndex: DESKTOP_LAYER.overlay }}
       aria-live="polite"
     >
-      <div className="w-full max-w-[520px] overflow-hidden rounded-lg border border-cyan-300/70 bg-[#05080d] shadow-[0_0_32px_rgba(0,255,255,0.22),0_0_80px_rgba(255,62,207,0.12)]">
-        <div className="flex items-center justify-between border-b border-cyan-300/30 bg-[#101520] px-4 py-3">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-cyan-100">{title || "INCOMING CALL"}</div>
-            <div className="mt-1 text-[11px] uppercase text-cyan-300/70">
-              {status || "connected"}
-            </div>
-          </div>
-          <div className="h-3 w-3 flex-shrink-0 rounded-full bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.9)]" />
-        </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.14),transparent_34%),linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[length:auto,100%_4px]" />
 
-        <div className="space-y-3 px-4 py-5">
-          {visibleMessages.map((message, index) => {
-            const isNotice = message.channel === "terminal_notice";
+      <div className="pointer-events-none absolute inset-x-0 top-0 bottom-[208px] flex items-center justify-center sm:bottom-[258px]">
+        <div className="relative flex h-[34vh] min-h-[220px] w-[min(68vw,560px)] items-center justify-center">
+          <div className="absolute h-[min(52vw,390px)] w-[min(52vw,390px)] rounded-full border border-cyan-200/10" />
+          <div className="absolute h-[min(42vw,310px)] w-[min(42vw,310px)] animate-ping rounded-full border border-cyan-300/30" />
+          <div className="absolute h-[min(31vw,230px)] w-[min(31vw,230px)] animate-pulse rounded-full border border-cyan-100/50 shadow-[0_0_40px_rgba(103,232,249,0.28)]" />
+          <div className="absolute h-[min(18vw,132px)] w-[min(18vw,132px)] rounded-full border border-white/20 bg-cyan-200/10 shadow-[0_0_34px_rgba(34,211,238,0.42)]" />
 
-            if (isNotice) {
-              return (
-                <div
-                  key={`${message.channel}-${index}`}
-                  className="rounded-md border border-red-400/40 bg-red-950/50 px-3 py-2 text-center font-terminal text-xs text-red-100"
-                >
-                  {message.text}
-                </div>
-              );
-            }
-
-            return (
-              <div key={`${message.channel}-${index}`} className="flex flex-col gap-1">
-                <div className="text-xs font-bold text-cyan-300">{message.speaker}</div>
-                <div className="rounded-md border border-cyan-300/20 bg-cyan-950/30 px-3 py-3 text-sm leading-relaxed text-cyan-50 shadow-[inset_0_0_18px_rgba(0,255,255,0.04)]">
-                  {message.text}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex justify-end gap-2 border-t border-cyan-300/20 bg-[#070b12] px-4 py-3">
-          {hasMoreMessages && (
-            <button
-              type="button"
-              className="rounded-md border border-cyan-300/60 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={handleAdvance}
-              disabled={isLoading}
-            >
-              다음
-            </button>
-          )}
-
-          {canShowButtons &&
-            buttons.map((button) => (
-              <button
-                key={button.value}
-                type="button"
-                className="rounded-md border border-fuchsia-300/70 bg-fuchsia-400/10 px-4 py-2 text-sm font-bold text-fuchsia-50 transition hover:bg-fuchsia-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => handlePromptAction(button.value)}
-                disabled={isLoading}
-              >
-                {button.label}
-              </button>
+          <div className="relative flex h-20 w-56 items-center justify-center gap-1.5 overflow-hidden">
+            {Array.from({ length: 17 }).map((_, index) => (
+              <span
+                key={index}
+                className="block w-1 rounded-full bg-cyan-100/70 shadow-[0_0_10px_rgba(165,243,252,0.72)]"
+                style={{
+                  height: `${18 + Math.abs(8 - index) * 3}px`,
+                  animation: `callSignalPulse ${1.1 + (index % 4) * 0.12}s ease-in-out infinite`,
+                  animationDelay: `${index * 0.045}s`,
+                }}
+              />
             ))}
+          </div>
         </div>
       </div>
+
+      <div className="absolute inset-x-0 bottom-0 px-3 pb-4 sm:px-8 sm:pb-8">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="call dialog"
+          onClick={handleAdvance}
+          onKeyDown={handleDialogKeyDown}
+          className={`relative mx-auto min-h-[176px] w-full max-w-5xl cursor-pointer overflow-hidden border bg-[#061018]/94 px-5 py-4 shadow-[0_-10px_44px_rgba(0,0,0,0.46),0_0_34px_rgba(34,211,238,0.18)] outline-none transition sm:min-h-[210px] sm:px-8 sm:py-6 ${
+            isLoading ? "cursor-wait opacity-70" : "hover:border-cyan-100/70"
+          } ${
+            isNotice
+              ? "border-red-300/50 text-red-50"
+              : "border-cyan-200/55 text-cyan-50"
+          }`}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(34,211,238,0.08),transparent_18%,transparent_82%,rgba(217,70,239,0.08))]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/70 to-transparent" />
+
+          <div className="relative flex h-full flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div
+                className={`border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] sm:text-sm ${
+                  isNotice
+                    ? "border-red-300/45 bg-red-500/10 text-red-100"
+                    : "border-cyan-200/45 bg-cyan-300/10 text-cyan-100"
+                }`}
+              >
+                {isNotice ? "SIGNAL NOTICE" : speaker}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((item) => (
+                  <span
+                    key={item}
+                    className="h-1.5 w-1.5 rounded-full bg-cyan-100/70"
+                    style={{
+                      animation: "callSignalPulse 1.2s ease-in-out infinite",
+                      animationDelay: `${item * 0.16}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <p
+              className={`min-h-[82px] whitespace-pre-wrap break-keep text-left text-[17px] leading-[1.75] sm:min-h-[104px] sm:text-[21px] ${
+                isNotice ? "font-terminal text-red-100" : "text-cyan-50"
+              }`}
+            >
+              {line}
+            </p>
+
+            <div className="flex justify-end">
+              <div
+                className={`text-2xl leading-none text-cyan-100/80 ${
+                  canCompleteCall ? "text-red-200" : ""
+                }`}
+              >
+                ▼
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes callSignalPulse {
+          0%, 100% { opacity: 0.35; transform: scaleY(0.58); }
+          50% { opacity: 1; transform: scaleY(1); }
+        }
+      `}</style>
     </div>
   );
 };
