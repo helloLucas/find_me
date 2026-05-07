@@ -4634,8 +4634,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 현재 노드의 transition 중 커맨드 패턴은 매칭되지만 플래그 조건만 불충족한 "near-miss"를 감지한다.
    *
-   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만
-   * requiredFlags를 만족하지 못하면 해당 넛지 메시지를 반환한다.
+   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만 requiredFlags를 만족하지 못하면
+   * 해당 넛지 메시지를 반환한다.
    *
    * @param currentNode 유저가 현재 위치한 스토리 노드
    * @param command 유저가 입력한 파싱된 커맨드 객체

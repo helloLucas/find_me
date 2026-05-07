@@ -64,8 +64,93 @@ public class TerminalCommandService {
       case "cat" -> handleCat(command, cwd, vfs); // 파일 내용 조회
       case "sh" -> handleSh(command, cwd, vfs); // 스크립트 실행 (특수 처리 포함)
       case "clear" -> handleClear(cwd, vfs); // 터미널 초기화 시그널 전송
-      default -> buildErrorResult(cwd, vfs, cmd + ": command not found"); // 알 수 없는 명령어 처리
+      case "echo" -> handleEcho(command, cwd, vfs); // 텍스트 출력
+      case "printf" -> handlePrintf(command, cwd, vfs); // 포맷 텍스트 출력
+      default -> handleUnknownOrMisusedCommand(cmd, cwd, vfs); // 알 수 없는 명령어 또는 잘못된 사용 처리
     };
+  }
+
+  /**
+   * 알려진 명령어의 오용이거나 완전히 모르는 명령어인 경우 실제 쉘과 유사한 에러를 반환합니다.
+   *
+   * @param cmd 입력된 명령어
+   * @param cwd 현재 경로
+   * @param vfs VFS 컨텍스트
+   * @return 에러 메시지가 담긴 결과
+   */
+  private TerminalResult handleUnknownOrMisusedCommand(String cmd, String cwd, VfsContext vfs) {
+    // switch 문을 사용하여 명령어별로 실제 터미널 환경과 유사한 표준 에러 메시지를 생성합니다.
+    String errorMsg =
+        switch (cmd) {
+            // nmap은 인자가 부족할 때 도움말 안내를 출력합니다.
+          case "nmap" -> "nmap: missing host or network. Try \"nmap -h\" for help";
+            // ss는 사용법(Usage)을 간략히 출력합니다.
+          case "ss" -> "Usage: ss [ OPTIONS ]";
+            // netstat도 옵션이 틀리거나 누락되었을 때 상세한 Usage를 보여줍니다.
+          case "netstat" ->
+              "usage: netstat [-vWeenNcCF] [<Af>] -r         netstat {-V|--version|-h|--help}";
+            // nc는 목적지 누락 에러를 반환합니다.
+          case "nc" -> "nc: missing or invalid destination";
+            // 해시 계산 명령어들은 피연산자 누락 에러를 반환합니다.
+          case "sha256sum", "shasum" -> cmd + ": missing operand";
+            // history 명령어의 경우 잘못된 옵션을 방어하기 위해 invalid usage를 반환합니다.
+          case "history" -> cmd + ": invalid usage";
+            // 위 목록에 없는, 정말로 등록되지 않은 명령어는 command not found 처리합니다.
+          default -> cmd + ": command not found";
+        };
+    // 생성된 에러 메시지를 stderr로 담아 TerminalResult로 반환합니다.
+    return buildErrorResult(cwd, vfs, errorMsg);
+  }
+
+  /**
+   * echo 명령어를 처리하여 텍스트를 출력합니다.
+   *
+   * @param command 명령어 인자
+   * @param cwd 현재 경로
+   * @param vfs VFS 컨텍스트
+   * @return 출력 결과
+   */
+  private TerminalResult handleEcho(ParsedCommand command, String cwd, VfsContext vfs) {
+    // 터미널 파서가 쪼갠 여러 인자들을 다시 하나의 공백으로 이어붙입니다.
+    // (이 과정에서 따옴표 등은 파서에서 미리 제거되었을 수 있습니다.)
+    String output = String.join(" ", command.args());
+    // 이어붙인 문자열을 표준 출력(stdout) 리스트에 담아 성공 결과를 반환합니다.
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(output))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  /**
+   * printf 명령어를 처리하여 이스케이프 시퀀스가 포함된 텍스트를 출력합니다.
+   *
+   * @param command 명령어 인자
+   * @param cwd 현재 경로
+   * @param vfs VFS 컨텍스트
+   * @return 출력 결과
+   */
+  private TerminalResult handlePrintf(ParsedCommand command, String cwd, VfsContext vfs) {
+    // printf 뒤에 출력할 문자열(포맷) 인자가 없으면 에러를 반환합니다.
+    if (command.args().isEmpty()) {
+      return buildErrorResult(cwd, vfs, "printf: missing operand");
+    }
+
+    // 단순하게 동작하도록 첫 번째 인자를 포맷 스트링으로 간주합니다.
+    String formatString = command.args().get(0);
+    // 문자열 내의 명시적인 '\n' 문자열을 실제 줄바꿈 문자로 치환합니다.
+    String replaced = formatString.replace("\\n", "\n");
+    // 치환된 문자열을 줄바꿈 기준으로 쪼개어, 각 줄을 원소로 가지는 출력 리스트를 만듭니다.
+    List<String> output = Arrays.asList(replaced.split("\n"));
+
+    // 파싱된 여러 줄의 문자열을 표준 출력(stdout)에 담아 성공 결과를 반환합니다.
+    return TerminalResult.builder()
+        .stdout(output)
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
   }
 
   /**
