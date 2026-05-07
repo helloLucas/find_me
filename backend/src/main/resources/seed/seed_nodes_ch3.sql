@@ -235,13 +235,14 @@ SELECT
   },
   "content": {
     "terminalOutput": [
-      "total 48",
+      "total 40",
       "drwxr-xr-x  6 guest guest 4096 Apr 14 23:16 .",
       "drwxr-xr-x  3 root  root  4096 Apr 14 22:58 ..",
       "-rw-------  1 guest guest  214 Apr 14 23:16 .bash_history",
       "-rw-r--r--  1 guest guest  319 Apr 14 23:15 gate_04.trace",
       "-rw-r--r--  1 guest guest  842 Apr 14 23:02 observer_status.log",
       "-rw-r--r--  1 guest guest  911 Apr 14 23:01 world_map.map",
+      "-rw-r--r--  1 guest guest  512 Apr 14 23:04 lucas_fragment_01.sh",
       "-rwxr-xr-x  1 guest guest  612 Apr 14 23:05 laplace_fragment_01.sh",
       "-rwxr-xr-x  1 guest guest  734 Apr 14 23:16 sever_external_nodes.sh",
       "drwxr-xr-x  2 guest guest 4096 Apr 14 23:03 trash",

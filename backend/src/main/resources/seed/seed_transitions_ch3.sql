@@ -131,9 +131,11 @@ SELECT
 }$json$::jsonb,
     $json${
   "setFlags": {
+    "home_rechecked": true,
     "bash_history_checked": true
   },
   "snapshotPatch": {
+    "flags.home_rechecked": true,
     "flags.bash_history_checked": true
   },
   "recentResult": "SUCCESS_MOVE"
@@ -5010,9 +5012,11 @@ SELECT
 }$json$::jsonb,
     $json${
   "setFlags": {
+    "home_rechecked": true,
     "bash_history_checked": true
   },
   "snapshotPatch": {
+    "flags.home_rechecked": true,
     "flags.bash_history_checked": true
   },
   "recentResult": "SUCCESS_MOVE"
@@ -5020,144 +5024,6 @@ SELECT
     90
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH3_HISTORY_VIEW'
-WHERE from_node.code = 'CH3_SERVER_AFTER_DECOY';
-
-INSERT INTO story_transitions (
-    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
-)
-SELECT
-    from_node.id,
-    to_node.id,
-    'command',
-    'discover_open_port_9091',
-    'server_rule',
-    $json${
-  "rule": "DISCOVER_OPEN_PORT",
-  "targetPort": 9091,
-  "acceptedMethods": [
-    {
-      "method": "NMAP_SERVICE_SCAN",
-      "command": "nmap",
-      "requiredArgs": [
-        "-sV"
-      ],
-      "acceptedTargets": [
-        "127.0.0.1",
-        "localhost"
-      ]
-    },
-    {
-      "method": "SS_LISTEN_SCAN",
-      "command": "ss",
-      "requiredArgsAnyOrder": [
-        "-ltn"
-      ]
-    },
-    {
-      "method": "NETSTAT_LISTEN_SCAN",
-      "command": "netstat",
-      "requiredArgsAnyOrder": [
-        "-ltn"
-      ]
-    },
-    {
-      "method": "NC_ZERO_IO_SCAN",
-      "command": "nc",
-      "requiredArgsAnyOrder": [
-        "-zv"
-      ],
-      "acceptedHosts": [
-        "127.0.0.1",
-        "localhost"
-      ],
-      "acceptedPorts": [
-        9091
-      ]
-    }
-  ]
-}$json$::jsonb,
-    $json${
-  "setFlags": {
-    "port_9091_discovered": true
-  },
-  "snapshotPatch": {
-    "flags.port_9091_discovered": true,
-    "relay.discovered": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-    90
-FROM story_nodes from_node
-JOIN story_nodes to_node ON to_node.code = 'CH3_PORT_DISCOVERED'
-WHERE from_node.code = 'CH3_HOME_RECHECK';
-
-INSERT INTO story_transitions (
-    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
-)
-SELECT
-    from_node.id,
-    to_node.id,
-    'command',
-    'discover_open_port_9091',
-    'server_rule',
-    $json${
-  "rule": "DISCOVER_OPEN_PORT",
-  "targetPort": 9091,
-  "acceptedMethods": [
-    {
-      "method": "NMAP_SERVICE_SCAN",
-      "command": "nmap",
-      "requiredArgs": [
-        "-sV"
-      ],
-      "acceptedTargets": [
-        "127.0.0.1",
-        "localhost"
-      ]
-    },
-    {
-      "method": "SS_LISTEN_SCAN",
-      "command": "ss",
-      "requiredArgsAnyOrder": [
-        "-ltn"
-      ]
-    },
-    {
-      "method": "NETSTAT_LISTEN_SCAN",
-      "command": "netstat",
-      "requiredArgsAnyOrder": [
-        "-ltn"
-      ]
-    },
-    {
-      "method": "NC_ZERO_IO_SCAN",
-      "command": "nc",
-      "requiredArgsAnyOrder": [
-        "-zv"
-      ],
-      "acceptedHosts": [
-        "127.0.0.1",
-        "localhost"
-      ],
-      "acceptedPorts": [
-        9091
-      ]
-    }
-  ]
-}$json$::jsonb,
-    $json${
-  "setFlags": {
-    "port_9091_discovered": true
-  },
-  "snapshotPatch": {
-    "flags.port_9091_discovered": true,
-    "relay.discovered": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-    70
-FROM story_nodes from_node
-JOIN story_nodes to_node ON to_node.code = 'CH3_PORT_DISCOVERED'
 WHERE from_node.code = 'CH3_SERVER_AFTER_DECOY';
 
 INSERT INTO story_transitions (
