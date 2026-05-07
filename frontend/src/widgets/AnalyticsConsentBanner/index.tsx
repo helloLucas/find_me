@@ -37,19 +37,8 @@ export function AnalyticsConsentBanner() {
 
   if (!hasAnalyticsConfig()) return null;
 
-  const statusLabel = consent?.status === "granted" ? "ON" : "OFF";
-
   if (!isOpen && consent) {
-    return (
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-3 right-3 z-[10001] border border-cyan-300/30 bg-black/70 px-3 py-2 font-system-overlay text-[9px] tracking-[0.2em] text-cyan-100/70 shadow-[0_0_14px_rgba(34,211,238,0.14)] backdrop-blur-sm transition-colors hover:border-cyan-200/70 hover:text-cyan-50"
-        title="Analytics consent settings"
-      >
-        ANALYTICS {statusLabel}
-      </button>
-    );
+    return null;
   }
 
   return (
