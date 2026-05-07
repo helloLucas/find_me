@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
@@ -19,33 +19,61 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   const isAtRoot = location.pathname === "/";
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
+
   // 선제적 토큰 만료 여부 판별 (백엔드 API 호출 사전 차단용)
   const isExpired = (() => {
+    if (refreshSuccess) return false;
     const accessToken = tokenManager.getAccessToken();
     if (!accessToken) return false;
     try {
       const decoded: any = jwtDecode(accessToken);
-      return !!(decoded && decoded.exp && decoded.exp * 1000 < Date.now());
+      return !!(decoded && decoded.exp && decoded.exp * 1000 < Date.now() + 5000); // 5초 오차 마진
     } catch {
       return true; // 디코딩 오류 시 유효하지 않은 토큰으로 간주하여 만료 처리
     }
   })();
 
-  // 선제적 토큰 만료 검사 및 처리
+  // 선제적 토큰 만료 감지 시 '조용한 자동 리프레시(Silent Refresh)' 시도
   useEffect(() => {
-    if (isExpired) {
-      console.warn("Access token has expired. Clearing session...");
-      clearAuth();
-      if (!isAtRoot) {
-        navigate("/", { replace: true });
-      }
+    let isMounted = true;
+    if (isExpired && !isAtRoot && !isRefreshing) {
+      console.warn("Access token has expired. Attempting silent refresh...");
+      setIsRefreshing(true);
+      
+      const attemptRefresh = async () => {
+        try {
+          const { default: axiosInstance } = await import('../../shared/api/axiosInstance');
+          const response = await axiosInstance.post('/api/v1/auth/refresh', undefined, { withCredentials: true });
+          const newAccessToken = response.data?.data?.accessToken;
+          
+          if (newAccessToken && isMounted) {
+            tokenManager.setAccessToken(newAccessToken);
+            checkAuth(); // authStore 상태 갱신
+            setRefreshSuccess(true);
+            setIsRefreshing(false);
+          }
+        } catch (error) {
+          console.error("Silent refresh failed:", error);
+          if (isMounted) {
+            clearAuth();
+            sessionStorage.setItem('show_session_expired_popup', 'true');
+            navigate("/", { replace: true });
+            setIsRefreshing(false);
+          }
+        }
+      };
+
+      attemptRefresh();
     }
-  }, [isExpired, isAtRoot, clearAuth, navigate]);
+    return () => { isMounted = false; };
+  }, [isExpired, isAtRoot, isRefreshing, clearAuth, navigate, checkAuth]);
 
   // 토큰이 만료되었고 로그인 페이지가 아니면 자식 렌더링 차단 (백엔드 요청 선제 차단)
   const shouldRenderChildren = !(isExpired && !isAtRoot);
 
-  // 세션 만료 팝업 감지 (axiosInstance에서 보낸 신호)
+  // 세션 만료 팝업 감지 (axiosInstance 또는 Silent Refresh 실패 시그널)
   useEffect(() => {
     const showPopup = sessionStorage.getItem('show_session_expired_popup');
     if (showPopup === 'true') {
@@ -56,7 +84,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       });
       sessionStorage.removeItem('show_session_expired_popup');
     }
-  }, [openModal]);
+  }, [openModal, location.pathname]);
 
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
