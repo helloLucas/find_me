@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
@@ -8,6 +8,7 @@ import { useModalStore } from "../../app/store/modalStore";
 import { GlobalModal } from "../GlobalModal";
 import { GlobalToast } from "../GlobalToast";
 import { jwtDecode } from "jwt-decode";
+import axiosInstance from '../../shared/api/axiosInstance';
 
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -19,12 +20,11 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   const isAtRoot = location.pathname === "/";
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshSuccess, setRefreshSuccess] = useState(false);
+  const [isRefreshingUI, setIsRefreshingUI] = useState(false);
+  const refreshLock = useRef(false);
 
   // 선제적 토큰 만료 여부 판별 (백엔드 API 호출 사전 차단용)
   const isExpired = (() => {
-    if (refreshSuccess) return false;
     const accessToken = tokenManager.getAccessToken();
     if (!accessToken) return false;
     try {
@@ -38,21 +38,19 @@ export default function AppShell({ children }: PropsWithChildren) {
   // 선제적 토큰 만료 감지 시 '조용한 자동 리프레시(Silent Refresh)' 시도
   useEffect(() => {
     let isMounted = true;
-    if (isExpired && !isAtRoot && !isRefreshing) {
+    if (isExpired && !isAtRoot && !refreshLock.current) {
       console.warn("Access token has expired. Attempting silent refresh...");
-      setIsRefreshing(true);
+      refreshLock.current = true;
+      setIsRefreshingUI(true);
       
       const attemptRefresh = async () => {
         try {
-          const { default: axiosInstance } = await import('../../shared/api/axiosInstance');
           const response = await axiosInstance.post('/api/v1/auth/refresh', undefined, { withCredentials: true });
           const newAccessToken = response.data?.data?.accessToken;
           
           if (newAccessToken && isMounted) {
             tokenManager.setAccessToken(newAccessToken);
             checkAuth(); // authStore 상태 갱신
-            setRefreshSuccess(true);
-            setIsRefreshing(false);
           }
         } catch (error) {
           console.error("Silent refresh failed:", error);
@@ -60,7 +58,11 @@ export default function AppShell({ children }: PropsWithChildren) {
             clearAuth();
             sessionStorage.setItem('show_session_expired_popup', 'true');
             navigate("/", { replace: true });
-            setIsRefreshing(false);
+          }
+        } finally {
+          if (isMounted) {
+            refreshLock.current = false;
+            setIsRefreshingUI(false);
           }
         }
       };
@@ -68,7 +70,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       attemptRefresh();
     }
     return () => { isMounted = false; };
-  }, [isExpired, isAtRoot, isRefreshing, clearAuth, navigate, checkAuth]);
+  }, [isExpired, isAtRoot, clearAuth, navigate, checkAuth]);
 
   // 토큰이 만료되었고 로그인 페이지가 아니면 자식 렌더링 차단 (백엔드 요청 선제 차단)
   const shouldRenderChildren = !(isExpired && !isAtRoot);
@@ -127,12 +129,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           type: 'confirm',
           onConfirm: async () => {
             try {
-              const axiosModule = await import('../../shared/api/axiosInstance');
-              const tokenManagerModule = await import('../../shared/utils/tokenManager');
-              const authStoreModule = await import('../../app/store/authStore');
-              const clientStoreModule = await import('../../app/store/clientStore');
-
-              const response = await axiosModule.default.post('/api/v1/users/register', {
+              const response = await axiosInstance.post('/api/v1/users/register', {
                 tempKey,
                 nickname: '',
                 confirmAccountLinking: true,
@@ -140,13 +137,13 @@ export default function AppShell({ children }: PropsWithChildren) {
 
               const newAccessToken = response.data?.data?.accessToken;
               if (newAccessToken) {
-                tokenManagerModule.tokenManager.setAccessToken(newAccessToken);
-                authStoreModule.useAuthStore.getState().setAuth(newAccessToken);
+                tokenManager.setAccessToken(newAccessToken);
+                useAuthStore.getState().setAuth(newAccessToken);
               }
 
-              clientStoreModule.useClientStore.getState().setIsAccessing(true);
+              useClientStore.getState().setIsAccessing(true);
               setTimeout(() => {
-                clientStoreModule.useClientStore.getState().setIsAccessing(false);
+                useClientStore.getState().setIsAccessing(false);
                 navigate('/lobby', { replace: true });
               }, 1000);
             } catch (err: any) {
@@ -174,12 +171,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           type: 'confirm',
           onConfirm: async () => {
             try {
-              const axiosModule = await import('../../shared/api/axiosInstance');
-              const tokenManagerModule = await import('../../shared/utils/tokenManager');
-              const authStoreModule = await import('../../app/store/authStore');
-              const clientStoreModule = await import('../../app/store/clientStore');
-
-              const response = await axiosModule.default.post('/api/v1/users/register', {
+              const response = await axiosInstance.post('/api/v1/users/register', {
                 tempKey,
                 nickname: '',
                 confirmSwitch: true,
@@ -187,13 +179,13 @@ export default function AppShell({ children }: PropsWithChildren) {
 
               const newAccessToken = response.data?.data?.accessToken;
               if (newAccessToken) {
-                tokenManagerModule.tokenManager.setAccessToken(newAccessToken);
-                authStoreModule.useAuthStore.getState().setAuth(newAccessToken);
+                tokenManager.setAccessToken(newAccessToken);
+                useAuthStore.getState().setAuth(newAccessToken);
               }
 
-              clientStoreModule.useClientStore.getState().setIsAccessing(true);
+              useClientStore.getState().setIsAccessing(true);
               setTimeout(() => {
-                clientStoreModule.useClientStore.getState().setIsAccessing(false);
+                useClientStore.getState().setIsAccessing(false);
                 navigate('/lobby', { replace: true });
               }, 1000);
             } catch (err: any) {
@@ -286,7 +278,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         </div>
       )}
 
-      {shouldRenderChildren ? children : (
+      {shouldRenderChildren && !isRefreshingUI ? children : (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black">
           <div className="font-system-overlay text-[#a3e635] text-lg animate-pulse tracking-widest">
             RE-AUTHENTICATING...
