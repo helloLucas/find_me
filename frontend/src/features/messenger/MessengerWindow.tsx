@@ -5,6 +5,7 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
+import { WindowControlButton } from "../../shared/ui/WindowControls";
 import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 const WINDOW_W = 400;
@@ -195,15 +196,15 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
               )}
             </div>
 
-            <button
-              className="w-6 h-5 flex items-center justify-center text-pink-400/70 hover:text-pink-300 transition-colors border border-pink-500/30 rounded-sm"
+            <WindowControlButton
+              variant="close"
+              label="Close"
+              className="border-pink-500/30 text-pink-400/70 hover:border-pink-400/70 hover:bg-pink-500/10 hover:text-pink-300"
               onClick={(event) => {
                 event.stopPropagation();
                 closeWindow(windowId);
               }}
-            >
-              <span className="text-[10px]">X</span>
-            </button>
+            />
           </div>
 
           <div
