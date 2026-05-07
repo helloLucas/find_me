@@ -9,9 +9,16 @@ import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
+import type { StoryNode } from "../../shared/types/story";
 
 function getIsFullscreen() {
   return !!document.fullscreenElement || (window.innerHeight === screen.height);
+}
+
+function isChapterCompletionNode(node: StoryNode | null) {
+  if (!node?.code.endsWith("_COMPLETE")) return false;
+
+  return node.nodeType === "ending" || node.isTerminal;
 }
 
 export default function PlayPage() {
@@ -90,8 +97,7 @@ export default function PlayPage() {
     }
   };
 
-  const shouldShowCompletionModal =
-    currentNode?.nodeType === "ending" && currentNode.code.endsWith("_COMPLETE");
+  const shouldShowCompletionModal = !isPlayingVideo && isChapterCompletionNode(currentNode);
 
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
