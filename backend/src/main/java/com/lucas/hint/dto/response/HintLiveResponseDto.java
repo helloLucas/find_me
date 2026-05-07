@@ -1,6 +1,5 @@
 package com.lucas.hint.dto.response;
 
-import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -16,10 +15,6 @@ public class HintLiveResponseDto {
   private String selectedPhase;
   private boolean lowConfidence;
   private int failCountAfterAction;
-  private String whyThisHint;
-  private String nextActionType;
-  private String nextInputPattern;
-  private List<Long> usedTransitionIds;
   private HintEvidenceResponseDto topEvidence;
   private HintEsSignalResponseDto esSignal;
   private HintLiveRetrieveResponseDto retrieval;

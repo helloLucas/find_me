@@ -27,11 +27,12 @@ class GmsLlmClient:
     async def close(self) -> None:
         await self._http.aclose()
 
-    async def generate_text(self, prompt: str) -> str:
+    async def generate_text(self, prompt: str, *, model_name: str | None = None) -> str:
         provider = _normalize_provider(self._settings.gms_llm_provider)
+        selected_model = model_name or self._settings.gms_llm_model
         return await self._chat(
             provider=provider,
-            model_name=self._settings.gms_llm_model,
+            model_name=selected_model,
             developer_prompt=self._developer_prompt,
             user_prompt=prompt,
             max_output_tokens=self._settings.gms_max_output_tokens,

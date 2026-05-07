@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,26 +28,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class HintRetrievalServiceImpl implements HintRetrievalService {
 
-  private static final int DEFAULT_RECENT_ACTION_LIMIT = 5;
+  private static final int DEFAULT_RECENT_ACTION_LIMIT = 3;
+  private static final int MAX_SEARCH_TOP_K = 5;
+  private static final int MAX_EVIDENCE_LIMIT = 5;
+  private static final int MAX_RECENT_ACTION_LIMIT = 3;
   private static final int REQUIRED_VECTOR_DIMENSION = 1536;
-
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final StoryTransitionRepository storyTransitionRepository;
   private final StorySessionRedisService storySessionRedisService;
   private final HintRetrieveOrchestratorClient hintRetrieveOrchestratorClient;
 
-  @Value("${app.hint.search-top-k:10}")
+  @Value("${app.hint.search-top-k}")
   private int defaultSearchTopK;
 
-  @Value("${app.hint.evidence-limit:3}")
+  @Value("${app.hint.evidence-limit}")
   private int defaultEvidenceLimit;
 
-  @Value("${app.hint.min-similarity:0.70}")
+  @Value("${app.hint.min-similarity}")
   private double defaultMinSimilarity;
 
-  @Value("${app.hint.recent-action-limit:5}")
+  @Value("${app.hint.recent-action-limit}")
   private int recentActionLimit;
 
   @Override
@@ -72,20 +76,19 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
     String actionType = latestEvent != null ? latestEvent.actionType() : null;
     String currentInput = latestEvent != null ? latestEvent.inputValueNorm() : null;
 
-    TransitionExpectation expectation =
-        resolveTransitionExpectation(progress.getLatestNode().getId());
+    String expectedActionType = resolveExpectedActionType(progress.getLatestNode().getId());
 
     HintRetrieveOrchestratorClient.HintRetrieveResult result =
         hintRetrieveOrchestratorClient.retrieve(
             HintRetrieveOrchestratorClient.HintRetrieveRequest.builder()
+                .session_id(sessionId)
                 .chapter_id(chapterCode)
                 .from_node_id(fromNodeCode)
                 .action_type(actionType)
                 .current_input(currentInput)
                 .user_message(request.getUserMessage())
                 .fail_count_after_action(failCount)
-                .expected_action_type(expectation.expectedActionType())
-                .expected_input_hint(expectation.expectedInputHint())
+                .expected_action_type(expectedActionType)
                 .recent_actions(mapRecentActions(recentEvents))
                 .extra_context(buildExtraContext(sessionId, fromNodeCode))
                 .es_signal(null)
@@ -104,6 +107,10 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
         .routeDecision(result.routeDecision())
         .actionType(actionType)
         .failCountAfterAction(failCount)
+        .repeatCountAfterAction(result.repeatCountAfterAction())
+        .stressScore(result.stressScore())
+        .hintLevel(result.hintLevel())
+        .repeatDecision("orchestrated")
         .queryVectorDimension(result.queryVectorDimension())
         .queryText(result.queryText())
         .selectedPhase(result.selectedPhase())
@@ -116,7 +123,7 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
         .build();
   }
 
-  private TransitionExpectation resolveTransitionExpectation(Long fromNodeId) {
+  private String resolveExpectedActionType(Long fromNodeId) {
     List<StoryTransition> transitions =
         storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(fromNodeId);
 
@@ -126,9 +133,9 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
           && transition.getToNode().getCode().contains("_FAIL_")) {
         continue;
       }
-      return new TransitionExpectation(transition.getActionType(), transition.getExpectedInput());
+      return transition.getActionType();
     }
-    return new TransitionExpectation(null, null);
+    return null;
   }
 
   private List<Map<String, Object>> mapRecentActions(List<StoryRecentEvent> events) {
@@ -160,11 +167,13 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
   }
 
   private int resolveSearchTopK(Integer requested) {
-    return requested != null ? requested : defaultSearchTopK;
+    int value = requested != null ? requested : defaultSearchTopK;
+    return Math.max(1, Math.min(value, MAX_SEARCH_TOP_K));
   }
 
   private int resolveEvidenceLimit(Integer requested, int searchTopK) {
     int limit = requested != null ? requested : defaultEvidenceLimit;
+    limit = Math.max(1, Math.min(limit, MAX_EVIDENCE_LIMIT));
     return Math.min(limit, searchTopK);
   }
 
@@ -173,8 +182,7 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
   }
 
   private int resolveRecentLimit() {
-    return Math.max(1, recentActionLimit > 0 ? recentActionLimit : DEFAULT_RECENT_ACTION_LIMIT);
+    int value = recentActionLimit > 0 ? recentActionLimit : DEFAULT_RECENT_ACTION_LIMIT;
+    return Math.max(1, Math.min(value, MAX_RECENT_ACTION_LIMIT));
   }
-
-  private record TransitionExpectation(String expectedActionType, String expectedInputHint) {}
 }

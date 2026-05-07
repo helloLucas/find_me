@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,8 +45,14 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     HintEvidenceResponseDto rawTopEvidence = firstEvidence(retrieval.getEvidences());
     HintEvidenceResponseDto topEvidence = sanitizeEvidence(rawTopEvidence);
     HintLiveRetrieveResponseDto sanitizedRetrieval = sanitizeRetrieval(retrieval);
-    String fallbackHintLevel =
-        resolveHintLevel(retrieval.getFailCountAfterAction(), retrieval.isLowConfidence());
+    String fallbackHintLevel = retrieval.getHintLevel() != null ? retrieval.getHintLevel() : "LIGHT";
+
+    log.info(
+        "Hint level decision. failCount={}, repeatCount={}, lowConfidence={}, hintLevel={}",
+        retrieval.getFailCountAfterAction(),
+        retrieval.getRepeatCountAfterAction(),
+        retrieval.isLowConfidence(),
+        fallbackHintLevel);
 
     if (ROUTE_BLOCKED_NON_HINT.equals(routeDecision)) {
       return buildBlockedResponse(retrieval, messageType, routeDecision);
@@ -66,6 +73,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
                   .actionType(retrieval.getActionType())
                   .userMessage(request.getUserMessage())
                   .failCountAfterAction(retrieval.getFailCountAfterAction())
+                  .repeatCountAfterAction(retrieval.getRepeatCountAfterAction())
                   .selectedPhase(retrieval.getSelectedPhase())
                   .lowConfidence(retrieval.isLowConfidence())
                   .queryText(retrieval.getQueryText())
@@ -75,11 +83,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
 
       String expectedInput = extractExpectedInput(rawTopEvidence);
       String safeHint = sanitizeHintText(llmResult.hintText(), expectedInput);
-      String safeInputPattern =
-          obfuscateExpectedInput(
-              !isBlank(llmResult.nextInputPattern())
-                  ? llmResult.nextInputPattern()
-                  : expectedInput);
 
       return HintLiveResponseDto.builder()
           .hint(safeHint)
@@ -89,10 +92,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .selectedPhase(retrieval.getSelectedPhase())
           .lowConfidence(retrieval.isLowConfidence())
           .failCountAfterAction(retrieval.getFailCountAfterAction())
-          .whyThisHint(llmResult.whyThisHint())
-          .nextActionType(llmResult.nextActionType())
-          .nextInputPattern(safeInputPattern)
-          .usedTransitionIds(llmResult.usedTransitionIds())
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
           .retrieval(sanitizedRetrieval)
@@ -109,10 +108,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
           .selectedPhase(retrieval.getSelectedPhase())
           .lowConfidence(retrieval.isLowConfidence())
           .failCountAfterAction(retrieval.getFailCountAfterAction())
-          .whyThisHint("llm_orchestrator_unavailable_fallback")
-          .nextActionType(topEvidence != null ? topEvidence.getActionType() : null)
-          .nextInputPattern(obfuscateExpectedInput(extractExpectedInput(rawTopEvidence)))
-          .usedTransitionIds(extractUsedTransitionIds(rawTopEvidence))
           .topEvidence(topEvidence)
           .esSignal(esSignal.orElse(null))
           .retrieval(sanitizedRetrieval)
@@ -127,39 +122,22 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     return evidences.get(0);
   }
 
-  private String resolveHintLevel(int failCountAfterAction, boolean lowConfidence) {
-    if (lowConfidence) {
-      return "LOW_CONFIDENCE";
-    }
-    if (failCountAfterAction >= 6) {
-      return "STRONG";
-    }
-    if (failCountAfterAction >= 3) {
-      return "MEDIUM";
-    }
-    return "LIGHT";
-  }
-
   private HintLiveResponseDto buildBlockedResponse(
       HintLiveRetrieveResponseDto retrieval, String messageType, String routeDecision) {
-    String blockedMessage =
+    String blockedHint =
         BLOCKED_NON_HINT_MESSAGES.get(
             ThreadLocalRandom.current().nextInt(BLOCKED_NON_HINT_MESSAGES.size()));
     return HintLiveResponseDto.builder()
-        .hint(blockedMessage)
+        .hint(blockedHint)
         .hintLevel("LOW_CONFIDENCE")
         .messageType(messageType)
         .routeDecision(routeDecision)
         .selectedPhase(retrieval.getSelectedPhase())
         .lowConfidence(true)
         .failCountAfterAction(retrieval.getFailCountAfterAction())
-        .whyThisHint("non_hint_blocked")
-        .nextActionType(null)
-        .nextInputPattern(null)
-        .usedTransitionIds(List.of())
         .topEvidence(null)
         .esSignal(null)
-        .retrieval(retrieval)
+        .retrieval(sanitizeRetrieval(retrieval))
         .build();
   }
 
@@ -258,13 +236,6 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     return isBlank(value) ? "action" : value;
   }
 
-  private List<Long> extractUsedTransitionIds(HintEvidenceResponseDto topEvidence) {
-    if (topEvidence == null || topEvidence.getTransitionId() == null) {
-      return List.of();
-    }
-    return List.of(topEvidence.getTransitionId());
-  }
-
   private String fallbackText(String value, String fallback) {
     return isBlank(value) ? fallback : value;
   }
@@ -283,6 +254,8 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
         .routeDecision(retrieval.getRouteDecision())
         .actionType(retrieval.getActionType())
         .failCountAfterAction(retrieval.getFailCountAfterAction())
+        .repeatCountAfterAction(retrieval.getRepeatCountAfterAction())
+        .repeatDecision(retrieval.getRepeatDecision())
         .queryVectorDimension(retrieval.getQueryVectorDimension())
         .queryText(retrieval.getQueryText())
         .selectedPhase(retrieval.getSelectedPhase())
