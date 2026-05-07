@@ -23,8 +23,8 @@ public class UserRegisterRequest {
   private boolean confirmSwitch;
 
   /**
-   * 동일 이메일로 가입된 계정에 새 소셜 로그인 수단을 연동(Account Linking)하는 것을 사용자가 확인했는지 여부.
-   * 프론트엔드에서 계정 연동 확인 팝업의 [확인] 버튼 클릭 시 true로 전달됩니다.
+   * 동일 이메일로 가입된 계정에 새 소셜 로그인 수단을 연동(Account Linking)하는 것을 사용자가 확인했는지 여부. 프론트엔드에서 계정 연동 확인 팝업의 [확인]
+   * 버튼 클릭 시 true로 전달됩니다.
    */
   private boolean confirmAccountLinking;
 }

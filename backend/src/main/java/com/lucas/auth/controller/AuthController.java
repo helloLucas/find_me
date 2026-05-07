@@ -1,13 +1,9 @@
 package com.lucas.auth.controller;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.lucas.auth.dto.response.RefreshTokenResponse;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.auth.service.AuthService;
 import com.lucas.global.dto.BaseResponse;
-import java.util.HashMap;
-import java.util.Map;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.global.util.CookieUtil;
@@ -16,9 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -33,19 +26,18 @@ public class AuthController {
   private final AuthService authService;
   private final CookieUtil cookieUtil;
 
-    /**
-     * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다.
-     * 프론트엔드에서 HttpOnly 쿠키의 값을 읽을 수 없으므로, @CookieValue를 사용하여 직접 수집합니다.
-     *
-     * @param refreshToken 쿠키에서 넘어온 Refresh Token
-     * @param response HTTP 응답 객체
-     * @return 재발급된 토큰 정보를 포함한 응답 객체
-     */
-    @PostMapping("/refresh")
-    public ResponseEntity<BaseResponse<RefreshTokenResponse>> refresh(
-
-        @CookieValue(value = "refresh_token", required = false) String refreshToken,
-        HttpServletResponse response) {
+  /**
+   * Refresh Token을 사용하여 Access Token 및 Refresh Token을 재발급합니다. 프론트엔드에서 HttpOnly 쿠키의 값을 읽을 수
+   * 없으므로, @CookieValue를 사용하여 직접 수집합니다.
+   *
+   * @param refreshToken 쿠키에서 넘어온 Refresh Token
+   * @param response HTTP 응답 객체
+   * @return 재발급된 토큰 정보를 포함한 응답 객체
+   */
+  @PostMapping("/refresh")
+  public ResponseEntity<BaseResponse<RefreshTokenResponse>> refresh(
+      @CookieValue(value = "refresh_token", required = false) String refreshToken,
+      HttpServletResponse response) {
 
     if (refreshToken == null || refreshToken.isBlank()) {
       throw new CustomException(ErrorCode.E1000);
@@ -53,8 +45,8 @@ public class AuthController {
 
     RefreshTokenResponse result = authService.refresh(refreshToken);
 
-        // 새로운 리프레시 토큰을 쿠키에 설정
-        cookieUtil.setRefreshTokenCookie(response, result.getRefreshToken());
+    // 새로운 리프레시 토큰을 쿠키에 설정
+    cookieUtil.setRefreshTokenCookie(response, result.getRefreshToken());
 
     return ResponseEntity.ok(BaseResponse.success("토큰이 재발급되었습니다.", result));
   }
@@ -77,8 +69,8 @@ public class AuthController {
     log.info("User ID: {} logged out.", principal.getUserId());
     authService.logout(principal.getUserId());
 
-        // 브라우저 쿠키 즉시 삭제 (Max-Age 0)
-        cookieUtil.setRefreshTokenCookie(response, "");
+    // 브라우저 쿠키 즉시 삭제 (Max-Age 0)
+    cookieUtil.setRefreshTokenCookie(response, "");
 
     return ResponseEntity.ok(BaseResponse.success("로그아웃이 완료되었습니다."));
   }
@@ -98,5 +90,4 @@ public class AuthController {
 
     return ResponseEntity.ok(BaseResponse.success("게스트 세션이 임시 생성되었습니다.", data));
   }
-
 }

@@ -18,9 +18,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다.
- */
+/** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -98,22 +96,26 @@ public class AuthService {
       }
 
       // 5. 유저 정보 조회
-      User user = userRepository.findByIdWithSocialLogins(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+      User user =
+          userRepository
+              .findByIdWithSocialLogins(userId)
+              .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
       // 6. 새 토큰 세트 발급
-      AuthProvider provider = user.getSocialLogins().isEmpty()
-          ? null
-          : user.getSocialLogins().get(0).getProvider();
+      AuthProvider provider =
+          user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
-      String newAccessToken = jwtUtil.createAccessToken(
-          user.getId(),
-          user.getEmail(),
-          user.getNickname(),
-          provider,
-          user.getRole().name(),
-          accessTokenExpiration);
+      String newAccessToken =
+          jwtUtil.createAccessToken(
+              user.getId(),
+              user.getEmail(),
+              user.getNickname(),
+              provider,
+              user.getRole().name(),
+              accessTokenExpiration);
 
-      String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+      String newRefreshToken =
+          jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
       // 7. Redis 갱신 및 TTL 재설정
       replaceRefreshToken(userId, newRefreshToken);
@@ -153,9 +155,7 @@ public class AuthService {
    * @return 임시 식별 키 (UUID)
    */
   public String initGuest() {
-    PendingUserInfo guestInfo = PendingUserInfo.builder()
-        .guest(true)
-        .build();
+    PendingUserInfo guestInfo = PendingUserInfo.builder().guest(true).build();
 
     return savePendingUserInfo(guestInfo);
   }
