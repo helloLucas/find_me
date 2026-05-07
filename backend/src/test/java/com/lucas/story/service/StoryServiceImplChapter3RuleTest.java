@@ -143,6 +143,62 @@ class StoryServiceImplChapter3RuleTest {
                 "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > my_people.list",
                 snapshot))
         .isTrue();
+
+    assertThat(
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
+                {
+                  "rule": "RELAY_REQUEST_TO_FILE",
+                  "hostAliases": ["127.0.0.1", "localhost"],
+                  "port": 9091,
+                  "request": "PEOPLE",
+                  "requiredFlags": ["relay_contacted"],
+                  "outputFile": "/home/guest/my_people.list",
+                  "allowAnyOutputFile": true
+                }
+                """,
+                "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > people.txt",
+                snapshot))
+        .isTrue();
+  }
+
+  @Test
+  void relayDumpSnapshotUsesUserOutputFileWhenAllowed() throws Exception {
+    JsonNode snapshot = baseSnapshot();
+    StoryNode nextNode = storyNode("CH3_PEOPLE_DUMPED");
+    TransitionRequestDto request = request("echo PEOPLE | nc -w 3 127.0.0.1 9091 > people.txt");
+    JsonNode effectBundle =
+        json(
+            """
+            {
+              "vfsOverlay": {
+                "createdNodes": [
+                  {
+                    "path": "/home/guest/my_people.list",
+                    "pathFromOutputFile": true,
+                    "type": "file",
+                    "readable": true,
+                    "contentKey": "CH3_MY_PEOPLE_LIST"
+                  }
+                ]
+              }
+            }
+            """);
+
+    JsonNode nextSnapshot =
+        ReflectionTestUtils.invokeMethod(
+            storyService,
+            "createTransitionSnapshot",
+            nextNode.getChapter(),
+            nextNode,
+            snapshot,
+            request,
+            effectBundle);
+
+    JsonNode createdNodes = nextSnapshot.at("/vfsOverlay/createdNodes");
+    assertThat(createdNodes.findValuesAsText("path")).contains("/home/guest/people.txt");
+    assertThat(createdNodes.findValues("pathFromOutputFile")).isEmpty();
   }
 
   @Test

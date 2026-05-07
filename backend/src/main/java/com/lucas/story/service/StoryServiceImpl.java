@@ -1711,6 +1711,11 @@ public class StoryServiceImpl implements StoryService {
     if (outputFileRequired) {
       String expectedOutputFile = getTextField(config, "outputFile");
       String actualOutputFile = invocation.outputFile();
+      // 정보 덤프용 relay 요청은 사용자가 고른 파일명을 그대로 허용할 수 있다.
+      if (config.path("allowAnyOutputFile").asBoolean(false)) {
+        // redirect 또는 tee 대상이 하나라도 있으면 저장형 요청으로 인정한다.
+        return actualOutputFile != null && !actualOutputFile.isBlank();
+      }
       return actualOutputFile != null
           && expectedOutputFile != null
           && expectedOutputFile.equals(resolveSnapshotPath(latestSnapshot, actualOutputFile));
@@ -3715,7 +3720,7 @@ public class StoryServiceImpl implements StoryService {
     carryIntegerField(snapshot, previousSnapshot, "scanPercent");
 
     // transition effect_bundle의 상태 변경 지시를 snapshot에 병합한다.
-    applyEffectBundleToSnapshot(snapshot, effectBundle);
+    applyEffectBundleToSnapshot(snapshot, effectBundle, request);
 
     // 이전 상태를 반영한 터미널 transition snapshot을 반환한다.
     return snapshot;
@@ -3863,8 +3868,10 @@ public class StoryServiceImpl implements StoryService {
    *
    * @param snapshot 값을 갱신할 터미널 snapshot
    * @param effectBundle transition의 effect_bundle JSON
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void applyEffectBundleToSnapshot(ObjectNode snapshot, JsonNode effectBundle) {
+  private void applyEffectBundleToSnapshot(
+      ObjectNode snapshot, JsonNode effectBundle, TransitionRequestDto request) {
     // effect_bundle이 없으면 반영할 상태 변경도 없다.
     if (effectBundle == null || effectBundle.isNull() || effectBundle.isEmpty()) {
       // 기존 snapshot 상태를 그대로 유지한다.
@@ -3878,7 +3885,7 @@ public class StoryServiceImpl implements StoryService {
     applySetScanPercent(snapshot, effectBundle.get("setScanPercent"));
 
     // vfsOverlay 변경 지시를 snapshot.vfsOverlay에 병합한다.
-    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"));
+    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"), request);
 
     // dotted path 기반 snapshotPatch를 마지막에 반영해 terminal.cwd 등 세부 상태를 갱신한다.
     applySnapshotPatch(snapshot, effectBundle.get("snapshotPatch"));
@@ -3927,12 +3934,6 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("scanPercent", setScanPercent.asInt());
   }
 
-  /**
-   * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
-   *
-   * @param snapshot 값을 갱신할 터미널 snapshot
-   * @param overlayEffect vfsOverlay effect JSON object
-   */
   /**
    * effect_bundle.snapshotPatch를 dotted path 기준으로 snapshot에 반영한다.
    *
@@ -3987,7 +3988,15 @@ public class StoryServiceImpl implements StoryService {
     applySnapshotPatchValue(childObject, pathParts, index + 1, value);
   }
 
-  private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
+  /**
+   * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
+   *
+   * @param snapshot 값을 갱신할 터미널 snapshot
+   * @param overlayEffect vfsOverlay effect JSON object
+   * @param request transition을 발생시킨 사용자 요청
+   */
+  private void applyVfsOverlayEffect(
+      ObjectNode snapshot, JsonNode overlayEffect, TransitionRequestDto request) {
     // overlay effect가 object가 아니면 병합할 VFS 변경이 없다.
     if (overlayEffect == null || !overlayEffect.isObject()) {
       // VFS overlay 변경 없이 종료한다.
@@ -3998,7 +4007,7 @@ public class StoryServiceImpl implements StoryService {
     ObjectNode targetOverlay = ensureObject(snapshot, "vfsOverlay");
 
     // createdNodes 배열 변경을 병합한다.
-    mergeCreatedNodes(targetOverlay, overlayEffect.get("createdNodes"));
+    mergeCreatedNodes(snapshot, targetOverlay, overlayEffect.get("createdNodes"), request);
 
     // removedPaths 배열 변경을 병합한다.
     mergeRemovedPaths(targetOverlay, overlayEffect.get("removedPaths"));
@@ -4010,10 +4019,16 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect createdNodes를 snapshot.vfsOverlay.createdNodes에 path 기준으로 병합한다.
    *
+   * @param snapshot transition 이후 snapshot
    * @param targetOverlay snapshot의 vfsOverlay object
    * @param createdNodes effect_bundle의 createdNodes array
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void mergeCreatedNodes(ObjectNode targetOverlay, JsonNode createdNodes) {
+  private void mergeCreatedNodes(
+      ObjectNode snapshot,
+      ObjectNode targetOverlay,
+      JsonNode createdNodes,
+      TransitionRequestDto request) {
     // createdNodes가 배열이 아니면 병합할 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
       // 생성 노드 병합 없이 종료한다.
@@ -4026,7 +4041,7 @@ public class StoryServiceImpl implements StoryService {
     // effect createdNodes를 순회한다.
     for (JsonNode createdNode : createdNodes) {
       // path가 있는 object만 VFS node로 인정한다.
-      String path = getTextField(createdNode, "path");
+      String path = resolveCreatedNodePath(snapshot, createdNode, request);
 
       // path가 없으면 병합할 수 없다.
       if (path == null) {
@@ -4038,11 +4053,57 @@ public class StoryServiceImpl implements StoryService {
       removeObjectWithPath(targetCreatedNodes, path);
 
       // 새 created node를 deep copy해 추가한다.
-      targetCreatedNodes.add(createdNode.deepCopy());
+      targetCreatedNodes.add(rewriteCreatedNodePath(createdNode, path));
 
       // 새로 생성된 path는 removedPaths에 남아 있으면 안 된다.
       removeTextValue(ensureArray(targetOverlay, "removedPaths"), path);
     }
+  }
+
+  /**
+   * createdNode에 저장할 실제 VFS 경로를 결정한다.
+   *
+   * @param snapshot 현재 transition 이후 snapshot
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param request transition을 발생시킨 사용자 요청
+   * @return snapshot에 저장할 절대 VFS 경로
+   */
+  private String resolveCreatedNodePath(
+      ObjectNode snapshot, JsonNode createdNode, TransitionRequestDto request) {
+    // pathFromOutputFile이 true이면 redirect/tee 대상 파일명을 사용자 입력에서 가져온다.
+    if (createdNode.path("pathFromOutputFile").asBoolean(false)) {
+      // command 입력에서 >, >>, tee 뒤의 출력 파일명을 추출한다.
+      String outputFile = request == null ? null : extractOutputFile(request.getInputValue());
+
+      // 출력 파일명이 있으면 현재 snapshot cwd 기준의 절대 경로로 정규화한다.
+      if (outputFile != null && !outputFile.isBlank()) {
+        return resolveSnapshotPath(snapshot, outputFile);
+      }
+    }
+
+    // 동적 출력 경로가 아니거나 추출에 실패하면 seed에 명시된 고정 path를 사용한다.
+    return getTextField(createdNode, "path");
+  }
+
+  /**
+   * createdNode의 path만 실제 저장 경로로 바꾼 사본을 만든다.
+   *
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param path snapshot에 저장할 절대 VFS 경로
+   * @return path가 보정된 createdNode 사본
+   */
+  private JsonNode rewriteCreatedNodePath(JsonNode createdNode, String path) {
+    // 원본 seed effect를 직접 수정하지 않도록 object node를 deep copy 한다.
+    ObjectNode copiedNode = createdNode.deepCopy();
+
+    // 사용자 입력에서 계산한 실제 저장 경로를 path에 덮어쓴다.
+    copiedNode.put("path", path);
+
+    // pathFromOutputFile은 런타임 해석용 힌트이므로 snapshot에는 남기지 않는다.
+    copiedNode.remove("pathFromOutputFile");
+
+    // 경로가 보정된 createdNode를 반환한다.
+    return copiedNode;
   }
 
   /**
