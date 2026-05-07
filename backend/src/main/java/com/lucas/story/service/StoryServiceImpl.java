@@ -98,6 +98,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
   private static final String TERMINAL_PROMPT_USER = "guest";
   private static final String TERMINAL_PROMPT_HOST = "lucas-server";
+  private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
   private static final Map<String, String> CHAPTER_START_NODE_CODES =
       Map.of(CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE);
 
@@ -1721,7 +1722,88 @@ public class StoryServiceImpl implements StoryService {
           && expectedOutputFile.equals(resolveSnapshotPath(latestSnapshot, actualOutputFile));
     }
 
+    // 조회형 relay 요청은 응답 저장 또는 입력 파일 전송 문법을 대신 소비하면 안 된다.
+    if (ncCommand.stdinFile() != null || invocation.outputFile() != null) {
+      // 파일 방향이 섞인 명령은 저장형 전이나 near-miss 힌트가 처리하도록 남긴다.
+      return false;
+    }
+
     return true;
+  }
+
+  /**
+   * 저장형 relay 명령의 리다이렉션 near-miss 여부를 판단해 범주형 힌트를 반환한다.
+   *
+   * <p>정답 파일명이나 다음 행동을 직접 노출하지 않고, 리다이렉션 방향과 파일 경로만 다시 보도록 안내한다.
+   *
+   * @param config transition validator_config
+   * @param command 사용자가 입력한 파싱된 명령
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return relay 저장형 near-miss이면 힌트 문구, 아니면 null
+   */
+  private String findRelayRedirectionNudge(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    // 설정 또는 명령이 없으면 near-miss를 판단할 수 없다.
+    if (config == null || command == null) {
+      return null;
+    }
+
+    // 저장형 relay 전이만 리다이렉션 near-miss 대상으로 본다.
+    if (!RULE_RELAY_REQUEST_TO_FILE.equals(getTextField(config, "rule"))) {
+      return null;
+    }
+
+    // 선행 플래그가 맞지 않는 상태에서는 순서 문제와 문법 문제를 섞지 않는다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return null;
+    }
+
+    // 원문 명령에서 relay payload, nc 대상, 출력 파일 구조를 다시 추출한다.
+    ParsedRelayInvocation invocation = parseRelayInvocation(command.rawInput());
+    if (invocation == null) {
+      return null;
+    }
+
+    // 사용자가 요청하려던 relay payload가 현재 전이의 payload와 다르면 대상이 아니다.
+    String expectedRequest = getTextField(config, "request");
+    if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
+      return null;
+    }
+
+    // nc 대상 host와 port가 맞을 때만 리다이렉션 근접 오답으로 판단한다.
+    ParsedNetcatCommand ncCommand = invocation.netcatCommand();
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return null;
+    }
+
+    // nc에 입력 리다이렉션이 붙어 있으면 방향을 혼동한 near-miss로 본다.
+    if (ncCommand.stdinFile() != null) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 저장형 전이인데 출력 파일이 없으면 리다이렉션 확인 힌트를 반환한다.
+    String actualOutputFile = invocation.outputFile();
+    if (actualOutputFile == null || actualOutputFile.isBlank()) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 임의 파일명을 허용하는 전이는 출력 파일이 존재하면 near-miss가 아니다.
+    if (config.path("allowAnyOutputFile").asBoolean(false)) {
+      return null;
+    }
+
+    // seed가 기대하는 출력 파일 경로를 읽는다.
+    String expectedOutputFile = getTextField(config, "outputFile");
+    // 입력한 출력 파일을 현재 snapshot cwd 기준 절대 경로로 정규화한다.
+    String resolvedOutputFile = resolveSnapshotPath(latestSnapshot, actualOutputFile);
+    // 출력 파일 경로가 기대값과 다르면 범주형 힌트를 반환한다.
+    if (expectedOutputFile == null || !expectedOutputFile.equals(resolvedOutputFile)) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 모든 조건이 맞으면 near-miss가 아니므로 별도 힌트를 만들지 않는다.
+    return null;
   }
 
   /**
@@ -4701,6 +4783,13 @@ public class StoryServiceImpl implements StoryService {
       if (config == null || config.isNull()) continue;
 
       String rule = getTextField(config, "rule");
+
+      // 저장형 relay 명령의 리다이렉션 near-miss 문구가 있는지 먼저 확인한다.
+      String relayRedirectionNudge = findRelayRedirectionNudge(config, command, latestSnapshot);
+      // near-miss 문구가 있으면 일반 터미널 fallback으로 넘기지 않고 바로 반환한다.
+      if (relayRedirectionNudge != null) {
+        return relayRedirectionNudge;
+      }
 
       if ("PARSED_TAR_COMMAND".equals(rule)) {
         if (!"tar".equals(command.command())) continue;
