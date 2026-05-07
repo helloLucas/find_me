@@ -39,11 +39,3 @@ export const env = {
   ),
   devMode: readBooleanEnv(import.meta.env.VITE_DEV_MODE, import.meta.env.DEV),
 };
-
-export const resolveApiUrl = (path: string): string => {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (!env.apiBaseUrl) {
-    return normalizedPath;
-  }
-  return `${env.apiBaseUrl}${normalizedPath}`;
-};

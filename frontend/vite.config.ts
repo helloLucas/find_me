@@ -1,13 +1,14 @@
 import { defineConfig, loadEnv, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), "");
   const frontendPort = Number(env.VITE_APP_PORT ?? 5173);
-  const hmrHost = env.VITE_HMR_HOST?.trim();
-  const hmrProtocol = (env.VITE_HMR_PROTOCOL?.trim() as "ws" | "wss" | undefined) ?? "ws";
-  const hmrClientPort = env.VITE_HMR_CLIENT_PORT ? Number(env.VITE_HMR_CLIENT_PORT) : undefined;
+  const hmrHost = env.VITE_HMR_HOST ?? "find.me.kr";
+  const hmrProtocol = env.VITE_HMR_PROTOCOL ?? "wss";
+  const hmrClientPort = env.VITE_HMR_CLIENT_PORT
+    ? Number(env.VITE_HMR_CLIENT_PORT)
+    : 443;
 
   // 로컬 개발: VITE_DEV_PROXY_TARGET 미설정 시 localhost:8080 사용
   // Docker 내부: VITE_DEV_PROXY_TARGET=http://backend-server:8080 으로 설정
@@ -47,10 +48,10 @@ export default defineConfig(({ mode }): UserConfig => {
       allowedHosts: ["find.me.kr", "www.find.me.kr", "find.find.me.kr"],
       hmr: hmrHost
         ? {
-            host: hmrHost,
-            protocol: hmrProtocol,
-            ...(hmrClientPort ? { clientPort: hmrClientPort } : {}),
-          }
+          host: hmrHost,
+          protocol: hmrProtocol as "ws" | "wss",
+          clientPort: hmrClientPort,
+        }
         : undefined,
       proxy: {
         // 백엔드 API 요청 프록시
