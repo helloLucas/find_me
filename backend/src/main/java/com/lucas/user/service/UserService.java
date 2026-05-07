@@ -186,7 +186,7 @@ public class UserService {
 
     String refreshToken =
         jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
-    authService.replaceRefreshToken(user.getId(), refreshToken);
+    authService.completeSuccessfulLogin(user.getId(), refreshToken);
 
     return TokenResponse.builder()
         .accessToken(accessToken)
@@ -230,7 +230,12 @@ public class UserService {
         user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
     return new UserResponseDto(
-        user.getId(), user.getEmail(), user.getNickname(), user.getRole().name(), provider);
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getRole().name(),
+        provider,
+        user.getLastLoginAt());
   }
 
   /**
@@ -251,6 +256,11 @@ public class UserService {
         user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
     return new UserResponseDto(
-        user.getId(), user.getEmail(), user.getNickname(), user.getRole().name(), provider);
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getRole().name(),
+        provider,
+        user.getLastLoginAt());
   }
 }

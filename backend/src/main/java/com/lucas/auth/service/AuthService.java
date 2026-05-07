@@ -54,6 +54,25 @@ public class AuthService {
   }
 
   /**
+   * 성공 로그인 처리를 완료합니다.
+   *
+   * <p>lastLoginAt은 이 메서드를 통해서만 갱신하여 일반 API 액션, 토큰 재발급, 로그아웃과 분리합니다.
+   *
+   * @param userId 유저 식별값
+   * @param refreshToken 저장할 Refresh Token
+   */
+  @Transactional
+  public void completeSuccessfulLogin(Long userId, String refreshToken) {
+    int updatedRows = userRepository.updateLastLoginAt(userId);
+    if (updatedRows == 0) {
+      throw new CustomException(ErrorCode.E3000);
+    }
+
+    replaceRefreshToken(userId, refreshToken);
+    log.info("마지막 로그인 시각 갱신 완료 - userId: {}", userId);
+  }
+
+  /**
    * 유효한 Refresh Token을 확인하고 새로운 토큰 세트(Access, Refresh)를 발급합니다.
    *
    * @param refreshToken 현재 사용 중인 Refresh Token

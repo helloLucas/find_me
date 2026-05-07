@@ -100,6 +100,7 @@ public class UserController {
     data.put("id", userDto.id());
     data.put("nickname", userDto.nickname());
     data.put("role", userDto.role());
+    data.put("lastLoginAt", userDto.lastLoginAt());
 
     return ResponseEntity.ok(BaseResponse.success("내 정보를 조회했습니다.", data));
   }
