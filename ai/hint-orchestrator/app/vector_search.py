@@ -36,21 +36,44 @@ class VectorSearchRepository:
         search_top_k: int,
         min_similarity: float,
         evidence_limit: int,
+        hint_level: str,
+        recent_actions: list[dict[str, Any]] | None = None,
     ) -> tuple[str, list[VectorCandidate], bool]:
         strict = self._search_strict(query_vector, chapter_code, from_node_code, action_type, search_top_k)
         if self._has_enough_similarity(strict, min_similarity):
-            selected = self._select_evidence(strict, evidence_limit, min_similarity)
+            selected = self._select_evidence(
+                strict,
+                evidence_limit,
+                min_similarity,
+                hint_level=hint_level,
+                recent_actions=recent_actions or [],
+                from_node_code=from_node_code,
+            )
             low_confidence = not any(item.similarity >= min_similarity for item in selected)
             return "strict", selected, low_confidence
 
         action_removed = self._search_action_removed(query_vector, chapter_code, from_node_code, search_top_k)
         if self._has_enough_similarity(action_removed, min_similarity):
-            selected = self._select_evidence(action_removed, evidence_limit, min_similarity)
+            selected = self._select_evidence(
+                action_removed,
+                evidence_limit,
+                min_similarity,
+                hint_level=hint_level,
+                recent_actions=recent_actions or [],
+                from_node_code=from_node_code,
+            )
             low_confidence = not any(item.similarity >= min_similarity for item in selected)
             return "fallback_action_removed", selected, low_confidence
 
         chapter_only = self._search_chapter_only(query_vector, chapter_code, search_top_k)
-        selected = self._select_evidence(chapter_only, evidence_limit, min_similarity)
+        selected = self._select_evidence(
+            chapter_only,
+            evidence_limit,
+            min_similarity,
+            hint_level=hint_level,
+            recent_actions=recent_actions or [],
+            from_node_code=from_node_code,
+        )
         low_confidence = True
         return "fallback_chapter_only", selected, low_confidence
 
@@ -134,7 +157,12 @@ class VectorSearchRepository:
             (1 - (lk.embedding <=> q.v)) AS similarity,
             COALESCE((lk.metadata->>'priority')::int, 0) AS priority,
             COALESCE((lk.metadata->>'priority_rank')::int, 9999) AS priority_rank,
-            COALESCE((lk.metadata->>'candidate_count')::int, 1) AS candidate_count
+            COALESCE((lk.metadata->>'candidate_count')::int, 1) AS candidate_count,
+            CASE
+              WHEN (lk.metadata->>'transition_id') ~ '^[0-9]+$'
+              THEN (lk.metadata->>'transition_id')::bigint
+              ELSE NULL
+            END AS transition_id_num
           FROM lucas_knowledge lk
           CROSS JOIN q
           WHERE lk.embedding IS NOT NULL
@@ -143,8 +171,14 @@ class VectorSearchRepository:
             AND lk.metadata->>'chapter_code' = %(chapter_code)s
             {extra_where}
         )
-        SELECT *
+        SELECT
+          scored.*,
+          st.expected_input AS transition_expected_input,
+          st.action_type AS transition_action_type,
+          st.validator_config AS transition_validator_config
         FROM scored
+        LEFT JOIN story_transitions st
+          ON st.id = scored.transition_id_num
         ORDER BY cosine_distance ASC, priority_rank ASC, priority DESC, id ASC
         LIMIT %(search_top_k)s
         """
@@ -161,13 +195,31 @@ class VectorSearchRepository:
                 rows = cur.fetchall()
         result: list[VectorCandidate] = []
         for row in rows:
+            metadata = row.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+
+            transition_id_num = row.get("transition_id_num")
+            transition_expected_input = row.get("transition_expected_input")
+            transition_action_type = row.get("transition_action_type")
+            transition_validator_config = row.get("transition_validator_config")
+
+            if transition_id_num is not None:
+                metadata["transition_id"] = transition_id_num
+            if transition_expected_input is not None:
+                metadata["expected_input"] = transition_expected_input
+            if transition_action_type is not None:
+                metadata["action_type"] = transition_action_type
+            if transition_validator_config is not None:
+                metadata["validator_config"] = transition_validator_config
+
             result.append(
                 VectorCandidate(
                     id=int(row["id"]),
                     chapter=row.get("chapter"),
                     puzzle_id=row.get("puzzle_id"),
                     content=row.get("content"),
-                    metadata=row.get("metadata") or {},
+                    metadata=metadata,
                     cosine_distance=float(row.get("cosine_distance") or 0.0),
                     similarity=float(row.get("similarity") or 0.0),
                     priority=int(row.get("priority") or 0),
@@ -181,14 +233,101 @@ class VectorSearchRepository:
         return any(candidate.similarity >= min_similarity for candidate in candidates)
 
     def _select_evidence(
-        self, candidates: list[VectorCandidate], evidence_limit: int, min_similarity: float
+        self,
+        candidates: list[VectorCandidate],
+        evidence_limit: int,
+        min_similarity: float,
+        hint_level: str,
+        recent_actions: list[dict[str, Any]],
+        from_node_code: str,
     ) -> list[VectorCandidate]:
         if not candidates:
             return []
         enough = [c for c in candidates if c.similarity >= min_similarity]
         base = enough if enough else candidates
+        trap_hit = self._has_trap_failure_signal(
+            recent_actions,
+            from_node_code=from_node_code,
+        )
+        if trap_hit:
+            non_trap = [c for c in base if not self._is_trap_candidate(c)]
+            if non_trap:
+                base = non_trap
+
         sorted_items = sorted(
             base,
-            key=lambda x: (x.priority_rank, x.cosine_distance, -x.priority, x.id),
+            key=lambda x: (
+                x.cosine_distance,
+                -x.priority,
+                x.id,
+            ),
         )
-        return sorted_items[:evidence_limit]
+        selected: list[VectorCandidate] = []
+        seen_keys: set[tuple[str | None, str | None, int | None]] = set()
+        for item in sorted_items:
+            action = item.metadata.get("action_type")
+            action_key = str(action).strip().lower() if action is not None else None
+            expected_input = item.metadata.get("expected_input")
+            if expected_input is None:
+                expected_input = item.content
+            expected_key = str(expected_input).strip().lower() if expected_input is not None else None
+            transition_id_raw = item.metadata.get("transition_id")
+            transition_id: int | None
+            try:
+                transition_id = int(transition_id_raw) if transition_id_raw is not None else None
+            except Exception:
+                transition_id = None
+            dedupe_key = (action_key, expected_key, transition_id)
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            selected.append(item)
+            if len(selected) >= evidence_limit:
+                return selected
+
+        if len(selected) < evidence_limit:
+            for item in sorted_items:
+                if item in selected:
+                    continue
+                selected.append(item)
+                if len(selected) >= evidence_limit:
+                    break
+        target_count = self._target_count_by_hint_level(hint_level, evidence_limit)
+        return selected[:target_count]
+
+    def _target_count_by_hint_level(self, hint_level: str, evidence_limit: int) -> int:
+        level = (hint_level or "").upper()
+        if level in {"LOW_CONFIDENCE", "LIGHT"}:
+            return 1
+        if level == "MEDIUM":
+            return min(2, evidence_limit)
+        return evidence_limit
+
+    def _has_trap_failure_signal(
+        self,
+        recent_actions: list[dict[str, Any]],
+        *,
+        from_node_code: str,
+    ) -> bool:
+        node_scope = (from_node_code or "").strip().upper()
+        for action in recent_actions:
+            action_node = str(action.get("from_node_id") or "").strip().upper()
+            if node_scope and action_node != node_scope:
+                continue
+            result = str(action.get("result") or "").upper()
+            if "FAIL_PROTECTED_CORE" in result:
+                return True
+        return False
+
+    def _is_trap_candidate(self, candidate: VectorCandidate) -> bool:
+        metadata = candidate.metadata or {}
+        expected = str(metadata.get("expected_input") or "").lower()
+        content = str(candidate.content or "").lower()
+        branch_type = str(metadata.get("branch_type") or "").lower()
+        to_node_code = str(metadata.get("to_node_code") or "").upper()
+
+        if "protected_core" in expected or "protected_core" in content:
+            return True
+        if branch_type.startswith("trap"):
+            return True
+        return "_FAIL_" in to_node_code

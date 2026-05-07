@@ -98,6 +98,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
   private static final String TERMINAL_PROMPT_USER = "guest";
   private static final String TERMINAL_PROMPT_HOST = "lucas-server";
+  private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
   private static final Map<String, String> CHAPTER_START_NODE_CODES =
       Map.of(CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE);
 
@@ -1711,12 +1712,98 @@ public class StoryServiceImpl implements StoryService {
     if (outputFileRequired) {
       String expectedOutputFile = getTextField(config, "outputFile");
       String actualOutputFile = invocation.outputFile();
+      // 정보 덤프용 relay 요청은 사용자가 고른 파일명을 그대로 허용할 수 있다.
+      if (config.path("allowAnyOutputFile").asBoolean(false)) {
+        // redirect 또는 tee 대상이 하나라도 있으면 저장형 요청으로 인정한다.
+        return actualOutputFile != null && !actualOutputFile.isBlank();
+      }
       return actualOutputFile != null
           && expectedOutputFile != null
           && expectedOutputFile.equals(resolveSnapshotPath(latestSnapshot, actualOutputFile));
     }
 
+    // 조회형 relay 요청은 응답 저장 또는 입력 파일 전송 문법을 대신 소비하면 안 된다.
+    if (ncCommand.stdinFile() != null || invocation.outputFile() != null) {
+      // 파일 방향이 섞인 명령은 저장형 전이나 near-miss 힌트가 처리하도록 남긴다.
+      return false;
+    }
+
     return true;
+  }
+
+  /**
+   * 저장형 relay 명령의 리다이렉션 near-miss 여부를 판단해 범주형 힌트를 반환한다.
+   *
+   * <p>정답 파일명이나 다음 행동을 직접 노출하지 않고, 리다이렉션 방향과 파일 경로만 다시 보도록 안내한다.
+   *
+   * @param config transition validator_config
+   * @param command 사용자가 입력한 파싱된 명령
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return relay 저장형 near-miss이면 힌트 문구, 아니면 null
+   */
+  private String findRelayRedirectionNudge(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    // 설정 또는 명령이 없으면 near-miss를 판단할 수 없다.
+    if (config == null || command == null) {
+      return null;
+    }
+
+    // 저장형 relay 전이만 리다이렉션 near-miss 대상으로 본다.
+    if (!RULE_RELAY_REQUEST_TO_FILE.equals(getTextField(config, "rule"))) {
+      return null;
+    }
+
+    // 선행 플래그가 맞지 않는 상태에서는 순서 문제와 문법 문제를 섞지 않는다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return null;
+    }
+
+    // 원문 명령에서 relay payload, nc 대상, 출력 파일 구조를 다시 추출한다.
+    ParsedRelayInvocation invocation = parseRelayInvocation(command.rawInput());
+    if (invocation == null) {
+      return null;
+    }
+
+    // 사용자가 요청하려던 relay payload가 현재 전이의 payload와 다르면 대상이 아니다.
+    String expectedRequest = getTextField(config, "request");
+    if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
+      return null;
+    }
+
+    // nc 대상 host와 port가 맞을 때만 리다이렉션 근접 오답으로 판단한다.
+    ParsedNetcatCommand ncCommand = invocation.netcatCommand();
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return null;
+    }
+
+    // nc에 입력 리다이렉션이 붙어 있으면 방향을 혼동한 near-miss로 본다.
+    if (ncCommand.stdinFile() != null) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 저장형 전이인데 출력 파일이 없으면 리다이렉션 확인 힌트를 반환한다.
+    String actualOutputFile = invocation.outputFile();
+    if (actualOutputFile == null || actualOutputFile.isBlank()) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 임의 파일명을 허용하는 전이는 출력 파일이 존재하면 near-miss가 아니다.
+    if (config.path("allowAnyOutputFile").asBoolean(false)) {
+      return null;
+    }
+
+    // seed가 기대하는 출력 파일 경로를 읽는다.
+    String expectedOutputFile = getTextField(config, "outputFile");
+    // 입력한 출력 파일을 현재 snapshot cwd 기준 절대 경로로 정규화한다.
+    String resolvedOutputFile = resolveSnapshotPath(latestSnapshot, actualOutputFile);
+    // 출력 파일 경로가 기대값과 다르면 범주형 힌트를 반환한다.
+    if (expectedOutputFile == null || !expectedOutputFile.equals(resolvedOutputFile)) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 모든 조건이 맞으면 near-miss가 아니므로 별도 힌트를 만들지 않는다.
+    return null;
   }
 
   /**
@@ -3715,7 +3802,7 @@ public class StoryServiceImpl implements StoryService {
     carryIntegerField(snapshot, previousSnapshot, "scanPercent");
 
     // transition effect_bundle의 상태 변경 지시를 snapshot에 병합한다.
-    applyEffectBundleToSnapshot(snapshot, effectBundle);
+    applyEffectBundleToSnapshot(snapshot, effectBundle, request);
 
     // 이전 상태를 반영한 터미널 transition snapshot을 반환한다.
     return snapshot;
@@ -3863,8 +3950,10 @@ public class StoryServiceImpl implements StoryService {
    *
    * @param snapshot 값을 갱신할 터미널 snapshot
    * @param effectBundle transition의 effect_bundle JSON
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void applyEffectBundleToSnapshot(ObjectNode snapshot, JsonNode effectBundle) {
+  private void applyEffectBundleToSnapshot(
+      ObjectNode snapshot, JsonNode effectBundle, TransitionRequestDto request) {
     // effect_bundle이 없으면 반영할 상태 변경도 없다.
     if (effectBundle == null || effectBundle.isNull() || effectBundle.isEmpty()) {
       // 기존 snapshot 상태를 그대로 유지한다.
@@ -3878,7 +3967,7 @@ public class StoryServiceImpl implements StoryService {
     applySetScanPercent(snapshot, effectBundle.get("setScanPercent"));
 
     // vfsOverlay 변경 지시를 snapshot.vfsOverlay에 병합한다.
-    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"));
+    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"), request);
 
     // dotted path 기반 snapshotPatch를 마지막에 반영해 terminal.cwd 등 세부 상태를 갱신한다.
     applySnapshotPatch(snapshot, effectBundle.get("snapshotPatch"));
@@ -3927,12 +4016,6 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("scanPercent", setScanPercent.asInt());
   }
 
-  /**
-   * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
-   *
-   * @param snapshot 값을 갱신할 터미널 snapshot
-   * @param overlayEffect vfsOverlay effect JSON object
-   */
   /**
    * effect_bundle.snapshotPatch를 dotted path 기준으로 snapshot에 반영한다.
    *
@@ -3987,7 +4070,15 @@ public class StoryServiceImpl implements StoryService {
     applySnapshotPatchValue(childObject, pathParts, index + 1, value);
   }
 
-  private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
+  /**
+   * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
+   *
+   * @param snapshot 값을 갱신할 터미널 snapshot
+   * @param overlayEffect vfsOverlay effect JSON object
+   * @param request transition을 발생시킨 사용자 요청
+   */
+  private void applyVfsOverlayEffect(
+      ObjectNode snapshot, JsonNode overlayEffect, TransitionRequestDto request) {
     // overlay effect가 object가 아니면 병합할 VFS 변경이 없다.
     if (overlayEffect == null || !overlayEffect.isObject()) {
       // VFS overlay 변경 없이 종료한다.
@@ -3998,7 +4089,7 @@ public class StoryServiceImpl implements StoryService {
     ObjectNode targetOverlay = ensureObject(snapshot, "vfsOverlay");
 
     // createdNodes 배열 변경을 병합한다.
-    mergeCreatedNodes(targetOverlay, overlayEffect.get("createdNodes"));
+    mergeCreatedNodes(snapshot, targetOverlay, overlayEffect.get("createdNodes"), request);
 
     // removedPaths 배열 변경을 병합한다.
     mergeRemovedPaths(targetOverlay, overlayEffect.get("removedPaths"));
@@ -4010,10 +4101,16 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect createdNodes를 snapshot.vfsOverlay.createdNodes에 path 기준으로 병합한다.
    *
+   * @param snapshot transition 이후 snapshot
    * @param targetOverlay snapshot의 vfsOverlay object
    * @param createdNodes effect_bundle의 createdNodes array
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void mergeCreatedNodes(ObjectNode targetOverlay, JsonNode createdNodes) {
+  private void mergeCreatedNodes(
+      ObjectNode snapshot,
+      ObjectNode targetOverlay,
+      JsonNode createdNodes,
+      TransitionRequestDto request) {
     // createdNodes가 배열이 아니면 병합할 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
       // 생성 노드 병합 없이 종료한다.
@@ -4026,7 +4123,7 @@ public class StoryServiceImpl implements StoryService {
     // effect createdNodes를 순회한다.
     for (JsonNode createdNode : createdNodes) {
       // path가 있는 object만 VFS node로 인정한다.
-      String path = getTextField(createdNode, "path");
+      String path = resolveCreatedNodePath(snapshot, createdNode, request);
 
       // path가 없으면 병합할 수 없다.
       if (path == null) {
@@ -4038,11 +4135,57 @@ public class StoryServiceImpl implements StoryService {
       removeObjectWithPath(targetCreatedNodes, path);
 
       // 새 created node를 deep copy해 추가한다.
-      targetCreatedNodes.add(createdNode.deepCopy());
+      targetCreatedNodes.add(rewriteCreatedNodePath(createdNode, path));
 
       // 새로 생성된 path는 removedPaths에 남아 있으면 안 된다.
       removeTextValue(ensureArray(targetOverlay, "removedPaths"), path);
     }
+  }
+
+  /**
+   * createdNode에 저장할 실제 VFS 경로를 결정한다.
+   *
+   * @param snapshot 현재 transition 이후 snapshot
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param request transition을 발생시킨 사용자 요청
+   * @return snapshot에 저장할 절대 VFS 경로
+   */
+  private String resolveCreatedNodePath(
+      ObjectNode snapshot, JsonNode createdNode, TransitionRequestDto request) {
+    // pathFromOutputFile이 true이면 redirect/tee 대상 파일명을 사용자 입력에서 가져온다.
+    if (createdNode.path("pathFromOutputFile").asBoolean(false)) {
+      // command 입력에서 >, >>, tee 뒤의 출력 파일명을 추출한다.
+      String outputFile = request == null ? null : extractOutputFile(request.getInputValue());
+
+      // 출력 파일명이 있으면 현재 snapshot cwd 기준의 절대 경로로 정규화한다.
+      if (outputFile != null && !outputFile.isBlank()) {
+        return resolveSnapshotPath(snapshot, outputFile);
+      }
+    }
+
+    // 동적 출력 경로가 아니거나 추출에 실패하면 seed에 명시된 고정 path를 사용한다.
+    return getTextField(createdNode, "path");
+  }
+
+  /**
+   * createdNode의 path만 실제 저장 경로로 바꾼 사본을 만든다.
+   *
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param path snapshot에 저장할 절대 VFS 경로
+   * @return path가 보정된 createdNode 사본
+   */
+  private JsonNode rewriteCreatedNodePath(JsonNode createdNode, String path) {
+    // 원본 seed effect를 직접 수정하지 않도록 object node를 deep copy 한다.
+    ObjectNode copiedNode = createdNode.deepCopy();
+
+    // 사용자 입력에서 계산한 실제 저장 경로를 path에 덮어쓴다.
+    copiedNode.put("path", path);
+
+    // pathFromOutputFile은 런타임 해석용 힌트이므로 snapshot에는 남기지 않는다.
+    copiedNode.remove("pathFromOutputFile");
+
+    // 경로가 보정된 createdNode를 반환한다.
+    return copiedNode;
   }
 
   /**
@@ -4482,8 +4625,76 @@ public class StoryServiceImpl implements StoryService {
       return null;
     }
 
-    // 4. 유저 진행 상태에서 최신 스냅샷을 꺼내고, 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
+    // 3-1. 유저 진행 상태에서 최신 스냅샷을 꺼냅니다.
     JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+
+    // 3-2. Near-miss 감지: 커맨드 패턴은 맞지만 플래그 조건이 불충족한 transition이 있는지 확인합니다.
+    // 있다면 터미널 실행 대신 LUCAS 넛지 메시지를 반환합니다.
+    String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
+    if (nudgeMessage != null) {
+      String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+
+      // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
+      // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
+      ObjectNode customOutputBundle = (ObjectNode) currentNode.getOutputBundle().deepCopy();
+
+      // 1. 말풍선 덮어쓰기
+      ArrayNode messages = (ArrayNode) customOutputBundle.path("messages");
+      if (messages != null && messages.isArray()) {
+        messages.removeAll();
+        ObjectNode msg = messages.addObject();
+        msg.put("speaker", "LUCAS");
+        msg.put("channel", "bubble");
+        msg.put("text", nudgeMessage);
+      }
+
+      // 2. 컷씬 제거 및 터미널 이력에서 방금 입력한 명령어 지우기 (__REMOVE_LAST_INPUT__)
+      ObjectNode content = (ObjectNode) customOutputBundle.path("content");
+      if (content == null || !content.isObject()) {
+        content = customOutputBundle.putObject("content");
+      }
+      content.remove("consoleLogs");
+      content.remove("completionTitle");
+      content.remove("completionText");
+
+      ArrayNode termOut = content.putArray("terminalOutput");
+      termOut.add("__REMOVE_LAST_INPUT__");
+
+      ObjectNode scene = (ObjectNode) customOutputBundle.path("scene");
+      if (scene != null && scene.isObject()) {
+        scene.remove("preVideo");
+      }
+
+      return TransitionResponseDto.builder()
+          .result("move") // 말풍선 갱신을 위해 move로 응답
+          .nextNode(
+              TransitionResponseDto.NextNodeDto.builder()
+                  .id(currentNode.getId())
+                  .code(currentNode.getCode())
+                  .nodeType(currentNode.getNodeType())
+                  .outputBundle(customOutputBundle)
+                  .promptType(currentNode.getPromptType())
+                  .promptMeta(currentNode.getPromptMeta())
+                  .isCheckpoint(currentNode.isCheckpoint())
+                  .isTerminal(currentNode.isTerminal())
+                  .build())
+          .snapshot(
+              objectMapper.convertValue(
+                  latestSnapshot,
+                  new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+          // 터미널에는 별다른 에러 없이 프롬프트만 갱신
+          .terminalResult(
+              TransitionResponseDto.TerminalResultDto.builder()
+                  .stdout(List.of())
+                  .stderr(List.of())
+                  .cwd(cwd)
+                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .resultCode("NUDGE")
+                  .build())
+          .build();
+    }
+
+    // 4. 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
     // 정적 VFS 구조와 스냅샷 내의 동적 변경사항(vfsOverlay)을 병합합니다.
     VfsContext vfs = createVfsContext(latestSnapshot);
 
@@ -4545,6 +4756,82 @@ public class StoryServiceImpl implements StoryService {
                 updatedSnapshot,
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
         .build();
+  }
+
+  /**
+   * 현재 노드의 transition 중 커맨드 패턴은 매칭되지만 플래그 조건만 불충족한 "near-miss"를 감지한다.
+   *
+   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만 requiredFlags를 만족하지 못하면
+   * 해당 넛지 메시지를 반환한다.
+   *
+   * @param currentNode 유저가 현재 위치한 스토리 노드
+   * @param command 유저가 입력한 파싱된 커맨드 객체
+   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @return 넛지 메시지 (near-miss가 없으면 null)
+   */
+  private String findNudgeForCommand(
+      StoryNode currentNode, ParsedCommand command, JsonNode latestSnapshot) {
+    // 현재 노드에서 출발하는 모든 transition을 우선순위 순으로 조회한다.
+    List<StoryTransition> transitions =
+        storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+
+    for (StoryTransition t : transitions) {
+      // server_rule 이외의 validator는 near-miss 감지 대상이 아니다.
+      if (!"server_rule".equals(t.getValidatorType())) continue;
+
+      JsonNode config = t.getValidatorConfig();
+      if (config == null || config.isNull()) continue;
+
+      String rule = getTextField(config, "rule");
+
+      // 저장형 relay 명령의 리다이렉션 near-miss 문구가 있는지 먼저 확인한다.
+      String relayRedirectionNudge = findRelayRedirectionNudge(config, command, latestSnapshot);
+      // near-miss 문구가 있으면 일반 터미널 fallback으로 넘기지 않고 바로 반환한다.
+      if (relayRedirectionNudge != null) {
+        return relayRedirectionNudge;
+      }
+
+      if ("PARSED_TAR_COMMAND".equals(rule)) {
+        if (!"tar".equals(command.command())) continue;
+
+        // tar 생성 옵션(-c)이 있는지 확인
+        boolean isCreate =
+            command.args().stream().anyMatch(arg -> arg.startsWith("-") && arg.contains("c"));
+        if (!isCreate) continue;
+
+        // DB 트랜지션을 수정하지 않고 하드코딩으로 안전하게 넛지를 생성
+        String expectedFile = getTextField(config, "outputFile");
+        if (expectedFile != null) {
+          return "명령어 형식은 완벽해! 하지만 추적을 분산시키려면 파일 이름을 정확히 '" + expectedFile + "'로 지정해야 해.";
+        }
+        continue;
+      }
+
+      // nudgeOnFlagMiss가 없는 일반 transition은 넛지 대상이 아니다.
+      String nudge = getTextField(config, "nudgeOnFlagMiss");
+      if (nudge == null || nudge.isBlank()) continue;
+
+      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+      String expectedCommand = getTextField(config, "command");
+      if (expectedCommand == null || !command.command().equals(expectedCommand)) continue;
+
+      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+      String expectedPath = getTextField(config, "resolvedPath");
+      if (expectedPath != null) {
+        String rawPath = firstNonOptionArgument(command.args());
+        if (rawPath == null) continue;
+        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+        if (!expectedPath.equals(actualPath)) continue;
+      }
+
+      // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
+      if (!matchesFlagRequirements(config, latestSnapshot)) {
+        return nudge;
+      }
+    }
+
+    // near-miss가 없으면 일반 터미널 실행으로 진행한다.
+    return null;
   }
 
   /**

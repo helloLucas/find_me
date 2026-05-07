@@ -13,6 +13,8 @@ import com.lucas.story.dto.request.TransitionRequestDto;
 import com.lucas.story.entity.StoryNode;
 import com.lucas.story.entity.StoryTransition;
 import com.lucas.story.repository.StoryNodeRepository;
+import com.lucas.story.repository.StoryTransitionRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -143,6 +145,137 @@ class StoryServiceImplChapter3RuleTest {
                 "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > my_people.list",
                 snapshot))
         .isTrue();
+
+    assertThat(
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
+                {
+                  "rule": "RELAY_REQUEST_TO_FILE",
+                  "hostAliases": ["127.0.0.1", "localhost"],
+                  "port": 9091,
+                  "request": "PEOPLE",
+                  "requiredFlags": ["relay_contacted"],
+                  "outputFile": "/home/guest/my_people.list",
+                  "allowAnyOutputFile": true
+                }
+                """,
+                "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > people.txt",
+                snapshot))
+        .isTrue();
+  }
+
+  @Test
+  void relayViewDoesNotConsumeRedirectionMistakes() throws Exception {
+    JsonNode snapshot = baseSnapshot();
+
+    assertThat(
+            matches(
+                "RELAY_REQUEST",
+                """
+                {
+                  "rule": "RELAY_REQUEST",
+                  "hostAliases": ["127.0.0.1", "localhost"],
+                  "port": 9091,
+                  "request": "FRAGMENT",
+                  "requiredFlags": ["relay_contacted"]
+                }
+                """,
+                "echo FRAGMENT | nc localhost 9091 < laplace_fra",
+                snapshot))
+        .isFalse();
+  }
+
+  @Test
+  void relayDumpNearMissUsesGenericRedirectionNudge() throws Exception {
+    StoryTransitionRepository storyTransitionRepository = mock(StoryTransitionRepository.class);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            storyTransitionRepository,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            objectMapper);
+    storyService.init();
+
+    StoryNode currentNode = storyNode("CH3_RELAY_STATUS_VIEW");
+    ReflectionTestUtils.setField(currentNode, "id", 208L);
+
+    StoryTransition transition =
+        StoryTransition.builder()
+            .actionType("command")
+            .expectedInput("relay_request_FRAGMENT_to_file")
+            .validatorType("server_rule")
+            .validatorConfig(
+                json(
+                    """
+                    {
+                      "rule": "RELAY_REQUEST_TO_FILE",
+                      "hostAliases": ["127.0.0.1", "localhost"],
+                      "port": 9091,
+                      "request": "FRAGMENT",
+                      "requiredFlags": ["relay_contacted"],
+                      "outputFile": "/home/guest/laplace_fragment_02.sh"
+                    }
+                    """))
+            .priority(100)
+            .build();
+    when(storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(208L))
+        .thenReturn(List.of(transition));
+
+    Object command =
+        ReflectionTestUtils.invokeMethod(
+            storyService, "parseCommand", "echo FRAGMENT | nc localhost 9091 < laplace_fra");
+
+    String nudge =
+        ReflectionTestUtils.invokeMethod(
+            storyService, "findNudgeForCommand", currentNode, command, baseSnapshot());
+
+    assertThat(nudge).isEqualTo("리다이렉션 방향과 파일 경로를 다시 확인해봐.");
+  }
+
+  @Test
+  void relayDumpSnapshotUsesUserOutputFileWhenAllowed() throws Exception {
+    JsonNode snapshot = baseSnapshot();
+    StoryNode nextNode = storyNode("CH3_PEOPLE_DUMPED");
+    TransitionRequestDto request = request("echo PEOPLE | nc -w 3 127.0.0.1 9091 > people.txt");
+    JsonNode effectBundle =
+        json(
+            """
+            {
+              "vfsOverlay": {
+                "createdNodes": [
+                  {
+                    "path": "/home/guest/my_people.list",
+                    "pathFromOutputFile": true,
+                    "type": "file",
+                    "readable": true,
+                    "contentKey": "CH3_MY_PEOPLE_LIST"
+                  }
+                ]
+              }
+            }
+            """);
+
+    JsonNode nextSnapshot =
+        ReflectionTestUtils.invokeMethod(
+            storyService,
+            "createTransitionSnapshot",
+            nextNode.getChapter(),
+            nextNode,
+            snapshot,
+            request,
+            effectBundle);
+
+    JsonNode createdNodes = nextSnapshot.at("/vfsOverlay/createdNodes");
+    assertThat(createdNodes.findValuesAsText("path")).contains("/home/guest/people.txt");
+    assertThat(createdNodes.findValues("pathFromOutputFile")).isEmpty();
   }
 
   @Test

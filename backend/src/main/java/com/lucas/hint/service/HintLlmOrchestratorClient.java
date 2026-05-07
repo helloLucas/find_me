@@ -13,7 +13,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
@@ -68,26 +67,12 @@ public class HintLlmOrchestratorClient {
       JsonNode body = objectMapper.readTree(response.body());
       String hintText = body.path("hint_text").asText(null);
       String hintLevel = body.path("hint_level").asText(null);
-      String whyThisHint = body.path("why_this_hint").asText("");
-      String nextActionType = body.path("next_action_check").path("action_type").asText(null);
-      String nextInputPattern = body.path("next_action_check").path("input_pattern").asText(null);
 
       if (hintText == null || hintText.isBlank() || hintLevel == null || hintLevel.isBlank()) {
         throw new CustomException(ErrorCode.G1000);
       }
 
-      List<Long> transitionIds = new ArrayList<>();
-      JsonNode usedTransitionIds = body.path("used_transition_ids");
-      if (usedTransitionIds.isArray()) {
-        for (JsonNode item : usedTransitionIds) {
-          if (item.canConvertToLong()) {
-            transitionIds.add(item.asLong());
-          }
-        }
-      }
-
-      return new HintGenerationResult(
-          hintText, hintLevel, whyThisHint, nextActionType, nextInputPattern, transitionIds);
+      return new HintGenerationResult(hintText, hintLevel);
     } catch (CustomException e) {
       throw e;
     } catch (Exception e) {
@@ -128,6 +113,9 @@ public class HintLlmOrchestratorClient {
     @JsonProperty("fail_count_after_action")
     private int failCountAfterAction;
 
+    @JsonProperty("repeat_count_after_action")
+    private int repeatCountAfterAction;
+
     @JsonProperty("selected_phase")
     private String selectedPhase;
 
@@ -143,11 +131,5 @@ public class HintLlmOrchestratorClient {
     private HintEsSignalResponseDto esSignal;
   }
 
-  public record HintGenerationResult(
-      String hintText,
-      String hintLevel,
-      String whyThisHint,
-      String nextActionType,
-      String nextInputPattern,
-      List<Long> usedTransitionIds) {}
+  public record HintGenerationResult(String hintText, String hintLevel) {}
 }
