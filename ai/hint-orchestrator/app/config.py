@@ -37,12 +37,21 @@ class Settings(BaseSettings):
     pg_user: str = Field(default="lucas_admin", alias="PG_USER")
     pg_password: str = Field(default="", alias="PG_PASSWORD")
 
-    retrieve_default_search_top_k: int = Field(default=7, alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
-    retrieve_default_evidence_limit: int = Field(default=3, alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
-    retrieve_default_min_similarity: float = Field(default=0.70, alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
+    redis_host: str = Field(alias="REDIS_HOST")
+    redis_port: int = Field(alias="REDIS_PORT")
+    redis_password: str = Field(alias="REDIS_PASSWORD")
 
-    hint_level_medium_fail_threshold: int = Field(default=3, alias="HINT_LEVEL_MEDIUM_FAIL_THRESHOLD")
-    hint_level_strong_fail_threshold: int = Field(default=6, alias="HINT_LEVEL_STRONG_FAIL_THRESHOLD")
+    retrieve_default_search_top_k: int = Field(alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
+    retrieve_default_evidence_limit: int = Field(alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
+    retrieve_default_min_similarity: float = Field(alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
+
+    hint_stress_fail_weight: int = Field(alias="HINT_STRESS_FAIL_WEIGHT")
+    hint_stress_repeat_weight: int = Field(alias="HINT_STRESS_REPEAT_WEIGHT")
+    hint_level_medium_stress_threshold: int = Field(alias="HINT_LEVEL_MEDIUM_STRESS_THRESHOLD")
+    hint_level_strong_stress_threshold: int = Field(alias="HINT_LEVEL_STRONG_STRESS_THRESHOLD")
+    hint_repeat_similarity_threshold: float = Field(alias="HINT_REPEAT_SIMILARITY_THRESHOLD")
+    hint_repeat_ttl_seconds: int = Field(alias="HINT_REPEAT_TTL_SECONDS")
+    hint_repeat_sliding_ttl: bool = Field(default=True, alias="HINT_REPEAT_SLIDING_TTL")
 
     vector_source_filter: str = Field(default="story_transitions", alias="VECTOR_SOURCE_FILTER")
     vector_knowledge_kind_filter: str = Field(

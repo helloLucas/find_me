@@ -113,6 +113,9 @@ public class HintLlmOrchestratorClient {
     @JsonProperty("fail_count_after_action")
     private int failCountAfterAction;
 
+    @JsonProperty("repeat_count_after_action")
+    private int repeatCountAfterAction;
+
     @JsonProperty("selected_phase")
     private String selectedPhase;
 

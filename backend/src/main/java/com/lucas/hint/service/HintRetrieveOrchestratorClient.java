@@ -73,6 +73,9 @@ public class HintRetrieveOrchestratorClient {
       int queryVectorDimension = body.path("query_vector_dimension").asInt(0);
       String queryText = body.path("query_text").asText("");
       int candidateCount = body.path("candidate_count").asInt(0);
+      int repeatCountAfterAction = body.path("repeat_count_after_action").asInt(0);
+      int stressScore = body.path("stress_score").asInt(0);
+      String hintLevel = body.path("hint_level").asText("LIGHT");
 
       boolean blockedNonHint = "BLOCKED_NON_HINT".equals(routeDecision);
       if (selectedPhase == null || selectedPhase.isBlank()) {
@@ -112,6 +115,9 @@ public class HintRetrieveOrchestratorClient {
           queryVectorDimension,
           queryText,
           candidateCount,
+          repeatCountAfterAction,
+          stressScore,
+          hintLevel,
           evidences);
     } catch (CustomException e) {
       throw e;
@@ -185,6 +191,7 @@ public class HintRetrieveOrchestratorClient {
   @Getter
   @Builder
   public static class HintRetrieveRequest {
+    private String session_id;
     private String chapter_id;
     private String from_node_id;
     private String action_type;
@@ -192,7 +199,6 @@ public class HintRetrieveOrchestratorClient {
     private String user_message;
     private int fail_count_after_action;
     private String expected_action_type;
-    private String expected_input_hint;
     private List<Map<String, Object>> recent_actions;
     private List<String> extra_context;
     private Map<String, Object> es_signal;
@@ -210,5 +216,8 @@ public class HintRetrieveOrchestratorClient {
       int queryVectorDimension,
       String queryText,
       int candidateCount,
+      int repeatCountAfterAction,
+      int stressScore,
+      String hintLevel,
       List<HintEvidenceResponseDto> evidences) {}
 }

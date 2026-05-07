@@ -22,7 +22,6 @@ def render_query_text(
     current_input: str | None,
     fail_count_after_action: int,
     expected_action_type: str | None,
-    expected_input_hint: str | None,
     recent_actions: list[dict],
     extra_context: list[str],
     es_signal: dict | None,
@@ -36,7 +35,6 @@ def render_query_text(
         f"current_input: {_normalize(current_input)}",
         f"fail_count_after_action: {fail_count_after_action}",
         f"expected_action_type: {_normalize(expected_action_type)}",
-        f"expected_input_hint: {_normalize(expected_input_hint)}",
     ]
 
     lines.append("recent_actions:")

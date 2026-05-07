@@ -8,19 +8,27 @@ from app.config import get_settings
 from app.schemas import EvidenceItem, HintGenerateRequest
 
 
-def resolve_hint_level(fail_count_after_action: int, low_confidence: bool) -> str:
+def resolve_hint_level(
+    fail_count_after_action: int, repeat_count_after_action: int, low_confidence: bool
+) -> str:
     settings = get_settings()
     if low_confidence:
         return "LOW_CONFIDENCE"
-    if fail_count_after_action >= settings.hint_level_strong_fail_threshold:
+    
+    stress_score = (fail_count_after_action * settings.hint_stress_fail_weight) + \
+                   (repeat_count_after_action * settings.hint_stress_repeat_weight)
+                   
+    if stress_score >= settings.hint_level_strong_stress_threshold:
         return "STRONG"
-    if fail_count_after_action >= settings.hint_level_medium_fail_threshold:
+    if stress_score >= settings.hint_level_medium_stress_threshold:
         return "MEDIUM"
     return "LIGHT"
 
 
 def build_prompt(request: HintGenerateRequest) -> str:
-    hint_level = resolve_hint_level(request.fail_count_after_action, request.low_confidence)
+    hint_level = resolve_hint_level(
+        request.fail_count_after_action, request.repeat_count_after_action, request.low_confidence
+    )
     payload = _to_prompt_payload(request, hint_level)
     payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
 
@@ -48,6 +56,7 @@ def _to_prompt_payload(request: HintGenerateRequest, hint_level: str) -> dict[st
             "from_node_code": request.from_node_code,
             "action_type": request.action_type,
             "fail_count_after_action": request.fail_count_after_action,
+            "repeat_count_after_action": request.repeat_count_after_action,
         },
         "user_message": request.user_message,
         "query_context_excerpt": _compact_query_text(request.query_text),
@@ -163,8 +172,25 @@ def _resolve_expected_input_exact(raw_expected: str | None, config: dict[str, An
         output_file = _safe_str(config.get("outputFile")) or "bundle.tar"
         required_files = [_normalize_hint_path(_safe_str(v)) for v in _as_list(config.get("requiredFiles"))]
         required_files = [v for v in required_files if v]
-        if required_files:
-            return f"tar -cvf {output_file} " + " ".join(required_files)
+        detected_files = [_normalize_hint_path(_safe_str(v)) for v in _as_list(config.get("detectedFiles"))]
+        detected_files = [v for v in detected_files if v]
+        protected_included = bool(config.get("protectedFileIncluded"))
+        forbidden_files = [_normalize_hint_path(_safe_str(v)) for v in _as_list(config.get("forbiddenFiles"))]
+        forbidden_set = {v for v in forbidden_files if v}
+
+        files: list[str] = []
+        for path in required_files:
+            if path not in files:
+                files.append(path)
+        if protected_included:
+            for path in detected_files:
+                if path not in files:
+                    files.append(path)
+        else:
+            files = [path for path in files if path not in forbidden_set]
+
+        if files:
+            return f"tar -cvf {output_file} " + " ".join(files)
         return f"tar -cvf {output_file} <files>"
 
     if rule == "NC_SEND_FILE":

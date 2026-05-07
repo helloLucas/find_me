@@ -49,6 +49,9 @@ class HintGenerateRequest(BaseModel):
     fail_count_after_action: int = Field(
         default=0, validation_alias=AliasChoices("fail_count_after_action", "failCountAfterAction")
     )
+    repeat_count_after_action: int = Field(
+        default=0, validation_alias=AliasChoices("repeat_count_after_action", "repeatCountAfterAction")
+    )
     selected_phase: str | None = Field(default=None, validation_alias=AliasChoices("selected_phase", "selectedPhase"))
     low_confidence: bool = Field(default=False, validation_alias=AliasChoices("low_confidence", "lowConfidence"))
     query_text: str | None = Field(default=None, validation_alias=AliasChoices("query_text", "queryText"))
@@ -65,6 +68,7 @@ class HintGenerateResponse(BaseModel):
 class HintRetrieveRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    session_id: str = Field(validation_alias=AliasChoices("session_id", "sessionId"))
     chapter_id: str = Field(validation_alias=AliasChoices("chapter_id", "chapterId"))
     from_node_id: str = Field(validation_alias=AliasChoices("from_node_id", "fromNodeId"))
     action_type: str | None = Field(default=None, validation_alias=AliasChoices("action_type", "actionType"))
@@ -75,9 +79,6 @@ class HintRetrieveRequest(BaseModel):
     )
     expected_action_type: str | None = Field(
         default=None, validation_alias=AliasChoices("expected_action_type", "expectedActionType")
-    )
-    expected_input_hint: str | None = Field(
-        default=None, validation_alias=AliasChoices("expected_input_hint", "expectedInputHint")
     )
     recent_actions: list[dict[str, Any]] = Field(
         default_factory=list, validation_alias=AliasChoices("recent_actions", "recentActions")
@@ -100,4 +101,7 @@ class HintRetrieveResponse(BaseModel):
     query_vector_dimension: int
     query_text: str
     candidate_count: int
+    repeat_count_after_action: int
+    stress_score: int
+    hint_level: str
     evidences: list[EvidenceItem]
