@@ -176,6 +176,18 @@ SELECT
       "channel": "bubble",
       "text": "내 서버에 데이터가 생긴 건 아니야. 어딘가랑 잘못 이어진 흔적이 남은 것 같아.",
       "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "chat",
+      "text": "서버 구석에서 네가 잃어버린 세션 조각의 복구 파일 링크를 찾아냈어! 데이터 우회 패킷 러너를 기동해서 지오메트리 대쉬를 하듯 점프하며 방화벽 가시들을 피해 끝까지 완주하면 세션 조각(FRAGMENT 3)을 성공적으로 안전하게 복원할 수 있을 거야. 한 번 실행해봐!",
+      "blocking": false
+    }
+  ],
+  "actions": [
+    {
+      "label": "Cyber Packet Dash",
+      "actionType": "friend_message_link_ch3"
     }
   ],
   "notifications": [

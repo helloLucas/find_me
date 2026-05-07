@@ -213,6 +213,10 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             }}
           >
             {conversation.messages.map((msg, idx) => {
+              const isCh3GameMessage = msg.id.includes("CH3_") || msg.text.includes("Cyber Packet Dash") || msg.text.includes("조각 복구");
+              const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
+              if (isCh3GameMessage && !isInCh3) return null;
+
               const showSenderName = idx === 0 || conversation.messages[idx - 1]?.senderId !== msg.senderId;
               const avatarSrc =
                 msg.senderAvatar ?? resolveMessengerFallbackAvatar(msg.senderId, msg.senderName);
@@ -240,12 +244,16 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             })}
 
             {conversation.actions?.map((action, idx) => {
+              const isCh3GameAction = action.actionType === "friend_message_link_ch3";
+              const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
+              if (isCh3GameAction && !isInCh3) return null;
+
               const canClickAction = canSubmitStoryAction(
                 currentNode,
                 "click",
                 action.actionType
               );
-              const isAlwaysClickable = action.actionType === "friend_message_link";
+              const isAlwaysClickable = action.actionType === "friend_message_link" || (action.actionType === "friend_message_link_ch3" && isInCh3);
               const isEnabled = canClickAction || isAlwaysClickable;
 
               return (
@@ -258,10 +266,16 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                         void submitStoryClick(action.actionType);
                         if (action.actionType === "friend_message_link") {
                           useBrowserContentStore.getState().triggerNewsTabClick();
+                        } else if (action.actionType === "friend_message_link_ch3") {
+                          useBrowserContentStore.getState().triggerCyberPacketDashTabClick();
                         }
                       } else if (isAlwaysClickable) {
                         openWindow("chrome");
-                        useBrowserContentStore.getState().triggerNewsTabClick();
+                        if (action.actionType === "friend_message_link") {
+                          useBrowserContentStore.getState().triggerNewsTabClick();
+                        } else if (action.actionType === "friend_message_link_ch3") {
+                          useBrowserContentStore.getState().triggerCyberPacketDashTabClick();
+                        }
                       }
                     }}
                     disabled={!isEnabled}
