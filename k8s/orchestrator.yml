@@ -17,7 +17,7 @@ spec:
         env: dev
       containers:
         - name: hint-orchestrator
-          image: shyunnnn/find-me-orchestrator:200-dev
+          image: shyunnnn/find-me-orchestrator:201-dev
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8201
