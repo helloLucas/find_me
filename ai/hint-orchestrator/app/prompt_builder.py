@@ -155,6 +155,42 @@ def _resolve_expected_input_exact(raw_expected: str | None, config: dict[str, An
     if not config:
         return raw_expected if _looks_like_command_text(raw_expected) else None
 
+    if rule == "DISCOVER_OPEN_PORT":
+        return _build_discover_open_port_command(config)
+
+    if rule == "CONNECT_RELAY":
+        return _build_connect_relay_command(config)
+
+    if rule == "RELAY_REQUEST":
+        return _build_relay_request_command(config, output_required=False)
+
+    if rule == "RELAY_REQUEST_TO_FILE":
+        return _build_relay_request_command(config, output_required=True)
+
+    if rule == "VALIDATE_CORE_GROUP_DAT":
+        return _build_validate_core_group_dat_command(config)
+
+    if rule == "GPG_OUTPUT_EXISTS":
+        return _build_gpg_output_exists_command(config)
+
+    if rule == "FILE_EQUIVALENCE":
+        return _build_file_equivalence_command(config)
+
+    if rule == "CONFIRMATION_STREAM_TO_SCRIPT":
+        return _build_confirmation_stream_to_script_command(config)
+
+    if rule == "DISCOVER_FILE":
+        return _build_discover_file_command(config)
+
+    if rule == "CREATE_FILE_EQUIVALENT":
+        return _build_create_file_equivalent_command(config)
+
+    if rule == "FILE_COMPOSITION":
+        return _build_file_composition_command(config)
+
+    if rule == "HASH_FILE_CHECK":
+        return _build_hash_file_check_command(config)
+
     if rule == "NORMALIZED_COMMAND":
         return _build_command_from_config(config)
 
@@ -234,16 +270,18 @@ def _adapt_expected_input_by_hint_level(
         by_rule = _medium_pattern_by_rule(rule, command_from_config)
         if by_rule:
             return by_rule
-        if _looks_like_command_text(raw_expected):
-            return _generalize_command_text(raw_expected)
+        command_candidate = exact_value or raw_expected
+        if _looks_like_command_text(command_candidate):
+            return _generalize_command_text(command_candidate)
         return _generic_expected_label(action)
 
     # LOW_CONFIDENCE / LIGHT
     by_rule = _light_label_by_rule(rule, command_from_config)
     if by_rule:
         return by_rule
-    if _looks_like_command_text(raw_expected):
-        head = _command_head(raw_expected)
+    command_candidate = exact_value or raw_expected
+    if _looks_like_command_text(command_candidate):
+        head = _command_head(command_candidate)
         return f"{head} 계열 명령" if head else _generic_expected_label(action)
     return _generic_expected_label(action)
 
@@ -377,6 +415,167 @@ def _build_command_from_config(config: dict[str, Any]) -> str | None:
         args.append(resolved_path)
 
     return " ".join([command, *args]).strip()
+
+
+def _build_discover_open_port_command(config: dict[str, Any]) -> str:
+    target_port = _safe_str(config.get("targetPort")) or "<port>"
+    methods = [_as_dict(v) for v in _as_list(config.get("acceptedMethods"))]
+    methods = [m for m in methods if m]
+    if not methods:
+        return f"nc -zv localhost {target_port}"
+
+    method = methods[0]
+    command = _safe_str(method.get("command")) or "nc"
+    required = _extract_required_args(method)
+
+    if command == "nmap":
+        target = _first_text(method.get("acceptedTargets")) or "localhost"
+        return _join_command([command, *required, target])
+
+    if command == "nc":
+        host = _first_text(method.get("acceptedHosts")) or "localhost"
+        port = _first_text(method.get("acceptedPorts")) or target_port
+        return _join_command([command, *required, host, str(port)])
+
+    return _join_command([command, *required])
+
+
+def _build_connect_relay_command(config: dict[str, Any]) -> str:
+    command = _first_text(config.get("acceptedCommands")) or "nc"
+    host = _first_text(config.get("hostAliases")) or "localhost"
+    port = _safe_str(config.get("port")) or "<port>"
+    base = _join_command([command, host, port])
+    if bool(config.get("stdinRequired")):
+        return f"{base} < <input>"
+    return base
+
+
+def _build_relay_request_command(config: dict[str, Any], output_required: bool) -> str:
+    host = _first_text(config.get("hostAliases")) or "localhost"
+    port = _safe_str(config.get("port")) or "<port>"
+    request = _safe_str(config.get("request")) or "<REQUEST>"
+    base = f'echo "{request}" | nc {host} {port}'
+    if not output_required:
+        return base
+
+    output_file = _normalize_hint_path(_safe_str(config.get("outputFile")))
+    if not output_file:
+        output_file = "./relay_output.txt"
+    return f"{base} > {output_file}"
+
+
+def _build_validate_core_group_dat_command(config: dict[str, Any]) -> str:
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "./core_group.dat"
+    source_file = "<source_file>"
+    content_keys = [v.upper() for v in _as_text_list(config.get("filterSourceContentKeys"))]
+    if "CH3_MY_PEOPLE_LIST" in content_keys:
+        source_file = "./my_people.list"
+
+    reject_statuses = _as_text_list(config.get("rejectStatuses"))
+    if reject_statuses:
+        pattern = "|".join(re.escape(v) for v in reject_statuses)
+        return f'cat {source_file} | grep -Ev "{pattern}" > {target_file}'
+    return f"cat {source_file} > {target_file}"
+
+
+def _build_gpg_output_exists_command(config: dict[str, Any]) -> str:
+    input_file = _normalize_hint_path(_safe_str(config.get("inputFile"))) or "./input.dat"
+    output_file = _normalize_hint_path(_safe_str(config.get("expectedOutput"))) or f"{input_file}.gpg"
+    return f"gpg -c -o {output_file} {input_file}"
+
+
+def _build_file_equivalence_command(config: dict[str, Any]) -> str:
+    source_file = _normalize_hint_path(_safe_str(config.get("equivalentTo"))) or "<source>"
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "<target>"
+    command = _first_text(config.get("acceptedCommands")) or "cp"
+    if command == "cat":
+        return f"cat {source_file} > {target_file}"
+    return _join_command([command, source_file, target_file])
+
+
+def _build_confirmation_stream_to_script_command(config: dict[str, Any]) -> str:
+    script_path = _normalize_hint_path(_safe_str(config.get("scriptPath"))) or "./script.sh"
+    token = _first_text(config.get("acceptedConfirmationTokens")) or "y"
+    return f"yes {token} | sh {script_path}"
+
+
+def _build_discover_file_command(config: dict[str, Any]) -> str:
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "./target.file"
+    parent_dir = _path_parent(target_file)
+    file_name = _path_name(target_file)
+    return f'find {parent_dir} -name "{file_name}"'
+
+
+def _build_create_file_equivalent_command(config: dict[str, Any]) -> str:
+    source_file = _normalize_hint_path(_safe_str(config.get("sourceFile"))) or "<source>"
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "<target>"
+    command = _first_text(config.get("acceptedCommands")) or "cp"
+    if command == "cat":
+        return f"cat {source_file} > {target_file}"
+    return _join_command([command, source_file, target_file])
+
+
+def _build_file_composition_command(config: dict[str, Any]) -> str:
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "./output.dat"
+    sources = [_normalize_hint_path(_safe_str(v)) for v in _as_list(config.get("orderedSources"))]
+    sources = [v for v in sources if v]
+    if not sources:
+        return f"cat <parts...> > {target_file}"
+    return f"cat {' '.join(sources)} > {target_file}"
+
+
+def _build_hash_file_check_command(config: dict[str, Any]) -> str:
+    target_file = _normalize_hint_path(_safe_str(config.get("targetFile"))) or "./target.file"
+    accepted_commands = _as_list(config.get("acceptedCommands"))
+    for item in accepted_commands:
+        command_config = _as_dict(item)
+        command = _safe_str(command_config.get("command"))
+        if not command:
+            continue
+        required_args = _as_text_list(command_config.get("requiredArgs"))
+        return _join_command([command, *required_args, target_file])
+    return f"sha256sum {target_file}"
+
+
+def _extract_required_args(config: dict[str, Any]) -> list[str]:
+    required_args = _as_text_list(config.get("requiredArgs"))
+    required_any_order = _as_text_list(config.get("requiredArgsAnyOrder"))
+    return [*required_args, *required_any_order]
+
+
+def _as_text_list(value: Any) -> list[str]:
+    out: list[str] = []
+    for item in _as_list(value):
+        text = _safe_str(item)
+        if text:
+            out.append(text)
+    return out
+
+
+def _first_text(value: Any) -> str | None:
+    values = _as_text_list(value)
+    return values[0] if values else None
+
+
+def _join_command(parts: list[str | None]) -> str:
+    return " ".join(str(p) for p in parts if p is not None and str(p).strip())
+
+
+def _path_parent(path: str) -> str:
+    normalized = path.rstrip("/")
+    if "/" not in normalized:
+        return "."
+    parent = normalized.rsplit("/", 1)[0]
+    return parent or "/"
+
+
+def _path_name(path: str) -> str:
+    normalized = path.rstrip("/")
+    if not normalized:
+        return "<file>"
+    if "/" not in normalized:
+        return normalized
+    return normalized.rsplit("/", 1)[1] or "<file>"
 
 
 def _looks_like_command_text(value: str | None) -> bool:
