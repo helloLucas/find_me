@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { useAuthActions } from '../features/Auth/useAuthActions';
 import MainMenu from '../widgets/MainMenu/MainMenu';
@@ -7,6 +8,7 @@ import { AuthSelectionModal } from '../widgets/AuthSelection';
 import { useTrackVisible } from '../shared/analytics/useTrackVisible';
 
 const Home = () => {
+    const { t } = useTranslation();
     const checkAuth = useAuthStore((state) => state.checkAuth);
     const { handleLoginWithProvider, handleGuestAccess, handleLogout } = useAuthActions();
 
@@ -29,8 +31,8 @@ const Home = () => {
 
     const handleGuestClick = () => {
         openModal({
-            title: 'ANONYMOUS_ACCESS_WARNING',
-            message: '익명 접속 시 진행 상황이 저장되지 않을 수 있습니다.\n계속하시겠습니까?',
+            title: t('auth.guestWarningTitle'),
+            message: t('auth.guestWarningMsg'),
             type: 'confirm',
             onConfirm: handleGuestAccess
         });
@@ -38,8 +40,8 @@ const Home = () => {
 
     const handleLogoutClick = () => {
         openModal({
-            title: 'LOGOUT_CONFIRMATION',
-            message: '로그아웃 하시겠습니까?\n세션이 종료됩니다.',
+            title: t('auth.logoutConfirmTitle'),
+            message: t('auth.logoutConfirmMsg'),
             type: 'confirm',
             onConfirm: handleLogout
         });

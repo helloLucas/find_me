@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../app/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { trackAnalyticsEvent } from '../../shared/analytics';
@@ -13,6 +14,7 @@ interface MainMenuProps {
  * 메뉴 영역 (Login / Guest or Chapter / Logout)
  */
 const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogoutClick }) => {
+  const { t } = useTranslation();
   const { isLoggedIn } = useAuthStore();
   const navigate = useNavigate();
 
@@ -31,7 +33,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
             }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
-            Select Chapter
+            {t('lobby.selectChapter')}
           </div>
           <div
             onClick={() => {
@@ -40,7 +42,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
             }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
-            Logout
+            {t('common.logout')}
           </div>
         </>
       ) : (
@@ -52,7 +54,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
             }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
-            Login
+            {t('common.login')}
           </div>
           <div
             onClick={() => {
@@ -61,7 +63,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
             }}
             className={`${baseClass} ${sizeClass} text-white`}
           >
-            Guest
+            {t('common.guest')}
           </div>
         </>
       )}
