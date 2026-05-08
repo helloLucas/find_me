@@ -1056,7 +1056,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "실행하려면 파일로 저장해야 해.",
+      "text": "실행하려면 laplace_fragment_02.sh 이름으로 저장해야 해.",
       "blocking": true
     }
   ],
@@ -1116,8 +1116,6 @@ SELECT
       "lucas_fragment_01.sh",
       "laplace_fragment_01.sh",
       "laplace_fragment_02.sh",
-      "my_people.list",
-      "nexus_monitor.log",
       "sever_external_nodes.sh",
       "trash/",
       "guest@lucas-server:~$"
@@ -2030,8 +2028,6 @@ SELECT
       "laplace_fragment_01.sh",
       "laplace_fragment_02.sh",
       "laplace_fragment_03.sh",
-      "my_people.list",
-      "nexus_monitor.log",
       "sever_external_nodes.sh",
       "trash/",
       "guest@lucas-server:~$"

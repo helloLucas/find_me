@@ -16,9 +16,6 @@ export interface HintLiveResponseData {
   selectedPhase?: string;
   lowConfidence?: boolean;
   failCountAfterAction?: number;
-  whyThisHint?: string;
-  nextActionType?: string | null;
-  nextInputPattern?: string | null;
 }
 
 export const hintApi = {

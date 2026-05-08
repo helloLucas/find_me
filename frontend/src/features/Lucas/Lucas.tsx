@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
@@ -9,7 +9,20 @@ import { canSubmitStoryAction } from '../story-runtime/storyActionGuards';
 import './Lucas.css';
 
 const PENDING_FRAMES = ['.', '..', '...'];
-
+const ENABLE_INTERFERENCE_FX = true;
+const INTERFERENCE_DURATION_MS = 1700;
+const INTERFERENCE_TEXT_PATTERN =
+  /(시스템\s*간섭|신호가\s*불안정|연결\s*상태|채널|노이즈|잠깐\s*뒤에\s*다시|재시도)/i;
+const HINT_ERROR_MESSAGES = [
+  '지금 신호가 불안정해서 너의 채팅을 못봤어. 잠시 후 다시 말을 걸어줘.',
+  '연결 상태가 불안정해. 잠깐 뒤에 다시 말해줘.',
+  '시스템 간섭으로 우리의 연결 상태가 좋지 못해. 잠시 후 다시 말을 걸어줘.',
+];
+const HINT_EMPTY_MESSAGES = [
+  '지금 신호가 불안정해서 너의 채팅을 못봤어. 잠시 후 다시 말을 걸어줘.',
+  '연결 상태가 불안정해. 잠깐 뒤에 다시 말해줘.',
+  '시스템 간섭으로 우리의 연결 상태가 좋지 못해. 잠시 후 다시 말을 걸어줘.',
+];
 export const Lucas: React.FC = () => {
   const {
     isVisible,
@@ -23,6 +36,7 @@ export const Lucas: React.FC = () => {
     addChatMessage,
     toggleHintMode,
     glitchLevel,
+    setGlitchLevel,
   } = useLucasStore();
 
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
@@ -35,12 +49,15 @@ export const Lucas: React.FC = () => {
   const [hintInput, setHintInput] = useState('');
   const [isHintRequesting, setIsHintRequesting] = useState(false);
   const [pendingFrame, setPendingFrame] = useState(0);
+  const [isInterferenceFxActive, setIsInterferenceFxActive] = useState(false);
   const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const lastReadIndicesRef = useRef<Record<string, number>>({});
   const savedScrollTopRef = useRef<Record<string, number>>({});
   const wasHintPanelVisibleRef = useRef(false);
   const isRestoringScrollRef = useRef(false);
+  const interferenceTimerRef = useRef<number | null>(null);
+  const baseGlitchLevelRef = useRef(0);
   const isHintPanelVisible = isHintMode && !isDialogueActive;
 
   const isLastMessage = currentScene
@@ -53,11 +70,45 @@ export const Lucas: React.FC = () => {
     : [];
   const hasPromptButtons =
     currentNode?.promptType === 'click' && promptButtons.length > 0 && !isCallOverlayPromptOwner;
+  const pickRandom = (messages: string[]) =>
+    messages[Math.floor(Math.random() * messages.length)] ?? messages[0];
 
   const persistHintScrollTop = () => {
     const container = hintMessagesRef.current;
     if (!container) return;
     savedScrollTopRef.current[chatScopeKey] = container.scrollTop;
+  };
+
+  const shouldTriggerInterferenceFx = (
+    hintText: string,
+    routeDecision?: string,
+    lowConfidence?: boolean,
+  ) => {
+    if (!ENABLE_INTERFERENCE_FX) return false;
+    if (routeDecision === 'BLOCKED_NON_HINT' && lowConfidence) return true;
+    return INTERFERENCE_TEXT_PATTERN.test(hintText);
+  };
+
+  const triggerInterferenceFx = (durationMs = INTERFERENCE_DURATION_MS) => {
+    if (!ENABLE_INTERFERENCE_FX) return;
+
+    if (interferenceTimerRef.current !== null) {
+      window.clearTimeout(interferenceTimerRef.current);
+      interferenceTimerRef.current = null;
+    }
+
+    if (!isInterferenceFxActive) {
+      baseGlitchLevelRef.current = glitchLevel;
+    }
+
+    setIsInterferenceFxActive(true);
+    setGlitchLevel(Math.max(glitchLevel, 10));
+
+    interferenceTimerRef.current = window.setTimeout(() => {
+      setIsInterferenceFxActive(false);
+      setGlitchLevel(baseGlitchLevelRef.current);
+      interferenceTimerRef.current = null;
+    }, durationMs);
   };
 
   useEffect(() => {
@@ -154,6 +205,28 @@ export const Lucas: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [isHintRequesting]);
 
+  useEffect(() => {
+    return () => {
+      if (interferenceTimerRef.current !== null) {
+        window.clearTimeout(interferenceTimerRef.current);
+      }
+      document.body.classList.remove('global-interference-fx');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ENABLE_INTERFERENCE_FX) {
+      document.body.classList.remove('global-interference-fx');
+      return;
+    }
+
+    if (isInterferenceFxActive) {
+      document.body.classList.add('global-interference-fx');
+    } else {
+      document.body.classList.remove('global-interference-fx');
+    }
+  }, [isInterferenceFxActive]);
+
   const handleBubbleClick = () => {
     if (isTyping) {
       setDisplayText(currentMessage?.text ?? '');
@@ -192,15 +265,23 @@ export const Lucas: React.FC = () => {
       const hintText = result.hint?.trim();
       if (hintText) {
         addChatMessage('LUCAS', hintText);
+        if (shouldTriggerInterferenceFx(hintText, result.routeDecision, result.lowConfidence)) {
+          triggerInterferenceFx();
+        }
       } else {
-        addChatMessage(
-          'LUCAS',
-          '연결 상태가 좋지 못해서 채팅을 읽지 못했어. 같은 질문을 한 번 더 보내줘.',
-        );
+        const fallbackText = pickRandom(HINT_EMPTY_MESSAGES);
+        addChatMessage('LUCAS', fallbackText);
+        if (shouldTriggerInterferenceFx(fallbackText)) {
+          triggerInterferenceFx();
+        }
       }
     } catch (error) {
       console.error('[Lucas] hint request failed', error);
-      addChatMessage('LUCAS', '지금 신호가 불안정해. 잠깐 뒤에 다시 말해줘.');
+      const errorText = pickRandom(HINT_ERROR_MESSAGES);
+      addChatMessage('LUCAS', errorText);
+      if (shouldTriggerInterferenceFx(errorText)) {
+        triggerInterferenceFx();
+      }
     } finally {
       setIsHintRequesting(false);
     }
@@ -252,7 +333,7 @@ export const Lucas: React.FC = () => {
       )}
 
       {isHintMode && !isDialogueActive && (
-        <div className="lucas-hint-ui">
+        <div className={`lucas-hint-ui ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
           <div className="hint-messages" ref={hintMessagesRef} onScroll={persistHintScrollTop}>
             {chatHistory.map((chat) => (

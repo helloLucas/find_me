@@ -17,6 +17,10 @@ public class HintLiveRetrieveResponseDto {
   private String routeDecision;
   private String actionType;
   private int failCountAfterAction;
+  private int repeatCountAfterAction;
+  private int stressScore;
+  private String hintLevel;
+  private String repeatDecision;
   private int queryVectorDimension;
   private String queryText;
   private String selectedPhase;

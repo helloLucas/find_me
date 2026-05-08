@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from contextlib import asynccontextmanager
 
 import httpx
@@ -16,9 +17,9 @@ from app.schemas import (
     HintGenerateResponse,
     HintRetrieveRequest,
     HintRetrieveResponse,
-    NextActionCheck,
 )
 from app.vector_search import VectorSearchRepository
+from app.hint_state import check_and_update_repeat_count, close_redis, get_repeat_count, init_redis
 
 settings = get_settings()
 
@@ -29,9 +30,11 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("GMS_KEY is not configured. Set it in environment or .env")
     app.state.gms_client = GmsLlmClient(settings)
     app.state.vector_repo = VectorSearchRepository(settings)
+    await init_redis()
     try:
         yield
     finally:
+        await close_redis()
         await app.state.gms_client.close()
 
 
@@ -50,11 +53,17 @@ async def health() -> dict[str, str]:
 
 @app.post("/v1/hints/generate", response_model=HintGenerateResponse)
 async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
+    hint_level = resolve_hint_level(
+        request.fail_count_after_action, request.repeat_count_after_action, request.low_confidence
+    )
     prompt = build_prompt(request)
     llm: GmsLlmClient = app.state.gms_client
+    selected_model = (
+        settings.gms_light_llm_model if hint_level == "LIGHT" else settings.gms_llm_model
+    )
 
     try:
-        raw_text = await llm.generate_text(prompt)
+        raw_text = await llm.generate_text(prompt, model_name=selected_model)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(
             status_code=502,
@@ -81,10 +90,7 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
         response = HintGenerateResponse(
             hint_text=parsed["hint_text"],
             hint_level=parsed["hint_level"],
-            why_this_hint=parsed.get("why_this_hint", ""),
-            next_action_check=NextActionCheck(**(parsed.get("next_action_check") or {})),
-            used_transition_ids=[int(x) for x in parsed.get("used_transition_ids", []) if x is not None],
-            model=settings.gms_llm_model.removeprefix("models/"),
+            model=selected_model.removeprefix("models/"),
         )
     except Exception:
         raise HTTPException(
@@ -134,6 +140,7 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
 
         route_decision = _route_decision_from_message_type(message_type)
         if route_decision == "BLOCKED_NON_HINT":
+            blocked_hint_level = resolve_hint_level(request.fail_count_after_action, 0, True)
             return HintRetrieveResponse(
                 message_type=message_type,
                 route_decision=route_decision,
@@ -142,12 +149,16 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
                 query_vector_dimension=0,
                 query_text="",
                 candidate_count=0,
+                repeat_count_after_action=0,
+                stress_score=0,
+                hint_level=blocked_hint_level,
                 evidences=[],
             )
 
     output_dim = request.output_dimensionality or settings.gms_embedding_output_dimensionality
-    search_top_k = request.search_top_k or settings.retrieve_default_search_top_k
-    evidence_limit = request.evidence_limit or settings.retrieve_default_evidence_limit
+    search_top_k = min(request.search_top_k or settings.retrieve_default_search_top_k, 5)
+    evidence_limit = min(request.evidence_limit or settings.retrieve_default_evidence_limit, 5)
+    evidence_limit = min(evidence_limit, search_top_k)
     min_similarity = request.min_similarity or settings.retrieve_default_min_similarity
 
     query_text = render_query_text(
@@ -157,7 +168,6 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         current_input=request.current_input,
         fail_count_after_action=request.fail_count_after_action,
         expected_action_type=request.expected_action_type,
-        expected_input_hint=request.expected_input_hint,
         recent_actions=request.recent_actions,
         extra_context=request.extra_context,
         es_signal=request.es_signal,
@@ -181,6 +191,49 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
     if not vector:
         raise HTTPException(status_code=502, detail={"message": "Empty embedding vector"})
 
+    repeat_text = _build_repeat_text(
+        user_message=user_message,
+        current_input=request.current_input,
+        recent_actions=request.recent_actions,
+        from_node_id=request.from_node_id,
+    )
+    if repeat_text:
+        try:
+            repeat_vector = await llm.embed_text(repeat_text, output_dimensionality=output_dim)
+            if repeat_vector:
+                repeat_count = await check_and_update_repeat_count(
+                    session_id=request.session_id,
+                    chapter_code=request.chapter_id,
+                    from_node_code=request.from_node_id,
+                    current_vector=repeat_vector,
+                )
+            else:
+                repeat_count = await get_repeat_count(
+                    session_id=request.session_id,
+                    chapter_code=request.chapter_id,
+                    from_node_code=request.from_node_id,
+                )
+        except Exception:
+            repeat_count = await get_repeat_count(
+                session_id=request.session_id,
+                chapter_code=request.chapter_id,
+                from_node_code=request.from_node_id,
+            )
+    else:
+        repeat_count = await get_repeat_count(
+            session_id=request.session_id,
+            chapter_code=request.chapter_id,
+            from_node_code=request.from_node_id,
+        )
+    stress_score = (request.fail_count_after_action * settings.hint_stress_fail_weight) + (
+        repeat_count * settings.hint_stress_repeat_weight
+    )
+    retrieval_hint_level = resolve_hint_level(
+        request.fail_count_after_action,
+        repeat_count,
+        False,
+    )
+
     vector_literal = "[" + ",".join(str(v) for v in vector) + "]"
     phase, selected, low_confidence = repo.search(
         query_vector=vector_literal,
@@ -190,6 +243,8 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         search_top_k=search_top_k,
         evidence_limit=evidence_limit,
         min_similarity=min_similarity,
+        hint_level=retrieval_hint_level,
+        recent_actions=request.recent_actions,
     )
     evidence_items = [
         EvidenceItem(
@@ -206,6 +261,7 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         )
         for item in selected
     ]
+
     return HintRetrieveResponse(
         message_type=message_type,
         route_decision=route_decision,
@@ -214,6 +270,9 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
         query_vector_dimension=len(vector),
         query_text=query_text,
         candidate_count=len(selected),
+        repeat_count_after_action=repeat_count,
+        stress_score=stress_score,
+        hint_level=retrieval_hint_level,
         evidences=evidence_items,
     )
 
@@ -249,7 +308,9 @@ def _to_text(value) -> str | None:
 
 
 def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
-    hint_level = resolve_hint_level(request.fail_count_after_action, request.low_confidence)
+    hint_level = resolve_hint_level(
+        request.fail_count_after_action, request.repeat_count_after_action, request.low_confidence
+    )
     top = request.evidences[0] if request.evidences else None
     expected_input = None
     if top and top.metadata:
@@ -258,13 +319,10 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
 
     if top is None:
         hint_text = "현재 노드에서 가능한 행동 유형을 다시 확인하고 직전 행동을 한 단계씩 복기해보세요."
-        action_type = request.action_type
     elif hint_level == "LOW_CONFIDENCE":
         hint_text = "근거 신뢰도가 낮아 정답 단정은 어렵습니다. 같은 행동 타입으로 입력 형식을 점검해보세요."
-        action_type = top.action_type or request.action_type
     elif hint_level == "LIGHT":
         hint_text = f"핵심 행동 타입은 {top.action_type or 'action'} 입니다. 입력 대상과 형식을 먼저 다시 확인해보세요."
-        action_type = top.action_type or request.action_type
     elif hint_level == "MEDIUM":
         if expected_input:
             hint_text = (
@@ -273,25 +331,15 @@ def _fallback_response(request: HintGenerateRequest) -> HintGenerateResponse:
             )
         else:
             hint_text = f"지금 노드는 {top.action_type or 'action'} 동작이 핵심입니다. 입력 형식을 더 정확히 맞춰보세요."
-        action_type = top.action_type or request.action_type
     else:
         if expected_input:
             hint_text = f"정답 행동은 {top.action_type or 'action'} 이고, 시도할 값은 `{expected_input}` 입니다."
         else:
             hint_text = f"정답 행동은 {top.action_type or 'action'} 입니다."
-        action_type = top.action_type or request.action_type
-
-    used_transition_ids = [top.transition_id] if top and top.transition_id is not None else []
 
     return HintGenerateResponse(
         hint_text=hint_text,
         hint_level=hint_level,
-        why_this_hint="fallback_generated",
-        next_action_check=NextActionCheck(
-            action_type=action_type,
-            input_pattern=expected_input,
-        ),
-        used_transition_ids=used_transition_ids,
         model=settings.gms_llm_model.removeprefix("models/"),
     )
 
@@ -304,6 +352,107 @@ def _sanitize_user_message(user_message: str | None) -> str | None:
         return None
     max_len = max(1, settings.hint_user_message_max_length)
     return normalized[:max_len]
+
+
+def _build_repeat_text(
+    *,
+    user_message: str | None,
+    current_input: str | None,
+    recent_actions: list[dict],
+    from_node_id: str,
+) -> str | None:
+    normalized_message = _normalize_repeat_message(user_message)
+    normalized_current_input = _normalize_repeat_message(current_input)
+    if normalized_current_input and not _is_scoped_current_input(
+        current_input=current_input,
+        recent_actions=recent_actions,
+        from_node_id=from_node_id,
+    ):
+        normalized_current_input = None
+
+    if normalized_message and normalized_current_input:
+        if _is_too_short_repeat_text(normalized_message) and _is_too_short_repeat_text(
+            normalized_current_input
+        ):
+            return None
+        return f"user_message={normalized_message}\ncurrent_input={normalized_current_input}"
+
+    if normalized_message:
+        if _is_too_short_repeat_text(normalized_message):
+            return None
+        return f"user_message={normalized_message}"
+
+    if normalized_current_input:
+        if _is_too_short_repeat_text(normalized_current_input):
+            return None
+        return f"current_input={normalized_current_input}"
+
+    return None
+
+
+def _normalize_repeat_message(text: str) -> str | None:
+    normalized = text.strip().lower()
+    if not normalized:
+        return None
+
+    # Keep expressive tone hints while reducing excessive repetition noise.
+    normalized = re.sub(r"([a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ])\1{2,}", r"\1\1", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    # Remove punctuation/symbols while preserving Korean/English letters and digits.
+    normalized = re.sub(r"[^0-9a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    if not normalized:
+        return None
+
+    filler_tokens = {
+        "아니",
+        "그니까",
+        "그러니까",
+        "좀",
+        "진짜",
+        "제발",
+        "어",
+        "음",
+        "uh",
+        "umm",
+        "well",
+        "just",
+        "please",
+    }
+    tokens = [token for token in normalized.split(" ") if token]
+    if not tokens:
+        return None
+
+    filtered = [token for token in tokens if token not in filler_tokens]
+    compact = " ".join(filtered if filtered else tokens).strip()
+    return compact or None
+
+
+def _is_scoped_current_input(
+    *,
+    current_input: str | None,
+    recent_actions: list[dict],
+    from_node_id: str,
+) -> bool:
+    if not current_input:
+        return False
+    current = current_input.strip()
+    if not current:
+        return False
+    node_scope = (from_node_id or "").strip().upper()
+    for action in recent_actions or []:
+        action_node = str(action.get("from_node_id") or "").strip().upper()
+        if node_scope and action_node != node_scope:
+            continue
+        action_input = str(action.get("input_value_norm") or "").strip()
+        if action_input == current:
+            return True
+    return False
+
+
+def _is_too_short_repeat_text(text: str) -> bool:
+    compact = re.sub(r"\s+", "", text or "")
+    return len(compact) <= 3
 
 
 def _normalize_message_type(raw_value: object) -> str:
