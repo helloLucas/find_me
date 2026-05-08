@@ -21,6 +21,7 @@ interface CallOverlayPayload {
 
 interface CallOverlayState {
   isVisible: boolean;
+  isRinging: boolean;
   nodeCode: string | null;
   title: string;
   status?: string;
@@ -28,11 +29,13 @@ interface CallOverlayState {
   buttons: CallOverlayButton[];
   openCallOverlay: (payload: CallOverlayPayload) => void;
   closeCallOverlay: () => void;
+  setRinging: (isRinging: boolean) => void;
   resetCallOverlay: () => void;
 }
 
 const INITIAL_STATE = {
   isVisible: false,
+  isRinging: false,
   nodeCode: null,
   title: "",
   status: undefined,
@@ -56,6 +59,12 @@ export const useCallOverlayStore = create<CallOverlayState>((set) => ({
   closeCallOverlay: () =>
     set({
       isVisible: false,
+      isRinging: false,
+    }),
+
+  setRinging: (isRinging) =>
+    set({
+      isRinging,
     }),
 
   resetCallOverlay: () =>
