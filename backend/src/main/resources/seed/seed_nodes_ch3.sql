@@ -180,13 +180,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "chat",
-      "text": "서버 구석에서 네가 잃어버린 세션 조각의 복구 파일 링크를 찾아냈어! 데이터 우회 패킷 러너를 기동해서 지오메트리 대쉬를 하듯 점프하며 방화벽 가시들을 피해 끝까지 완주하면 세션 조각(FRAGMENT 3)을 성공적으로 안전하게 복원할 수 있을 거야. 한 번 실행해봐!",
+      "text": "내가 남긴 흔적 중 하나야.",
       "blocking": false
     }
   ],
   "actions": [
     {
-      "label": "Cyber Packet Dash",
+      "label": "lucas_fragment",
       "actionType": "friend_message_link_ch3"
     }
   ],
