@@ -184,7 +184,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
         osc.type = 'square';
         osc.frequency.setValueAtTime(160, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(650, ctx.currentTime + 0.14);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.setValueAtTime(0.38, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.14);
         osc.start();
         osc.stop(ctx.currentTime + 0.14);
@@ -192,7 +192,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(140, ctx.currentTime);
         osc.frequency.linearRampToValueAtTime(30, ctx.currentTime + 0.45);
-        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.setValueAtTime(0.38, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
         osc.start();
         osc.stop(ctx.currentTime + 0.45);
@@ -202,7 +202,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
         osc.frequency.setValueAtTime(329.63, ctx.currentTime + 0.1); // 미 (E4)
         osc.frequency.setValueAtTime(392.00, ctx.currentTime + 0.2); // 솔 (G4)
         osc.frequency.setValueAtTime(523.25, ctx.currentTime + 0.3); // 도 (C5)
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.setValueAtTime(0.38, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
         osc.start();
         osc.stop(ctx.currentTime + 0.6);
