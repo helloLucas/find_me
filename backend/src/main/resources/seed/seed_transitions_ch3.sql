@@ -161,9 +161,7 @@ SELECT
     {
       "method": "NMAP_SERVICE_SCAN",
       "command": "nmap",
-      "requiredArgs": [
-        "-sV"
-      ],
+      "requiredArgs": [],
       "acceptedTargets": [
         "127.0.0.1",
         "localhost"
@@ -180,7 +178,14 @@ SELECT
       "method": "NETSTAT_LISTEN_SCAN",
       "command": "netstat",
       "requiredArgsAnyOrder": [
-        "-ltn"
+        "-l"
+      ]
+    },
+    {
+      "method": "LSOF_LISTEN_SCAN",
+      "command": "lsof",
+      "requiredArgsAnyOrder": [
+        "-i"
       ]
     },
     {
