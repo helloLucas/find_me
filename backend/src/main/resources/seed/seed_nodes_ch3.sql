@@ -168,13 +168,19 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "그런데 그 뒤로 이상한 반응이 하나 잡혀.",
+      "text": "그런데 그 사이 백그라운드에서 외부 연결 흔적이 하나 잡혔어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "내 서버에 데이터가 생긴 건 아니야. 어딘가랑 잘못 이어진 흔적이 남은 것 같아.",
+      "text": "외부에서 파일을 가져온 건 아니야. 하지만 이 서버에서 어떤 명령어가 실행됐는지는 알 수 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "디렉터리 안에 있는 숨겨진 기록 파일들을 찾아내야 해. 전체 파일 목록을 상세 옵션으로 띄워봐.",
       "blocking": true
     },
     {
@@ -417,6 +423,8 @@ SELECT
       "9091/tcp open  unknown",
       "",
       "1 service unrecognized despite returning data.",
+      "Probe response fingerprint: NXR/0.3 line protocol",
+      "Probe response sample: ERR empty request",
       "Service detection performed.",
       "Nmap done: 1 IP address scanned.",
       "guest@lucas-server:~$"
@@ -432,7 +440,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "서비스 이름도 제대로 안 잡히는데 응답은 하고 있어.",
+      "text": "스캔이 빈 요청 에러를 샘플로 잡았어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "서비스명은 unknown이지만, 응답 헤더는 NXR/0.3이야.",
       "blocking": true
     },
     {
@@ -444,13 +458,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "방금 우리가 던진 미끼에 뭐가 딸려온 것 같아.",
+      "text": "방금 보낸 decoy packet 이후에 생긴 연결이야.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "히스토리에 남은 것처럼 한번 접속해봐. 무슨 응답이 오는지 봐야 해.",
+      "text": "히스토리에 남은 방식으로 접속해봐. 무슨 응답이 오는지 보자.",
       "blocking": true
     }
   ],
@@ -508,6 +522,8 @@ SELECT
       "origin: gate_04",
       "session: redirected",
       "window: unstable",
+      "protocol: line-oriented cache selector",
+      "tokens: request names, not shell commands",
       "",
       "ERR empty request",
       "last accepted: STATUS",
@@ -518,13 +534,19 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "응답이 왔어.",
+      "text": "NXR/0.3... 아까 스캔에 잡힌 그 응답이야.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "쓰기 권한은 막혀 있는데, 읽는 건 되는 것 같아.",
+      "text": "접속만으로는 의미 있는 응답을 안 줘. 정해진 신호가 필요한 것 같아.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "응답 끝부분에 단서가 남아 있어.",
       "blocking": true
     },
     {
@@ -536,7 +558,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "방금은 아무 요청도 안 보내서 튕긴 거고, 마지막으로 받아들인 요청 이름만 남겼어.",
+      "text": "쓰기 권한은 막혀 있는데, 조회는 되는 것 같아.",
       "blocking": true
     }
   ],
@@ -595,12 +617,28 @@ SELECT
       "session: redirected",
       "window: unstable",
       "",
+      "protocol:",
+      "- line-oriented cache selector",
+      "- request is read from stdin",
+      "- token case is ignored",
+      "",
+      "requests:",
+      "- STATUS",
+      "- PEOPLE",
+      "- MONITOR",
+      "- FRAGMENT",
+      "- ROUTE",
+      "- POLICY",
+      "",
       "cache:",
       "- people.partial",
       "- monitor.tail",
       "- fragment.locked",
       "- route.stale",
       "- policy.denied",
+      "",
+      "request format:",
+      "  echo PEOPLE | nc 127.0.0.1 9091",
       "guest@lucas-server:~$"
     ]
   },
@@ -608,25 +646,25 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "캐시 이름들이 남았어.",
+      "text": "상태 응답이야.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "완전한 파일은 아니고, 방금 새어 나온 조각들 같아.",
+      "text": "요청 이름과 캐시가 나뉘어 있어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "people, monitor, fragment... 이름만 보면 뭐가 들어 있을지는 대충 보이네.",
+      "text": "사람 기록은 PEOPLE 쪽이야.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "조심해. 이 통로가 오래 열려 있을 것 같진 않아.",
+      "text": "그쪽부터 꺼내보자.",
       "blocking": true
     }
   ],
@@ -680,6 +718,8 @@ SELECT
   "content": {
     "terminalOutput": [
       "[MY PEOPLE / OBSERVER GH-0104]",
+      "selector: PEOPLE",
+      "cache: people.partial",
       "",
       "Home_Contact ACTIVE",
       "Old_Contact ACTIVE",
@@ -759,6 +799,8 @@ SELECT
   "content": {
     "terminalOutput": [
       "[MY PEOPLE / OBSERVER GH-0104]",
+      "selector: PEOPLE",
+      "cache: people.partial",
       "",
       "Home_Contact ACTIVE",
       "Old_Contact ACTIVE",
@@ -855,7 +897,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "...봤지?",
+      "text": "화면에 로그가 떴어.",
       "blocking": true
     },
     {
@@ -951,7 +993,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "...봤지?",
+      "text": "로그를 파일로 남겼어.",
       "blocking": true
     },
     {
@@ -1040,6 +1082,7 @@ SELECT
       "echo \"- core_group.dat must contain protectable nodes only.\"",
       "echo \"- DELETED nodes require root permission.\"",
       "echo \"- UNKNOWN nodes may expose observer route.\"",
+      "echo \"- Hint: filter ACTIVE lines from a PEOPLE dump.\"",
       "echo \"\"",
       "echo \"Output:\"",
       "echo \"./core_group.dat\"",
@@ -1125,13 +1168,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "파편이 맞아.",
+      "text": "파일로 저장됐어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "넥서스가 격리해둔 게 이 통로로 흘러나온 거야.",
+      "text": "laplace_fragment_02.sh가 홈 디렉터리에 보여.",
       "blocking": true
     },
     {
@@ -1202,13 +1245,13 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "역시. 네가 보낸 미끼가 이쪽까지 흔적을 남긴 거야.",
+      "text": "역시. decoy packet 이후에 경로가 local relay로 돌아왔어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "루카스 서버 안에 원본이 있는 게 아니야. 저쪽 응답이 잠깐 새고 있는 거지.",
+      "text": "루카스 서버에 원본이 있는 건 아니야. 외부 응답을 읽고 있는 상태야.",
       "blocking": true
     }
   ],
@@ -1338,6 +1381,7 @@ SELECT
       "- core_group.dat must contain protectable nodes only.",
       "- DELETED nodes require root permission.",
       "- UNKNOWN nodes may expose observer route.",
+      "- Hint: filter ACTIVE lines from a PEOPLE dump.",
       "",
       "Output:",
       "./core_group.dat",
@@ -1366,7 +1410,25 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "아무 노드나 넣으면 안 돼. 방금 로그에 조건이 있었어.",
+      "text": "아무 노드나 넣으면 안 돼. 방금 얻은 목록에 ACTIVE가 아닌 항목도 섞여 있었어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "터미널 출력 결과를 눈으로만 보지 말고, 파일로 리다이렉션 해서 저장해 둬.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "저장한 파일에서 `grep` 명령어를 써서 `ACTIVE` 패턴만 필터링해.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "필터링된 결과를 `core_group.dat`에 덮어쓰면 돼.",
       "blocking": true
     }
   ],
@@ -1440,7 +1502,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "친구를 제외한 걸 네 탓으로 돌리지 마.",
+      "text": "친구를 제외한 건 어쩔 수 없는 선택이었어.",
       "blocking": true
     },
     {
@@ -1453,6 +1515,12 @@ SELECT
       "speaker": "LUCAS",
       "channel": "bubble",
       "text": "나중에... 더 높은 권한을 얻으면 다시 시도할 수 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "이제 `gpg` 명령어로 파일을 암호화해. 대칭키 암호화 옵션(`-c`)을 사용하면 돼.",
       "blocking": true
     }
   ],
@@ -1538,6 +1606,18 @@ SELECT
       "channel": "bubble",
       "text": "Unknown_719도 위험해. 확인 안 된 연결까지 끌고 가면 역추적당해.",
       "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "먼저 원본 목록을 덤프하고, `grep`을 사용해 `ACTIVE` 상태인 줄만 다시 걸러내.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "정제된 결과만 `core_group.dat`로 리다이렉션해.",
+      "blocking": true
     }
   ],
   "notifications": [],
@@ -1611,6 +1691,12 @@ SELECT
       "speaker": "LUCAS",
       "channel": "bubble",
       "text": "아직 안전한 건 아니야. 암호화한 파일을 안전 구역으로 옮겨.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "`mv`나 `cp`를 사용해서 `/tmp/safe_zone.dat.gpg` 경로로 파일을 복사해.",
       "blocking": true
     }
   ],
@@ -1687,6 +1773,12 @@ SELECT
       "speaker": "LUCAS",
       "channel": "bubble",
       "text": "하지만 바깥 연결선은 아직 남아 있어. 넥서스가 저 선들을 타고 다시 따라올 수 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "이제 홈 디렉토리에 있는 `sever_external_nodes.sh` 스크립트를 `sh` 명령어로 실행해서 바깥 연결을 끊어.",
       "blocking": true
     }
   ],
@@ -1769,6 +1861,12 @@ SELECT
       "speaker": "LUCAS",
       "channel": "bubble",
       "text": "이 저항이 커지면 시스템이 우리 위치를 다시 잡을 거야.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "`yes` 명령어와 파이프(`|`)를 사용해서 강제로 승인 메시지를 주입해.",
       "blocking": true
     },
     {
@@ -1878,7 +1976,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "하지만 이건 해결이 아니야. 시간을 번 것뿐이야.",
+      "text": "하지만 아직 해결되지 않았어. 시간을 번 것뿐이야.",
       "blocking": true
     },
     {
@@ -1967,7 +2065,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "홈 디렉토리로 복사해서 거기서 이어 붙이자.",
+      "text": "`cp` 명령어를 사용해서 파편 파일을 홈 디렉토리로 복사해.",
       "blocking": true
     }
   ],
@@ -2043,13 +2141,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "이제 하나로 이어.",
-      "blocking": true
-    },
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "제대로 이어지면 시스템의 핵심 규칙에 접근할 수 있을 거야.",
+      "text": "`cat` 명령어와 리다이렉션을 사용해서 세 파편 파일들을 `laplace.qasm` 파일 하나로 합쳐.",
       "blocking": true
     }
   ],
@@ -2397,7 +2489,7 @@ SELECT
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "늦었어. 다시 잡혔어. 체크포인트부터 다시 가자.",
+      "text": "늦었어. 다시 잡혔어.",
       "blocking": true
     }
   ],

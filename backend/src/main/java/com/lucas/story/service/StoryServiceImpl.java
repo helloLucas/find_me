@@ -1695,7 +1695,7 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    // 요청 payload는 STATUS, PEOPLE 같은 seed request 값과 정확히 맞아야 한다.
+    // 요청 payload는 STATUS, PEOPLE 같은 seed request 값을 대소문자 구분 없이 맞춘다.
     String expectedRequest = getTextField(config, "request");
     if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
       return false;
@@ -1830,8 +1830,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    // 명령 문자열에서 ACTIVE/DELETED/UNKNOWN 상태 라인을 추출해 seed 정책으로 검증한다.
-    List<String> statusLines = extractStatusLines(input, config);
+    // 명령 문자열 또는 PEOPLE 덤프 필터링 명령에서 core_group.dat에 들어갈 상태 라인을 추론한다.
+    List<String> statusLines = extractCoreGroupStatusLines(input, config, latestSnapshot);
     if (statusLines.isEmpty()) {
       return false;
     }
@@ -2404,7 +2404,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
     return java.util.regex.Pattern.compile(
-            "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b")
+            "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE)
         .matcher(payload)
         .find();
   }
@@ -2490,6 +2491,343 @@ public class StoryServiceImpl implements StoryService {
       }
     }
     return lines;
+  }
+
+  /**
+   * core_group.dat 검증에 사용할 상태 라인 목록을 추출한다.
+   *
+   * <p>직접 파일 내용을 작성한 입력은 기존처럼 상태 라인을 바로 읽고, 사용자가 PEOPLE 덤프 파일을 grep/awk/sed로 필터링한 입력은
+   * sourceStatusLines를 기준으로 실제 결과 파일에 들어갈 상태 라인을 추론한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return core_group.dat에 들어간 것으로 판단되는 상태 라인 목록
+   */
+  private List<String> extractCoreGroupStatusLines(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // printf처럼 파일 내용을 직접 쓴 입력은 명령 문자열 안에서 상태 라인을 바로 뽑는다.
+    List<String> directStatusLines = extractStatusLines(input, config);
+
+    // 직접 작성한 상태 라인이 있으면 기존 검증 경로를 그대로 사용한다.
+    if (!directStatusLines.isEmpty()) {
+      return directStatusLines;
+    }
+
+    // 상태 라인이 직접 보이지 않으면 PEOPLE 덤프를 필터링한 명령인지 확인한다.
+    return extractFilteredCoreGroupStatusLines(input, config, latestSnapshot);
+  }
+
+  /**
+   * PEOPLE 덤프 파일을 필터링해 core_group.dat를 만드는 명령의 결과 상태 라인을 추론한다.
+   *
+   * <p>실제 shell을 실행하지 않으므로, 사용자가 만든 relay 덤프 파일(contentKey)과 grep/awk/sed 필터 의도를 함께 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 필터링 결과로 만들어진 상태 라인 목록, 인식할 수 없으면 빈 목록
+   */
+  private List<String> extractFilteredCoreGroupStatusLines(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // 입력이 없으면 필터링 명령을 판정할 수 없다.
+    if (input == null || input.isBlank()) {
+      return List.of();
+    }
+
+    // 현재 snapshot에 PEOPLE relay 덤프 파일이 생성되어 있어야 파일 가공 흐름으로 인정한다.
+    if (!referencesRelayDumpSource(input, config, latestSnapshot)) {
+      return List.of();
+    }
+
+    // grep/awk/sed 중 하나를 사용하지 않았다면 파일 필터링 의도로 보지 않는다.
+    if (!usesCoreGroupFilterCommand(input)) {
+      return List.of();
+    }
+
+    // seed에 정의된 원본 PEOPLE 상태 라인을 읽는다.
+    List<String> sourceStatusLines = getCoreGroupSourceStatusLines(config);
+
+    // 원본 상태 라인이 없으면 결과를 추론할 기준이 없다.
+    if (sourceStatusLines.isEmpty()) {
+      return List.of();
+    }
+
+    // 사용자가 ACTIVE 줄을 선택하는 필터를 작성했으면 보호 가능한 노드만 남긴다.
+    if (selectsActiveCoreGroupLines(input)) {
+      return filterStatusLinesByStatus(sourceStatusLines, "ACTIVE");
+    }
+
+    // DELETED/UNKNOWN 또는 ACTIVE 반전 필터는 실패 branch가 잡을 수 있도록 위험 상태 라인을 반환한다.
+    if (selectsRejectedCoreGroupLines(input, config)) {
+      return filterRejectedStatusLines(sourceStatusLines, config);
+    }
+
+    // 어떤 상태를 남기려는지 모호한 필터는 이 rule에서 처리하지 않는다.
+    return List.of();
+  }
+
+  /**
+   * 명령 문자열이 snapshot에 생성된 PEOPLE relay 덤프 파일을 참조하는지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 명령 토큰 중 하나가 PEOPLE 덤프 파일 경로와 일치하면 true
+   */
+  private boolean referencesRelayDumpSource(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // validator_config에서 허용할 relay 덤프 contentKey 목록을 읽는다.
+    List<String> contentKeys = getTextArrayField(config, "filterSourceContentKeys");
+
+    // 설정이 없으면 Chapter 3 PEOPLE 덤프 contentKey를 기본값으로 사용한다.
+    if (contentKeys.isEmpty()) {
+      contentKeys = List.of("CH3_MY_PEOPLE_LIST");
+    }
+
+    // 현재 snapshot에서 해당 contentKey를 가진 생성 파일 경로를 모은다.
+    Set<String> sourcePaths = findCreatedPathsByContentKeys(latestSnapshot, contentKeys);
+
+    // 생성된 PEOPLE 덤프 파일이 없으면 필터링 명령을 인정할 수 없다.
+    if (sourcePaths.isEmpty()) {
+      return false;
+    }
+
+    // 명령을 shell-like tokenizer로 나눠 파일명 후보를 검사한다.
+    for (String token : tokenizeCommand(input)) {
+      // shell 제어 토큰은 파일 경로 후보가 아니므로 건너뛴다.
+      if (isShellOperatorToken(token)) {
+        continue;
+      }
+
+      // 현재 cwd 기준으로 해소한 경로가 PEOPLE 덤프 파일이면 참조가 맞다.
+      if (sourcePaths.contains(resolveSnapshotPath(latestSnapshot, token))) {
+        return true;
+      }
+    }
+
+    // PEOPLE 덤프 파일을 참조하지 않았다.
+    return false;
+  }
+
+  /**
+   * snapshot overlay에서 지정 contentKey를 가진 생성 파일 경로를 찾는다.
+   *
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param contentKeys 허용할 contentKey 목록
+   * @return 삭제되지 않은 생성 파일의 절대 경로 집합
+   */
+  private Set<String> findCreatedPathsByContentKeys(
+      JsonNode latestSnapshot, List<String> contentKeys) {
+    // 결과 경로는 중복 없이 순서를 유지한다.
+    Set<String> paths = new LinkedHashSet<>();
+
+    // createdNodes 배열을 읽는다.
+    JsonNode createdNodes =
+        latestSnapshot == null ? null : latestSnapshot.path("vfsOverlay").path("createdNodes");
+
+    // createdNodes가 없으면 동적 생성 파일이 없다.
+    if (createdNodes == null || !createdNodes.isArray()) {
+      return paths;
+    }
+
+    // snapshot에 남은 생성 파일을 하나씩 확인한다.
+    for (JsonNode createdNode : createdNodes) {
+      // contentKey가 허용 목록에 없으면 대상 파일이 아니다.
+      if (!contentKeys.contains(createdNode.path("contentKey").asText())) {
+        continue;
+      }
+
+      // path 필드를 읽는다.
+      String path = createdNode.path("path").asText();
+
+      // path가 없거나 삭제된 파일이면 사용할 수 없다.
+      if (path.isBlank() || isRemovedPath(latestSnapshot, path)) {
+        continue;
+      }
+
+      // 사용할 수 있는 생성 파일 경로로 추가한다.
+      paths.add(path);
+    }
+
+    // 수집한 경로 집합을 반환한다.
+    return paths;
+  }
+
+  /**
+   * core_group.dat 생성에 허용할 리눅스 필터 명령인지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return grep/awk/sed 중 하나가 명령 토큰에 있으면 true
+   */
+  private boolean usesCoreGroupFilterCommand(String input) {
+    // 명령 토큰을 순회하며 필터 명령 존재 여부를 확인한다.
+    for (String token : tokenizeCommand(input)) {
+      // grep/awk/sed는 PEOPLE 덤프에서 상태 줄을 추려내는 실제 리눅스식 도구다.
+      if ("grep".equals(token) || "awk".equals(token) || "sed".equals(token)) {
+        return true;
+      }
+    }
+
+    // 허용한 필터 명령이 없다.
+    return false;
+  }
+
+  /**
+   * 사용자의 필터가 ACTIVE 상태 라인을 선택하는지 판정한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return ACTIVE를 포함하고 ACTIVE 반전 조건이 아니면 true
+   */
+  private boolean selectsActiveCoreGroupLines(String input) {
+    // 대소문자 영향을 없애기 위해 비교용 문자열을 대문자로 정규화한다.
+    String normalized = input.toUpperCase(java.util.Locale.ROOT);
+
+    // ACTIVE가 언급되지 않으면 활성 노드 선택 필터가 아니다.
+    if (!normalized.contains("ACTIVE")) {
+      return false;
+    }
+
+    // grep -v ACTIVE처럼 ACTIVE를 제외하는 명령은 성공 필터가 아니다.
+    return !containsInvertMatchOption(input);
+  }
+
+  /**
+   * 사용자의 필터가 DELETED/UNKNOWN 같은 제외 대상 상태를 선택하는지 판정한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @return 제외 상태를 선택하거나 ACTIVE를 반전하면 true
+   */
+  private boolean selectsRejectedCoreGroupLines(String input, JsonNode config) {
+    // 비교용 문자열을 대문자로 정규화한다.
+    String normalized = input.toUpperCase(java.util.Locale.ROOT);
+
+    // ACTIVE 반전은 결과적으로 비활성/위험 상태를 남긴다.
+    if (normalized.contains("ACTIVE") && containsInvertMatchOption(input)) {
+      return true;
+    }
+
+    // rejectStatuses에 등록된 상태를 직접 고르면 실패 branch 대상이다.
+    for (String rejectStatus : getTextArrayField(config, "rejectStatuses")) {
+      if (normalized.contains(rejectStatus.toUpperCase(java.util.Locale.ROOT))) {
+        return true;
+      }
+    }
+
+    // 제외 상태 선택으로 보이지 않는다.
+    return false;
+  }
+
+  /**
+   * grep의 반전 매칭 옵션이 입력에 포함되어 있는지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return -v 또는 --invert-match가 있으면 true
+   */
+  private boolean containsInvertMatchOption(String input) {
+    // 토큰 단위로 옵션을 확인한다.
+    for (String token : tokenizeCommand(input)) {
+      // grep -v 또는 grep --invert-match는 선택 의미가 반대로 바뀐다.
+      if ("-v".equals(token) || "--invert-match".equals(token)) {
+        return true;
+      }
+    }
+
+    // 반전 옵션이 없다.
+    return false;
+  }
+
+  /**
+   * config에 정의된 PEOPLE 원본 상태 라인을 읽는다.
+   *
+   * @param config transition validator_config
+   * @return PEOPLE 덤프에 들어 있는 상태 라인 목록
+   */
+  private List<String> getCoreGroupSourceStatusLines(JsonNode config) {
+    // sourceStatusLines가 있으면 seed가 정의한 원본 데이터로 사용한다.
+    List<String> sourceStatusLines = getTextArrayField(config, "sourceStatusLines");
+
+    // 명시된 원본 데이터가 있으면 그대로 반환한다.
+    if (!sourceStatusLines.isEmpty()) {
+      return sourceStatusLines;
+    }
+
+    // 하위 호환을 위해 기존 canonical active 라인만으로 최소 원본을 구성한다.
+    return getTextArrayField(config, "canonicalAllowedLines");
+  }
+
+  /**
+   * 상태 라인 목록에서 특정 상태로 끝나는 라인만 남긴다.
+   *
+   * @param statusLines 원본 상태 라인 목록
+   * @param status 선택할 상태 문자열
+   * @return 지정 상태 라인 목록
+   */
+  private List<String> filterStatusLinesByStatus(List<String> statusLines, String status) {
+    // 결과를 순서대로 담는다.
+    List<String> filteredLines = new ArrayList<>();
+
+    // 각 상태 라인을 확인한다.
+    for (String statusLine : statusLines) {
+      // "노드명 상태" 형식에서 기대 상태로 끝나는 라인만 선택한다.
+      if (statusLine.endsWith(" " + status)) {
+        filteredLines.add(statusLine);
+      }
+    }
+
+    // 필터링된 상태 라인을 반환한다.
+    return filteredLines;
+  }
+
+  /**
+   * 상태 라인 목록에서 rejectStatuses에 해당하는 라인만 남긴다.
+   *
+   * @param statusLines 원본 상태 라인 목록
+   * @param config transition validator_config
+   * @return 실패 branch가 검증할 수 있는 제외 대상 상태 라인 목록
+   */
+  private List<String> filterRejectedStatusLines(List<String> statusLines, JsonNode config) {
+    // rejectStatuses 설정을 읽는다.
+    List<String> rejectStatuses = getTextArrayField(config, "rejectStatuses");
+
+    // 결과를 순서대로 담는다.
+    List<String> rejectedLines = new ArrayList<>();
+
+    // 각 상태 라인을 확인한다.
+    for (String statusLine : statusLines) {
+      // 설정된 제외 상태 중 하나로 끝나는지 검사한다.
+      for (String rejectStatus : rejectStatuses) {
+        if (statusLine.endsWith(" " + rejectStatus)) {
+          rejectedLines.add(statusLine);
+          break;
+        }
+      }
+    }
+
+    // 실패 branch용 위험 상태 라인을 반환한다.
+    return rejectedLines;
+  }
+
+  /**
+   * shell 제어 토큰인지 확인한다.
+   *
+   * @param token 명령 토큰
+   * @return 파이프/리다이렉션 계열 토큰이면 true
+   */
+  private boolean isShellOperatorToken(String token) {
+    // null은 파일 경로 후보가 아니다.
+    if (token == null) {
+      return true;
+    }
+
+    // shell 제어 문자 토큰은 경로로 해소하지 않는다.
+    return "|".equals(token)
+        || ">".equals(token)
+        || ">>".equals(token)
+        || "<".equals(token)
+        || "<<".equals(token)
+        || "<<<".equals(token);
   }
 
   private boolean isValidCoreGroupDat(List<String> statusLines, JsonNode config) {
