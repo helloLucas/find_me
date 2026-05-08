@@ -29,26 +29,22 @@ export const NotepadWindow: React.FC = () => {
     }
   };
 
-  // 붙여넣기(Paste) 이벤트 제한 및 경고 처리
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    e.preventDefault(); // 기본 외부 붙여넣기 완전 차단
+  // 붙여넣기(Paste) 이벤트 제한 및 내부 데이터 강제 삽입 처리
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement> | React.KeyboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault(); // 기본 외부 붙여넣기 완전 차단 (시스템 클립보드 무시)
 
-    const pastedText = e.clipboardData.getData("text");
     const gameClipboardText = useClipboardStore.getState().text;
     const lastCopiedCommand = useBrowserContentStore.getState().lastCopiedCommand;
 
-    // 허용 판단: 게임 내부 복사 스토어 중 하나라도 일치하는가?
-    const isInternalText =
-      (gameClipboardText && pastedText === gameClipboardText) ||
-      (lastCopiedCommand && pastedText === lastCopiedCommand);
+    // 우선적으로 적재된 내부 복사 텍스트 채택
+    const textToInsert = gameClipboardText || lastCopiedCommand || "";
 
-    if (!isInternalText) {
+    // 내부 클립보드 상태값이 완전히 비어 있는 경우에만 경고 알림 표출
+    if (!textToInsert) {
       useToastStore.getState().showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
       return;
     }
 
-    // 일치 시 텍스트를 추출해서 수동 삽입
-    const textToInsert = pastedText;
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -72,19 +68,14 @@ export const NotepadWindow: React.FC = () => {
     }, 0);
   };
 
-  // OS 교차 붙여넣기 단축키(Ctrl+V / Cmd+V)에서도 handlePaste가 브라우저에 의해 정상 트리거되지만,
-  // KeyDown 단축키 감지 요구사항 충족 및 키보드 수준의 정밀 제어를 보장합니다.
+  // OS 교차 붙여넣기 단축키(Ctrl+V / Cmd+V) 명시적 감지 및 가로채기
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isPasteCombo = (e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V");
-    const isCopyCombo = (e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C");
 
     if (isPasteCombo) {
-      // 브라우저 기본 paste 이벤트를 타므로 handlePaste 함수가 실행될 것이나,
-      // 혹시 기본 키보드 버블링으로 외부 유입 우회되는 것을 이중 차단합니다.
-    }
-    if (isCopyCombo) {
-      // 복사 키 콤보 발생 시 표준 copy 이벤트를 타서 handleCopy가 실행되나,
-      // 이중으로 가드 처리를 위해 브라우저 가비지 유입을 이벤트를 통해 제어합니다.
+      e.preventDefault(); // 브라우저 기본 붙여넣기 동작 완전 차단
+      handlePaste(e);     // 내부 삽입 로직 강제 호출
+      return;
     }
   };
 
