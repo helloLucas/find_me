@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), "");
-  const frontendPort = Number(env.VITE_APP_PORT ?? 5173);
+  const frontendPort = Number(env.VITE_APP_PORT ?? 4173);
   const hmrHost = env.VITE_HMR_HOST ?? "find.me.kr";
   const hmrProtocol = env.VITE_HMR_PROTOCOL ?? "wss";
   const hmrClientPort = env.VITE_HMR_CLIENT_PORT
@@ -13,7 +13,7 @@ export default defineConfig(({ mode }): UserConfig => {
 
   // 로컬 개발: VITE_DEV_PROXY_TARGET 미설정 시 localhost:8080 사용
   // Docker 내부: VITE_DEV_PROXY_TARGET=http://backend-server:8080 으로 설정
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET?.trim() || "http://localhost:8080";
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET?.trim() || "http://127.0.0.1:8080";
 
   // 공통 프록시 설정 함수
   const configureProxy = (proxy: any) => {
@@ -24,7 +24,7 @@ export default defineConfig(({ mode }): UserConfig => {
       const host = req.headers.host || '';
 
       // [로컬 환경 판별]
-      // 브라우저가 프론트(5173)에 요청할 때의 Host 헤더를 확인
+      // 브라우저가 프론트(4173)에 요청할 때의 Host 헤더를 확인
       const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
       const protocol = isLocal ? 'http' : 'https';
 
