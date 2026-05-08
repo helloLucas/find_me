@@ -19,6 +19,7 @@ import {
 import { BugReportModal } from "../BugReportModal";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
+import { NotepadWindow } from "../../features/notepad/NotepadWindow";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
@@ -78,6 +79,11 @@ export const Desktop: React.FC = () => {
 
     if (id === "email") {
       openWindow("email");
+      return;
+    }
+
+    if (id === "notepad") {
+      openWindow("notepad");
       return;
     }
 
@@ -214,6 +220,21 @@ export const Desktop: React.FC = () => {
                 zIndex={windowState.zIndex}
                 onFocus={() => useWindowStore.getState().focusWindow("email")}
               />
+            );
+          }
+
+          if (windowState.type === "notepad") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon="/pixel_notepad_icon.svg"
+                defaultWidth={400}
+                defaultHeight={500}
+              >
+                <NotepadWindow />
+              </Window>
             );
           }
 

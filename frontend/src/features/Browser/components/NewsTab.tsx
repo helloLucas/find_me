@@ -77,7 +77,11 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     ? activeFallbackArticle!.body
     : (Array.isArray(content.articleBody) ? content.articleBody.map(String) : []);
   const articleCorruption = useFallback ? null : normalizeArticleCorruption(content.articleCorruption);
-  const corruptedParagraphIndexes = new Set(articleCorruption?.paragraphIndexes ?? []);
+  const corruptedParagraphIndexes = new Set(
+    articleCorruption
+      ? articleBody.map((_, index) => index)
+      : []
+  );
   const isScrollTriggeredArticleNode = currentNode?.code === "CH1_DARK_ARTICLE_OPEN";
   const isArticleScrollCorruptionNode =
     currentNode?.code === "CH1_ARTICLE_SCROLL_CORRUPTION";
