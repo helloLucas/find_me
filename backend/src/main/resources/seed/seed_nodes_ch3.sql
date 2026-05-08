@@ -176,6 +176,18 @@ SELECT
       "channel": "bubble",
       "text": "내 서버에 데이터가 생긴 건 아니야. 어딘가랑 잘못 이어진 흔적이 남은 것 같아.",
       "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "chat",
+      "text": "내가 남긴 흔적 중 하나야.",
+      "blocking": false
+    }
+  ],
+  "actions": [
+    {
+      "label": "lucas_fragment",
+      "actionType": "friend_message_link_ch3"
     }
   ],
   "notifications": [

@@ -13,7 +13,6 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +44,8 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     HintEvidenceResponseDto rawTopEvidence = firstEvidence(retrieval.getEvidences());
     HintEvidenceResponseDto topEvidence = sanitizeEvidence(rawTopEvidence);
     HintLiveRetrieveResponseDto sanitizedRetrieval = sanitizeRetrieval(retrieval);
-    String fallbackHintLevel = retrieval.getHintLevel() != null ? retrieval.getHintLevel() : "LIGHT";
+    String fallbackHintLevel =
+        retrieval.getHintLevel() != null ? retrieval.getHintLevel() : "LIGHT";
 
     log.info(
         "Hint level decision. failCount={}, repeatCount={}, lowConfidence={}, hintLevel={}",

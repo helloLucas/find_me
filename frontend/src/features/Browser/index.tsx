@@ -8,6 +8,7 @@ import { PacmanTab } from "./components/PacmanTab";
 import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { DocTab } from "./components/DocTab";
+import { CyberPacketDashTab } from "./components/CyberPacketDashTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
@@ -21,10 +22,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
     title: string;
   }>;
   historyIndex: number;
@@ -43,7 +44,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger } = useBrowserContentStore();
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -56,6 +57,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   useEffect(() => {
     return () => {
       useBrowserContentStore.getState().resetNewsTabClickTrigger();
+      useBrowserContentStore.getState().resetCyberPacketDashTabClickTrigger();
     };
   }, []);
 
@@ -67,6 +69,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         url: "system://terminal2/starforce",
         component: "starforce",
         history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
+        historyIndex: 0,
+      }];
+    }
+
+    const initialCardTrigger = useBrowserContentStore.getState().cyberPacketDashTabClickTrigger;
+    if (initialCardTrigger > 0) {
+      return [{
+        id: "tab1",
+        title: "Cyber Packet Dash",
+        url: "system://cyberpacketdash",
+        component: "cyberpacketdash" as const,
+        history: [{ url: "system://cyberpacketdash", component: "cyberpacketdash" as const, title: "Cyber Packet Dash" }],
         historyIndex: 0,
       }];
     }
@@ -177,6 +191,35 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       return [...prev, newTab];
     });
   }, [newsTabClickTrigger, currentNode, articleTitleFromContent]);
+
+  const lastCyberPacketDashTabClickTriggerRef = useRef(0);
+
+  // 사이버 패킷 대시 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 생성
+  useEffect(() => {
+    if (cyberPacketDashTabClickTrigger === 0) return;
+    if (cyberPacketDashTabClickTrigger === lastCyberPacketDashTabClickTriggerRef.current) return;
+    lastCyberPacketDashTabClickTriggerRef.current = cyberPacketDashTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingCardTab = prev.find((tab) => tab.component === "cyberpacketdash" || tab.component === "cardmatching");
+      if (existingCardTab) {
+        queueMicrotask(() => setActiveTabId(existingCardTab.id));
+        return prev;
+      }
+
+      const newId = `tab_card_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Cyber Packet Dash",
+        url: "system://cyberpacketdash",
+        component: "cyberpacketdash" as const,
+        history: [{ url: "system://cyberpacketdash", component: "cyberpacketdash" as const, title: "Cyber Packet Dash" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [cyberPacketDashTabClickTrigger]);
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
@@ -598,6 +641,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === 'doc' && (
             <DocTab url={activeTab.url} />
           )}
+          {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
         </div>
 
         {showDevTools && (
