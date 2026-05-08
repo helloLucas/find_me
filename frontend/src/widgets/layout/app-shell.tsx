@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import { useAuthStore } from "../../app/store/authStore";
@@ -10,6 +11,7 @@ import { GlobalToast } from "../GlobalToast";
 import { jwtDecode } from "jwt-decode";
 
 export default function AppShell({ children }: PropsWithChildren) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -34,7 +36,7 @@ export default function AppShell({ children }: PropsWithChildren) {
   // 선제적 토큰 만료 검사 및 처리
   useEffect(() => {
     if (isExpired) {
-      console.warn("Access token has expired. Clearing session...");
+      console.warn(t("auth.accessTokenExpired"));
       clearAuth();
       if (!isAtRoot) {
         navigate("/", { replace: true });
@@ -50,8 +52,8 @@ export default function AppShell({ children }: PropsWithChildren) {
     const showPopup = sessionStorage.getItem('show_session_expired_popup');
     if (showPopup === 'true') {
       openModal({
-        title: 'SESSION_EXPIRED',
-        message: '세션이 만료되었습니다.\n다시 로그인해 주세요.',
+        title: t('auth.sessionExpiredTitle'),
+        message: t('auth.sessionExpiredMsg'),
         type: 'alert'
       });
       sessionStorage.removeItem('show_session_expired_popup');
@@ -94,8 +96,8 @@ export default function AppShell({ children }: PropsWithChildren) {
         // [계정 연동 확인] 동일 이메일로 이미 가입된 계정이 있는 경우
         const { tempKey } = event.data;
         openModal({
-          title: 'ACCOUNT_LINKING',
-          message: '동일한 이메일로 이미 가입된 계정이 존재합니다.\n해당 계정에 현재 소셜 로그인을 연동하시겠습니까?',
+          title: t('auth.accountLinkingTitle'),
+          message: t('auth.accountLinkingMsg'),
           type: 'confirm',
           onConfirm: async () => {
             try {
@@ -126,8 +128,8 @@ export default function AppShell({ children }: PropsWithChildren) {
               // E1002(세션 만료)는 인터셉터에서 이미 팝업을 표시했으므로 중복 방지
               if (err.response?.data?.code === 'E1002') return;
               openModal({
-                title: 'SYSTEM_ERROR',
-                message: '계정 연동 처리 중 오류가 발생했습니다.',
+                title: t('common.systemError'),
+                message: t('auth.accountLinkingFailed'),
                 type: 'alert',
               });
             }
@@ -141,8 +143,8 @@ export default function AppShell({ children }: PropsWithChildren) {
         // [계정 전환 확인] 게스트로 접속 중 이미 가입된 소셜 계정 발견
         const { tempKey } = event.data;
         openModal({
-          title: 'ACCOUNT_CONFLICT',
-          message: '이미 이 소셜 계정으로 가입된 정보가 존재합니다.\n해당 계정으로 전환하시겠습니까?\n(현재 게스트 정보는 사라집니다.)',
+          title: t('auth.accountConflictTitle'),
+          message: t('auth.accountConflictMsg'),
           type: 'confirm',
           onConfirm: async () => {
             try {
@@ -173,8 +175,8 @@ export default function AppShell({ children }: PropsWithChildren) {
               // E1002(세션 만료)는 인터셉터에서 이미 팝업을 표시했으므로 중복 방지
               if (err.response?.data?.code === 'E1002') return;
               openModal({
-                title: 'SYSTEM_ERROR',
-                message: '계정 전환 처리 중 오류가 발생했습니다.',
+                title: t('common.systemError'),
+                message: t('auth.accountSwitchFailed'),
                 type: 'alert',
               });
             }
@@ -184,8 +186,8 @@ export default function AppShell({ children }: PropsWithChildren) {
       } else if (event.data?.type === 'AUTH_ERROR') {
         setIsAccessing(false);
         openModal({
-          title: 'AUTH_ERROR',
-          message: '>> AUTHENTICATION_FAILED: ACCESS_DENIED',
+          title: t('auth.authErrorTitle'),
+          message: t('auth.authErrorMsg'),
           type: 'alert'
         });
       }
@@ -250,7 +252,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       {isAccessing && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md">
           <div className="font-system-overlay text-[#a3e635] text-2xl animate-pulse tracking-[0.5em]">
-            SYSTEM_ACCESSING...
+            {t('common.accessing')}
           </div>
           <div className="mt-4 w-48 h-1 bg-gray-900 overflow-hidden">
             <div className="h-full bg-[#a3e635] animate-[shimmer_2s_infinite]" />
@@ -261,7 +263,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       {shouldRenderChildren ? children : (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black">
           <div className="font-system-overlay text-[#a3e635] text-lg animate-pulse tracking-widest">
-            RE-AUTHENTICATING...
+            {t('common.reauthenticating')}
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+import i18n from "../../i18n";
 import { create } from "zustand";
 import { useAuthStore } from "../../app/store/authStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
@@ -252,12 +253,12 @@ function applyCallOverlayOutput(
 
   useCallOverlayStore.getState().openCallOverlay({
     nodeCode: node.code,
-    title: stringValue(callNotification?.title) ?? "INCOMING CALL",
+    title: stringValue(callNotification?.title) ?? i18n.t("story.incomingCall"),
     status:
       stringValue(normalizedOutput.uiMarkers.callStatus) ??
       stringValue(callNotification?.body),
     messages: callMessages.map((message) => ({
-      speaker: stringValue(message.speaker) ?? "UNKNOWN",
+      speaker: stringValue(message.speaker) ?? i18n.t("story.unknownSpeaker"),
       channel: stringValue(message.channel) ?? "call",
       text: resolveStoryText(message.text, { playerName }),
     })),
@@ -311,14 +312,14 @@ function applyStoryNodeOutputBundle(
   const documentId = stringValue(content.documentId);
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", undefined, "chrome");
+    useWindowStore.getState().openWindow("browser", i18n.t("story.webBrowser"), undefined, "chrome");
   }
 
   const terminalProfile = getTerminalProfile(node);
   const isTerminalContext = isTerminalRuntimeNode(node, normalizedOutput);
 
   if (isTerminalContext) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
+    useWindowStore.getState().openWindow("terminal", i18n.t("story.terminal"), undefined, "terminal");
   }
 
   if (node.code === "CH2_RECOVERED_DOCUMENT") {
@@ -434,7 +435,7 @@ function safelyApplyStoryNodeOutputBundle(
 
     return error instanceof Error
       ? error.message
-      : "스토리 출력 반영에 실패했습니다.";
+      : i18n.t("story.error.applyOutputFailed");
   }
 
   return null;
@@ -446,7 +447,7 @@ function getAutoSystemInputValue(node: StoryNode) {
 
 function getCommandNotFoundLine(inputValue: string | undefined) {
   const commandName = inputValue?.trim().split(/\s+/)[0];
-  return `${commandName || "command"}: command not found`;
+  return i18n.t("story.error.commandNotFound", { command: commandName || "command" });
 }
 
 function showUnavailableCommandToast() {
@@ -602,7 +603,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
           error:
             startError instanceof Error
               ? startError.message
-              : "스토리 초기화에 실패했습니다.",
+              : i18n.t("story.error.initFailed"),
         });
       }
     } finally {
@@ -651,7 +652,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   submitStoryAction: async (actionType, inputValue, meta) => {
     const currentNode = get().currentNode;
     if (!currentNode) {
-      set({ error: "현재 스토리 노드를 찾을 수 없습니다." });
+      set({ error: i18n.t("story.error.nodeNotFound") });
       return;
     }
 
@@ -673,7 +674,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       }
 
       if (!response.nextNode) {
-        throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+        throw new Error(i18n.t("story.error.nextNodeNotFound"));
       }
 
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
@@ -718,7 +719,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
               inputValue: "dismiss",
             });
             if (!dismissResponse.nextNode) {
-              throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+              throw new Error(i18n.t("story.error.nextNodeNotFound"));
             }
 
             const normalizedDismissNode = normalizeTransitionNodeResponse(dismissResponse.nextNode);
@@ -765,7 +766,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     } catch (error) {
       set({
         error:
-          error instanceof Error ? error.message : "스토리 전이에 실패했습니다.",
+          error instanceof Error ? error.message : i18n.t("story.error.transitionFailed"),
       });
     } finally {
       set({ isLoading: false });
