@@ -116,9 +116,39 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       queryClient.invalidateQueries({ queryKey: ['fragment', '3'] });
     }
   });
-
   const [gameState, setGameState] = useState<'intro' | 'playing' | 'crashed' | 'cleared'>('intro');
   const [progressPercent, setProgressPercent] = useState(0);
+
+  // --- BGM 오디오 인스턴스 (S3 저장소 연동) ---
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('https://djbod0nv85jx9.cloudfront.net/audios/minigame_3_v1.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    bgmRef.current = audio;
+
+    return () => {
+      audio.pause();
+      bgmRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!bgmRef.current) return;
+
+    if (gameState === 'playing') {
+      bgmRef.current.play().catch(err => console.warn('BGM Autoplay blocked:', err));
+    } else if (gameState === 'crashed') {
+      bgmRef.current.pause();
+      bgmRef.current.currentTime = 0; // 실패 시 처음부터 다시 시작
+    } else if (gameState === 'cleared') {
+      bgmRef.current.pause();
+    } else if (gameState === 'intro') {
+      bgmRef.current.pause();
+      bgmRef.current.currentTime = 0;
+    }
+  }, [gameState]);
 
   // --- 사이버 패킷 대시 캔버스 게임 엔진 ---
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -763,7 +793,6 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
             onClick={() => setForceBypassAccess(true)}
             className="mt-6 w-full py-2.5 rounded bg-gradient-to-r from-[#ff2a6d] to-[#05d9e8] hover:scale-105 transition-all text-white font-bold text-xs shadow-[0_0_15px_rgba(255,42,109,0.4)] cursor-pointer"
           >
-            🔧 BYPASS FOR TESTING (DEV PLAY)
           </button>
         </div>
       </div>
@@ -781,7 +810,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   // 3. 이미 침투에 완수하여 동기화 세션이 영구 확보된 상태 화면
   if (isCleared && !forceReplay) {
     return (
-      <div 
+      <div
         onClick={() => {
           setForceReplay(true);
           startContinuousRun();
@@ -799,7 +828,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
           <h2 className="text-3xl font-extrabold mb-6 tracking-widest text-white">FRAGMENT 3 SECURED</h2>
           {/* 스페이스바 점프/시작 가이드 */}
           <div className="text-cyan-400 text-sm font-black tracking-wider animate-pulse border border-cyan-400/20 py-3.5 rounded-lg bg-cyan-950/20 hover:bg-cyan-950/50 transition-all">
-            ⌨️ PRESS SPACEBAR TO START GAME
+            PRESS SPACEBAR TO START GAME
           </div>
           <p className="text-gray-500 text-[10px] mt-4 opacity-60">(또는 여기를 클릭하여 바로 시작)</p>
         </div>
@@ -847,7 +876,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
           </div>
         )}
         {gameState === 'crashed' && (
-          <div 
+          <div
             onClick={startContinuousRun}
             className="max-w-md w-full text-center border border-red-500/30 bg-[#1d0611] px-8 py-10 rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.22)] cursor-pointer hover:scale-[1.02] transition-all"
           >
@@ -857,7 +886,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
             <p className="text-base text-yellow-400 font-bold mb-6">PROGRESS: {progressPercent}%</p>
             {/* 스페이스바 재시작 가이드 */}
             <div className="text-red-400 text-sm font-black tracking-wider border border-red-500/20 py-3.5 rounded-lg bg-red-950/20 hover:bg-red-950/50 transition-all animate-pulse">
-              ⌨️ PRESS SPACEBAR TO RESTART
+              PRESS SPACEBAR TO RESTART
             </div>
             <p className="text-gray-500 text-[10px] mt-4 opacity-60">(또는 여기를 클릭하여 바로 시작)</p>
           </div>
