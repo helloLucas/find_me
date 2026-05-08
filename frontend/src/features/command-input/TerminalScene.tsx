@@ -6,6 +6,7 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
+import { useClipboardStore } from "../../app/store/clipboardStore";
 import { storyApi } from "../../shared/api/storyApi";
 import {
   DESKTOP_TASKBAR_HEIGHT,
@@ -262,6 +263,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // OS 교차 붙여넣기 단축키(Ctrl+V / Cmd+V) 명시적 감지 및 가로채기
+    const isPasteCombo = (event.ctrlKey || event.metaKey) && (event.key === "v" || event.key === "V");
+    if (isPasteCombo) {
+      event.preventDefault();
+      handlePaste(event);
+      return;
+    }
+
     if (event.key !== "Tab") {
       setAutocompleteSuggestions([]);
     }
@@ -330,16 +339,40 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
   };
 
-  const handlePaste = (event: React.ClipboardEvent) => {
-    const pastedText = event.clipboardData.getData("text");
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
+    event.preventDefault(); // 외부 기본 붙여넣기 동작 완전 차단 (외부 텍스트 유입 원천 불가)
+
+    // 게임 전용 내부 클립보드 텍스트 가져오기
+    const gameClipboardText = useClipboardStore.getState().text;
     const lastCopiedCommand = useBrowserContentStore.getState().lastCopiedCommand;
 
-    // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
-    if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
-      event.preventDefault();
+    // 둘 중 우선적으로 적재된 신뢰 가능한 내부 복사 텍스트 채택
+    const textToInsert = gameClipboardText || lastCopiedCommand || "";
+
+    if (!textToInsert) {
       trackAnalyticsEvent("terminal_paste_blocked");
       showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
+      return;
     }
+
+    // 허용된 텍스트를 현재 입력창의 커서 위치에 수동 삽입
+    const input = inputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+
+    const nextValue =
+      inputValue.substring(0, start) +
+      textToInsert +
+      inputValue.substring(end);
+
+    setInputValue(nextValue);
+
+    const newCursorPos = start + textToInsert.length;
+    setTimeout(() => {
+      input.selectionStart = input.selectionEnd = newCursorPos;
+    }, 0);
   };
 
   if (!windowState) return null;

@@ -11,6 +11,7 @@ import { GlobalToast } from "../GlobalToast";
 import { jwtDecode } from "jwt-decode";
 import axiosInstance from '../../shared/api/axiosInstance';
 import axios from 'axios';
+import { useClipboardStore } from "../../app/store/clipboardStore";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
@@ -231,6 +232,33 @@ export default function AppShell({ children }: PropsWithChildren) {
     window.addEventListener('keydown', handleKeyDown);
     disableDebugger();
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 게임 내부 전용 복사(Copy) 이벤트 및 OS 교차 지원 단축키(Ctrl+C / Cmd+C) 감지 리스너
+  useEffect(() => {
+    const handleGlobalCopy = (e: ClipboardEvent) => {
+      const selection = window.getSelection()?.toString();
+      if (selection) {
+        useClipboardStore.getState().setClipboardText(selection);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCopyCombo = (e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C");
+      if (isCopyCombo) {
+        const selection = window.getSelection()?.toString();
+        if (selection) {
+          useClipboardStore.getState().setClipboardText(selection);
+        }
+      }
+    };
+
+    document.addEventListener("copy", handleGlobalCopy);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("copy", handleGlobalCopy);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   return (

@@ -25,6 +25,7 @@ export const Taskbar: React.FC = () => {
   const terminalWindow = windows.find((windowState) => windowState.id === "terminal");
   const messengerWindow = windows.find((windowState) => windowState.id === "messenger");
   const browserWindows = windows.filter((windowState) => windowState.type === "browser");
+  const notepadWindows = windows.filter((windowState) => windowState.type === "notepad");
   const pendingOpenChatAction = Object.values(conversations)
     .flatMap((conversation) => conversation.actions ?? [])
     .find((action) => action.actionType === "open_friend_chat");
@@ -197,6 +198,33 @@ export const Taskbar: React.FC = () => {
                 >
                   <img
                     src={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+                    className="w-4 h-4 mr-2 object-contain"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                  <span className="text-white text-xs truncate leading-none">{windowState.title}</span>
+                </button>
+              );
+            })}
+
+            {notepadWindows.map((windowState) => {
+              const isActive = !windowState.isMinimized && activeWindowId === windowState.id;
+
+              return (
+                <button
+                  key={windowState.id}
+                  onClick={() =>
+                    windowState.isMinimized || !isActive
+                      ? focusWindow(windowState.id)
+                      : minimizeWindow(windowState.id)
+                  }
+                  className={`flex items-center px-2 py-1 h-8 max-w-[150px] rounded border ${
+                    isActive
+                      ? "bg-white/20 border-white/30 shadow-[inset_0_2px_5px_rgba(0,0,0,0.2)]"
+                      : "bg-transparent border-transparent hover:bg-white/10"
+                  } transition-all`}
+                >
+                  <img
+                    src="/pixel_notepad_icon.svg"
                     className="w-4 h-4 mr-2 object-contain"
                     style={{ imageRendering: "pixelated" }}
                   />
