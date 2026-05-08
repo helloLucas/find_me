@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStatus } from '../../shared/hooks/useAuthStatus';
 import { ChapterList } from '../../widgets/ChapterList';
@@ -14,6 +15,7 @@ import { useTrackVisible } from '../../shared/analytics/useTrackVisible';
  * - BFCache(뒤로가기 캐시) 무효화 및 레이아웃 흔들림(Layout Shift)을 방지합니다.
  */
 const LobbyPage = () => {
+    const { t } = useTranslation();
     const { nickname, sessionMode, isGuest, isLoading } = useAuthStatus();
     const navigate = useNavigate();
     const { mutate: updateNickname, isPending: isUpdating } = useUpdateNickname();
@@ -56,11 +58,11 @@ const LobbyPage = () => {
     const handleEditSubmit = () => {
         const trimmed = inputValue.trim();
         if (!trimmed) {
-            setEditError('닉네임을 입력해 주세요.');
+            setEditError(t('lobby.errorEmpty'));
             return;
         }
         if (trimmed.length > 15) {
-            setEditError('15자 이내로 입력해 주세요.');
+            setEditError(t('lobby.errorTooLong'));
             return;
         }
         if (trimmed === nickname) {
@@ -81,7 +83,7 @@ const LobbyPage = () => {
                     setEditError('');
                 },
                 onError: () => {
-                    setEditError('닉네임 변경에 실패했습니다.');
+                    setEditError(t('lobby.errorUpdateFailed'));
                 }
             }
         );
@@ -126,7 +128,7 @@ const LobbyPage = () => {
                         className="flex items-center gap-2 text-sm md:text-lg font-bold text-gray-300 hover:text-[#a3e635] transition-all group"
                     >
                         <span className="text-gray-500 group-hover:text-[#a3e635]">{" < "}</span>
-                        <span className="border-b border-transparent group-hover:border-[#a3e635]">BACK</span>
+                        <span className="border-b border-transparent group-hover:border-[#a3e635]">{t('setup.back')}</span>
                     </button>
                     <div className="flex flex-col gap-0.5 border-l border-gray-800 pl-6 opacity-30 select-none">
                         <div className="flex items-center gap-2 text-[8px] uppercase tracking-tighter">
@@ -146,21 +148,21 @@ const LobbyPage = () => {
                                 <button
                                     onClick={handleEditStart}
                                     data-clarity-mask="true"
-                                    title={isGuest ? '소셜 로그인 후 닉네임 변경 가능' : '클릭하여 닉네임 변경'}
+                                    title={isGuest ? t('lobby.guestTooltip') : t('lobby.editTooltip')}
                                     className={`text-white font-bold border-b pb-1 tracking-[0.1em] flex items-center gap-2 group/nick transition-all ${isGuest
                                             ? 'border-white cursor-default'
                                             : 'border-white hover:border-[#a3e635] hover:text-[#a3e635] cursor-pointer'
                                         }`}
                                 >
-                                    <span>AGENT: {nickname}</span>
+                                    <span>{t('lobby.agent')}: {nickname}</span>
                                     {!isGuest && (
                                         <span className="flex items-center justify-center bg-[#a3e635]/10 border border-[#a3e635] text-[#a3e635] text-[10px] px-1.5 py-0.5 rounded shadow-[0_0_5px_rgba(163,230,53,0.3)] group-hover/nick:bg-[#a3e635] group-hover/nick:text-black transition-all">
-                                            ✎ EDIT
+                                            ✎ {t('lobby.edit')}
                                         </span>
                                     )}
                                 </button>
                             </div>
-                            <span className="hidden md:inline">SESS: {sessionMode}</span>
+                            <span className="hidden md:inline">{t('lobby.sess')}: {sessionMode}</span>
                         </>
                     )}
                 </div>
@@ -174,7 +176,7 @@ const LobbyPage = () => {
 
                 {/* 타이틀 */}
                 <h1 className="shrink-0 text-3xl md:text-4xl tracking-[0.3em] mt-4 mb-4 text-white font-bold drop-shadow-lg uppercase text-center">
-                    SELECT CHAPTER
+                    {t('lobby.selectChapter')}
                 </h1>
 
                 {/* 메인 콘텐츠 영역 */}
@@ -197,7 +199,7 @@ const LobbyPage = () => {
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-[#0a0a0a] border border-[#a3e635] p-6 w-80 shadow-[0_0_15px_rgba(163,230,53,0.3)] flex flex-col gap-5">
                         <div className="flex justify-between items-center border-b border-[#a3e635]/30 pb-2">
-                            <h3 className="text-[#a3e635] tracking-widest font-bold text-sm uppercase">UPDATE AGENT ALIAS</h3>
+                            <h3 className="text-[#a3e635] tracking-widest font-bold text-sm uppercase">{t('lobby.updateAlias')}</h3>
                             <button onClick={handleEditCancel} className="text-gray-500 hover:text-white transition-colors">X</button>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -211,12 +213,12 @@ const LobbyPage = () => {
                                 maxLength={15}
                                 disabled={isUpdating}
                                 className="bg-black border border-[#a3e635]/50 text-white p-3 text-sm outline-none focus:border-[#a3e635] focus:shadow-[0_0_8px_rgba(163,230,53,0.3)] disabled:opacity-50 transition-all font-mono"
-                                placeholder="Enter new nickname"
+                                placeholder={t('lobby.placeholder')}
                             />
                             {editError ? (
                                 <span className="text-[10px] text-red-400 tracking-wider h-3">{editError}</span>
                             ) : (
-                                <span className="text-[10px] text-gray-500 tracking-wider h-3">Max 15 characters.</span>
+                                <span className="text-[10px] text-gray-500 tracking-wider h-3">{t('lobby.maxChars')}</span>
                             )}
                         </div>
                         <div className="flex gap-3 justify-end mt-2">
@@ -225,14 +227,14 @@ const LobbyPage = () => {
                                 disabled={isUpdating}
                                 className="px-4 py-2 text-[10px] tracking-widest border border-gray-600 text-gray-400 hover:bg-gray-800 disabled:opacity-50 transition-colors"
                             >
-                                CANCEL
+                                {t('lobby.cancel')}
                             </button>
                             <button
                                 onClick={handleEditSubmit}
                                 disabled={isUpdating}
                                 className="px-4 py-2 text-[10px] tracking-widest bg-[#a3e635]/10 border border-[#a3e635] text-[#a3e635] hover:bg-[#a3e635]/20 hover:shadow-[0_0_10px_rgba(163,230,53,0.2)] disabled:opacity-50 transition-all"
                             >
-                                {isUpdating ? 'UPDATING...' : 'CONFIRM'}
+                                {isUpdating ? t('lobby.updating') : t('lobby.confirm')}
                             </button>
                         </div>
                     </div>

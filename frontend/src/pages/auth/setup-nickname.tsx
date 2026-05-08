@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
 import { useAuthStore } from '../../app/store/authStore';
@@ -7,6 +8,7 @@ import { useAuthStore } from '../../app/store/authStore';
  * SetupNicknamePage
  */
 const SetupNicknamePage = () => {
+    const { t } = useTranslation();
     const [nickname, setNickname] = useState('');
     const { mutate, isPending } = useUpdateNickname();
     const navigate = useNavigate();
@@ -31,7 +33,7 @@ const SetupNicknamePage = () => {
         }
 
         if (!tempKey && !isLoggedIn) {
-            console.warn('Sign-up session expired or state lost. Redirecting to login.');
+            console.warn(t('setup.sessionExpired'));
             navigate('/', { replace: true });
         }
     }, [tempKey, isLoggedIn, confirmSwitch, mutate, navigate]);
@@ -78,7 +80,7 @@ const SetupNicknamePage = () => {
                                 onClick={() => navigate('/')}
                                 className="px-4 py-2 border-r border-gray-600 hover:bg-white hover:text-black transition-colors text-[10px] tracking-widest font-bold"
                             >
-                                {"<"} BACK
+                                {"<"} {t('setup.back')}
                             </button>
                             <div className="flex items-center gap-3 px-4">
                                 <div className="w-2 h-2 bg-gray-500"></div>
@@ -100,12 +102,12 @@ const SetupNicknamePage = () => {
 
                         <div className="relative z-20">
                             <div className="mb-12 space-y-3 font-bold">
-                                <div className="flex items-center gap-2 text-[9px] text-gray-500 tracking-widest animate-pulse">
+                                <div className="flex items-center gap-2 text-[9px] text-gray-500 tracking-widest">
                                     <span className="w-1 h-1 bg-gray-500 rounded-full"></span>
                                     <span>CONNECTION_STABLE</span>
                                 </div>
                                 <h2 className="text-2xl md:text-3xl text-white tracking-[0.2em] border-l-4 border-white pl-5 uppercase">
-                                    INPUT NICKNAME
+                                    {t('setup.inputNickname')}
                                 </h2>
                             </div>
 
@@ -138,8 +140,8 @@ const SetupNicknamePage = () => {
                                     </div>
                                     <p className={`text-sm tracking-wide uppercase relative z-10 transition-colors ${nickname.length > 0 && !isValid ? 'text-red-500' : 'text-gray-600'}`}>
                                         {nickname.length > 0 && !isValid
-                                            ? '>> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)'
-                                            : '>> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED'}
+                                            ? t('setup.errorTooShort')
+                                            : t('setup.noticeUnmodifiable')}
                                     </p>
                                 </div>
 
@@ -155,7 +157,7 @@ const SetupNicknamePage = () => {
                                     )}
                                     <span className={`relative z-10 text-sm tracking-[0.4em] font-bold uppercase transition-colors
                                         ${isValid ? 'text-gray-400 group-hover:text-black' : 'text-gray-700'}`}>
-                                        {isPending ? 'STABILIZING...' : 'ESTABLISH'}
+                                        {isPending ? t('setup.stabilizing') : t('setup.establish')}
                                     </span>
                                 </button>
                             </form>
@@ -169,7 +171,7 @@ const SetupNicknamePage = () => {
                             <span>AUTH: PENDING</span>
                         </div>
                         <div className="flex gap-4 text-right">
-                            <span className="animate-pulse opacity-50">● ENCRYPTION_ON</span>
+                            <span className="opacity-50">● ENCRYPTION_ON</span>
                         </div>
                     </div>
                 </div>
