@@ -2,6 +2,13 @@ import axios from 'axios';
 import { tokenManager } from '../utils/tokenManager';
 import { env } from '../config/env';
 import type { BaseResponse } from '../types/api';
+import type { AxiosRequestConfig } from 'axios';
+
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipGlobalError?: boolean;
+  }
+}
 
 /**
  * Axios Instance 설정
@@ -48,7 +55,8 @@ axiosInstance.interceptors.response.use(
     const isSilentRefreshing = sessionStorage.getItem('is_silent_refreshing') === 'true';
 
     // 진행 중인 조용한 리프레시(AppShell)가 있다면 전역 모달 띄우기와 강제 로그아웃을 무시(Bypass)
-    if ((isNetworkError || isServerError) && !isSilentRefreshing) {
+    // skipGlobalError 옵션이 true인 경우에도 전역 에러 핸들링을 건너뜀
+    if ((isNetworkError || isServerError) && !isSilentRefreshing && !originalRequest?.skipGlobalError) {
       console.error('Network or Server error occurred:', error);
       try {
         const { useModalStore } = await import('../../app/store/modalStore');
@@ -56,14 +64,9 @@ axiosInstance.interceptors.response.use(
           title: 'CONNECTION_FAILED',
           message: '서버와 연결할 수 없습니다. \n네트워크 상태를 확인해 주세요.',
           type: 'alert',
-          onConfirm: async () => {
-            // 1. 토큰 삭제
-            tokenManager.clearTokens();
-            // 2. 인증 상태 완전 초기화
-            const { useAuthStore } = await import('../../app/store/authStore');
-            useAuthStore.getState().clearAuth();
-            // 3. 루트 페이지로 리다이렉트
-            window.location.href = '/';
+          onConfirm: () => {
+            // 더 이상 강제로 로그아웃 시키거나 홈으로 리다이렉트하지 않음.
+            // 사용자가 모달을 닫고 다시 시도하거나 현재 페이지에 머무를 수 있게 함.
             return true;
           }
         });
