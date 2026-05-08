@@ -22,7 +22,8 @@ export const hintApi = {
   getLiveHint: async (request: HintLiveRequest): Promise<HintLiveResponseData> => {
     const response = await axiosInstance.post<BaseResponse<HintLiveResponseData>>(
       '/api/v1/hints/live',
-      request
+      request,
+      { skipGlobalError: true }
     );
     return response.data.data;
   },

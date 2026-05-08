@@ -34,7 +34,7 @@
   height: 100%;
   object-fit: contain;
   /* Ensure the svg is rendered sharply if it's meant to be pixel art */
-  image-rendering: pixelated; 
+  image-rendering: pixelated;
   filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.2));
 }
 
@@ -83,7 +83,7 @@
   padding: 16px;
   border-radius: 0 12px 12px 12px;
   font-family: var(--lucas-font-assistant);
-  box-shadow: 
+  box-shadow:
     0 10px 25px rgba(0, 0, 0, 0.6),
     inset 0 0 15px rgba(84, 58, 183, 0.2);
   position: relative;
@@ -197,84 +197,53 @@
   flex-direction: column;
   margin-bottom: 24px;
   font-family: var(--lucas-font-assistant);
-  box-shadow: 
+  box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.9),
     0 0 20px rgba(84, 58, 183, 0.3);
   overflow: hidden;
   animation: slide-up 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
+/* Interference effects for individual components */
+.lucas-bubble.interference-fx,
 .lucas-hint-ui.interference-fx {
   filter: saturate(1.35) contrast(1.25) brightness(1.08);
   animation:
-    slide-up 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
+    bubble-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
     hint-jitter 0.08s steps(2, end) 16;
 }
 
+.lucas-bubble.interference-fx::before,
 .lucas-hint-ui.interference-fx::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(130, 240, 255, 0.28) 0 2px,
-    rgba(80, 40, 160, 0.2) 2px 4px,
-    transparent 4px 6px
-  );
+  background: repeating-linear-gradient(0deg,
+      rgba(130, 240, 255, 0.28) 0 2px,
+      rgba(80, 40, 160, 0.2) 2px 4px,
+      transparent 4px 6px);
   mix-blend-mode: screen;
   opacity: 0.52;
   animation: hint-scanline 0.09s linear infinite;
+  border-radius: inherit;
 }
 
+.lucas-bubble.interference-fx::after,
 .lucas-hint-ui.interference-fx::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(255, 255, 255, 0.2) 45%,
-    rgba(255, 255, 255, 0.42) 49%,
-    rgba(255, 255, 255, 0.18) 53%,
-    transparent 100%
-  );
+  background: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 45%,
+      rgba(255, 255, 255, 0.42) 49%,
+      rgba(255, 255, 255, 0.18) 53%,
+      transparent 100%);
   mix-blend-mode: overlay;
   animation: hint-tear 0.14s steps(2, end) 10;
-}
-
-body.global-interference-fx::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2147483646;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(130, 240, 255, 0.22) 0 2px,
-    rgba(80, 40, 160, 0.15) 2px 4px,
-    transparent 4px 6px
-  );
-  mix-blend-mode: screen;
-  animation: hint-scanline 0.08s linear infinite;
-}
-
-body.global-interference-fx::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2147483647;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(255, 255, 255, 0.12) 44%,
-    rgba(255, 255, 255, 0.36) 49%,
-    rgba(255, 255, 255, 0.14) 54%,
-    transparent 100%
-  );
-  animation: global-hint-jitter 0.08s steps(2, end) 16;
+  border-radius: inherit;
 }
 
 .hint-header {
@@ -349,9 +318,13 @@ body.global-interference-fx::after {
   align-self: flex-end;
 }
 
-.chat-msg.player .chat-speaker { color: #fe2c55; text-align: right; }
-.chat-msg.player .chat-text { 
-  background: linear-gradient(135deg, rgba(254, 44, 85, 0.15), rgba(254, 44, 85, 0.05)); 
+.chat-msg.player .chat-speaker {
+  color: #fe2c55;
+  text-align: right;
+}
+
+.chat-msg.player .chat-text {
+  background: linear-gradient(135deg, rgba(254, 44, 85, 0.15), rgba(254, 44, 85, 0.05));
   border: 1px solid rgba(254, 44, 85, 0.4);
   color: #ffb3c1;
   border-bottom-right-radius: 2px;
@@ -361,9 +334,12 @@ body.global-interference-fx::after {
   align-self: flex-start;
 }
 
-.chat-msg.lucas .chat-speaker { color: #0ff; }
-.chat-msg.lucas .chat-text { 
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05)); 
+.chat-msg.lucas .chat-speaker {
+  color: #0ff;
+}
+
+.chat-msg.lucas .chat-text {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05));
   border: 1px solid rgba(0, 255, 255, 0.4);
   color: #b3ffff;
   border-bottom-left-radius: 2px;
@@ -466,12 +442,29 @@ body.global-interference-fx::after {
   opacity: 0.5;
 }
 
-.intensity-1 .glitch-copy { animation: avatar-glitch-1 2s infinite linear alternate-reverse; }
-.intensity-2 .glitch-copy { animation: avatar-glitch-1 1.5s infinite linear alternate-reverse; }
-.intensity-3 .glitch-copy { animation: avatar-glitch-1 1s infinite linear alternate-reverse; }
-.intensity-5 .glitch-copy { animation: avatar-glitch-2 0.8s infinite linear alternate-reverse; }
-.intensity-7 .glitch-copy { animation: avatar-glitch-2 0.6s infinite linear alternate-reverse; }
-.intensity-10 .glitch-copy { animation: avatar-glitch-2 0.4s infinite linear alternate-reverse; }
+.intensity-1 .glitch-copy {
+  animation: avatar-glitch-1 2s infinite linear alternate-reverse;
+}
+
+.intensity-2 .glitch-copy {
+  animation: avatar-glitch-1 1.5s infinite linear alternate-reverse;
+}
+
+.intensity-3 .glitch-copy {
+  animation: avatar-glitch-1 1s infinite linear alternate-reverse;
+}
+
+.intensity-5 .glitch-copy {
+  animation: avatar-glitch-2 0.8s infinite linear alternate-reverse;
+}
+
+.intensity-7 .glitch-copy {
+  animation: avatar-glitch-2 0.6s infinite linear alternate-reverse;
+}
+
+.intensity-10 .glitch-copy {
+  animation: avatar-glitch-2 0.4s infinite linear alternate-reverse;
+}
 
 @keyframes avatar-glitch-1 {
   0% {
@@ -479,11 +472,13 @@ body.global-interference-fx::after {
     transform: translate(-1px, 0.5px);
     filter: hue-rotate(15deg) opacity(0.8);
   }
+
   50% {
     clip-path: inset(80% 0 5% 0);
     transform: translate(1px, -0.5px);
     filter: hue-rotate(30deg) opacity(0.9);
   }
+
   100% {
     clip-path: inset(30% 0 20% 0);
     transform: translate(-1.5px, 1px);
@@ -497,68 +492,152 @@ body.global-interference-fx::after {
     transform: translate(-3px, 1.5px);
     filter: hue-rotate(45deg) brightness(1.2);
   }
+
   50% {
     clip-path: inset(70% 0 15% 0);
     transform: translate(3px, -1.5px) skew(1deg);
     filter: hue-rotate(90deg) contrast(1.2);
   }
+
   100% {
     clip-path: inset(50% 0 25% 0);
     transform: translate(0, 0);
     filter: hue-rotate(0deg);
   }
 }
+
 /* Animations */
 @keyframes lucas-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
-  50% { opacity: 0.6; transform: translateX(-50%) scale(1.3); }
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateX(-50%) scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: translateX(-50%) scale(1.3);
+  }
 }
 
 @keyframes bubble-pop {
-  from { opacity: 0; transform: scale(0.8) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes hint-jitter {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-4px, 2px); }
-  50% { transform: translate(4px, -2px); }
-  75% { transform: translate(-3px, -2px); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-4px, 2px);
+  }
+
+  50% {
+    transform: translate(4px, -2px);
+  }
+
+  75% {
+    transform: translate(-3px, -2px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 @keyframes hint-scanline {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(8px); }
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(8px);
+  }
 }
 
 @keyframes hint-tear {
-  0% { transform: translateY(-6px); opacity: 0.28; }
-  50% { transform: translateY(6px); opacity: 0.45; }
-  100% { transform: translateY(0); opacity: 0.22; }
+  0% {
+    transform: translateY(-6px);
+    opacity: 0.28;
+  }
+
+  50% {
+    transform: translateY(6px);
+    opacity: 0.45;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 0.22;
+  }
 }
 
 @keyframes global-hint-jitter {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-5px, 2px); }
-  50% { transform: translate(5px, -2px); }
-  75% { transform: translate(-3px, -2px); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-5px, 2px);
+  }
+
+  50% {
+    transform: translate(5px, -2px);
+  }
+
+  75% {
+    transform: translate(-3px, -2px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 /* Scrollbar Styling */

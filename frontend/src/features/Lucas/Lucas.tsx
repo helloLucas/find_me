@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
@@ -210,22 +210,8 @@ export const Lucas: React.FC = () => {
       if (interferenceTimerRef.current !== null) {
         window.clearTimeout(interferenceTimerRef.current);
       }
-      document.body.classList.remove('global-interference-fx');
     };
   }, []);
-
-  useEffect(() => {
-    if (!ENABLE_INTERFERENCE_FX) {
-      document.body.classList.remove('global-interference-fx');
-      return;
-    }
-
-    if (isInterferenceFxActive) {
-      document.body.classList.add('global-interference-fx');
-    } else {
-      document.body.classList.remove('global-interference-fx');
-    }
-  }, [isInterferenceFxActive]);
 
   const handleBubbleClick = () => {
     if (isTyping) {
@@ -304,7 +290,7 @@ export const Lucas: React.FC = () => {
       {isDialogueActive && currentMessage && (
         <div className="lucas-bubble-container" onClick={handleBubbleClick}>
           <div className="lucas-speaker-label">{currentMessage.speaker}</div>
-          <div className="lucas-bubble">
+          <div className={`lucas-bubble ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
             <p>{displayText}</p>
             {!isTyping &&
               isLastMessage &&
