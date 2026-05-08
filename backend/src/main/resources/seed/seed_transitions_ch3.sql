@@ -4412,6 +4412,16 @@ SELECT
     "Old_Contact ACTIVE",
     "Classmate_21 ACTIVE"
   ],
+  "sourceStatusLines": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "filterSourceContentKeys": [
+    "CH3_MY_PEOPLE_LIST"
+  ],
   "rejectStatuses": [
     "DELETED",
     "UNKNOWN"
@@ -4481,6 +4491,16 @@ SELECT
     "Old_Contact ACTIVE",
     "Classmate_21 ACTIVE"
   ],
+  "sourceStatusLines": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "filterSourceContentKeys": [
+    "CH3_MY_PEOPLE_LIST"
+  ],
   "rejectStatuses": [
     "DELETED",
     "UNKNOWN"
@@ -4535,6 +4555,16 @@ SELECT
     "Home_Contact ACTIVE",
     "Old_Contact ACTIVE",
     "Classmate_21 ACTIVE"
+  ],
+  "sourceStatusLines": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "filterSourceContentKeys": [
+    "CH3_MY_PEOPLE_LIST"
   ],
   "rejectStatuses": [
     "DELETED",
@@ -4604,6 +4634,16 @@ SELECT
     "Home_Contact ACTIVE",
     "Old_Contact ACTIVE",
     "Classmate_21 ACTIVE"
+  ],
+  "sourceStatusLines": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "filterSourceContentKeys": [
+    "CH3_MY_PEOPLE_LIST"
   ],
   "rejectStatuses": [
     "DELETED",
@@ -5114,5 +5154,113 @@ SELECT
 FROM story_nodes from_node
 JOIN story_nodes to_node ON to_node.code = 'CH3_RELAY_EMPTY_RESPONSE'
 WHERE from_node.code = 'CH3_HISTORY_VIEW';
+
+INSERT INTO story_transitions (
+    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
+)
+SELECT
+    from_node.id,
+    from_node.id,
+    'command',
+    'relay_request_PEOPLE_to_file',
+    'server_rule',
+    $json${
+  "rule": "RELAY_REQUEST_TO_FILE",
+  "hostAliases": [
+    "127.0.0.1",
+    "localhost"
+  ],
+  "port": 9091,
+  "request": "PEOPLE",
+  "acceptedInputForms": [
+    "PIPE_ECHO",
+    "PIPE_PRINTF",
+    "INPUT_REDIRECT",
+    "HERE_STRING",
+    "HERE_DOC"
+  ],
+  "requiredFlags": [
+    "relay_contacted"
+  ],
+  "acceptedOutputForms": [
+    "REDIRECT_OVERWRITE",
+    "TEE"
+  ],
+  "outputFile": "/home/guest/my_people.list",
+  "allowAnyOutputFile": true,
+  "allowRelativeOutputFile": true,
+  "allowOverwrite": true
+}$json$::jsonb,
+    $json${
+  "recentResult": "SUCCESS_MOVE",
+  "setFlags": {
+    "people_dumped": true
+  },
+  "snapshotPatch": {
+    "flags.people_dumped": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/home/guest/my_people.list",
+        "pathFromOutputFile": true,
+        "type": "file",
+        "readable": true,
+        "executable": false,
+        "protected": false,
+        "virtual": true,
+        "createdBy": "relay_people",
+        "contentKey": "CH3_MY_PEOPLE_LIST"
+      }
+    ]
+  }
+}$json$::jsonb,
+    100
+FROM story_nodes from_node
+WHERE from_node.code IN ('CH3_SOCIAL_ISOLATION_READY', 'CH3_CORE_GROUP_INVALID');
+
+INSERT INTO story_transitions (
+    from_node_id, to_node_id, action_type, expected_input, validator_type, validator_config, effect_bundle, priority
+)
+SELECT
+    from_node.id,
+    from_node.id,
+    'command',
+    'relay_request_PEOPLE_view',
+    'server_rule',
+    $json${
+  "rule": "RELAY_REQUEST",
+  "hostAliases": [
+    "127.0.0.1",
+    "localhost"
+  ],
+  "port": 9091,
+  "request": "PEOPLE",
+  "acceptedInputForms": [
+    "PIPE_ECHO",
+    "PIPE_PRINTF",
+    "INPUT_REDIRECT",
+    "HERE_STRING",
+    "HERE_DOC",
+    "INTERACTIVE"
+  ],
+  "requiredFlags": [
+    "relay_contacted"
+  ],
+  "outputRequired": false
+}$json$::jsonb,
+    $json${
+  "recentResult": "SUCCESS_MOVE",
+  "setFlags": {
+    "people_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.people_viewed": true,
+    "relay.requests.PEOPLE": true
+  }
+}$json$::jsonb,
+    90
+FROM story_nodes from_node
+WHERE from_node.code IN ('CH3_SOCIAL_ISOLATION_READY', 'CH3_CORE_GROUP_INVALID');
 
 COMMIT;

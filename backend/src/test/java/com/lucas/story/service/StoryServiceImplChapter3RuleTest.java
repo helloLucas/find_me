@@ -163,6 +163,40 @@ class StoryServiceImplChapter3RuleTest {
                 "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > people.txt",
                 snapshot))
         .isTrue();
+
+    assertThat(
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
+                {
+                  "rule": "RELAY_REQUEST_TO_FILE",
+                  "hostAliases": ["127.0.0.1", "localhost"],
+                  "port": 9091,
+                  "request": "PEOPLE",
+                  "requiredFlags": ["relay_contacted"],
+                  "outputFile": "/home/guest/my_people.list",
+                  "allowAnyOutputFile": true
+                }
+                """,
+                "printf 'people\\n' | nc 127.0.0.1 9091 > people.txt",
+                snapshot))
+        .isTrue();
+
+    assertThat(
+            matches(
+                "RELAY_REQUEST",
+                """
+                {
+                  "rule": "RELAY_REQUEST",
+                  "hostAliases": ["127.0.0.1", "localhost"],
+                  "port": 9091,
+                  "request": "STATUS",
+                  "requiredFlags": ["relay_contacted"]
+                }
+                """,
+                "nc 127.0.0.1 9091 <<< status",
+                snapshot))
+        .isTrue();
   }
 
   @Test
@@ -291,6 +325,14 @@ class StoryServiceImplChapter3RuleTest {
             "Old_Contact ACTIVE",
             "Classmate_21 ACTIVE"
           ],
+          "sourceStatusLines": [
+            "Home_Contact ACTIVE",
+            "Old_Contact ACTIVE",
+            "Friend_04 DELETED",
+            "Classmate_21 ACTIVE",
+            "Unknown_719 UNKNOWN"
+          ],
+          "filterSourceContentKeys": ["CH3_MY_PEOPLE_LIST"],
           "rejectStatuses": ["DELETED", "UNKNOWN"],
           "allowDuplicateLines": false,
           "allowMissingActiveNode": false,
@@ -309,11 +351,28 @@ class StoryServiceImplChapter3RuleTest {
         "printf 'Home_Contact ACTIVE\\nOld_Contact ACTIVE\\nClassmate_21 ACTIVE\\n' > core_group.dat";
     String invalidInput =
         "printf 'Home_Contact ACTIVE\\nFriend_04 DELETED\\nClassmate_21 ACTIVE\\n' > core_group.dat";
+    String grepValidInput = "grep ' ACTIVE$' people.txt > core_group.dat";
+    String awkValidInput = "awk '$2 == \"ACTIVE\" { print $0 }' people.txt > core_group.dat";
+    String sedValidInput = "sed -n '/ ACTIVE$/p' people.txt > core_group.dat";
+    String grepInvalidInput = "grep DELETED people.txt > core_group.dat";
+    String grepInvertInvalidInput = "grep -v ACTIVE people.txt > core_group.dat";
 
     assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, validInput, snapshot)).isTrue();
     assertThat(matches("VALIDATE_CORE_GROUP_DAT", failureConfig, validInput, snapshot)).isFalse();
     assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, invalidInput, snapshot)).isFalse();
     assertThat(matches("VALIDATE_CORE_GROUP_DAT", failureConfig, invalidInput, snapshot)).isTrue();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, grepValidInput, snapshot))
+        .isTrue();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, awkValidInput, snapshot)).isTrue();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, sedValidInput, snapshot)).isTrue();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, grepInvalidInput, snapshot))
+        .isFalse();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", failureConfig, grepInvalidInput, snapshot))
+        .isTrue();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", successConfig, grepInvertInvalidInput, snapshot))
+        .isFalse();
+    assertThat(matches("VALIDATE_CORE_GROUP_DAT", failureConfig, grepInvertInvalidInput, snapshot))
+        .isTrue();
   }
 
   @Test
@@ -499,6 +558,12 @@ class StoryServiceImplChapter3RuleTest {
           },
           "vfsOverlay": {
             "createdNodes": [
+              {
+                "path": "/home/guest/people.txt",
+                "type": "file",
+                "readable": true,
+                "contentKey": "CH3_MY_PEOPLE_LIST"
+              },
               {
                 "path": "/home/guest/laplace_fragment_02.sh",
                 "type": "file",

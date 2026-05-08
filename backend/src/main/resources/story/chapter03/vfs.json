@@ -13,6 +13,10 @@
     "allowParentPath": true,
     "denyOutsideRoot": false,
     "allowedExternalPaths": [
+      "/",
+      "/home",
+      "/usr",
+      "/usr/bin",
       "/tmp",
       "/usr/bin/local"
     ],
@@ -20,6 +24,38 @@
     "showHiddenFiles": false
   },
   "nodes": {
+    "/": {
+      "type": "directory",
+      "name": "root",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home": {
+      "type": "directory",
+      "name": "home",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/usr": {
+      "type": "directory",
+      "name": "usr",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/usr/bin": {
+      "type": "directory",
+      "name": "bin",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
     "/home/guest": {
       "type": "directory",
       "name": "guest",
