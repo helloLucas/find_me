@@ -85,6 +85,7 @@ const MAPLE_STORY_TERMINAL_SIGNAL = "terminal://maple-story";
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
 const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
+const RING_TONE_SOUND = "chapter3_ringtone.mp3";
 const CLEAR_TERMINAL_SIGNAL = "__CLEAR_TERMINAL__";
 
 
@@ -598,10 +599,29 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         await storyApi.startStory(resolveChapterCode(chapterCode))
       );
       get().setCurrentNode(node);
+
+      // Chapter 3 도입 시 벨소리 재생 (Node 1: CH3_FRIEND_CALL)
+      if (node.code === "CH3_FRIEND_CALL") {
+        const callStore = useCallOverlayStore.getState();
+        callStore.setRinging(true);
+        audioManager.playSfx(RING_TONE_SOUND);
+        // 벨소리를 충분히 들려주기 위해 6초 대기 후 콘텐츠 표시
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+        callStore.setRinging(false);
+      }
     } catch (startError) {
       try {
         const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
         get().setCurrentNode(fallbackNode);
+
+        // Resume 시에도 Chapter 3 첫 노드라면 벨소리 재생
+        if (fallbackNode.code === "CH3_FRIEND_CALL") {
+          const callStore = useCallOverlayStore.getState();
+          callStore.setRinging(true);
+          audioManager.playSfx(RING_TONE_SOUND);
+          await new Promise((resolve) => setTimeout(resolve, 6000));
+          callStore.setRinging(false);
+        }
       } catch {
         set({
           error:

@@ -4,7 +4,7 @@ import { DESKTOP_LAYER } from "../../../shared/config/desktopWindows";
 import { useStoryRuntimeStore } from "../storyRuntime.store";
 
 export const CallOverlay: React.FC = () => {
-  const { isVisible, nodeCode, messages, buttons } = useCallOverlayStore();
+  const { isVisible, isRinging, nodeCode, messages, buttons } = useCallOverlayStore();
   const { isLoading, submitStoryClick } = useStoryRuntimeStore();
   const [messageIndex, setMessageIndex] = useState(0);
 
@@ -20,7 +20,7 @@ export const CallOverlay: React.FC = () => {
   if (!isVisible) return null;
 
   const handleAdvance = () => {
-    if (isLoading) return;
+    if (isLoading || isRinging) return;
 
     if (hasMoreMessages) {
       setMessageIndex((index) => Math.min(index + 1, messages.length - 1));
@@ -100,7 +100,7 @@ export const CallOverlay: React.FC = () => {
                     : "border-cyan-200/45 bg-cyan-300/10 text-cyan-100"
                 }`}
               >
-                {isNotice ? "SIGNAL NOTICE" : speaker}
+                {isRinging ? "INCOMING CALL" : (isNotice ? "SIGNAL NOTICE" : speaker)}
               </div>
               <div className="flex items-center gap-1.5">
                 {[0, 1, 2].map((item) => (
@@ -121,7 +121,7 @@ export const CallOverlay: React.FC = () => {
                 isNotice ? "font-terminal text-red-100" : "text-cyan-50"
               }`}
             >
-              {line}
+              {isRinging ? "" : line}
             </p>
 
             <div className="flex justify-end">
