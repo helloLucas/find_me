@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import imageCompression from "browser-image-compression";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
 import { bugReportApi } from "../../shared/api/bugReportApi";
@@ -14,6 +15,7 @@ interface BugReportModalProps {
 }
 
 export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, zIndex = 9000, onFocus }) => {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -151,7 +153,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       const requestData = {
         title,
         content,
-        nickname: nickname || "GUEST",
+        nickname: nickname || t("common.guest"),
         currentChapter,
       };
 
@@ -174,7 +176,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
 
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || "An error occurred while sending the bug report.");
+      setError(err.message || t("common.errorOccurred"));
     } finally {
       setIsSubmitting(false);
     }
@@ -192,7 +194,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
 
   return (
     <WindowFrame
-      title="Bug Report System"
+      title={t("bug.title")}
       zIndex={zIndex}
       onClose={onClose}
       onFocus={onFocus}
@@ -214,10 +216,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
             <div className="relative flex flex-col items-center">
               <div className="w-16 h-16 border-4 border-t-[#00D4FF] border-r-transparent border-b-[#00D4FF] border-l-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,212,255,0.5)]" />
               <div className="text-[#00D4FF] font-bold text-xl tracking-[0.2em] animate-pulse drop-shadow-[0_0_8px_rgba(0,212,255,0.8)]">
-                OPTIMIZING...
+                {t("bug.status.optimizing")}
               </div>
               <p className="text-[#0099CC] text-[10px] mt-2 uppercase tracking-widest">
-                Compressing high-res visual data
+                {t("bug.status.compressing")}
               </p>
             </div>
           </div>
@@ -227,10 +229,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
           <div className="flex flex-col items-center justify-center h-full gap-6">
             <div className="text-center drop-shadow-[0_0_10px_rgba(0,212,255,0.8)] h-16 flex flex-col justify-center">
               <p className={`text-xl font-bold mb-1 text-[#00D4FF] transition-all duration-500 ${showCompleteText ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-                시스템 오류 로그 전송 완료
+                {t("bug.status.successTitle")}
               </p>
               <p className={`text-[#0099CC] text-sm transition-opacity duration-500 ${showCompleteText ? "opacity-100" : "opacity-40 animate-pulse"}`}>
-                {showCompleteText ? "신고해주셔서 감사합니다." : "데이터 패킷 전송 중..."}
+                {showCompleteText ? t("bug.status.successMsg") : t("bug.status.sendingMsg")}
               </p>
             </div>
 
@@ -243,7 +245,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
             </div>
 
             <div className="text-[10px] text-[#0099CC] mt-[-10px] tracking-widest font-bold">
-              TRANSMISSION {progress}% {progress === 100 ? "COMPLETE" : "IN PROGRESS"}
+              {t("bug.status.transmission")} {progress}% {progress === 100 ? t("bug.status.complete") : t("bug.status.inProgress")}
             </div>
 
             <button
@@ -251,42 +253,41 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
               onClick={handleSuccessConfirm}
               className="px-10 py-2 bg-[#00D4FF] text-black hover:bg-[#0099CC] hover:shadow-[0_0_15px_rgba(0,212,255,0.8)] transition-all uppercase text-sm font-bold shadow-[0_0_8px_rgba(0,212,255,0.6)] mt-4"
             >
-              확인
+              {t("bug.confirm")}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 h-full">
             <div className="border-b border-[#0099CC]/50 pb-2 mb-2">
-              <h2 className="text-lg font-bold drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">[시스템 오류 보고 전송]</h2>
-              <p className="text-xs text-[#0099CC]">AGENT: {nickname} | LOC: {currentChapter}</p>
+              <h2 className="text-lg font-bold drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">{t("bug.header")}</h2>
+              <p className="text-xs text-[#0099CC]">{t("bug.agent")}: {nickname} | {t("bug.loc")}: {currentChapter}</p>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">Title</label>
+              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">{t("bug.form.titleLabel")}</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="bg-gray-900 border border-[#0099CC] text-white p-2 outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] focus:bg-[#00D4FF]/[0.05] focus:shadow-[0_0_8px_rgba(0,212,255,0.6)] transition-all"
-                placeholder="오류 데이터 요약..."
+                placeholder={t("bug.form.titlePlaceholder")}
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">Details</label>
+              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">{t("bug.form.detailsLabel")}</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="bg-gray-900 border border-[#0099CC] text-white p-2 outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] focus:bg-[#00D4FF]/[0.05] focus:shadow-[0_0_8px_rgba(0,212,255,0.6)] transition-all flex-1 resize-none terminal-scrollbar"
-                placeholder="어떤 행동을 했을 때 오류가 발생했나요?"
+                placeholder={t("bug.form.detailsPlaceholder")}
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">Attachments (Optional)</label>
-
+              <label className="text-xs font-bold text-[#00D4FF] uppercase drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]">{t("bug.form.attachmentsLabel")}</label>
               <div
                 className={`relative overflow-hidden w-full border-2 border-dashed transition-all p-4 flex flex-col items-center justify-center gap-2 ${
                   isDragging ? "border-[#00D4FF] bg-[#00D4FF]/20 shadow-[inset_0_0_20px_rgba(0,212,255,0.2)]" : "border-[#0099CC]/50 bg-black hover:border-[#00D4FF]/70"
@@ -303,10 +304,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                   disabled={isSubmitting || isCompressing}
                 />
                 <span className="font-bold uppercase text-sm transition-colors text-center pointer-events-none drop-shadow-[0_0_5px_rgba(0,212,255,0.8)]" style={{ color: isDragging ? '#ffffff' : '#00D4FF' }}>
-                  {isCompressing ? "COMPRESSING IMAGES..." : isDragging ? "DROP FILES HERE" : "파일 업로드"}
+                  {isCompressing ? t("bug.form.compressing") : isDragging ? t("bug.form.dropFilesActive") : t("bug.form.dropFiles")}
                 </span>
                 <span className="text-xs text-[#0099CC] pointer-events-none">
-                  [용량 제한: 총 10MB]
+                  {t("bug.form.sizeLimit")}
                 </span>
               </div>
 
@@ -338,14 +339,14 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
                 className="px-4 py-2 border border-[#00D4FF] text-[#00D4FF] hover:bg-[#00D4FF]/10 hover:shadow-[0_0_10px_rgba(0,212,255,0.4)] transition-all uppercase text-sm font-bold"
                 disabled={isSubmitting}
               >
-                Cancel
+                {t("bug.cancel")}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-[#00D4FF] border border-[#00D4FF] text-black hover:bg-[#0099CC] hover:shadow-[0_0_15px_rgba(0,212,255,0.8)] transition-all uppercase text-sm font-bold shadow-[0_0_8px_rgba(0,212,255,0.6)]"
                 disabled={isSubmitting || isCompressing}
               >
-                {isSubmitting ? "TRANSMITTING..." : isCompressing ? "OPTIMIZING..." : "TRANSMIT"}
+                {isSubmitting ? t("bug.status.transmitting") : isCompressing ? t("bug.status.optimizing") : t("bug.status.transmit")}
               </button>
             </div>
           </form>

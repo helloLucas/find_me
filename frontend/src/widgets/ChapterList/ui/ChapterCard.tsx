@@ -1,4 +1,5 @@
 import { CHAPTER_STATUS, type ChapterStatusValue } from '../../../entities/Chapter/hooks/useChapterStatus';
+import { useTranslation } from 'react-i18next';
 import { useModalStore } from '../../../app/store/modalStore';
 import { trackAnalyticsEvent } from '../../../shared/analytics';
 
@@ -42,7 +43,7 @@ const PixelArrow = () => (
 );
 
 // 전략 패턴: 상태별 렌더링 및 이벤트 설정 객체 (if-else 구조 제거)
-const STATUS_CONFIG: Record<ChapterStatusValue, {
+const getStatusConfig = (t: any): Record<ChapterStatusValue, {
     containerClass: string;
     label: string;
     icon: React.ReactNode;
@@ -50,36 +51,36 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
     titleClass: string;
     watermarkClass: string;
     action: (onClick: () => void, openModal: any) => void;
-}> = {
+}> => ({
     [CHAPTER_STATUS.DISABLED]: {
         containerClass: "border-gray-700 bg-gray-900/10 cursor-not-allowed opacity-70",
-        label: "NOT_AVAILABLE",
+        label: t('lobby.status.notAvailable'),
         icon: <PixelX />,
         labelClass: "text-gray-400",
         titleClass: "text-gray-300",
         watermarkClass: "text-gray-800/80",
         action: (_, openModal) => openModal({
-            title: 'SYSTEM_LOCK',
-            message: '아직 시스템에 배포되지 않은 챕터입니다.',
+            title: t('lobby.modal.lockTitle'),
+            message: t('lobby.modal.lockMsg'),
             type: 'alert'
         }),
     },
     [CHAPTER_STATUS.LOCKED]: {
         containerClass: "border-gray-700 bg-[#0a0a0a] cursor-not-allowed",
-        label: "ACCESS_LOCKED",
+        label: t('lobby.status.accessLocked'),
         icon: <PixelLock />,
         labelClass: "text-gray-500",
         titleClass: "text-gray-400",
         watermarkClass: "text-gray-800",
         action: (_, openModal) => openModal({
-            title: 'SECURITY_ENFORCEMENT',
-            message: '아직 접근할 수 없습니다.\n이전 챕터를 클리어해주세요.',
+            title: t('lobby.modal.securityTitle'),
+            message: t('lobby.modal.securityMsg'),
             type: 'alert'
         }),
     },
     [CHAPTER_STATUS.UNLOCKED]: {
         containerClass: "border-gray-600 bg-[#0a0c08] hover:border-[#a3e635] hover:bg-[#12170d] cursor-pointer group shadow-sm",
-        label: "READY_TO_SYNC",
+        label: t('lobby.status.readyToSync'),
         icon: <PixelArrow />,
         labelClass: "text-[#a3e635] opacity-90",
         titleClass: "text-white",
@@ -88,14 +89,14 @@ const STATUS_CONFIG: Record<ChapterStatusValue, {
     },
     [CHAPTER_STATUS.COMPLETED]: {
         containerClass: "border-[#a3e635]/40 bg-[#0a0c08] hover:border-[#a3e635] hover:bg-[#12170d] cursor-pointer group shadow-[0_0_15px_rgba(163,230,53,0.15)]",
-        label: "SYSTEM_CLEARED",
+        label: t('lobby.status.systemCleared'),
         icon: <PixelCheck />,
         labelClass: "text-[#a3e635]",
         titleClass: "text-[#a3e635]",
         watermarkClass: "text-[#a3e635]/10 group-hover:text-[#a3e635]/20",
         action: (onClick) => onClick(),
     }
-};
+});
 
 export const ChapterCard: React.FC<ChapterCardProps> = ({
     code,
@@ -103,9 +104,12 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     status,
     onClick,
 }) => {
+    const { t } = useTranslation();
     const openModal = useModalStore((state) => state.openModal);
+    
+    const statusConfig = getStatusConfig(t);
     // 안전장치: 매핑되지 않은 status가 들어올 경우 LOCKED 처리
-    const config = STATUS_CONFIG[status] || STATUS_CONFIG[CHAPTER_STATUS.LOCKED];
+    const config = statusConfig[status] || statusConfig[CHAPTER_STATUS.LOCKED];
     const chapterId = extractChapterNumber(code);
     const watermarkId = String(chapterId).padStart(2, '0');
 
@@ -127,7 +131,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
                     {config.label}
                 </span>
                 <h2 className={`text-xl md:text-2xl tracking-widest font-lobby ${config.titleClass}`}>
-                    CHAPTER {chapterId}
+                    {t('lobby.chapter')} {chapterId}
                 </h2>
                 <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-lobby opacity-70 ${config.titleClass}`}>
                     {title}
@@ -141,7 +145,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             {/* Cleared Stamp (Visible only when COMPLETED) */}
             {status === CHAPTER_STATUS.COMPLETED && (
                 <div className="absolute top-4 right-6 z-20 border-2 border-[#a3e635] text-[#a3e635] text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 shadow-[0_0_10px_rgba(163,230,53,0.3)]">
-                    [ CLEARED ]
+                    [ {t('lobby.cleared')} ]
                 </div>
             )}
         </div>
