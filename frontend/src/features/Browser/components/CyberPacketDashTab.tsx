@@ -807,34 +807,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       </div>
     );
   }
-  // 3. 이미 침투에 완수하여 동기화 세션이 영구 확보된 상태 화면
-  if (isCleared && !forceReplay) {
-    return (
-      <div
-        onClick={() => {
-          setForceReplay(true);
-          startContinuousRun();
-        }}
-        className="flex flex-col items-center justify-center h-full bg-[#040112] text-cyan-400 font-mono p-6 select-none cursor-pointer"
-      >
-        <div className="max-w-md w-full border border-cyan-400/30 bg-[#0c081e] px-8 py-10 rounded-xl text-center shadow-[0_0_40px_rgba(5,217,232,0.18)] hover:scale-[1.02] transition-all">
-          {/* 상단 위아래로 움직이는 아이콘 */}
-          <div className="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-950 border border-cyan-400 shadow-[0_0_15px_rgba(5,217,232,0.4)] animate-bounce">
-            <svg viewBox="0 0 8 8" className="w-8 h-8" style={{ imageRendering: 'pixelated' }}>
-              <path d="M1 5h1v1h1v1h2V6h1V5h1V3H6V2H5V1H3v1H2v1H1v2z" fill="#05d9e8" />
-            </svg>
-          </div>
-          {/* FRAGMENT 3 SECURED 문구 */}
-          <h2 className="text-3xl font-extrabold mb-6 tracking-widest text-white">FRAGMENT 3 SECURED</h2>
-          {/* 스페이스바 점프/시작 가이드 */}
-          <div className="text-cyan-400 text-sm font-black tracking-wider animate-pulse border border-cyan-400/20 py-3.5 rounded-lg bg-cyan-950/20 hover:bg-cyan-950/50 transition-all">
-            PRESS SPACEBAR TO START GAME
-          </div>
-          <p className="text-gray-500 text-[10px] mt-4 opacity-60">(또는 여기를 클릭하여 바로 시작)</p>
-        </div>
-      </div>
-    );
-  }
+
   return (
     <div className="h-full bg-[#040112] text-cyan-50 font-mono select-none flex flex-col overflow-hidden">
       {/* 게임 상단 네비 바 */}
@@ -858,21 +831,23 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       {/* 게임 주요 실행부 컨테이너 */}
       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-4 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0d072a] via-[#040112] to-[#010006]">
         {gameState === 'intro' && (
-          <div className="max-w-md w-full text-center border border-[#00ff66]/30 bg-[#0a051d] px-8 py-8 rounded-xl shadow-[0_0_30px_rgba(0,255,102,0.12)]">
-            <h3 className="text-xl font-black mb-2 tracking-widest text-white">60-SECOND FIREWALL BREACH</h3>
-            <p className="text-sm text-gray-300 leading-relaxed mb-6">
-              서버 복구 터널을 통과하기 위해 **1분짜리 리드미컬 트랙**을 완주하십시오.<br />
-              공중에서 한 번 더 누르면 <span className="text-cyan-400 font-bold">이단 점프(Double Jump)</span>를 수행하며,<br />
-              포탈 진입 시 길게 누르고 있으면 상승하는 <span className="text-[#05d9e8] font-bold">비행 모드(Hold to Fly)</span>가 가동됩니다.
-              <br /><br />
-              <span className="text-xs text-gray-400">조작: Spacebar / ArrowUp / W Key / 화면 아무 곳이나 클릭</span>
-            </p>
-            <button
-              onClick={startContinuousRun}
-              className="w-full py-3 rounded bg-[#00ff66] hover:bg-[#00dd55] text-[#040112] font-black transition-all shadow-[0_0_15px_rgba(0,255,102,0.4)] cursor-pointer"
-            >
-              BREACH FIREWALL (START SONG)
-            </button>
+          <div
+            onClick={startContinuousRun}
+            className="max-w-md w-full border border-cyan-400/30 bg-[#0c081e] px-8 py-10 rounded-xl text-center shadow-[0_0_40px_rgba(5,217,232,0.18)] cursor-pointer hover:scale-[1.02] transition-all"
+          >
+            {/* 상단 위아래로 움직이는 아이콘 */}
+            <div className="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-950 border border-cyan-400 shadow-[0_0_15px_rgba(5,217,232,0.4)] animate-bounce">
+              <svg viewBox="0 0 8 8" className="w-8 h-8" style={{ imageRendering: 'pixelated' }}>
+                <path d="M1 5h1v1h1v1h2V6h1V5h1V3H6V2H5V1H3v1H2v1H1v2z" fill="#05d9e8" />
+              </svg>
+            </div>
+            {/* FRAGMENT 3 SECURED 문구 */}
+            <h2 className="text-3xl font-extrabold mb-6 tracking-widest text-white">FRAGMENT 3 SECURED</h2>
+            {/* 스페이스바 점프/시작 가이드 */}
+            <div className="text-cyan-400 text-sm font-black tracking-wider animate-pulse border border-cyan-400/20 py-3.5 rounded-lg bg-cyan-950/20 hover:bg-cyan-950/50 transition-all">
+              PRESS SPACEBAR TO START GAME
+            </div>
+            <p className="text-gray-500 text-[10px] mt-4 opacity-60">(또는 여기를 클릭하여 바로 시작)</p>
           </div>
         )}
         {gameState === 'crashed' && (
@@ -880,7 +855,6 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
             onClick={startContinuousRun}
             className="max-w-md w-full text-center border border-red-500/30 bg-[#1d0611] px-8 py-10 rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.22)] cursor-pointer hover:scale-[1.02] transition-all"
           >
-            {/* FAILED 문구 */}
             <div className="text-5xl font-black text-red-500 mb-4 tracking-wider animate-pulse">FAILED</div>
             {/* 진행률 */}
             <p className="text-base text-yellow-400 font-bold mb-6">PROGRESS: {progressPercent}%</p>
