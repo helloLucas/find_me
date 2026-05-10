@@ -88,11 +88,12 @@ public class TerminalCommandService {
       case "nmap":
         if (args.contains("-h") || args.contains("--help")) {
           return TerminalResult.builder()
-              .stdout(Arrays.asList(
-                  "Usage: nmap [Scan Type(s)] [Options] {target specification}",
-                  "  -p <port ranges>: Only scan specified ports",
-                  "  -v: Increase verbosity level",
-                  "  -h: Display this help summary page"))
+              .stdout(
+                  Arrays.asList(
+                      "Usage: nmap [Scan Type(s)] [Options] {target specification}",
+                      "  -p <port ranges>: Only scan specified ports",
+                      "  -v: Increase verbosity level",
+                      "  -h: Display this help summary page"))
               .cwd(cwd)
               .prompt(buildPrompt(cwd, vfs))
               .resultCode("SUCCESS")
@@ -248,22 +249,23 @@ public class TerminalCommandService {
       case "ss":
       case "netstat":
         if (args.contains("-h") || args.contains("--help")) {
-          List<String> helpLines = cmd.equals("ss")
-              ? Arrays.asList(
-                  "Usage: ss [ OPTIONS ]",
-                  "   -h, --help          this help message",
-                  "   -a, --all           display all sockets",
-                  "   -l, --listening     display listening sockets",
-                  "   -p, --processes     show process using socket",
-                  "   -t, --tcp           display TCP sockets")
-              : Arrays.asList(
-                  "usage: netstat {-V|--version|-h|--help}",
-                  "       netstat [-vWnNcaeol] [<Socket> ...]",
-                  "",
-                  "        -s, --statistics         display networking statistics",
-                  "        -a, --all                display all sockets",
-                  "        -l, --listening          display listening server sockets",
-                  "        -h, --help               display this help message");
+          List<String> helpLines =
+              cmd.equals("ss")
+                  ? Arrays.asList(
+                      "Usage: ss [ OPTIONS ]",
+                      "   -h, --help          this help message",
+                      "   -a, --all           display all sockets",
+                      "   -l, --listening     display listening sockets",
+                      "   -p, --processes     show process using socket",
+                      "   -t, --tcp           display TCP sockets")
+                  : Arrays.asList(
+                      "usage: netstat {-V|--version|-h|--help}",
+                      "       netstat [-vWnNcaeol] [<Socket> ...]",
+                      "",
+                      "        -s, --statistics         display networking statistics",
+                      "        -a, --all                display all sockets",
+                      "        -l, --listening          display listening server sockets",
+                      "        -h, --help               display this help message");
           return TerminalResult.builder()
               .stdout(helpLines)
               .cwd(cwd)
@@ -276,18 +278,26 @@ public class TerminalCommandService {
           return buildErrorResult(cwd, vfs, "Usage: " + cmd + " [ OPTIONS ]");
         }
 
-        boolean isListening = args.stream().anyMatch(a -> a.contains("l") || a.contains("listening"));
+        boolean isListening =
+            args.stream().anyMatch(a -> a.contains("l") || a.contains("listening"));
         boolean isTcp = args.stream().anyMatch(a -> a.contains("t") || a.contains("tcp"));
         boolean isUdp = args.stream().anyMatch(a -> a.contains("u") || a.contains("udp"));
         boolean isStats = args.stream().anyMatch(a -> a.contains("s") || a.contains("statistics"));
 
         List<String> resultLines = new ArrayList<>();
         if (cmd.equals("ss")) {
-          resultLines.add("State       Recv-Q Send-Q  Local Address:Port   Peer Address:Port   Process");
+          resultLines.add(
+              "State       Recv-Q Send-Q  Local Address:Port   Peer Address:Port   Process");
           if (isListening) {
-            if (!isUdp) resultLines.add("LISTEN      0      128     0.0.0.0:8080         0.0.0.0:*           users:((\"relay_stub\",pid=1042,fd=6))");
-            if (!isUdp) resultLines.add("LISTEN      0      128     0.0.0.0:22           0.0.0.0:*           users:((\"sshd\",pid=842,fd=3))");
-            if (!isUdp) resultLines.add("LISTEN      0      128     0.0.0.0:9091         0.0.0.0:*           users:((\"relay\",pid=2105,fd=4))");
+            if (!isUdp)
+              resultLines.add(
+                  "LISTEN      0      128     0.0.0.0:8080         0.0.0.0:*           users:((\"relay_stub\",pid=1042,fd=6))");
+            if (!isUdp)
+              resultLines.add(
+                  "LISTEN      0      128     0.0.0.0:22           0.0.0.0:*           users:((\"sshd\",pid=842,fd=3))");
+            if (!isUdp)
+              resultLines.add(
+                  "LISTEN      0      128     0.0.0.0:9091         0.0.0.0:*           users:((\"relay\",pid=2105,fd=4))");
           } else if (isStats) {
             resultLines.add("Total: 145");
             resultLines.add("TCP:   17 (estab 2, closed 0, orphaned 0, timewait 0, ports 0)");
@@ -302,13 +312,18 @@ public class TerminalCommandService {
             resultLines.add("    2 connections established");
           } else {
             resultLines.add("Active Internet connections (w/o servers)");
-            resultLines.add("Proto Recv-Q Send-Q Local Address           Foreign Address         State");
+            resultLines.add(
+                "Proto Recv-Q Send-Q Local Address           Foreign Address         State");
             if (isListening) {
-              resultLines.add("tcp        0      0 0.0.0.0:8080            0.0.0.0:*               LISTEN");
-              resultLines.add("tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN");
-              resultLines.add("tcp        0      0 0.0.0.0:9091            0.0.0.0:*               LISTEN");
+              resultLines.add(
+                  "tcp        0      0 0.0.0.0:8080            0.0.0.0:*               LISTEN");
+              resultLines.add(
+                  "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN");
+              resultLines.add(
+                  "tcp        0      0 0.0.0.0:9091            0.0.0.0:*               LISTEN");
             } else {
-              resultLines.add("tcp        0      0 192.168.1.15:44342      104.26.10.233:443       ESTABLISHED");
+              resultLines.add(
+                  "tcp        0      0 192.168.1.15:44342      104.26.10.233:443       ESTABLISHED");
             }
           }
         }
@@ -323,13 +338,14 @@ public class TerminalCommandService {
       case "nc":
         if (args.contains("-h") || args.contains("--help")) {
           return TerminalResult.builder()
-              .stdout(Arrays.asList(
-                  "usage: nc [-hlnuvz] [destination] [port]",
-                  "        Command line options:",
-                  "          -h              This help text",
-                  "          -l              Listen mode",
-                  "          -v              Verbose",
-                  "          -z              Zero-I/O mode [used for scanning]"))
+              .stdout(
+                  Arrays.asList(
+                      "usage: nc [-hlnuvz] [destination] [port]",
+                      "        Command line options:",
+                      "          -h              This help text",
+                      "          -l              Listen mode",
+                      "          -v              Verbose",
+                      "          -z              Zero-I/O mode [used for scanning]"))
               .cwd(cwd)
               .prompt(buildPrompt(cwd, vfs))
               .resultCode("SUCCESS")
@@ -346,24 +362,27 @@ public class TerminalCommandService {
         if (port.equals("9091")) {
           if (isZeroIo && isVerbose) {
             return TerminalResult.builder()
-                .stdout(Collections.singletonList("Connection to " + host + " 9091 port [tcp/*] succeeded!"))
+                .stdout(
+                    Collections.singletonList(
+                        "Connection to " + host + " 9091 port [tcp/*] succeeded!"))
                 .cwd(cwd)
                 .prompt(buildPrompt(cwd, vfs))
                 .resultCode("SUCCESS")
                 .build();
           } else {
             return TerminalResult.builder()
-                .stdout(Arrays.asList(
-                    "NXR/0.3",
-                    "mode: ro",
-                    "origin: gate_04",
-                    "session: redirected",
-                    "window: unstable",
-                    "protocol: line-oriented cache selector",
-                    "tokens: request names, not shell commands",
-                    "",
-                    "ERR empty request",
-                    "last accepted: STATUS"))
+                .stdout(
+                    Arrays.asList(
+                        "NXR/0.3",
+                        "mode: ro",
+                        "origin: gate_04",
+                        "session: redirected",
+                        "window: unstable",
+                        "protocol: line-oriented cache selector",
+                        "tokens: request names, not shell commands",
+                        "",
+                        "ERR empty request",
+                        "last accepted: STATUS"))
                 .cwd(cwd)
                 .prompt(buildPrompt(cwd, vfs))
                 .resultCode("SUCCESS")
@@ -374,13 +393,18 @@ public class TerminalCommandService {
         if (isZeroIo && isVerbose) {
           if (port.equals("80") || port.equals("22")) {
             return TerminalResult.builder()
-                .stdout(Collections.singletonList("Connection to " + host + " " + port + " port [tcp/*] succeeded!"))
+                .stdout(
+                    Collections.singletonList(
+                        "Connection to " + host + " " + port + " port [tcp/*] succeeded!"))
                 .cwd(cwd)
                 .prompt(buildPrompt(cwd, vfs))
                 .resultCode("SUCCESS")
                 .build();
           } else {
-            return buildErrorResult(cwd, vfs, "nc: connect to " + host + " port " + port + " (tcp) failed: Connection refused");
+            return buildErrorResult(
+                cwd,
+                vfs,
+                "nc: connect to " + host + " port " + port + " (tcp) failed: Connection refused");
           }
         }
 
@@ -392,11 +416,12 @@ public class TerminalCommandService {
       case "lsof":
         if (args.contains("-i")) {
           return TerminalResult.builder()
-              .stdout(Arrays.asList(
-                  "COMMAND    PID   USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME",
-                  "sshd       842   root    3u  IPv4   21045      0t0  TCP *:22 (LISTEN)",
-                  "relay_stu 1042  guest    6u  IPv4   22156      0t0  TCP *:8080 (LISTEN)",
-                  "relay     2105  guest    4u  IPv4   25167      0t0  TCP *:9091 (LISTEN)"))
+              .stdout(
+                  Arrays.asList(
+                      "COMMAND    PID   USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME",
+                      "sshd       842   root    3u  IPv4   21045      0t0  TCP *:22 (LISTEN)",
+                      "relay_stu 1042  guest    6u  IPv4   22156      0t0  TCP *:8080 (LISTEN)",
+                      "relay     2105  guest    4u  IPv4   25167      0t0  TCP *:9091 (LISTEN)"))
               .cwd(cwd)
               .prompt(buildPrompt(cwd, vfs))
               .resultCode("SUCCESS")
