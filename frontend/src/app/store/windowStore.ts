@@ -54,6 +54,7 @@ function resolveWindowId(
   if (idOrType === "messenger") return "messenger";
   if (idOrType === "email") return "email";
   if (idOrType === "notepad") return "notepad";
+  if (idOrType === "trash") return "trash";
 
   return null;
 }
