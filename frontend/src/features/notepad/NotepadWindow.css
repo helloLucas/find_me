@@ -1,17 +1,22 @@
+/* ────────────────────────────────────────────────────────
+   1. 최상위 메모장 컨테이너 (사이버펑크 메카니컬 테마)
+   ──────────────────────────────────────────────────────── */
 .notepad-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background: linear-gradient(135deg, #0b0f19 0%, #111827 100%);
+  background: radial-gradient(circle at 50% 30%, #15102a 0%, #080a10 100%);
   color: #38bdf8;
   font-family: 'Courier New', Courier, monospace, 'Outfit', 'Inter', sans-serif;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+  /* 테두리에 미세한 메탈 프레임 느낌 부여 */
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.85);
 }
 
-/* CRT 스캔라인 특수 효과 */
+/* CRT 스캔라인 특수 효과 (화면이 지직거리는 듯한 레트로 감성 심화) */
 .notepad-scanlines {
   position: absolute;
   top: 0;
@@ -20,20 +25,241 @@
   height: 100%;
   background: linear-gradient(
     rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
+    rgba(0, 0, 0, 0.3) 50%
   );
   background-size: 100% 4px;
   z-index: 10;
   pointer-events: none;
-  opacity: 0.45;
+  opacity: 0.35;
+  animation: scanlineScroll 12s linear infinite;
 }
 
+@keyframes scanlineScroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* ────────────────────────────────────────────────────────
+   2. 최첨단 하이테크 멀티 탭 바 (Tab Bar UI)
+   ──────────────────────────────────────────────────────── */
+.notepad-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #0f111a 0%, #07080e 100%);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.25);
+  padding: 0 12px;
+  height: 42px;
+  z-index: 15;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 1px 0px rgba(56, 189, 248, 0.15);
+  position: relative;
+}
+
+/* 탭 바 하단 네온 백라이트 라인 */
+.notepad-tab-bar::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 10%, #38bdf8 50%, transparent 90%);
+  opacity: 0.6;
+  box-shadow: 0 0 8px #38bdf8;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.notepad-tabs-scroll-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1;
+  height: 100%;
+  padding-top: 8px;
+  padding-bottom: 0px;
+}
+
+/* 탭 바 가로 스크롤 가리기 및 스무스 터치 */
+.notepad-tabs-scroll-area::-webkit-scrollbar {
+  height: 4px;
+}
+
+.notepad-tabs-scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.notepad-tabs-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 2px;
+}
+
+/* 대각선 경사 컷팅 사이버네틱 탭 스타일 (Angled Tab Design) */
+.notepad-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-bottom: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 12px; /* 사선 컷 대칭 */
+  padding: 0 14px;
+  height: 30px;
+  min-width: 100px;
+  max-width: 160px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #475569;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* 호버 시 네온 시안 은은한 반응형 글로우 */
+.notepad-tab-item:hover {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* 활성화된 탭 (Active State - 극강의 미래도시 메카니컬 비주얼) */
+.notepad-tab-item.active {
+  background: linear-gradient(180deg, rgba(16, 24, 48, 1) 0%, #0b0f19 100%);
+  border-color: #0284c7;
+  border-top-color: #67e8f9;
+  border-right-color: #0284c7;
+  border-left-color: #0284c7;
+  border-bottom: 2px solid #111827; /* 탭 에디터 바디 영역과 구조적 융합 */
+  color: #67e8f9;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(103, 232, 249, 0.7);
+  height: 33px; /* 위로 영리하게 솟아올라 명확히 주도적임을 표현 */
+  z-index: 10;
+  box-shadow: 0 -3px 10px rgba(103, 232, 249, 0.15);
+}
+
+/* 활성 탭 상단 네온 광원 이펙트 바 */
+.notepad-tab-item.active::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #38bdf8, #67e8f9, #38bdf8);
+  box-shadow: 0 0 10px #67e8f9;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 12px;
+}
+
+/* 탭 타이틀 텍스트 정밀 포맷팅 */
+.notepad-tab-title-text {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* 탭 타이틀 수정용 인풋창 (공학용 오렌지 네온 골드 톤) */
+.notepad-tab-title-input {
+  background: #080a10;
+  border: 1px solid #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  color: #f59e0b;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  width: 100%;
+  outline: none;
+  box-sizing: border-box;
+  animation: pulseGoldBorder 1.5s infinite alternate;
+}
+
+@keyframes pulseGoldBorder {
+  0% { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 4px rgba(245, 158, 11, 0.3); }
+  100% { border-color: rgba(245, 158, 11, 1); box-shadow: 0 0 10px rgba(245, 158, 11, 0.6); }
+}
+
+/* 탭 닫기 버튼 (미세 오차 조율 및 에러 방지용 호버 레드 글로우) */
+.notepad-tab-close-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #475569;
+  font-size: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin-top: 1px;
+}
+
+.notepad-tab-item:hover .notepad-tab-close-btn {
+  color: #94a3b8;
+}
+
+.notepad-tab-close-btn:hover {
+  background: rgba(244, 63, 94, 0.2) !important;
+  color: #f43f5e !important;
+  text-shadow: 0 0 6px #f43f5e;
+}
+
+/* 새 탭 추가 플러스(+) 버튼 (고유 브라켓 디자인) */
+.notepad-tab-add-btn {
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px dashed rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 10px;
+  transition: all 0.25s ease;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.notepad-tab-add-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  border-style: solid;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  text-shadow: 0 0 4px #34d399;
+}
+
+/* ────────────────────────────────────────────────────────
+   3. 에디터 텍스트 영역 (CRT 고해상도 백라이트 연출)
+   ──────────────────────────────────────────────────────── */
 .notepad-editor-wrapper {
   flex: 1;
   position: relative;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
+  background: rgba(11, 15, 25, 0.5);
+  border: 1px solid rgba(56, 189, 248, 0.08);
+  margin: 12px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.7);
 }
 
 .notepad-textarea {
@@ -46,71 +272,97 @@
   resize: none;
   color: #67e8f9;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   font-family: inherit;
   z-index: 5;
   box-sizing: border-box;
-  caret-color: #f59e0b; /* 네온 골드 캐럿 */
-  text-shadow: 0 0 4px rgba(103, 232, 249, 0.4);
+  caret-color: #f59e0b; /* 오렌지 골드 네온 포인터 */
+  text-shadow: 0 0 5px rgba(103, 232, 249, 0.35);
 }
 
 .notepad-textarea::placeholder {
-  color: #67e8f9;
-  text-shadow: 0 0 2px rgba(103, 232, 249, 0.2);
-  opacity: 0.45; /* 본문 네온 컬러와 패밀리 톤을 유지하면서 선명한 가독성 보장 */
+  color: #38bdf8;
+  text-shadow: 0 0 3px rgba(56, 189, 248, 0.25);
+  opacity: 0.35;
 }
 
-/* 네온 테마 커스텀 스크롤바 */
+/* 메카닉 스타일의 고화질 네온 스크롤바 */
 .notepad-textarea::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .notepad-textarea::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(11, 15, 25, 0.6);
+  border-radius: 4px;
 }
 
 .notepad-textarea::-webkit-scrollbar-thumb {
-  background: #0284c7;
-  border-radius: 3px;
-  box-shadow: 0 0 8px rgba(2, 132, 199, 0.6);
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.5);
 }
 
 .notepad-textarea::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
 }
 
-/* 사이버펑크 상태바 */
+/* ────────────────────────────────────────────────────────
+   4. 고대비 사이버네틱 상태바 (LED 애니메이션 탑재)
+   ──────────────────────────────────────────────────────── */
 .notepad-status-bar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 20px;
-  padding: 8px 16px;
-  background: rgba(15, 23, 42, 0.85);
+  gap: 24px;
+  padding: 10px 20px;
+  background: linear-gradient(180deg, #080a10 0%, #040508 100%);
   border-top: 1px solid rgba(56, 189, 248, 0.15);
   font-size: 11px;
-  letter-spacing: 0.1em;
-  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-weight: 700;
   z-index: 5;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
 }
 
 .notepad-status-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .status-label {
-  color: #64748b;
+  color: #475569;
+  text-transform: uppercase;
 }
 
 .status-value {
   color: #38bdf8;
-  text-shadow: 0 0 5px rgba(56, 189, 248, 0.3);
+  text-shadow: 0 0 6px rgba(56, 189, 248, 0.45);
 }
 
+/* 실시간 가동 중인 하드웨어를 암시하는 깜빡이는 LED 인디케이터 */
 .status-online {
   color: #10b981;
-  text-shadow: 0 0 5px rgba(16, 185, 129, 0.4);
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.status-online::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10b981, 0 0 4px #10b981;
+  animation: blinkLed 1.4s infinite alternate;
+}
+
+@keyframes blinkLed {
+  0% { opacity: 0.4; box-shadow: 0 0 2px #10b981; }
+  100% { opacity: 1; box-shadow: 0 0 12px #10b981, 0 0 6px #10b981; }
+}
+
