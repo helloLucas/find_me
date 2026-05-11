@@ -1958,24 +1958,175 @@ public class StoryServiceImpl implements StoryService {
     }
 
     if ("find".equals(command.command())) {
-      return command.args().contains("-name")
-          && command.args().contains(fileNameOf(targetFile))
-          && command.args().stream()
-              .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
-              .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+      return matchesFindNameDiscovery(command, targetFile, latestSnapshot);
     }
 
     if ("ls".equals(command.command())) {
-      return command.args().isEmpty()
-          ? parentPathOf(targetFile).equals(extractText(latestSnapshot, "/terminal/cwd"))
-          : command.args().stream()
-              .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
-              .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+      return matchesLsDiscovery(
+          command, targetFile, latestSnapshot, extractText(latestSnapshot, "/terminal/cwd"));
     }
 
-    return input.contains("cd " + parentPathOf(targetFile))
-        && input.contains("&&")
-        && input.contains("ls");
+    return matchesCdThenLsDiscovery(input, targetFile, latestSnapshot);
+  }
+
+  /**
+   * find -name 형태로 targetFile을 찾는 입력인지 검증한다.
+   *
+   * @param command 파싱된 find 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return targetFile 이름과 탐색 루트가 일치하면 true
+   */
+  private boolean matchesFindNameDiscovery(
+      ParsedCommand command, String targetFile, JsonNode latestSnapshot) {
+    // targetFile의 파일명만 분리해 -name 값과 비교한다.
+    String targetName = fileNameOf(targetFile);
+
+    // find가 탐색할 루트 경로 후보를 담는다.
+    List<String> searchRoots = new ArrayList<>();
+
+    // -name 값이 targetName과 일치했는지 추적한다.
+    boolean targetNameSeen = false;
+
+    // find 인자를 왼쪽부터 해석한다.
+    for (int i = 0; i < command.args().size(); i++) {
+      // 현재 인자를 읽는다.
+      String arg = command.args().get(i);
+
+      // -name 뒤에는 파일명 패턴이 온다.
+      if ("-name".equals(arg)) {
+        // 다음 값이 targetName이면 파일명 조건을 충족한다.
+        targetNameSeen =
+            targetNameSeen
+                || (i + 1 < command.args().size() && targetName.equals(command.args().get(i + 1)));
+
+        // -name 값까지 소비했으므로 다음 반복에서 건너뛴다.
+        i++;
+
+        // 현재 인자 처리를 마쳤다.
+        continue;
+      }
+
+      // -type f 같은 보조 조건은 탐색 루트가 아니므로 값까지 건너뛴다.
+      if ("-type".equals(arg)) {
+        // -type 뒤의 타입 값이 있으면 함께 소비한다.
+        if (i + 1 < command.args().size()) {
+          i++;
+        }
+
+        // 현재 인자 처리를 마쳤다.
+        continue;
+      }
+
+      // 다른 옵션은 탐색 루트가 아니므로 무시한다.
+      if (arg.startsWith("-")) {
+        continue;
+      }
+
+      // 옵션이 아닌 값은 find 탐색 루트 후보로 본다.
+      searchRoots.add(arg);
+    }
+
+    // targetName 조건이 없으면 targetFile을 찾는 find가 아니다.
+    if (!targetNameSeen) {
+      return false;
+    }
+
+    // 루트 생략 find는 현재 디렉터리에서 찾는 것으로 간주한다.
+    if (searchRoots.isEmpty()) {
+      return parentPathOf(targetFile).equals(extractText(latestSnapshot, "/terminal/cwd"));
+    }
+
+    // 입력된 탐색 루트 중 targetFile 위치와 일치하는 루트가 있는지 확인한다.
+    return searchRoots.stream()
+        .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
+        .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+  }
+
+  /**
+   * ls 형태로 targetFile 또는 targetFile이 있는 디렉터리를 확인하는 입력인지 검증한다.
+   *
+   * @param command 파싱된 ls 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param cwdOverride cd 이후처럼 임시로 적용할 기준 cwd
+   * @return targetFile 또는 부모 디렉터리를 ls로 조회하면 true
+   */
+  private boolean matchesLsDiscovery(
+      ParsedCommand command, String targetFile, JsonNode latestSnapshot, String cwdOverride) {
+    // targetFile이 들어 있는 디렉터리를 계산한다.
+    String targetDirectory = parentPathOf(targetFile);
+
+    // 기준 cwd가 없으면 snapshot의 현재 cwd를 사용한다.
+    String baseCwd =
+        cwdOverride == null || cwdOverride.isBlank()
+            ? extractText(latestSnapshot, "/terminal/cwd")
+            : cwdOverride;
+
+    // 옵션을 제외한 실제 path 인자만 모은다.
+    List<String> pathArgs =
+        command.args().stream().filter(arg -> !arg.startsWith("-")).collect(Collectors.toList());
+
+    // path 인자가 없는 ls는 현재 디렉터리를 조회한다.
+    if (pathArgs.isEmpty()) {
+      return targetDirectory.equals(baseCwd);
+    }
+
+    // path 인자가 있으면 targetFile 또는 부모 디렉터리로 해석되는지 확인한다.
+    return pathArgs.stream()
+        .map(rawPath -> resolveSnapshotPathFromCwd(latestSnapshot, baseCwd, rawPath))
+        .anyMatch(path -> path.equals(targetDirectory) || path.equals(targetFile));
+  }
+
+  /**
+   * cd targetDirectory 후 ls로 targetFile을 찾는 입력인지 검증한다.
+   *
+   * @param input 사용자 원문 입력
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cd와 ls가 같은 입력 안에서 순서대로 수행되면 true
+   */
+  private boolean matchesCdThenLsDiscovery(
+      String input, String targetFile, JsonNode latestSnapshot) {
+    // && 또는 ; 로 나뉜 쉘 명령 두 개를 순서대로 확인한다.
+    String[] rawCommands = input.trim().split("\\s*(?:&&|;)\\s*");
+
+    // cd와 ls가 모두 있어야 한다.
+    if (rawCommands.length < 2) {
+      return false;
+    }
+
+    // 첫 명령어를 cd 후보로 파싱한다.
+    ParsedCommand cdCommand = parseCommand(rawCommands[0]);
+
+    // 두 번째 명령어를 ls 후보로 파싱한다.
+    ParsedCommand lsCommand = parseCommand(rawCommands[1]);
+
+    // cd 또는 ls 파싱이 실패하면 검증할 수 없다.
+    if (cdCommand == null || lsCommand == null) {
+      return false;
+    }
+
+    // 첫 명령은 cd여야 하고 이동 경로가 있어야 한다.
+    if (!"cd".equals(cdCommand.command()) || cdCommand.args().isEmpty()) {
+      return false;
+    }
+
+    // 두 번째 명령은 ls여야 한다.
+    if (!"ls".equals(lsCommand.command())) {
+      return false;
+    }
+
+    // cd 대상 경로를 현재 snapshot 기준 절대 경로로 해석한다.
+    String cdTarget = resolveSnapshotPath(latestSnapshot, cdCommand.args().get(0));
+
+    // targetFile이 있는 디렉터리로 이동하는지 확인한다.
+    if (!parentPathOf(targetFile).equals(cdTarget)) {
+      return false;
+    }
+
+    // cd 이후 cwd를 기준으로 ls가 targetFile을 드러내는지 확인한다.
+    return matchesLsDiscovery(lsCommand, targetFile, latestSnapshot, cdTarget);
   }
 
   /**
@@ -3340,6 +3491,27 @@ public class StoryServiceImpl implements StoryService {
     VfsContext vfs = createVfsContext(latestSnapshot);
 
     // PathResolver를 사용해 루트 이탈을 막은 절대 경로로 변환한다.
+    return pathResolver.resolve(cwd, rawPath, vfs);
+  }
+
+  /**
+   * 지정한 cwd 기준으로 입력 경로를 VFS 절대 경로로 정규화한다.
+   *
+   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @param cwd 경로 해석에 사용할 기준 cwd
+   * @param rawPath 유저가 입력한 경로
+   * @return 정규화된 VFS 절대 경로
+   */
+  private String resolveSnapshotPathFromCwd(JsonNode latestSnapshot, String cwd, String rawPath) {
+    // cwd가 비어 있으면 일반 snapshot cwd 해석으로 위임한다.
+    if (cwd == null || cwd.isBlank()) {
+      return resolveSnapshotPath(latestSnapshot, rawPath);
+    }
+
+    // 현재 snapshot의 정적 VFS와 overlay를 반영한 컨텍스트를 만든다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+
+    // 지정된 cwd를 기준으로 입력 경로를 정규화한다.
     return pathResolver.resolve(cwd, rawPath, vfs);
   }
 

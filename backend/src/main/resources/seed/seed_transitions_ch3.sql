@@ -4854,6 +4854,30 @@ SELECT
   "setFlags": {
     "ghost_mode_enabled": true
   },
+  "vfsOverlay": {
+    "modifiedNodes": [
+      {
+        "path": "/usr/bin/local",
+        "type": "directory",
+        "name": "local",
+        "readable": true,
+        "executable": true,
+        "protected": false,
+        "hidden": false
+      },
+      {
+        "path": "/usr/bin/local/laplace_fragment_03.sh",
+        "type": "file",
+        "name": "laplace_fragment_03.sh",
+        "readable": true,
+        "executable": true,
+        "protected": false,
+        "hidden": false,
+        "contentKey": "LAPLACE_FRAGMENT_03",
+        "storyKey": "LAPLACE_FRAGMENT"
+      }
+    ]
+  },
   "snapshotPatch": {
     "flags.ghost_mode_enabled": true
   },
