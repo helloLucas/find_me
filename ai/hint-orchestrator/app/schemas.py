@@ -53,8 +53,13 @@ class HintGenerateRequest(BaseModel):
         default=0, validation_alias=AliasChoices("repeat_count_after_action", "repeatCountAfterAction")
     )
     selected_phase: str | None = Field(default=None, validation_alias=AliasChoices("selected_phase", "selectedPhase"))
+    intent_subtype: str | None = Field(default=None, validation_alias=AliasChoices("intent_subtype", "intentSubtype"))
     low_confidence: bool = Field(default=False, validation_alias=AliasChoices("low_confidence", "lowConfidence"))
     query_text: str | None = Field(default=None, validation_alias=AliasChoices("query_text", "queryText"))
+    command_usage_context: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("command_usage_context", "commandUsageContext"),
+    )
     evidences: list[EvidenceItem] = Field(default_factory=list)
     es_signal: EsSignalInput | None = Field(default=None, validation_alias=AliasChoices("es_signal", "esSignal"))
 
@@ -96,6 +101,7 @@ class HintRetrieveRequest(BaseModel):
 class HintRetrieveResponse(BaseModel):
     message_type: str
     route_decision: str
+    intent_subtype: str = "progress_hint"
     selected_phase: str
     low_confidence: bool
     query_vector_dimension: int
@@ -104,4 +110,5 @@ class HintRetrieveResponse(BaseModel):
     repeat_count_after_action: int
     stress_score: int
     hint_level: str
+    command_usage_context: dict[str, Any] | None = None
     evidences: list[EvidenceItem]

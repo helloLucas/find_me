@@ -30,25 +30,69 @@ def build_prompt(request: HintGenerateRequest) -> str:
         request.fail_count_after_action, request.repeat_count_after_action, request.low_confidence
     )
     payload = _to_prompt_payload(request, hint_level)
-    payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 
-    return (
-        "입력 컨텍스트(JSON):\n"
-        f"{payload_json}\n\n"
-        "반드시 JSON 객체 하나만 출력해라. 마크다운 금지.\n"
-        "{\n"
-        '  "hint_text": "string",\n'
-        '  "hint_level": "LOW_CONFIDENCE|LIGHT|MEDIUM|STRONG"\n'
-        "}"
+
+def resolve_command_usage_examples_from_metadata(
+    metadata: dict[str, Any] | None,
+    action_type: str | None = None,
+) -> dict[str, str | None]:
+    source = metadata or {}
+    config = _as_dict(source.get("validator_config"))
+    rule = str(config.get("rule") or "").strip().upper()
+    raw_expected = _safe_str(source.get("expected_input"))
+
+    strong = _resolve_expected_input_exact(raw_expected, config, rule)
+    strong = _adapt_expected_input_by_hint_level(
+        raw_expected=raw_expected,
+        exact_value=strong,
+        rule=rule,
+        hint_level="STRONG",
+        action_type=action_type,
+        command_from_config=_safe_str(config.get("command")) if config else None,
     )
+    medium = _adapt_expected_input_by_hint_level(
+        raw_expected=raw_expected,
+        exact_value=strong,
+        rule=rule,
+        hint_level="MEDIUM",
+        action_type=action_type,
+        command_from_config=_safe_str(config.get("command")) if config else None,
+    )
+
+    command_head = _command_head(strong) or _command_head(medium) or _command_head(raw_expected)
+    if not command_head:
+        command_head = _command_head(_build_command_from_config(config))
+
+    return {
+        "rule": rule or None,
+        "command_head": command_head,
+        "example_strong": strong,
+        "example_medium": medium,
+        "raw_expected_input": raw_expected,
+    }
 
 
 def _to_prompt_payload(request: HintGenerateRequest, hint_level: str) -> dict[str, Any]:
+    intent_subtype = (request.intent_subtype or "progress_hint").strip().lower()
+
+    if intent_subtype == "command_usage":
+        query_context_excerpt = None
+        evidences_payload: list[dict[str, Any]] = []
+    else:
+        query_context_excerpt = _compact_query_text(request.query_text)
+        current_head = _extract_current_input_head(query_context_excerpt)
+        evidences_payload = _build_progress_evidences(
+            request.evidences,
+            hint_level=hint_level,
+            current_command_head=current_head,
+        )
+
     payload: dict[str, Any] = {
         "policy": {
             "hint_level": hint_level,
-            "instruction_tone": _instruction_tone(hint_level),
             "phase": request.selected_phase,
+            "intent_subtype": intent_subtype,
             "low_confidence": request.low_confidence,
         },
         "runtime": {
@@ -59,12 +103,80 @@ def _to_prompt_payload(request: HintGenerateRequest, hint_level: str) -> dict[st
             "repeat_count_after_action": request.repeat_count_after_action,
         },
         "user_message": request.user_message,
-        "query_context_excerpt": _compact_query_text(request.query_text),
-        "evidences": [_compact_evidence(item, hint_level) for item in request.evidences],
+        "query_context_excerpt": query_context_excerpt,
+        "evidences": evidences_payload,
     }
+    if request.command_usage_context:
+        payload["command_usage_context"] = _normalize_command_usage_context(request.command_usage_context)
     if request.es_signal:
         payload["es_signal"] = request.es_signal.model_dump()
     return payload
+
+
+def _extract_current_input_head(query_context_excerpt: str | None) -> str | None:
+    if not query_context_excerpt:
+        return None
+    for line in query_context_excerpt.splitlines():
+        line = line.strip()
+        if not line.startswith("current_input:"):
+            continue
+        value = line.removeprefix("current_input:").strip()
+        return _command_head(value)
+    return None
+
+
+def _build_progress_evidences(
+    items: list[EvidenceItem],
+    *,
+    hint_level: str,
+    current_command_head: str | None,
+) -> list[dict[str, Any]]:
+    compacted = [_compact_evidence(item, hint_level) for item in items]
+    ordered = _order_progress_evidences(compacted, current_command_head=current_command_head)
+    target_count = _target_prompt_evidence_count(hint_level, len(ordered))
+    return ordered[:target_count]
+
+
+def _target_prompt_evidence_count(hint_level: str, total_count: int) -> int:
+    if total_count <= 0:
+        return 0
+    settings = get_settings()
+    level = (hint_level or "").upper()
+    if level in {"LOW_CONFIDENCE", "LIGHT"}:
+        return min(max(1, settings.retrieve_evidence_limit_light), total_count)
+    if level == "MEDIUM":
+        return min(max(1, settings.retrieve_evidence_limit_medium), total_count)
+    return min(max(1, settings.retrieve_evidence_limit_strong), total_count)
+
+
+def _order_progress_evidences(
+    evidences: list[dict[str, Any]],
+    *,
+    current_command_head: str | None,
+) -> list[dict[str, Any]]:
+    def sort_key(item: dict[str, Any]) -> tuple[int, int, float]:
+        metadata = item.get("metadata") if isinstance(item, dict) else {}
+        metadata = metadata if isinstance(metadata, dict) else {}
+        expected = _safe_str(metadata.get("expected_input"))
+        head = _command_head(expected)
+        same_as_current_priority = 0 if (current_command_head and head == current_command_head) else 1
+
+        priority_rank_raw = item.get("priority_rank")
+        try:
+            priority_rank = int(priority_rank_raw) if priority_rank_raw is not None else 9999
+        except Exception:
+            priority_rank = 9999
+
+        similarity_raw = item.get("similarity")
+        try:
+            similarity = float(similarity_raw) if similarity_raw is not None else 0.0
+        except Exception:
+            similarity = 0.0
+
+        return (same_as_current_priority, priority_rank, -similarity)
+
+    return sorted(evidences, key=sort_key)
+
 
 
 def _compact_query_text(query_text: str | None) -> str | None:
@@ -81,7 +193,7 @@ def _compact_query_text(query_text: str | None) -> str | None:
         if line.startswith(keep_prefixes):
             kept.append(line)
 
-    recent_commands = _extract_recent_command_lines(lines, limit=3)
+    recent_commands = _extract_recent_command_lines(lines, limit=2)
     if recent_commands:
         kept.append("recent_commands:")
         kept.extend(recent_commands)
@@ -120,13 +232,11 @@ def _compact_evidence(item: EvidenceItem, hint_level: str) -> dict[str, Any]:
         "expected_input": expected_value,
         "priority_rank": metadata.get("priority_rank"),
     }
-    content = _rewrite_content_expected_input(item.content, expected_value)
 
     return {
         "action_type": item.action_type,
         "similarity": item.similarity,
         "priority_rank": item.priority_rank,
-        "content": content,
         "metadata": metadata_min,
     }
 
@@ -192,7 +302,13 @@ def _resolve_expected_input_exact(raw_expected: str | None, config: dict[str, An
         return _build_hash_file_check_command(config)
 
     if rule == "NORMALIZED_COMMAND":
-        return _build_command_from_config(config)
+        normalized = _build_command_from_config(config)
+        if normalized:
+            return normalized
+        accepted_form = _build_command_from_accepted_forms(config)
+        if accepted_form:
+            return accepted_form
+        return None
 
     if rule == "VIRTUAL_FS_COMMAND":
         command = _safe_str(config.get("command"))
@@ -263,74 +379,118 @@ def _adapt_expected_input_by_hint_level(
     level = (hint_level or "").upper()
     action = (action_type or "").strip().lower()
 
-    if level == "STRONG":
+    if level in {"MEDIUM", "STRONG"}:
         return exact_value or raw_expected or _generic_expected_label(action)
-
-    if level == "MEDIUM":
-        by_rule = _medium_pattern_by_rule(rule, command_from_config)
-        if by_rule:
-            return by_rule
-        command_candidate = exact_value or raw_expected
-        if _looks_like_command_text(command_candidate):
-            return _generalize_command_text(command_candidate)
-        return _generic_expected_label(action)
+    command_candidate = exact_value or raw_expected
+    command_head = _command_head(command_candidate) or _command_head(command_from_config)
 
     # LOW_CONFIDENCE / LIGHT
-    by_rule = _light_label_by_rule(rule, command_from_config)
+    by_rule = _light_pattern_by_rule(rule, command_from_config)
     if by_rule:
         return by_rule
-    command_candidate = exact_value or raw_expected
+    by_head = _light_pattern_by_command_head(command_head)
+    if by_head:
+        return by_head
     if _looks_like_command_text(command_candidate):
-        head = _command_head(command_candidate)
-        return f"{head} 계열 명령" if head else _generic_expected_label(action)
+        return _generalize_command_text(command_candidate)
     return _generic_expected_label(action)
 
 
-def _light_label_by_rule(rule: str, command_from_config: str | None) -> str | None:
+def _light_pattern_by_rule(rule: str, command_from_config: str | None) -> str | None:
+    if rule == "RELAY_REQUEST":
+        return 'echo "<문자열>" | nc <host> <port>'
+    if rule == "RELAY_REQUEST_TO_FILE":
+        return 'echo "<문자열>" | nc <host> <port> > <파일경로>'
     if rule == "PARSED_TAR_COMMAND":
-        return "파일 묶음 생성 명령"
+        return "tar <옵션> <출력.tar> <대상들...>"
     if rule == "FIND_TMP_COMMAND":
-        return "파일 탐색 명령"
+        return 'find <경로> -name "<패턴>"'
     if rule == "NC_SEND_FILE":
-        return "파일 전송 명령"
+        return "nc <host> <port> < <file>"
     if rule == "CHAINED_COMMAND":
-        return "연속 정리 명령"
+        return "<명령어1> && <명령어2>"
     if rule == "AUTO_SYSTEM":
-        return "자동 진행 동작"
-    if rule in {"NORMALIZED_COMMAND", "VIRTUAL_FS_COMMAND"}:
-        if command_from_config:
-            return f"{command_from_config} 계열 명령"
-        return "다음 단계 명령"
+        return "auto"
+    if rule in {"NORMALIZED_COMMAND", "VIRTUAL_FS_COMMAND"} and command_from_config:
+        return _light_pattern_by_command_head(_command_head(command_from_config))
     return None
 
 
 def _medium_pattern_by_rule(rule: str, command_from_config: str | None) -> str | None:
     if rule == "PARSED_TAR_COMMAND":
-        return "tar <옵션> <아카이브이름>.tar <대상들>"
+        return "tar -cvf <출력.tar> <대상1> <대상2>"
     if rule == "FIND_TMP_COMMAND":
-        return 'find . -name "<패턴>"'
+        return 'find <경로> -name "<패턴>"'
     if rule == "NC_SEND_FILE":
         return "nc <host> <port> < <file>"
     if rule == "CHAINED_COMMAND":
-        return "<명령1> && <명령2>"
+        return "<명령어1> && <명령어2>"
     if rule == "AUTO_SYSTEM":
         return "auto"
     if rule in {"NORMALIZED_COMMAND", "VIRTUAL_FS_COMMAND"} and command_from_config:
-        return f"{command_from_config} <대상>"
+        return _medium_pattern_by_command_head(_command_head(command_from_config))
     return None
+
+
+def _light_pattern_by_command_head(command_head: str | None) -> str | None:
+    head = (command_head or "").lower().strip()
+    if not head:
+        return None
+    if head == "ls":
+        return "ls <옵션>"
+    if head == "find":
+        return "find <경로> <조건>"
+    if head == "cat":
+        return "cat <경로>"
+    if head == "grep":
+        return "grep <패턴> <경로>"
+    if head == "echo":
+        return "echo <문자열>"
+    if head == "tar":
+        return "tar <옵션> <압축파일> <대상들...>"
+    return f"{head} <옵션> <대상>"
+
+
+def _medium_pattern_by_command_head(command_head: str | None) -> str | None:
+    head = (command_head or "").lower().strip()
+    if not head:
+        return None
+    if head == "ls":
+        return "ls -a[l] <경로>"
+    if head == "find":
+        return 'find <경로> -name "<패턴>"'
+    if head == "cat":
+        return "cat <파일경로>"
+    if head == "grep":
+        return "grep -n <패턴> <파일경로>"
+    if head == "echo":
+        return "echo <문자열> | <다음명령>"
+    if head == "tar":
+        return "tar -cvf <출력.tar> <대상1> <대상2>"
+    return f"{head} <옵션> <대상>"
 
 
 def _generalize_command_text(command: str) -> str:
     head = _command_head(command)
     if not head:
-        return "다음 단계 명령"
+        return "쉘 실행 명령어"
     low = command.strip().lower()
-    if low.startswith("tar "):
-        return "tar <옵션> <아카이브이름>.tar <대상들>"
+    if low.startswith("ls"):
+        return "ls <옵션> <경로>"
     if low.startswith("find ") and " -name " in low:
-        return 'find . -name "<패턴>"'
+        return 'find <경로> -name "<패턴>"'
+    if low.startswith("cat "):
+        return "cat <파일경로>"
+    if low.startswith("grep "):
+        return "grep <패턴> <파일경로>"
+    if low.startswith("echo ") and "| nc " in low and " > " in low:
+        return 'echo "<문자열>" | nc <host> <port> > <파일경로>'
+    if low.startswith("echo ") and "| nc " in low:
+        return 'echo "<문자열>" | nc <host> <port>'
     if low.startswith("nc "):
         return "nc <host> <port> < <file>"
+    if low.startswith("tar "):
+        return "tar <옵션> <압축파일> <대상들...>"
     return f"{head} <대상>"
 
 
@@ -345,21 +505,12 @@ def _command_head(command: str | None) -> str | None:
 
 def _generic_expected_label(action: str) -> str:
     if action == "command":
-        return "다음 단계 명령"
+        return "쉘 실행 명령어"
     if action == "click":
-        return "다음 단계 UI 동작"
+        return "화면 상호작용"
     if action == "system":
-        return "다음 단계 시스템 동작"
-    return "다음 단계 행동"
-
-
-def _rewrite_content_expected_input(content: str | None, expected_value: str | None) -> str | None:
-    if not content:
-        return content
-    if expected_value is None:
-        return content
-    value = expected_value
-    return re.sub(r"expected_input=[^;]+", f"expected_input={value}", content)
+        return "시스템 동작"
+    return "유효한 동작"
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -377,6 +528,91 @@ def _as_dict(value: Any) -> dict[str, Any]:
         except json.JSONDecodeError:
             return {}
     return {}
+
+
+def _normalize_command_usage_context(context: dict[str, Any]) -> dict[str, Any]:
+    normalized: dict[str, Any] = dict(context or {})
+    asked = _safe_str(normalized.get("asked_command_head"))
+    normalized["asked_command_head"] = asked
+
+    resolved = normalized.get("resolved_candidates")
+    if isinstance(resolved, str):
+        parsed = _parse_json_loose(resolved)
+        if isinstance(parsed, dict):
+            resolved = parsed.get("resolved_candidates")
+        elif isinstance(parsed, list):
+            resolved = parsed
+
+    candidates: list[dict[str, Any]] = []
+    if isinstance(resolved, list):
+        for item in resolved:
+            if not isinstance(item, dict):
+                continue
+            command_head = _safe_str(item.get("command_head"))
+            if not command_head:
+                continue
+            rule = _safe_str(item.get("rule"))
+            example_medium = _safe_str(item.get("example_medium"))
+            example_strong = _safe_str(item.get("example_strong"))
+            safe_example = _to_safe_command_example(
+                rule=rule,
+                command_head=command_head,
+                example_strong=example_strong,
+                example_medium=example_medium,
+            )
+            candidates.append(
+                {
+                    "command_head": command_head,
+                    "rule": rule,
+                    "example_strong": safe_example,
+                    "example_medium": example_medium,
+                    "score": item.get("score"),
+                    "from_node_match": bool(item.get("from_node_match")),
+                    "transition_id": item.get("transition_id"),
+                }
+            )
+
+    normalized["resolved_candidates"] = candidates
+    normalized["selected_candidate"] = candidates[0] if candidates else None
+    if not normalized.get("asked_command_head") and candidates:
+        normalized["asked_command_head"] = _safe_str(candidates[0].get("command_head"))
+    return normalized
+
+
+def _parse_json_loose(value: str) -> Any:
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        left = text.find("{")
+        right = text.rfind("}")
+        if left != -1 and right > left:
+            try:
+                return json.loads(text[left : right + 1])
+            except json.JSONDecodeError:
+                return None
+    return None
+
+
+def _to_safe_command_example(
+    *,
+    rule: str | None,
+    command_head: str,
+    example_strong: str | None,
+    example_medium: str | None,
+) -> str | None:
+    normalized_rule = (rule or "").strip().upper()
+    if normalized_rule == "RELAY_REQUEST_TO_FILE" and command_head.lower() == "echo":
+        return 'echo "<메시지>" | nc <host> <port> > <output_file>'
+    if normalized_rule == "RELAY_REQUEST" and command_head.lower() == "echo":
+        return 'echo "<요청문>" | nc <host> <port>'
+    if example_medium:
+        return example_medium
+    if example_strong:
+        return _generalize_command_text(example_strong)
+    return f"{command_head} <대상>"
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -415,6 +651,42 @@ def _build_command_from_config(config: dict[str, Any]) -> str | None:
         args.append(resolved_path)
 
     return " ".join([command, *args]).strip()
+
+
+def _build_command_from_accepted_forms(config: dict[str, Any]) -> str | None:
+    forms = _as_list(config.get("acceptedForms"))
+    if not forms:
+        return None
+
+    for raw_form in forms:
+        form = _as_dict(raw_form)
+        if not form:
+            continue
+
+        command = _safe_str(form.get("command"))
+        if not command:
+            continue
+
+        args: list[str] = []
+        args.extend(_as_text_list(form.get("args")))
+        args.extend(_as_text_list(form.get("requiredArgs")))
+
+        any_order = _as_text_list(form.get("argsAnyOrder"))
+        if not any_order:
+            any_order = _as_text_list(form.get("requiredArgsAnyOrder"))
+        if any_order:
+            any_order = sorted(any_order)
+            args.append(any_order[0])
+
+        resolved_path = _normalize_hint_path(_safe_str(form.get("resolvedPath")))
+        if resolved_path:
+            args.append(resolved_path)
+
+        built = _join_command([command, *args])
+        if built:
+            return built
+
+    return None
 
 
 def _build_discover_open_port_command(config: dict[str, Any]) -> str:
@@ -589,13 +861,3 @@ def _looks_like_command_text(value: str | None) -> bool:
     if any(ch in text for ch in ('"', "'", "/", ".", "-", "<", ">", "|", "&", "=")):
         return True
     return False
-
-
-def _instruction_tone(hint_level: str) -> str:
-    if hint_level == "LOW_CONFIDENCE":
-        return "정답을 직접 말하지 말고, 탐색 방향만 짧게 제시"
-    if hint_level == "LIGHT":
-        return "정답을 직접 말하지 말고, 부드럽고 간단한 방향 힌트"
-    if hint_level == "MEDIUM":
-        return "정답을 직접 말하지 말고 핵심 단서를 한 단계 더 구체화"
-    return "필요 시 구체 입력 패턴을 말하듯이 자연스럽게 제시"
