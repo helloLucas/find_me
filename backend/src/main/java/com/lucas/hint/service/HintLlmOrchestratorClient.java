@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -119,11 +120,17 @@ public class HintLlmOrchestratorClient {
     @JsonProperty("selected_phase")
     private String selectedPhase;
 
+    @JsonProperty("intent_subtype")
+    private String intentSubtype;
+
     @JsonProperty("low_confidence")
     private boolean lowConfidence;
 
     @JsonProperty("query_text")
     private String queryText;
+
+    @JsonProperty("command_usage_context")
+    private Map<String, Object> commandUsageContext;
 
     private List<HintEvidenceResponseDto> evidences;
 

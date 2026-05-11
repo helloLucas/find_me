@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     gms_router_provider: str = Field(default="openai", alias="GMS_ROUTER_PROVIDER")
     gms_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LLM_MODEL")
     gms_light_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LIGHT_LLM_MODEL")
+    gms_command_usage_llm_model: str = Field(
+        default="gpt-5-mini", alias="GMS_COMMAND_USAGE_LLM_MODEL"
+    )
     gms_router_model: str = Field(default="gpt-5-mini", alias="GMS_ROUTER_MODEL")
     gms_openai_chat_path: str = Field(
         default="api.openai.com/v1/chat/completions", alias="GMS_OPENAI_CHAT_PATH"
@@ -44,6 +47,9 @@ class Settings(BaseSettings):
     retrieve_default_search_top_k: int = Field(alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
     retrieve_default_evidence_limit: int = Field(alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
     retrieve_default_min_similarity: float = Field(alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
+    retrieve_evidence_limit_light: int = Field(default=2, alias="RETRIEVE_EVIDENCE_LIMIT_LIGHT")
+    retrieve_evidence_limit_medium: int = Field(default=2, alias="RETRIEVE_EVIDENCE_LIMIT_MEDIUM")
+    retrieve_evidence_limit_strong: int = Field(default=3, alias="RETRIEVE_EVIDENCE_LIMIT_STRONG")
 
     hint_stress_fail_weight: int = Field(alias="HINT_STRESS_FAIL_WEIGHT")
     hint_stress_repeat_weight: int = Field(alias="HINT_STRESS_REPEAT_WEIGHT")
@@ -59,6 +65,32 @@ class Settings(BaseSettings):
     )
 
     hint_user_message_max_length: int = Field(default=200, alias="HINT_USER_MESSAGE_MAX_LENGTH")
+
+    hint_command_usage_routing_enabled: bool = Field(
+        default=False, alias="HINT_COMMAND_USAGE_ROUTING_ENABLED"
+    )
+    hint_command_usage_embed_resolver_enabled: bool = Field(
+        default=False, alias="HINT_COMMAND_USAGE_EMBED_RESOLVER_ENABLED"
+    )
+    hint_command_usage_candidate_top_k: int = Field(
+        default=20, alias="HINT_COMMAND_USAGE_CANDIDATE_TOP_K"
+    )
+    hint_command_usage_high_confidence: float = Field(
+        default=0.62, alias="HINT_COMMAND_USAGE_HIGH_CONFIDENCE"
+    )
+    hint_command_usage_medium_confidence: float = Field(
+        default=0.48, alias="HINT_COMMAND_USAGE_MEDIUM_CONFIDENCE"
+    )
+
+    hint_runtime_pattern_rerank_enabled: bool = Field(
+        default=True, alias="HINT_RUNTIME_PATTERN_RERANK_ENABLED"
+    )
+    hint_runtime_pattern_cache_size: int = Field(
+        default=4000, alias="HINT_RUNTIME_PATTERN_CACHE_SIZE"
+    )
+    hint_runtime_pattern_cache_ttl_seconds: int = Field(
+        default=86400, alias="HINT_RUNTIME_PATTERN_CACHE_TTL_SECONDS"
+    )
 
 
 @lru_cache
