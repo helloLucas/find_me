@@ -66,6 +66,8 @@ export default function PlayPage() {
       audioManager.disableGlobalClickSfx();
       audioManager.setStoryVideoPlaying(false);
       audioManager.stopBgm();
+      // 퇴장 시 스토리 런타임 상태 초기화 (다른 챕터 진입 시 잔상 방지)
+      useStoryRuntimeStore.getState().resetStoryRuntime();
     };
   }, [chapterCode, initializeStory]);
 

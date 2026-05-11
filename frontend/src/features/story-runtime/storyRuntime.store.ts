@@ -8,6 +8,7 @@ import { useToastStore } from "../../app/store/toastStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
+import { useNotepadStore } from "../../app/store/notepadStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
 import type {
@@ -61,6 +62,7 @@ type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
   error: string | null;
+  initializationId: number;
   initializeStory: (chapterCode: string) => Promise<void>;
   setCurrentNode: (node: StoryNode, options?: SetCurrentNodeOptions) => void;
   submitStoryAction: (
@@ -578,10 +580,19 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   currentNode: null,
   isLoading: false,
   error: null,
+  initializationId: 0,
   initializeStory: async (chapterCode) => {
-    if (get().isLoading) return;
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
+    
+    // 중복 호출 및 레이스 컨디션 방지를 위한 세션 ID 증가
+    const currentId = get().initializationId + 1;
+    set({ 
+      initializationId: currentId,
+      isLoading: true, 
+      error: null 
+    });
+
     useBrowserContentStore.getState().resetContent();
     useClientStore.getState().resetClientStore();
     useMessengerStore.getState().resetMessenger();
@@ -589,15 +600,17 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     useCallOverlayStore.getState().resetCallOverlay();
     useWindowStore.getState().resetWindows();
 
-    set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
-
     await syncAuthenticatedUserProfile();
 
     try {
       const node = normalizeStoryNodeResponse(
         await storyApi.startStory(resolveChapterCode(chapterCode))
       );
+      
+      // 세션이 유효한지 확인
+      if (get().initializationId !== currentId) return;
+
       get().setCurrentNode(node);
 
       // Chapter 3 도입 시 벨소리 재생 (Node 1: CH3_FRIEND_CALL)
@@ -607,11 +620,19 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         audioManager.playSfx(RING_TONE_SOUND);
         // 벨소리를 충분히 들려주기 위해 6초 대기 후 콘텐츠 표시
         await new Promise((resolve) => setTimeout(resolve, 6000));
+        
+        // 대기 후 세션이 여전히 유효한지 재확인
+        if (get().initializationId !== currentId) return;
+        
         callStore.setRinging(false);
       }
     } catch (startError) {
+      if (get().initializationId !== currentId) return;
+
       try {
         const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
+        if (get().initializationId !== currentId) return;
+
         get().setCurrentNode(fallbackNode);
 
         // Resume 시에도 Chapter 3 첫 노드라면 벨소리 재생
@@ -620,9 +641,12 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
           callStore.setRinging(true);
           audioManager.playSfx(RING_TONE_SOUND);
           await new Promise((resolve) => setTimeout(resolve, 6000));
+          
+          if (get().initializationId !== currentId) return;
           callStore.setRinging(false);
         }
       } catch {
+        if (get().initializationId !== currentId) return;
         set({
           error:
             startError instanceof Error
@@ -631,7 +655,9 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         });
       }
     } finally {
-      set({ isLoading: false });
+      if (get().initializationId === currentId) {
+        set({ isLoading: false });
+      }
     }
   },
 
@@ -811,10 +837,16 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
   resetStoryRuntime: () => {
     useCallOverlayStore.getState().resetCallOverlay();
-    set({
+    useNotepadStore.getState().resetNotepad();
+    // 벨소리나 대화 등의 진행 중인 시각적 효과가 있으면 여기서 명시적으로 닫아줌
+    useLucasStore.getState().resetLucas();
+    
+    set((state) => ({
       currentNode: null,
       isLoading: false,
       error: null,
-    });
+      // initializationId는 리셋하지 않음 (monotonically increasing)
+      initializationId: state.initializationId,
+    }));
   },
 }));
