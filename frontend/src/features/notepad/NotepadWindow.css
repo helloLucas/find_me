@@ -128,7 +128,6 @@
 .notepad-tab-item.active {
   background: linear-gradient(180deg, rgba(16, 24, 48, 1) 0%, #0b0f19 100%);
   border-color: #0284c7;
-  border-top-color: #67e8f9;
   border-right-color: #0284c7;
   border-left-color: #0284c7;
   border-bottom: 2px solid #111827; /* 탭 에디터 바디 영역과 구조적 융합 */
@@ -138,20 +137,6 @@
   height: 33px; /* 위로 영리하게 솟아올라 명확히 주도적임을 표현 */
   z-index: 10;
   box-shadow: 0 -3px 10px rgba(103, 232, 249, 0.15);
-}
-
-/* 활성 탭 상단 네온 광원 이펙트 바 */
-.notepad-tab-item.active::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(90deg, #38bdf8, #67e8f9, #38bdf8);
-  box-shadow: 0 0 10px #67e8f9;
-  border-top-left-radius: 6px;
-  border-top-right-radius: 12px;
 }
 
 /* 탭 타이틀 텍스트 정밀 포맷팅 */
