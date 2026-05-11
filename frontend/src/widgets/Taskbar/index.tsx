@@ -11,6 +11,7 @@ import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGu
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
 import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
+import { useNotepadStore } from "../../app/store/notepadStore";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 
 export const Taskbar: React.FC = () => {
@@ -49,6 +50,7 @@ export const Taskbar: React.FC = () => {
     useLucasStore.getState().resetLucas();
     useBrowserContentStore.getState().resetContent();
     useWindowStore.getState().resetWindows();
+    useNotepadStore.getState().resetNotepad();
 
     navigate("/lobby", { replace: true });
   };
