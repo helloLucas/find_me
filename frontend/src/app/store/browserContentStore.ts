@@ -2,6 +2,11 @@ import { create } from "zustand";
 
 type BrowserContent = Record<string, unknown>;
 
+export interface SearchHistoryItem {
+  query: string;
+  time: string; // "HH:MM:SS" 형식
+}
+
 interface BrowserContentState {
   content: BrowserContent;
   isRelayClueUnlocked: boolean;
@@ -10,6 +15,7 @@ interface BrowserContentState {
   newsTabClickTrigger: number; // 기사 추가 클릭 트리거
   cyberPacketDashTabClickTrigger: number; // 사이버 패킷 대시 탭 추가 클릭 트리거
   newsScrollTop: number; // 뉴스 탭 스크롤 위치 저장
+  searchHistory: SearchHistoryItem[]; // 챕터 3 전용 검색어 기록 저장소 (검색어 + 실제 검색시각)
   mergeContent: (content?: BrowserContent | null) => void;
   setRelayClueUnlocked: (unlocked: boolean) => void;
   setIsChapter2Mode: (active: boolean) => void; // 챕터 2 모드 설정
@@ -19,6 +25,8 @@ interface BrowserContentState {
   triggerCyberPacketDashTabClick: () => void; // 사이버 패킷 대시 탭 추가 클릭 트리거 증가 함수
   resetCyberPacketDashTabClickTrigger: () => void; // 사이버 패킷 대시 탭 추가 클릭 트리거 초기화 함수
   setNewsScrollTop: (scrollTop: number) => void; // 뉴스 탭 스크롤 위치 설정 함수
+  addSearchHistory: (query: string) => void; // 챕터 3 검색 기록 추가 액션 (실제 현재 시각 저장)
+  resetSearchHistory: () => void; // 챕터 3 검색 기록 리셋 액션
   resetContent: () => void;
 }
 
@@ -29,6 +37,7 @@ export const useBrowserContentStore = create<BrowserContentState>((set) => ({
   newsTabClickTrigger: 0,
   cyberPacketDashTabClickTrigger: 0,
   newsScrollTop: 0,
+  searchHistory: [],
   mergeContent: (content) => {
     if (!content) return;
     set((state) => ({
@@ -47,5 +56,17 @@ export const useBrowserContentStore = create<BrowserContentState>((set) => ({
   triggerCyberPacketDashTabClick: () => set((state) => ({ cyberPacketDashTabClickTrigger: state.cyberPacketDashTabClickTrigger + 1 })),
   resetCyberPacketDashTabClickTrigger: () => set({ cyberPacketDashTabClickTrigger: 0 }),
   setNewsScrollTop: (scrollTop) => set({ newsScrollTop: scrollTop }),
-  resetContent: () => set({ content: {}, isRelayClueUnlocked: false, isChapter2Mode: false, lastCopiedCommand: null, newsTabClickTrigger: 0, cyberPacketDashTabClickTrigger: 0, newsScrollTop: 0 }),
+  addSearchHistory: (query) => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    const formattedTime = `${hours}:${minutes}:${seconds}`;
+
+    set((state) => ({
+      searchHistory: [{ query, time: formattedTime }, ...state.searchHistory]
+    }));
+  },
+  resetSearchHistory: () => set({ searchHistory: [] }),
+  resetContent: () => set({ content: {}, isRelayClueUnlocked: false, isChapter2Mode: false, lastCopiedCommand: null, newsTabClickTrigger: 0, cyberPacketDashTabClickTrigger: 0, newsScrollTop: 0, searchHistory: [] }),
 }));
