@@ -91,6 +91,17 @@ class Settings(BaseSettings):
     hint_runtime_pattern_cache_ttl_seconds: int = Field(
         default=86400, alias="HINT_RUNTIME_PATTERN_CACHE_TTL_SECONDS"
     )
+    hint_status_file_bootstrap_enabled: bool = Field(
+        default=False, alias="HINT_STATUS_FILE_BOOTSTRAP_ENABLED"
+    )
+    hint_status_file_bootstrap_nodes: str = Field(
+        default="CH3_PORT_DISCOVERED,CH3_RELAY_EMPTY_RESPONSE,CH3_RELAY_STATUS_VIEW,CH3_PEOPLE_VIEWED,CH3_MONITOR_VIEWED",
+        alias="HINT_STATUS_FILE_BOOTSTRAP_NODES",
+    )
+    hint_status_file_bootstrap_message: str = Field(
+        default="터미널 말고 너의 컴퓨터 어딘가에 내가 파일을 전송했어. 일반적인 방식으로 전송할 수 없어서 꼼수를 써뒀으니 확인해봐.",
+        alias="HINT_STATUS_FILE_BOOTSTRAP_MESSAGE",
+    )
 
 
 @lru_cache

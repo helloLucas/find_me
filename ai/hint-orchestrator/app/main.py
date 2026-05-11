@@ -30,9 +30,11 @@ from app.vector_search import VectorSearchRepository
 from app.hint_state import (
     check_and_update_repeat_count,
     close_redis,
+    get_one_time_hint_served,
     get_pattern_embedding,
     get_repeat_count,
     init_redis,
+    set_one_time_hint_served,
     set_pattern_embedding,
 )
 
@@ -71,9 +73,16 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
     hint_level = resolve_hint_level(
         request.fail_count_after_action, request.repeat_count_after_action, request.low_confidence
     )
+    one_time_bootstrap = await _build_status_file_bootstrap_hint_if_needed(request, hint_level)
+    if one_time_bootstrap is not None:
+        return one_time_bootstrap
+
     prompt_request = request
     if hint_level == "MEDIUM" and len(request.evidences) > 1:
-        prompt_request = request.model_copy(update={"evidences": request.evidences[:1]})
+        if hasattr(request, "model_copy"):
+            prompt_request = request.model_copy(update={"evidences": request.evidences[:1]})
+        else:
+            prompt_request = request.copy(update={"evidences": request.evidences[:1]})
     prompt = build_prompt(prompt_request)
     llm: GmsLlmClient = app.state.gms_client
     intent_subtype = (request.intent_subtype or "progress_hint").strip().lower()
@@ -157,6 +166,71 @@ async def generate_hint(request: HintGenerateRequest) -> HintGenerateResponse:
         )
 
     return response
+
+
+async def _build_status_file_bootstrap_hint_if_needed(
+    request: HintGenerateRequest,
+    hint_level: str,
+) -> HintGenerateResponse | None:
+    if not settings.hint_status_file_bootstrap_enabled:
+        return None
+
+    intent_subtype = (request.intent_subtype or "progress_hint").strip().lower()
+    if intent_subtype != "progress_hint":
+        return None
+    if (request.chapter_code or "").strip().lower() != "week03":
+        return None
+
+    allowed_nodes = {
+        node.strip().upper()
+        for node in (settings.hint_status_file_bootstrap_nodes or "").split(",")
+        if node.strip()
+    }
+    current_node = (request.from_node_code or "").strip().upper()
+    if allowed_nodes and current_node not in allowed_nodes:
+        return None
+    if not _matches_bootstrap_context(request, current_node=current_node):
+        return None
+
+    hint_key = "week03-status-file-bootstrap-v1"
+    if await get_one_time_hint_served(
+        session_id=request.session_id,
+        chapter_code=request.chapter_code,
+        hint_key=hint_key,
+    ):
+        return None
+
+    await set_one_time_hint_served(
+        session_id=request.session_id,
+        chapter_code=request.chapter_code,
+        hint_key=hint_key,
+        ttl_seconds=settings.hint_repeat_ttl_seconds,
+    )
+    return HintGenerateResponse(
+        hint_text=(settings.hint_status_file_bootstrap_message or "").strip()
+        or "너의 컴퓨터 내에 숨겨진 텍스트 파일을 찾아봐.",
+        hint_level=hint_level,
+        model="override",
+    )
+
+
+def _matches_bootstrap_context(request: HintGenerateRequest, *, current_node: str) -> bool:
+    if current_node == "CH3_PORT_DISCOVERED":
+        return True
+    haystacks: list[str] = []
+    if request.user_message:
+        haystacks.append(request.user_message)
+    if request.query_text:
+        haystacks.append(request.query_text)
+    for evidence in request.evidences or []:
+        if evidence.content:
+            haystacks.append(evidence.content)
+        metadata = evidence.metadata or {}
+        expected_input = metadata.get("expected_input")
+        if expected_input is not None:
+            haystacks.append(str(expected_input))
+    merged = "\n".join(haystacks).lower()
+    return ("echo" in merged and "status" in merged) or '"status"' in merged
 
 
 @app.post("/v1/hints/retrieve", response_model=HintRetrieveResponse)
@@ -927,8 +1001,10 @@ def _build_repeat_text(
     return None
 
 
-def _normalize_repeat_message(text: str) -> str | None:
-    normalized = text.strip().lower()
+def _normalize_repeat_message(text: str | None) -> str | None:
+    if text is None:
+        return None
+    normalized = str(text).strip().lower()
     if not normalized:
         return None
 
