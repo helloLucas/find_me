@@ -634,6 +634,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     <div
       className="w-full h-full bg-[#0a0514] flex flex-col relative"
       onClick={() => focusWindow(windowId)}
+      onContextMenu={handleContextMenu}
     >
       <style>{`
         @keyframes slow-pulse-border {
