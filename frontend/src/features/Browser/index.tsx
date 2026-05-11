@@ -30,6 +30,10 @@ interface Tab {
     title: string;
   }>;
   historyIndex: number;
+  currentView?: "home" | "history_list" | "search_result";
+  selectedHint?: Chapter3Hint | null;
+  detailOrigin?: "home" | "history_list" | null;
+  currentSearchQuery?: string | null;
 }
 
 interface BrowserProps {
@@ -59,11 +63,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   // 챕터 3 전용 상태 및 더 보기 관리
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<"home" | "history_list" | "search_result">("home");
-  const [selectedHint, setSelectedHint] = useState<Chapter3Hint | null>(null);
   const [hasClickedMoreBtn, setHasClickedMoreBtn] = useState(false);
-  const [detailOrigin, setDetailOrigin] = useState<"home" | "history_list" | null>(null);
-  const [currentSearchQuery, setCurrentSearchQuery] = useState<string | null>(null);
 
   // 챕터 3가 아닐 때 전역 검색 기록 리셋 보조
   useEffect(() => {
@@ -104,6 +104,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "starforce",
         history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
 
@@ -116,6 +120,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "cyberpacketdash" as const,
         history: [{ url: "system://cyberpacketdash", component: "cyberpacketdash" as const, title: "Cyber Packet Dash" }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
 
@@ -133,6 +141,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "news" as const,
         history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
 
@@ -145,6 +157,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "history",
         history: [{ url: "system://history", component: "history", title: "History" }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
     return [{
@@ -154,9 +170,19 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       component: "search",
       history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
       historyIndex: 0,
+      currentView: "home",
+      selectedHint: null,
+      detailOrigin: null,
+      currentSearchQuery: null,
     }];
   });
   const [activeTabId, setActiveTabId] = useState("tab1");
+
+  // 탭 전환 시 더 보기 드롭다운 메뉴 자동 폐쇄 처리
+  useEffect(() => {
+    setIsMoreMenuOpen(false);
+  }, [activeTabId]);
+
   const [showDevTools, setShowDevTools] = useState(false);
   const [devToolsWidth, setDevToolsWidth] = useState(320);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -166,6 +192,22 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const lastSynchronizedNodeIdRef = useRef<number | null>(null);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+
+  // 현재 활성 탭 상태 업데이트 헬퍼
+  const updateActiveTab = (updates: Partial<Tab>) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, ...updates } : tab
+      )
+    );
+  };
+
+  // 챕터 3 전용 활성 탭의 개별 독립 상태 동적 바인딩
+  const currentView = activeTab?.currentView ?? "home";
+  const selectedHint = activeTab?.selectedHint ?? null;
+  const detailOrigin = activeTab?.detailOrigin ?? null;
+  const currentSearchQuery = activeTab?.currentSearchQuery ?? null;
+
   const articleTitleFromContent =
     typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined;
 
@@ -261,17 +303,21 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       ...prev,
       {
         id: newId,
-        title: "New Tab",
-        url: "",
-        component: "home",
+        title: "Search",
+        url: "https://void-search.net",
+        component: "search",
         history: [
           {
-            url: "",
-            component: "home",
-            title: "New Tab",
+            url: "https://void-search.net",
+            component: "search",
+            title: "Search",
           },
         ],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       },
     ]);
     setActiveTabId(newId);
@@ -642,26 +688,32 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         <button
           type="button"
           className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${(canGoBack || (isChapter3Mode && currentView !== "home"))
-              ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
-              : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
+            ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
+            : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
             }`}
           onClick={() => {
             if (isChapter3Mode && currentView !== "home") {
               if (currentView === "history_list") {
-                setCurrentView("home");
-                setSelectedHint(null);
-                setDetailOrigin(null);
-                setCurrentSearchQuery(null);
+                updateActiveTab({
+                  currentView: "home",
+                  selectedHint: null,
+                  detailOrigin: null,
+                  currentSearchQuery: null,
+                });
               } else if (currentView === "search_result") {
                 if (detailOrigin === "history_list") {
-                  setCurrentView("history_list");
-                  setSelectedHint(null);
-                  setCurrentSearchQuery(null);
+                  updateActiveTab({
+                    currentView: "history_list",
+                    selectedHint: null,
+                    currentSearchQuery: null,
+                  });
                 } else {
-                  setCurrentView("home");
-                  setSelectedHint(null);
-                  setDetailOrigin(null);
-                  setCurrentSearchQuery(null);
+                  updateActiveTab({
+                    currentView: "home",
+                    selectedHint: null,
+                    detailOrigin: null,
+                    currentSearchQuery: null,
+                  });
                 }
               }
             } else {
@@ -706,27 +758,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                   type="button"
                   onClick={() => {
                     setIsMoreMenuOpen(false);
-                    // 검색기록 클릭 시, 현재 탭이 search가 아니라면 search 탭으로 전환
-                    const searchTab = tabs.find((t) => t.component === "search");
-                    if (searchTab) {
-                      setActiveTabId(searchTab.id);
-                    } else {
-                      const newId = `tab_${Date.now()}`;
-                      setTabs((prev) => [
-                        ...prev,
-                        {
-                          id: newId,
-                          title: "Search",
-                          url: "https://void-search.net",
-                          component: "search",
-                          history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
-                          historyIndex: 0,
-                        }
-                      ]);
-                      setActiveTabId(newId);
-                    }
-                    setCurrentView("history_list");
-                    setSelectedHint(null);
+                    // 현재 활성화된 탭(activeTabId)의 화면 상태만 'history_list'로 업데이트
+                    updateActiveTab({
+                      currentView: "history_list",
+                      selectedHint: null,
+                      currentSearchQuery: null,
+                      detailOrigin: null,
+                    });
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
                 >
@@ -761,13 +799,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
               onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
               isChapter3Mode={isChapter3Mode}
               currentView={currentView}
-              setCurrentView={setCurrentView}
+              setCurrentView={(val) => updateActiveTab({ currentView: val })}
               selectedHint={selectedHint}
-              setSelectedHint={setSelectedHint}
+              setSelectedHint={(val) => updateActiveTab({ selectedHint: val })}
               detailOrigin={detailOrigin}
-              setDetailOrigin={setDetailOrigin}
+              setDetailOrigin={(val) => updateActiveTab({ detailOrigin: val })}
               currentSearchQuery={currentSearchQuery}
-              setCurrentSearchQuery={setCurrentSearchQuery}
+              setCurrentSearchQuery={(val) => updateActiveTab({ currentSearchQuery: val })}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
