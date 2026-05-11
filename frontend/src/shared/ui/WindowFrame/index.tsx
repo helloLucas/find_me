@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { WindowControlButton } from "../WindowControls";
 
 interface WindowFrameProps {
   title: string;
@@ -219,39 +220,37 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
         <div className="flex items-center h-full gap-1 mr-1">
           {allowMinimize && onMinimize && (
-            <button
-              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] transition-colors ${buttonClasses}`}
+            <WindowControlButton
+              variant="minimize"
+              label="Minimize"
+              className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onMinimize();
               }}
-            >
-              <span className="w-[10px] h-[2px] bg-current translate-y-[2px]" />
-            </button>
+            />
           )}
           {allowMaximize && onToggleMaximize && (
-            <button
-              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] transition-colors ${buttonClasses}`}
+            <WindowControlButton
+              variant={isMaximized ? "restore" : "maximize"}
+              label={isMaximized ? "Restore" : "Maximize"}
+              className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onToggleMaximize();
               }}
-            >
-              <div className={`border-[2px] border-current w-3 h-3 ${isMaximized ? "relative top-[1px] right-[1px]" : ""}`}>
-                {isMaximized && <div className="absolute border-[2px] border-current w-3 h-3 -top-1 -right-1 z-[-1]" />}
-              </div>
-            </button>
+            />
           )}
           {onClose && (
-            <button
-              className={`w-7 h-6 flex items-center justify-center bg-transparent border border-transparent mx-[1px] hover:bg-red-800/70 hover:text-white hover:border-red-500/50 transition-colors ${theme === "cyan" ? "text-[#00D4FF]" : theme === "magenta" ? "text-[#FF00FF]" : "text-green-600"}`}
+            <WindowControlButton
+              variant="close"
+              label="Close"
+              className={`mx-[1px] border-transparent bg-transparent hover:border-red-500/50 hover:bg-red-800/70 hover:text-white ${theme === "cyan" ? "text-[#00D4FF]" : theme === "magenta" ? "text-[#FF00FF]" : "text-green-600"}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onClose();
               }}
-            >
-              <span className="font-bold text-sm">X</span>
-            </button>
+            />
           )}
         </div>
       </div>

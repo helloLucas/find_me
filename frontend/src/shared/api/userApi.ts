@@ -5,6 +5,7 @@ export type CurrentUserResponse = {
   id: number;
   nickname: string;
   role: "GUEST" | "MEMBER";
+  lastLoginAt: string | null;
 };
 
 export const userApi = {

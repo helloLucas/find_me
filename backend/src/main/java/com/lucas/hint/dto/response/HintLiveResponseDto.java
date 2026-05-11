@@ -1,6 +1,6 @@
 package com.lucas.hint.dto.response;
 
-import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,13 +13,11 @@ public class HintLiveResponseDto {
   private String hintLevel;
   private String messageType;
   private String routeDecision;
+  private String intentSubtype;
   private String selectedPhase;
   private boolean lowConfidence;
   private int failCountAfterAction;
-  private String whyThisHint;
-  private String nextActionType;
-  private String nextInputPattern;
-  private List<Long> usedTransitionIds;
+  private Map<String, Object> commandUsageContext;
   private HintEvidenceResponseDto topEvidence;
   private HintEsSignalResponseDto esSignal;
   private HintLiveRetrieveResponseDto retrieval;

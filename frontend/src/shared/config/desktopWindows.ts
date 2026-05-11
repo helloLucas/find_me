@@ -9,8 +9,8 @@ export const DESKTOP_LAYER = {
   overlay: 10000,
 } as const;
 
-export type DesktopWindowId = "chrome" | "terminal" | "terminal2" | "messenger" | "document_viewer" | "email";
-export type DesktopWindowType = "browser" | "terminal" | "messenger" | "document_viewer" | "email";
+export type DesktopWindowId = "chrome" | "terminal" | "terminal2" | "messenger" | "document_viewer" | "email" | "notepad" | "trash";
+export type DesktopWindowType = "browser" | "terminal" | "messenger" | "document_viewer" | "email" | "notepad" | "trash";
 
 export interface DesktopWindowDefinition {
   id: DesktopWindowId;
@@ -55,5 +55,17 @@ export const DESKTOP_WINDOW_DEFINITIONS: Record<DesktopWindowId, DesktopWindowDe
     type: "email",
     title: "Bug Report",
     iconPath: "/pixel_email_cyberpunk.png",
+  },
+  notepad: {
+    id: "notepad",
+    type: "notepad",
+    title: "Notebook",
+    iconPath: "/pixel_notepad_icon.svg",
+  },
+  trash: {
+    id: "trash",
+    type: "trash",
+    title: "Recycle Bin",
+    iconPath: "/pixel_trash_icon.svg",
   },
 };

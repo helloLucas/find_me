@@ -49,30 +49,31 @@ class HintGenerateRequest(BaseModel):
     fail_count_after_action: int = Field(
         default=0, validation_alias=AliasChoices("fail_count_after_action", "failCountAfterAction")
     )
+    repeat_count_after_action: int = Field(
+        default=0, validation_alias=AliasChoices("repeat_count_after_action", "repeatCountAfterAction")
+    )
     selected_phase: str | None = Field(default=None, validation_alias=AliasChoices("selected_phase", "selectedPhase"))
+    intent_subtype: str | None = Field(default=None, validation_alias=AliasChoices("intent_subtype", "intentSubtype"))
     low_confidence: bool = Field(default=False, validation_alias=AliasChoices("low_confidence", "lowConfidence"))
     query_text: str | None = Field(default=None, validation_alias=AliasChoices("query_text", "queryText"))
+    command_usage_context: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("command_usage_context", "commandUsageContext"),
+    )
     evidences: list[EvidenceItem] = Field(default_factory=list)
     es_signal: EsSignalInput | None = Field(default=None, validation_alias=AliasChoices("es_signal", "esSignal"))
-
-
-class NextActionCheck(BaseModel):
-    action_type: str | None = None
-    input_pattern: str | None = None
 
 
 class HintGenerateResponse(BaseModel):
     hint_text: str
     hint_level: str
-    why_this_hint: str
-    next_action_check: NextActionCheck
-    used_transition_ids: list[int] = Field(default_factory=list)
     model: str
 
 
 class HintRetrieveRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    session_id: str = Field(validation_alias=AliasChoices("session_id", "sessionId"))
     chapter_id: str = Field(validation_alias=AliasChoices("chapter_id", "chapterId"))
     from_node_id: str = Field(validation_alias=AliasChoices("from_node_id", "fromNodeId"))
     action_type: str | None = Field(default=None, validation_alias=AliasChoices("action_type", "actionType"))
@@ -83,9 +84,6 @@ class HintRetrieveRequest(BaseModel):
     )
     expected_action_type: str | None = Field(
         default=None, validation_alias=AliasChoices("expected_action_type", "expectedActionType")
-    )
-    expected_input_hint: str | None = Field(
-        default=None, validation_alias=AliasChoices("expected_input_hint", "expectedInputHint")
     )
     recent_actions: list[dict[str, Any]] = Field(
         default_factory=list, validation_alias=AliasChoices("recent_actions", "recentActions")
@@ -103,9 +101,14 @@ class HintRetrieveRequest(BaseModel):
 class HintRetrieveResponse(BaseModel):
     message_type: str
     route_decision: str
+    intent_subtype: str = "progress_hint"
     selected_phase: str
     low_confidence: bool
     query_vector_dimension: int
     query_text: str
     candidate_count: int
+    repeat_count_after_action: int
+    stress_score: int
+    hint_level: str
+    command_usage_context: dict[str, Any] | None = None
     evidences: list[EvidenceItem]

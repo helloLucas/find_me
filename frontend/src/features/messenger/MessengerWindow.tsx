@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
+import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { DESKTOP_TASKBAR_HEIGHT, type DesktopWindowId } from "../../shared/config/desktopWindows";
+import { WindowControlButton } from "../../shared/ui/WindowControls";
 import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 const WINDOW_W = 400;
@@ -20,7 +22,7 @@ interface MessengerWindowProps {
 export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) => {
   const { conversations, activeRoomId, setActiveRoom, markMessengerSeen } = useMessengerStore();
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
-  const { closeWindow, focusWindow } = useWindowStore();
+  const { closeWindow, focusWindow, openWindow } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -194,15 +196,15 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
               )}
             </div>
 
-            <button
-              className="w-6 h-5 flex items-center justify-center text-pink-400/70 hover:text-pink-300 transition-colors border border-pink-500/30 rounded-sm"
+            <WindowControlButton
+              variant="close"
+              label="Close"
+              className="border-pink-500/30 text-pink-400/70 hover:border-pink-400/70 hover:bg-pink-500/10 hover:text-pink-300"
               onClick={(event) => {
                 event.stopPropagation();
                 closeWindow(windowId);
               }}
-            >
-              <span className="text-[10px]">X</span>
-            </button>
+            />
           </div>
 
           <div
@@ -212,6 +214,10 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             }}
           >
             {conversation.messages.map((msg, idx) => {
+              const isCh3GameMessage = msg.id.includes("CH3_") || msg.text.includes("Cyber Packet Dash") || msg.text.includes("조각 복구");
+              const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
+              if (isCh3GameMessage && !isInCh3) return null;
+
               const showSenderName = idx === 0 || conversation.messages[idx - 1]?.senderId !== msg.senderId;
               const avatarSrc =
                 msg.senderAvatar ?? resolveMessengerFallbackAvatar(msg.senderId, msg.senderName);
@@ -239,11 +245,17 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
             })}
 
             {conversation.actions?.map((action, idx) => {
+              const isCh3GameAction = action.actionType === "friend_message_link_ch3";
+              const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
+              if (isCh3GameAction && !isInCh3) return null;
+
               const canClickAction = canSubmitStoryAction(
                 currentNode,
                 "click",
                 action.actionType
               );
+              const isAlwaysClickable = action.actionType === "friend_message_link" || (action.actionType === "friend_message_link_ch3" && isInCh3);
+              const isEnabled = canClickAction || isAlwaysClickable;
 
               return (
                 <div key={`${action.actionType}-${idx}`} className="flex items-end gap-2">
@@ -253,9 +265,21 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
                     onClick={() => {
                       if (canClickAction) {
                         void submitStoryClick(action.actionType);
+                        if (action.actionType === "friend_message_link") {
+                          useBrowserContentStore.getState().triggerNewsTabClick();
+                        } else if (action.actionType === "friend_message_link_ch3") {
+                          useBrowserContentStore.getState().triggerCyberPacketDashTabClick();
+                        }
+                      } else if (isAlwaysClickable) {
+                        openWindow("chrome");
+                        if (action.actionType === "friend_message_link") {
+                          useBrowserContentStore.getState().triggerNewsTabClick();
+                        } else if (action.actionType === "friend_message_link_ch3") {
+                          useBrowserContentStore.getState().triggerCyberPacketDashTabClick();
+                        }
                       }
                     }}
-                    disabled={!canClickAction}
+                    disabled={!isEnabled}
                   >
                     <span className="block text-[10px] tracking-wide text-pink-300">{LINK_LABEL}</span>
                     <span className="mt-1 block text-[13px] text-cyan-100">&lt;{action.label}&gt;</span>

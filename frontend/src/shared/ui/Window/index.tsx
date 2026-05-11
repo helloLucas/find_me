@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Rnd } from "react-rnd";
 import { useWindowStore } from "../../../app/store/windowStore";
 import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
+import { WindowControlButton } from "../WindowControls";
 
 interface WindowProps {
   id: string;
@@ -116,48 +117,35 @@ export const Window: React.FC<WindowProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              className="w-5 h-5 flex items-center justify-center text-[#0ff] hover:bg-[#0ff]/20 rounded border border-transparent hover:border-[#0ff]"
+            <WindowControlButton
+              variant="minimize"
+              label="Minimize"
+              className="border-transparent text-[#0ff] hover:border-[#0ff] hover:bg-[#0ff]/20"
               onClick={(event) => {
                 event.stopPropagation();
                 minimizeWindow(windowState.id);
               }}
-              title="Minimize"
-            >
-              <div className="w-2.5 h-0.5 bg-current translate-y-[3px]" />
-            </button>
+            />
 
-            <button
-              className="w-5 h-5 flex items-center justify-center text-[#0ff] hover:bg-[#0ff]/20 rounded border border-transparent hover:border-[#0ff]"
+            <WindowControlButton
+              variant={isMaximized ? "restore" : "maximize"}
+              label={isMaximized ? "Restore" : "Maximize"}
+              className="border-transparent text-[#0ff] hover:border-[#0ff] hover:bg-[#0ff]/20"
               onClick={(event) => {
                 event.stopPropagation();
                 handleToggleMaximize();
               }}
-              title={isMaximized ? "Restore" : "Maximize"}
-            >
-              {isMaximized ? (
-                <div className="relative w-2.5 h-2.5">
-                  <div className="absolute top-0 right-0 w-2 h-2 border border-current" />
-                  <div className="absolute bottom-0 left-0 w-2 h-2 border border-current bg-[#0f0c29]" />
-                </div>
-              ) : (
-                <div className="w-2.5 h-2.5 border border-current" />
-              )}
-            </button>
+            />
 
-            <button
-              className="w-5 h-5 flex items-center justify-center text-[#ff3366] hover:bg-[#ff3366]/20 rounded border border-transparent hover:border-[#ff3366]"
+            <WindowControlButton
+              variant="close"
+              label="Close"
+              className="border-transparent text-[#ff3366] hover:border-[#ff3366] hover:bg-[#ff3366]/20"
               onClick={(event) => {
                 event.stopPropagation();
                 closeWindow(windowState.id);
               }}
-              title="Close"
-            >
-              <div className="relative w-2.5 h-2.5 flex items-center justify-center">
-                <div className="absolute w-full h-0.5 bg-current rotate-45" />
-                <div className="absolute w-full h-0.5 bg-current -rotate-45" />
-              </div>
-            </button>
+            />
           </div>
         </div>
 

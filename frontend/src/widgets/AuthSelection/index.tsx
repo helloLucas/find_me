@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { trackAnalyticsEvent } from '../../shared/analytics';
 
 interface AuthSelectionModalProps {
     isOpen: boolean;
@@ -78,7 +79,12 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
                     {AUTH_PROVIDERS.map((provider) => (
                         <button
                             key={provider.id}
-                            onClick={() => onSelect(provider.id)}
+                            onClick={() => {
+                                trackAnalyticsEvent('auth_provider_selected', {
+                                    provider: provider.id,
+                                });
+                                onSelect(provider.id);
+                            }}
                             className="group relative flex items-center gap-4 w-full px-4 py-4 text-left border border-white/15 bg-white/[0.03] hover:bg-white/[0.06] hover:border-cyan-300/45 active:scale-[0.99] transition-all duration-200 rounded-[2px]"
                         >
                             <div className="absolute inset-[5px] border border-white/6 group-hover:border-cyan-200/20 rounded-[1px] pointer-events-none" />
@@ -112,7 +118,10 @@ export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
                 </div>
 
                 <button
-                    onClick={onClose}
+                    onClick={() => {
+                        trackAnalyticsEvent('auth_provider_modal_closed');
+                        onClose();
+                    }}
                     className="self-center font-auth-flow text-[10px] text-white/55 hover:text-white transition-all uppercase tracking-[0.35em] mt-2"
                 >
                     [ Close ]

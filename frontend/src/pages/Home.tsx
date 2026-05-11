@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { useAuthActions } from '../features/Auth/useAuthActions';
 import MainMenu from '../widgets/MainMenu/MainMenu';
 import { useModalStore } from '../app/store/modalStore';
 import { AuthSelectionModal } from '../widgets/AuthSelection';
+import { useTrackVisible } from '../shared/analytics/useTrackVisible';
 
 const Home = () => {
+    const { t } = useTranslation();
     const checkAuth = useAuthStore((state) => state.checkAuth);
     const { handleLoginWithProvider, handleGuestAccess, handleLogout } = useAuthActions();
 
     const openModal = useModalStore((state) => state.openModal);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const landingViewRef = useTrackVisible<HTMLDivElement>({
+        eventName: 'home_landing_visible_5s',
+        params: { page: 'home' },
+        minVisibleMs: 5000,
+    });
 
     const handleLoginClick = () => {
         setIsAuthModalOpen(true);
@@ -23,8 +31,8 @@ const Home = () => {
 
     const handleGuestClick = () => {
         openModal({
-            title: 'ANONYMOUS_ACCESS_WARNING',
-            message: '익명 접속 시 진행 상황이 저장되지 않을 수 있습니다.\n계속하시겠습니까?',
+            title: t('auth.guestWarningTitle'),
+            message: t('auth.guestWarningMsg'),
             type: 'confirm',
             onConfirm: handleGuestAccess
         });
@@ -32,8 +40,8 @@ const Home = () => {
 
     const handleLogoutClick = () => {
         openModal({
-            title: 'LOGOUT_CONFIRMATION',
-            message: '로그아웃 하시겠습니까?\n세션이 종료됩니다.',
+            title: t('auth.logoutConfirmTitle'),
+            message: t('auth.logoutConfirmMsg'),
             type: 'confirm',
             onConfirm: handleLogout
         });
@@ -64,6 +72,7 @@ const Home = () => {
 
     return (
         <div
+            ref={landingViewRef}
             className="min-h-screen w-full relative overflow-hidden bg-[#0a1118] flex flex-col justify-center select-none pixel-crisp"
             style={{
                 backgroundImage: `linear-gradient(to right, #000 0%, #000 30%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImageUrl})`,

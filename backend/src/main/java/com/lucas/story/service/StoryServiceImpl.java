@@ -36,6 +36,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -75,11 +76,73 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_PARSED_TAR_COMMAND = "PARSED_TAR_COMMAND";
   private static final String RULE_NC_SEND_FILE = "NC_SEND_FILE";
   private static final String RULE_CHAINED_COMMAND = "CHAINED_COMMAND";
+  private static final String RULE_DISCOVER_OPEN_PORT = "DISCOVER_OPEN_PORT";
+  private static final String RULE_CONNECT_RELAY = "CONNECT_RELAY";
+  private static final String RULE_RELAY_REQUEST = "RELAY_REQUEST";
+  private static final String RULE_RELAY_REQUEST_TO_FILE = "RELAY_REQUEST_TO_FILE";
+  private static final String RULE_VALIDATE_CORE_GROUP_DAT = "VALIDATE_CORE_GROUP_DAT";
+  private static final String RULE_GPG_OUTPUT_EXISTS = "GPG_OUTPUT_EXISTS";
+  private static final String RULE_FILE_EQUIVALENCE = "FILE_EQUIVALENCE";
+  private static final String RULE_CONFIRMATION_STREAM_TO_SCRIPT = "CONFIRMATION_STREAM_TO_SCRIPT";
+  private static final String RULE_DISCOVER_FILE = "DISCOVER_FILE";
+  private static final String RULE_CREATE_FILE_EQUIVALENT = "CREATE_FILE_EQUIVALENT";
+  private static final String RULE_FILE_COMPOSITION = "FILE_COMPOSITION";
+  private static final String RULE_HASH_FILE_CHECK = "HASH_FILE_CHECK";
   private static final String CHAPTER_02_CODE = "week02";
+  private static final String CHAPTER_03_CODE = "week03";
+  private static final String CHAPTER_03_START_NODE_CODE = "CH3_FRIEND_CALL";
+  private static final String CHAPTER_02_TERMINAL_PROFILE = "chapter2";
+  private static final String CHAPTER_03_TERMINAL_PROFILE = "chapter3";
   private static final String CHAPTER_02_VFS_VERSION = "chapter02-v1";
+  private static final String CHAPTER_03_VFS_VERSION = "chapter03-v1";
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
-  private static final String CHAPTER_02_PROMPT_USER = "guest";
-  private static final String CHAPTER_02_PROMPT_HOST = "lucas-server";
+  private static final String TERMINAL_PROMPT_USER = "guest";
+  private static final String TERMINAL_PROMPT_HOST = "lucas-server";
+  private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
+  private static final Map<String, String> CHAPTER_START_NODE_CODES =
+      Map.of(CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE);
+
+  /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
+  private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
+      Map.of(
+          CHAPTER_02_CODE,
+          new TerminalChapterProfile(
+              CHAPTER_02_CODE,
+              CHAPTER_02_TERMINAL_PROFILE,
+              CHAPTER_02_VFS_VERSION,
+              "/story/chapter02/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST),
+          CHAPTER_03_CODE,
+          new TerminalChapterProfile(
+              CHAPTER_03_CODE,
+              CHAPTER_03_TERMINAL_PROFILE,
+              CHAPTER_03_VFS_VERSION,
+              "/story/chapter03/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST));
+
+  /**
+   * 터미널 챕터별 런타임 프로필입니다.
+   *
+   * @param chapterCode DB chapters.code와 snapshot.chapterCode에 저장되는 챕터 코드
+   * @param terminalProfile story_nodes.prompt_meta.terminalProfile과 매칭되는 프론트/백엔드 식별자
+   * @param vfsVersion snapshot에 기록할 VFS 리소스 버전
+   * @param vfsResourcePath classpath 기준 vfs.json 리소스 경로
+   * @param defaultCwd 새 스냅샷과 상대 경로 해석에 사용할 기본 작업 디렉터리
+   * @param promptUser 터미널 프롬프트에 표시할 사용자명
+   * @param promptHost 터미널 프롬프트에 표시할 호스트명
+   */
+  private record TerminalChapterProfile(
+      String chapterCode,
+      String terminalProfile,
+      String vfsVersion,
+      String vfsResourcePath,
+      String defaultCwd,
+      String promptUser,
+      String promptHost) {}
 
   private final UserRepository userRepository;
   private final ChapterRepository chapterRepository;
@@ -94,37 +157,51 @@ public class StoryServiceImpl implements StoryService {
   private final ObjectMapper objectMapper;
   private final PathResolver pathResolver = new PathResolver();
 
-  private JsonNode chapter02Vfs;
+  private final Map<String, JsonNode> vfsByChapterCode = new HashMap<>();
 
   /**
-   * Bean 초기화 시 Chapter 2 정적 VFS 리소스를 메모리에 로드합니다.
+   * Bean 초기화 시 터미널 챕터의 정적 VFS 리소스를 메모리에 로드합니다.
    *
    * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
    */
   @PostConstruct
   public void init() {
-    // Chapter 2 VFS JSON을 classpath 리소스에서 읽어 필드에 캐싱합니다.
+    // 등록된 터미널 챕터들의 VFS JSON을 classpath 리소스에서 읽어 캐싱합니다.
     loadVfsJson();
   }
 
   /**
-   * classpath의 Chapter 2 VFS JSON 파일을 읽어 {@code chapter02Vfs}에 저장합니다.
+   * classpath의 터미널 챕터 VFS JSON 파일들을 읽어 챕터 코드별로 캐싱합니다.
    *
-   * <p>리소스가 없거나 파싱에 실패하더라도 서비스 기동 자체는 막지 않고 로그만 남깁니다. 실제 명령 처리 시에는 빈 VFS fallback이 적용됩니다.
+   * <p>개별 챕터의 VFS 리소스가 없거나 파싱에 실패해도 서버 기동은 유지하고, 해당 챕터만 빈 VFS fallback이 적용되도록 로그만 남깁니다.
    */
   private void loadVfsJson() {
-    // try-with-resources로 리소스 스트림을 자동 해제합니다.
-    try (InputStream is = getClass().getResourceAsStream("/story/chapter02/vfs.json")) {
-      // 리소스가 존재하는 경우에만 JSON을 파싱합니다.
-      if (is != null) {
-        // Jackson으로 정적 VFS JSON tree를 읽어 필드에 저장합니다.
-        this.chapter02Vfs = objectMapper.readTree(is);
-        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남깁니다.
-        log.info("Loaded Chapter 2 VFS from /story/chapter02/vfs.json");
+    // 재초기화 상황에서도 이전 캐시가 남지 않도록 먼저 비운다.
+    vfsByChapterCode.clear();
+
+    // 등록된 터미널 챕터 프로필을 순회하며 각자의 vfs.json을 로드한다.
+    for (TerminalChapterProfile profile : TERMINAL_CHAPTER_PROFILES.values()) {
+      // try-with-resources로 classpath 리소스 스트림을 자동 해제한다.
+      try (InputStream is = getClass().getResourceAsStream(profile.vfsResourcePath())) {
+        // 리소스가 없으면 해당 챕터는 건너뛰고 다음 프로필을 계속 처리한다.
+        if (is == null) {
+          log.warn(
+              "VFS resource not found. chapter={}, path={}",
+              profile.chapterCode(),
+              profile.vfsResourcePath());
+          continue;
+        }
+
+        // Jackson으로 정적 VFS JSON tree를 읽어 챕터 코드 기준으로 저장한다.
+        vfsByChapterCode.put(profile.chapterCode(), objectMapper.readTree(is));
+
+        // 정상 로드 여부를 운영 로그에서 확인할 수 있도록 남긴다.
+        log.info(
+            "Loaded VFS. chapter={}, path={}", profile.chapterCode(), profile.vfsResourcePath());
+      } catch (Exception e) {
+        // 특정 챕터 VFS 로딩 실패는 해당 챕터 기능에 영향을 주므로 error 로그로 기록한다.
+        log.error("Failed to load VFS. chapter={}", profile.chapterCode(), e);
       }
-    } catch (Exception e) {
-      // VFS 로딩 실패는 Chapter 2 터미널 기능에 영향을 주므로 error 로그로 기록합니다.
-      log.error("Failed to load Chapter 2 VFS", e);
     }
   }
 
@@ -149,10 +226,7 @@ public class StoryServiceImpl implements StoryService {
             .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode =
-        storyNodeRepository
-            .findFirstByChapter_CodeOrderByIdAsc(request.getChapterCode())
-            .orElseThrow(() -> new CustomException(ErrorCode.E3002));
+    StoryNode firstNode = findStartNode(request.getChapterCode());
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
@@ -184,6 +258,47 @@ public class StoryServiceImpl implements StoryService {
     storySessionRedisService.clearRecentCommands(sessionId);
 
     return StoryNodeResponseDto.from(firstNode);
+  }
+
+  /**
+   * 챕터 시작 시 사용할 첫 노드를 조회한다.
+   *
+   * <p>Chapter 3처럼 뒤늦게 도입부 노드가 추가된 챕터는 DB id 순서만으로 시작점을 정할 수 없으므로, 명시 시작 노드 코드를 먼저 조회하고 기존 정렬 기준을
+   * fallback으로 유지한다.
+   *
+   * @param chapterCode 시작할 챕터 코드
+   * @return 챕터 시작 노드
+   * @throws CustomException E3002 - 시작 가능한 노드가 없을 때
+   */
+  private StoryNode findStartNode(String chapterCode) {
+    // Optional helper가 비어 있으면 호출부의 기존 예외 규약에 맞춰 E3002를 던진다.
+    return findStartNodeOptional(chapterCode)
+        .orElseThrow(() -> new CustomException(ErrorCode.E3002));
+  }
+
+  /**
+   * 챕터 시작 노드를 Optional로 조회한다.
+   *
+   * @param chapterCode 시작할 챕터 코드
+   * @return 명시 시작 노드 또는 기존 id 순서 첫 노드
+   */
+  private java.util.Optional<StoryNode> findStartNodeOptional(String chapterCode) {
+    // Chapter 3는 새 도입 통화 노드를 항상 첫 노드로 사용해야 한다.
+    String configuredStartNodeCode = CHAPTER_START_NODE_CODES.get(chapterCode);
+
+    // 명시 시작 노드가 있으면 같은 챕터 안의 노드인지까지 함께 검증한다.
+    if (configuredStartNodeCode != null) {
+      java.util.Optional<StoryNode> configuredStartNode =
+          storyNodeRepository.findByChapter_CodeAndCode(chapterCode, configuredStartNodeCode);
+
+      // seed가 아직 갱신되지 않은 환경에서는 기존 id 순서 fallback으로 기동 가능성을 유지한다.
+      if (configuredStartNode.isPresent()) {
+        return configuredStartNode;
+      }
+    }
+
+    // 별도 시작 노드 정책이 없는 챕터는 기존 구현과 같은 id 순서 첫 노드를 사용한다.
+    return storyNodeRepository.findFirstByChapter_CodeOrderByIdAsc(chapterCode);
   }
 
   // ──────────────────────────────────────────────
@@ -259,10 +374,10 @@ public class StoryServiceImpl implements StoryService {
               .orElse(null);
 
       if (matched == null) {
-        // ── Step 2: Chapter 2 터미널 Fallback ──
-        // DB 전이에 실패했을 때, Chapter 2 터미널 노드라면 가상 파일 시스템 로직으로 처리한다.
+        // ── Step 2: 터미널 챕터 Fallback ──
+        // DB 전이에 실패했을 때, 터미널 프로필 노드라면 가상 파일 시스템 로직으로 처리한다.
         TransitionResponseDto terminalResponse =
-            handleChapter2TerminalFallback(user, progress, currentNode, request);
+            handleTerminalFallback(user, progress, currentNode, request);
         if (terminalResponse != null) {
           return terminalResponse;
         }
@@ -788,8 +903,7 @@ public class StoryServiceImpl implements StoryService {
                         .build());
 
                 // 2. 해당 챕터의 첫 번째 노드 조회
-                storyNodeRepository
-                    .findFirstByChapter_CodeOrderByIdAsc(firstChapter.getCode())
+                findStartNodeOptional(firstChapter.getCode())
                     .ifPresent(
                         firstNode -> {
                           // 3. 최초 스토리 진행 레코드(UserStoryProgress) 생성
@@ -831,15 +945,22 @@ public class StoryServiceImpl implements StoryService {
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
       case "exact" ->
-          matchesExactTransition(t.getExpectedInput(), request.getInputValue()); // 완전 일치
+          matchesExactTransition(
+              t.getExpectedInput(), request.getInputValue(), t.getValidatorConfig()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
   }
 
-  private boolean matchesExactTransition(String expectedInput, String actualInput) {
+  private boolean matchesExactTransition(
+      String expectedInput, String actualInput, JsonNode validatorConfig) {
     if (actualInput.equals(expectedInput)) {
+      return true;
+    }
+
+    // exact validator도 acceptedValues 배열이 있으면 같은 click/action의 별칭으로 인정한다.
+    if (getTextArrayField(validatorConfig, "acceptedValues").contains(actualInput)) {
       return true;
     }
 
@@ -893,6 +1014,22 @@ public class StoryServiceImpl implements StoryService {
       case RULE_PARSED_TAR_COMMAND -> matchesParsedTarCommandRule(config, request, latestSnapshot);
       case RULE_NC_SEND_FILE -> matchesNcSendFileRule(config, request, latestSnapshot);
       case RULE_CHAINED_COMMAND -> matchesChainedCommandRule(config, request, latestSnapshot);
+      case RULE_DISCOVER_OPEN_PORT -> matchesDiscoverOpenPortRule(config, request, latestSnapshot);
+      case RULE_CONNECT_RELAY -> matchesConnectRelayRule(config, request, latestSnapshot);
+      case RULE_RELAY_REQUEST -> matchesRelayRequestRule(config, request, latestSnapshot, false);
+      case RULE_RELAY_REQUEST_TO_FILE ->
+          matchesRelayRequestRule(config, request, latestSnapshot, true);
+      case RULE_VALIDATE_CORE_GROUP_DAT ->
+          matchesValidateCoreGroupDatRule(config, request, latestSnapshot);
+      case RULE_GPG_OUTPUT_EXISTS -> matchesGpgOutputExistsRule(config, request, latestSnapshot);
+      case RULE_FILE_EQUIVALENCE -> matchesFileEquivalenceRule(config, request, latestSnapshot);
+      case RULE_CONFIRMATION_STREAM_TO_SCRIPT ->
+          matchesConfirmationStreamToScriptRule(config, request, latestSnapshot);
+      case RULE_DISCOVER_FILE -> matchesDiscoverFileRule(config, request, latestSnapshot);
+      case RULE_CREATE_FILE_EQUIVALENT ->
+          matchesCreateFileEquivalentRule(config, request, latestSnapshot);
+      case RULE_FILE_COMPOSITION -> matchesFileCompositionRule(config, request, latestSnapshot);
+      case RULE_HASH_FILE_CHECK -> matchesHashFileCheckRule(config, request, latestSnapshot);
       default -> false;
     };
   }
@@ -957,6 +1094,29 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // validator_config.command에는 기대하는 첫 번째 명령어 토큰이 들어 있다.
+    // cwd 조건이 있으면 현재 snapshot의 터미널 위치와 먼저 비교한다.
+    if (!matchesCwdRequirement(config, latestSnapshot)) {
+      return false;
+    }
+
+    // 사용자가 입력한 명령어를 공통 tokenizer로 분해한다.
+    List<String> normalizedTokens = tokenizeCommand(input);
+    if (normalizedTokens.isEmpty()) {
+      return false;
+    }
+
+    // Chapter 3 seed는 acceptedForms로 여러 허용 명령 형태를 표현한다.
+    JsonNode acceptedForms = config.get("acceptedForms");
+    if (acceptedForms != null && acceptedForms.isArray()) {
+      for (JsonNode acceptedForm : acceptedForms) {
+        if (matchesCommandForm(acceptedForm, normalizedTokens)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     String expectedCommand = getTextField(config, "command");
 
     // command 설정이 없으면 비교 기준이 없으므로 실패로 처리한다.
@@ -1095,7 +1255,8 @@ public class StoryServiceImpl implements StoryService {
     // '.'인 경우 현재 작업 디렉토리가 루트인지 확인
     if (".".equals(normalized)) {
       String cwd = extractText(latestSnapshot, "/terminal/cwd");
-      return cwd == null || cwd.isBlank() || CHAPTER_02_DEFAULT_CWD.equals(cwd);
+      String defaultCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+      return cwd == null || cwd.isBlank() || defaultCwd.equals(cwd);
     }
 
     // 절대/상대 경로를 해소하여 VFS의 루트 경로와 일치하는지 확인
@@ -1392,6 +1553,669 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
+   * DISCOVER_OPEN_PORT rule을 검증한다.
+   *
+   * <p>Chapter 3 seed는 nmap, ss, netstat, nc 중 하나로 9091 relay 포트를 발견하는 입력을 허용한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 허용된 포트 탐색 명령이면 true
+   */
+  private boolean matchesDiscoverOpenPortRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // 선행 flags 조건이 있으면 먼저 확인한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    // 입력을 일반 명령 구조로 파싱한다.
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null) {
+      return false;
+    }
+
+    // acceptedMethods 중 하나라도 현재 입력과 맞으면 포트 발견으로 인정한다.
+    JsonNode acceptedMethods = config.get("acceptedMethods");
+    if (acceptedMethods == null || !acceptedMethods.isArray()) {
+      return false;
+    }
+
+    for (JsonNode method : acceptedMethods) {
+      if (matchesDiscoverOpenPortMethod(method, command, config.path("targetPort").asInt())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * DISCOVER_OPEN_PORT의 개별 허용 방식을 검증한다.
+   *
+   * @param method acceptedMethods의 단일 method 설정
+   * @param command 사용자 입력 명령
+   * @param targetPort 찾아야 하는 relay 포트
+   * @return 해당 method가 입력과 일치하면 true
+   */
+  private boolean matchesDiscoverOpenPortMethod(
+      JsonNode method, ParsedCommand command, int targetPort) {
+    // command 이름이 seed의 허용 command와 같아야 한다.
+    String expectedCommand = getTextField(method, "command");
+    if (expectedCommand == null || !expectedCommand.equals(command.command())) {
+      return false;
+    }
+
+    // nmap처럼 순서가 의미 있는 필수 인자는 모두 포함되어야 한다.
+    if (!containsRequiredArgs(command.args(), getTextArrayField(method, "requiredArgs"))) {
+      return false;
+    }
+
+    // ss/netstat/nc처럼 순서가 중요하지 않은 필수 인자도 모두 포함되어야 한다.
+    if (!containsRequiredArgs(command.args(), getTextArrayField(method, "requiredArgsAnyOrder"))) {
+      return false;
+    }
+
+    // acceptedTargets는 nmap 대상 host를 검증한다.
+    List<String> acceptedTargets = getTextArrayField(method, "acceptedTargets");
+    if (!acceptedTargets.isEmpty() && !containsAnyToken(command.args(), acceptedTargets)) {
+      return false;
+    }
+
+    // acceptedHosts/acceptedPorts는 nc -zv host port 형식을 검증한다.
+    if (method.has("acceptedHosts") || method.has("acceptedPorts")) {
+      ParsedNetcatCommand ncCommand = parseNetcatCommand(command.args());
+      return ncCommand != null
+          && matchesHostAlias(ncCommand.host(), getTextArrayField(method, "acceptedHosts"))
+          && matchesPort(ncCommand.port(), method.get("acceptedPorts"), targetPort);
+    }
+
+    return true;
+  }
+
+  /**
+   * CONNECT_RELAY rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return nc host port 형식이 relay 접속 조건과 맞으면 true
+   */
+  private boolean matchesConnectRelayRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // relay 접속은 포트 발견 등 선행 플래그가 맞아야 한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null
+        || !getTextArrayField(config, "acceptedCommands").contains(command.command())) {
+      return false;
+    }
+
+    ParsedNetcatCommand ncCommand = parseNetcatCommand(command.args());
+    if (ncCommand == null) {
+      return false;
+    }
+
+    // host alias와 port가 seed 설정과 같아야 한다.
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return false;
+    }
+
+    // stdinRequired가 true일 때만 입력 리다이렉션을 필수로 본다.
+    boolean stdinRequired = config.path("stdinRequired").asBoolean(false);
+    return !stdinRequired || ncCommand.stdinFile() != null;
+  }
+
+  /**
+   * RELAY_REQUEST 및 RELAY_REQUEST_TO_FILE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param outputFileRequired 파일 저장형 요청이면 true
+   * @return relay 요청 payload와 nc 대상, 출력 파일 조건이 맞으면 true
+   */
+  private boolean matchesRelayRequestRule(
+      JsonNode config,
+      TransitionRequestDto request,
+      JsonNode latestSnapshot,
+      boolean outputFileRequired) {
+    // relay 요청은 접속 완료 등 선행 조건이 맞아야 한다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    ParsedRelayInvocation invocation = parseRelayInvocation(input);
+    if (invocation == null) {
+      return false;
+    }
+
+    // 요청 payload는 STATUS, PEOPLE 같은 seed request 값을 대소문자 구분 없이 맞춘다.
+    String expectedRequest = getTextField(config, "request");
+    if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
+      return false;
+    }
+
+    // relay host/port는 config가 허용한 localhost alias와 9091이어야 한다.
+    ParsedNetcatCommand ncCommand = invocation.netcatCommand();
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return false;
+    }
+
+    // 파일 저장형 요청은 redirect 또는 tee 출력 대상이 outputFile과 같아야 한다.
+    if (outputFileRequired) {
+      String expectedOutputFile = getTextField(config, "outputFile");
+      String actualOutputFile = invocation.outputFile();
+      // 정보 덤프용 relay 요청은 사용자가 고른 파일명을 그대로 허용할 수 있다.
+      if (config.path("allowAnyOutputFile").asBoolean(false)) {
+        // redirect 또는 tee 대상이 하나라도 있으면 저장형 요청으로 인정한다.
+        return actualOutputFile != null && !actualOutputFile.isBlank();
+      }
+      return actualOutputFile != null
+          && expectedOutputFile != null
+          && expectedOutputFile.equals(resolveSnapshotPath(latestSnapshot, actualOutputFile));
+    }
+
+    // 조회형 relay 요청은 응답 저장 또는 입력 파일 전송 문법을 대신 소비하면 안 된다.
+    if (ncCommand.stdinFile() != null || invocation.outputFile() != null) {
+      // 파일 방향이 섞인 명령은 저장형 전이나 near-miss 힌트가 처리하도록 남긴다.
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 저장형 relay 명령의 리다이렉션 near-miss 여부를 판단해 범주형 힌트를 반환한다.
+   *
+   * <p>정답 파일명이나 다음 행동을 직접 노출하지 않고, 리다이렉션 방향과 파일 경로만 다시 보도록 안내한다.
+   *
+   * @param config transition validator_config
+   * @param command 사용자가 입력한 파싱된 명령
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return relay 저장형 near-miss이면 힌트 문구, 아니면 null
+   */
+  private String findRelayRedirectionNudge(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    // 설정 또는 명령이 없으면 near-miss를 판단할 수 없다.
+    if (config == null || command == null) {
+      return null;
+    }
+
+    // 저장형 relay 전이만 리다이렉션 near-miss 대상으로 본다.
+    if (!RULE_RELAY_REQUEST_TO_FILE.equals(getTextField(config, "rule"))) {
+      return null;
+    }
+
+    // 선행 플래그가 맞지 않는 상태에서는 순서 문제와 문법 문제를 섞지 않는다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return null;
+    }
+
+    // 원문 명령에서 relay payload, nc 대상, 출력 파일 구조를 다시 추출한다.
+    ParsedRelayInvocation invocation = parseRelayInvocation(command.rawInput());
+    if (invocation == null) {
+      return null;
+    }
+
+    // 사용자가 요청하려던 relay payload가 현재 전이의 payload와 다르면 대상이 아니다.
+    String expectedRequest = getTextField(config, "request");
+    if (!matchesRelayPayload(invocation.payload(), expectedRequest)) {
+      return null;
+    }
+
+    // nc 대상 host와 port가 맞을 때만 리다이렉션 근접 오답으로 판단한다.
+    ParsedNetcatCommand ncCommand = invocation.netcatCommand();
+    if (!matchesHostAlias(ncCommand.host(), getTextArrayField(config, "hostAliases"))
+        || ncCommand.port() != config.path("port").asInt()) {
+      return null;
+    }
+
+    // nc에 입력 리다이렉션이 붙어 있으면 방향을 혼동한 near-miss로 본다.
+    if (ncCommand.stdinFile() != null) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 저장형 전이인데 출력 파일이 없으면 리다이렉션 확인 힌트를 반환한다.
+    String actualOutputFile = invocation.outputFile();
+    if (actualOutputFile == null || actualOutputFile.isBlank()) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 임의 파일명을 허용하는 전이는 출력 파일이 존재하면 near-miss가 아니다.
+    if (config.path("allowAnyOutputFile").asBoolean(false)) {
+      return null;
+    }
+
+    // seed가 기대하는 출력 파일 경로를 읽는다.
+    String expectedOutputFile = getTextField(config, "outputFile");
+    // 입력한 출력 파일을 현재 snapshot cwd 기준 절대 경로로 정규화한다.
+    String resolvedOutputFile = resolveSnapshotPath(latestSnapshot, actualOutputFile);
+    // 출력 파일 경로가 기대값과 다르면 범주형 힌트를 반환한다.
+    if (expectedOutputFile == null || !expectedOutputFile.equals(resolvedOutputFile)) {
+      return RELAY_REDIRECTION_NUDGE;
+    }
+
+    // 모든 조건이 맞으면 near-miss가 아니므로 별도 힌트를 만들지 않는다.
+    return null;
+  }
+
+  /**
+   * VALIDATE_CORE_GROUP_DAT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return core_group.dat 작성 내용이 성공/실패 branch 조건과 맞으면 true
+   */
+  private boolean matchesValidateCoreGroupDatRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    // fragment 실행 및 relay 지식 조건이 맞아야 검증을 시작할 수 있다.
+    if (!matchesRulePrerequisites(config, latestSnapshot)
+        || !matchesKnowledgeRequirements(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null
+        || targetFile == null
+        || !targetsOutputFile(input, targetFile, latestSnapshot)) {
+      return false;
+    }
+
+    // 명령 문자열 또는 PEOPLE 덤프 필터링 명령에서 core_group.dat에 들어갈 상태 라인을 추론한다.
+    List<String> statusLines = extractCoreGroupStatusLines(input, config, latestSnapshot);
+    if (statusLines.isEmpty()) {
+      return false;
+    }
+
+    boolean valid = isValidCoreGroupDat(statusLines, config);
+    boolean expectFailure = config.path("expectFailure").asBoolean(false);
+    return expectFailure ? !valid : valid;
+  }
+
+  /**
+   * GPG_OUTPUT_EXISTS rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return gpg symmetric 출력 경로가 기대값과 맞으면 true
+   */
+  private boolean matchesGpgOutputExistsRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null || !"gpg".equals(command.command())) {
+      return false;
+    }
+
+    if (!containsAnyToken(command.args(), List.of("-c", "--symmetric"))) {
+      return false;
+    }
+
+    String expectedInput = getTextField(config, "inputFile");
+    String expectedOutput = getTextField(config, "expectedOutput");
+    String actualOutput = resolveSnapshotPath(latestSnapshot, resolveGpgOutputFile(command.args()));
+    String actualInput = resolveSnapshotPath(latestSnapshot, resolveGpgInputFile(command.args()));
+
+    return expectedInput != null
+        && expectedOutput != null
+        && expectedInput.equals(actualInput)
+        && expectedOutput.equals(actualOutput);
+  }
+
+  /**
+   * FILE_EQUIVALENCE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cp/mv/cat로 기대 파일을 targetFile에 복제하려는 입력이면 true
+   */
+  private boolean matchesFileEquivalenceRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    if (copyCommand == null) {
+      return false;
+    }
+
+    List<String> acceptedCommands = getTextArrayField(config, "acceptedCommands");
+    String expectedSource = getTextField(config, "equivalentTo");
+    String expectedTarget = getTextField(config, "targetFile");
+
+    return acceptedCommands.contains(copyCommand.command())
+        && expectedSource != null
+        && expectedTarget != null
+        && expectedSource.equals(copyCommand.sourceFile())
+        && expectedTarget.equals(copyCommand.targetFile());
+  }
+
+  /**
+   * CONFIRMATION_STREAM_TO_SCRIPT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 충분한 확인 토큰을 script로 stream하는 입력이면 true
+   */
+  private boolean matchesConfirmationStreamToScriptRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    if (input == null
+        || !targetsShellScript(input, getTextField(config, "scriptPath"), latestSnapshot)) {
+      return false;
+    }
+
+    List<String> acceptedTokens = getTextArrayField(config, "acceptedConfirmationTokens");
+    int minimumConfirmations = config.path("minimumConfirmations").asInt(1);
+    return countConfirmationTokens(input, acceptedTokens) >= minimumConfirmations
+        || streamsInfiniteConfirmation(input, acceptedTokens);
+  }
+
+  /**
+   * DISCOVER_FILE rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return ls/find/cd 후 ls로 targetFile을 찾는 입력이면 true
+   */
+  private boolean matchesDiscoverFileRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null || targetFile == null) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(input);
+    if (command == null) {
+      return false;
+    }
+
+    if ("find".equals(command.command())) {
+      return matchesFindNameDiscovery(command, targetFile, latestSnapshot);
+    }
+
+    if ("ls".equals(command.command())) {
+      return matchesLsDiscovery(
+          command, targetFile, latestSnapshot, extractText(latestSnapshot, "/terminal/cwd"));
+    }
+
+    return matchesCdThenLsDiscovery(input, targetFile, latestSnapshot);
+  }
+
+  /**
+   * find -name 형태로 targetFile을 찾는 입력인지 검증한다.
+   *
+   * @param command 파싱된 find 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return targetFile 이름과 탐색 루트가 일치하면 true
+   */
+  private boolean matchesFindNameDiscovery(
+      ParsedCommand command, String targetFile, JsonNode latestSnapshot) {
+    // targetFile의 파일명만 분리해 -name 값과 비교한다.
+    String targetName = fileNameOf(targetFile);
+
+    // find가 탐색할 루트 경로 후보를 담는다.
+    List<String> searchRoots = new ArrayList<>();
+
+    // -name 값이 targetName과 일치했는지 추적한다.
+    boolean targetNameSeen = false;
+
+    // find 인자를 왼쪽부터 해석한다.
+    for (int i = 0; i < command.args().size(); i++) {
+      // 현재 인자를 읽는다.
+      String arg = command.args().get(i);
+
+      // -name 뒤에는 파일명 패턴이 온다.
+      if ("-name".equals(arg)) {
+        // 다음 값이 targetName이면 파일명 조건을 충족한다.
+        targetNameSeen =
+            targetNameSeen
+                || (i + 1 < command.args().size() && targetName.equals(command.args().get(i + 1)));
+
+        // -name 값까지 소비했으므로 다음 반복에서 건너뛴다.
+        i++;
+
+        // 현재 인자 처리를 마쳤다.
+        continue;
+      }
+
+      // -type f 같은 보조 조건은 탐색 루트가 아니므로 값까지 건너뛴다.
+      if ("-type".equals(arg)) {
+        // -type 뒤의 타입 값이 있으면 함께 소비한다.
+        if (i + 1 < command.args().size()) {
+          i++;
+        }
+
+        // 현재 인자 처리를 마쳤다.
+        continue;
+      }
+
+      // 다른 옵션은 탐색 루트가 아니므로 무시한다.
+      if (arg.startsWith("-")) {
+        continue;
+      }
+
+      // 옵션이 아닌 값은 find 탐색 루트 후보로 본다.
+      searchRoots.add(arg);
+    }
+
+    // targetName 조건이 없으면 targetFile을 찾는 find가 아니다.
+    if (!targetNameSeen) {
+      return false;
+    }
+
+    // 루트 생략 find는 현재 디렉터리에서 찾는 것으로 간주한다.
+    if (searchRoots.isEmpty()) {
+      return parentPathOf(targetFile).equals(extractText(latestSnapshot, "/terminal/cwd"));
+    }
+
+    // 입력된 탐색 루트 중 targetFile 위치와 일치하는 루트가 있는지 확인한다.
+    return searchRoots.stream()
+        .map(rawPath -> resolveSnapshotPath(latestSnapshot, rawPath))
+        .anyMatch(path -> path.equals(parentPathOf(targetFile)) || path.equals(targetFile));
+  }
+
+  /**
+   * ls 형태로 targetFile 또는 targetFile이 있는 디렉터리를 확인하는 입력인지 검증한다.
+   *
+   * @param command 파싱된 ls 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param cwdOverride cd 이후처럼 임시로 적용할 기준 cwd
+   * @return targetFile 또는 부모 디렉터리를 ls로 조회하면 true
+   */
+  private boolean matchesLsDiscovery(
+      ParsedCommand command, String targetFile, JsonNode latestSnapshot, String cwdOverride) {
+    // targetFile이 들어 있는 디렉터리를 계산한다.
+    String targetDirectory = parentPathOf(targetFile);
+
+    // 기준 cwd가 없으면 snapshot의 현재 cwd를 사용한다.
+    String baseCwd =
+        cwdOverride == null || cwdOverride.isBlank()
+            ? extractText(latestSnapshot, "/terminal/cwd")
+            : cwdOverride;
+
+    // 옵션을 제외한 실제 path 인자만 모은다.
+    List<String> pathArgs =
+        command.args().stream().filter(arg -> !arg.startsWith("-")).collect(Collectors.toList());
+
+    // path 인자가 없는 ls는 현재 디렉터리를 조회한다.
+    if (pathArgs.isEmpty()) {
+      return targetDirectory.equals(baseCwd);
+    }
+
+    // path 인자가 있으면 targetFile 또는 부모 디렉터리로 해석되는지 확인한다.
+    return pathArgs.stream()
+        .map(rawPath -> resolveSnapshotPathFromCwd(latestSnapshot, baseCwd, rawPath))
+        .anyMatch(path -> path.equals(targetDirectory) || path.equals(targetFile));
+  }
+
+  /**
+   * cd targetDirectory 후 ls로 targetFile을 찾는 입력인지 검증한다.
+   *
+   * @param input 사용자 원문 입력
+   * @param targetFile 찾아야 하는 파일 절대 경로
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cd와 ls가 같은 입력 안에서 순서대로 수행되면 true
+   */
+  private boolean matchesCdThenLsDiscovery(
+      String input, String targetFile, JsonNode latestSnapshot) {
+    // && 또는 ; 로 나뉜 쉘 명령 두 개를 순서대로 확인한다.
+    String[] rawCommands = input.trim().split("\\s*(?:&&|;)\\s*");
+
+    // cd와 ls가 모두 있어야 한다.
+    if (rawCommands.length < 2) {
+      return false;
+    }
+
+    // 첫 명령어를 cd 후보로 파싱한다.
+    ParsedCommand cdCommand = parseCommand(rawCommands[0]);
+
+    // 두 번째 명령어를 ls 후보로 파싱한다.
+    ParsedCommand lsCommand = parseCommand(rawCommands[1]);
+
+    // cd 또는 ls 파싱이 실패하면 검증할 수 없다.
+    if (cdCommand == null || lsCommand == null) {
+      return false;
+    }
+
+    // 첫 명령은 cd여야 하고 이동 경로가 있어야 한다.
+    if (!"cd".equals(cdCommand.command()) || cdCommand.args().isEmpty()) {
+      return false;
+    }
+
+    // 두 번째 명령은 ls여야 한다.
+    if (!"ls".equals(lsCommand.command())) {
+      return false;
+    }
+
+    // cd 대상 경로를 현재 snapshot 기준 절대 경로로 해석한다.
+    String cdTarget = resolveSnapshotPath(latestSnapshot, cdCommand.args().get(0));
+
+    // targetFile이 있는 디렉터리로 이동하는지 확인한다.
+    if (!parentPathOf(targetFile).equals(cdTarget)) {
+      return false;
+    }
+
+    // cd 이후 cwd를 기준으로 ls가 targetFile을 드러내는지 확인한다.
+    return matchesLsDiscovery(lsCommand, targetFile, latestSnapshot, cdTarget);
+  }
+
+  /**
+   * CREATE_FILE_EQUIVALENT rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return sourceFile을 targetFile로 복사하는 입력이면 true
+   */
+  private boolean matchesCreateFileEquivalentRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    if (copyCommand == null) {
+      return false;
+    }
+
+    return getTextArrayField(config, "acceptedCommands").contains(copyCommand.command())
+        && getTextField(config, "sourceFile").equals(copyCommand.sourceFile())
+        && getTextField(config, "targetFile").equals(copyCommand.targetFile());
+  }
+
+  /**
+   * FILE_COMPOSITION rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return orderedSources를 targetFile로 합치는 입력이면 true
+   */
+  private boolean matchesFileCompositionRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    String targetFile = getTextField(config, "targetFile");
+    if (input == null
+        || targetFile == null
+        || !targetsOutputFile(input, targetFile, latestSnapshot)) {
+      return false;
+    }
+
+    List<String> actualSources = resolveCatSourcePaths(input, latestSnapshot);
+    List<String> orderedSources = getTextArrayField(config, "orderedSources");
+    return containsAllPaths(actualSources, orderedSources)
+        && appearsInOrder(actualSources, orderedSources);
+  }
+
+  /**
+   * HASH_FILE_CHECK rule을 검증한다.
+   *
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return sha256sum 또는 shasum -a 256 대상이 targetFile이면 true
+   */
+  private boolean matchesHashFileCheckRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    ParsedCommand command = parseCommand(request.getInputValue());
+    if (command == null) {
+      return false;
+    }
+
+    JsonNode acceptedCommands = config.get("acceptedCommands");
+    if (acceptedCommands == null || !acceptedCommands.isArray()) {
+      return false;
+    }
+
+    for (JsonNode acceptedCommand : acceptedCommands) {
+      if (matchesHashCommand(acceptedCommand, command, config, latestSnapshot)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * validator_config에서 문자열 필드를 안전하게 읽는다.
    *
    * @param node 값을 읽을 JSON node
@@ -1475,6 +2299,865 @@ public class StoryServiceImpl implements StoryService {
    * @param input 사용자가 입력한 명령어 문자열
    * @return 토큰화된 명령어/인자 목록
    */
+  /**
+   * validator_config.cwd 조건이 현재 snapshot의 terminal.cwd와 맞는지 확인한다.
+   *
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return cwd 조건이 없거나 현재 cwd와 같으면 true
+   */
+  private boolean matchesCwdRequirement(JsonNode config, JsonNode latestSnapshot) {
+    // cwd 조건이 없는 rule은 디렉터리와 무관하게 매칭한다.
+    String expectedCwd = getTextField(config, "cwd");
+    if (expectedCwd == null || expectedCwd.isBlank()) {
+      return true;
+    }
+
+    // snapshot에 cwd가 없으면 챕터 프로필의 기본 cwd를 사용한다.
+    String actualCwd = extractText(latestSnapshot, "/terminal/cwd");
+    if (actualCwd == null || actualCwd.isBlank()) {
+      actualCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+    }
+
+    // seed가 지정한 cwd와 현재 cwd가 같아야 한다.
+    return expectedCwd.equals(actualCwd);
+  }
+
+  /**
+   * command form 설정과 실제 token 목록을 비교한다.
+   *
+   * @param form command/args 또는 command/argsAnyOrder 설정
+   * @param actualTokens tokenizer로 분해한 실제 입력
+   * @return command와 args 조건이 맞으면 true
+   */
+  private boolean matchesCommandForm(JsonNode form, List<String> actualTokens) {
+    // 빈 token은 어떤 command form에도 매칭할 수 없다.
+    if (actualTokens == null || actualTokens.isEmpty()) {
+      return false;
+    }
+
+    // 첫 token은 명령어 이름이어야 한다.
+    String expectedCommand = getTextField(form, "command");
+    if (expectedCommand == null || !expectedCommand.equals(actualTokens.get(0))) {
+      return false;
+    }
+
+    // command 뒤의 token만 인자 목록으로 비교한다.
+    List<String> actualArgs = actualTokens.subList(1, actualTokens.size());
+    List<String> expectedArgs = getTextArrayField(form, "args");
+    if (!expectedArgs.isEmpty()) {
+      return actualArgs.equals(expectedArgs);
+    }
+
+    // argsAnyOrder는 순서만 무시하고 인자 개수는 동일해야 한다.
+    List<String> expectedArgsAnyOrder = getTextArrayField(form, "argsAnyOrder");
+    if (!expectedArgsAnyOrder.isEmpty()) {
+      return actualArgs.size() == expectedArgsAnyOrder.size()
+          && containsRequiredArgs(actualArgs, expectedArgsAnyOrder);
+    }
+
+    // 인자 조건이 없으면 command 단독 입력만 통과시킨다.
+    return actualArgs.isEmpty();
+  }
+
+  private boolean containsRequiredArgs(List<String> actualArgs, List<String> requiredArgs) {
+    if (requiredArgs == null || requiredArgs.isEmpty()) {
+      return true;
+    }
+    for (String requiredArg : requiredArgs) {
+      if (!containsCliArg(actualArgs, requiredArg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean containsCliArg(List<String> actualArgs, String expectedArg) {
+    if (actualArgs.contains(expectedArg)) {
+      return true;
+    }
+    if (expectedArg == null || !expectedArg.startsWith("-") || expectedArg.startsWith("--")) {
+      return false;
+    }
+
+    String requiredOptions = expectedArg.substring(1);
+    for (String actualArg : actualArgs) {
+      if (actualArg == null || !actualArg.startsWith("-") || actualArg.startsWith("--")) {
+        continue;
+      }
+
+      String actualOptions = actualArg.substring(1);
+      boolean allPresent = true;
+      for (int i = 0; i < requiredOptions.length(); i++) {
+        if (actualOptions.indexOf(requiredOptions.charAt(i)) < 0) {
+          allPresent = false;
+          break;
+        }
+      }
+      if (allPresent) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean containsAnyToken(List<String> actualTokens, List<String> acceptedTokens) {
+    for (String acceptedToken : acceptedTokens) {
+      if (containsCliArg(actualTokens, acceptedToken) || actualTokens.contains(acceptedToken)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** nc host/port 명령에서 추출한 구조입니다. */
+  private record ParsedNetcatCommand(
+      String host, int port, String stdinFile, List<String> trailingValues) {}
+
+  /** relay 요청 입력에서 추출한 payload, nc 대상, 출력 파일 구조입니다. */
+  private record ParsedRelayInvocation(
+      String payload, ParsedNetcatCommand netcatCommand, String outputFile) {}
+
+  /** 파일 복사/동등성 rule에서 사용하는 source/target 구조입니다. */
+  private record ParsedFileCopyCommand(String command, String sourceFile, String targetFile) {}
+
+  private ParsedNetcatCommand parseNetcatCommand(List<String> args) {
+    List<String> positionals = new ArrayList<>();
+    String stdinFile = null;
+
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-w".equals(arg) && i + 1 < args.size()) {
+        i++;
+        continue;
+      }
+      if (arg != null && arg.startsWith("-w") && arg.length() > 2) {
+        continue;
+      }
+      if (arg != null && arg.startsWith("-")) {
+        continue;
+      }
+      if ("<".equals(arg) && i + 1 < args.size()) {
+        stdinFile = args.get(++i);
+        continue;
+      }
+      if (arg != null && arg.startsWith("<") && arg.length() > 1) {
+        stdinFile = arg.substring(1);
+        continue;
+      }
+      if ("|".equals(arg) || ">".equals(arg) || ">>".equals(arg)) {
+        break;
+      }
+      positionals.add(arg);
+    }
+
+    for (int i = 0; i + 1 < positionals.size(); i++) {
+      Integer port = parseInteger(positionals.get(i + 1));
+      if (port == null) {
+        continue;
+      }
+
+      List<String> trailingValues =
+          i + 2 >= positionals.size()
+              ? List.of()
+              : new ArrayList<>(positionals.subList(i + 2, positionals.size()));
+      return new ParsedNetcatCommand(positionals.get(i), port, stdinFile, trailingValues);
+    }
+    return null;
+  }
+
+  private boolean matchesHostAlias(String actualHost, List<String> hostAliases) {
+    return hostAliases.isEmpty() || hostAliases.contains(actualHost);
+  }
+
+  private boolean matchesPort(int actualPort, JsonNode acceptedPorts, int fallbackPort) {
+    if (acceptedPorts == null || !acceptedPorts.isArray()) {
+      return actualPort == fallbackPort;
+    }
+    for (JsonNode acceptedPort : acceptedPorts) {
+      if (acceptedPort.canConvertToInt() && acceptedPort.asInt() == actualPort) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private ParsedRelayInvocation parseRelayInvocation(String input) {
+    if (input == null || input.isBlank()) {
+      return null;
+    }
+
+    List<String> tokens = tokenizeCommand(input);
+    int ncIndex = tokens.indexOf("nc");
+    if (ncIndex < 0) {
+      return null;
+    }
+
+    List<String> ncArgs = new ArrayList<>();
+    for (int i = ncIndex + 1; i < tokens.size(); i++) {
+      String token = tokens.get(i);
+      if ("|".equals(token)
+          || ">".equals(token)
+          || ">>".equals(token)
+          || token.startsWith(">")
+          || "<<<".equals(token)
+          || "<<".equals(token)) {
+        break;
+      }
+      ncArgs.add(token);
+    }
+
+    ParsedNetcatCommand ncCommand = parseNetcatCommand(ncArgs);
+    if (ncCommand == null) {
+      return null;
+    }
+
+    String payload = extractRelayPayload(input, tokens, ncIndex, ncCommand.trailingValues());
+    if (payload == null || payload.isBlank()) {
+      return null;
+    }
+
+    return new ParsedRelayInvocation(payload, ncCommand, extractOutputFile(input));
+  }
+
+  private String extractRelayPayload(
+      String input, List<String> tokens, int ncIndex, List<String> trailingValues) {
+    int pipeIndex = tokens.indexOf("|");
+    if (pipeIndex >= 0 && pipeIndex < ncIndex) {
+      return joinPayloadTokens(tokens.subList(0, pipeIndex));
+    }
+
+    int hereStringIndex = tokens.indexOf("<<<");
+    if (hereStringIndex >= 0 && hereStringIndex + 1 < tokens.size()) {
+      return joinPayloadTokens(tokens.subList(hereStringIndex + 1, tokens.size()));
+    }
+
+    if (trailingValues != null && !trailingValues.isEmpty()) {
+      return joinPayloadTokens(trailingValues);
+    }
+
+    return input.contains("<<") ? input : null;
+  }
+
+  private String joinPayloadTokens(List<String> tokens) {
+    if (tokens.isEmpty()) {
+      return "";
+    }
+    int start = ("echo".equals(tokens.get(0)) || "printf".equals(tokens.get(0))) ? 1 : 0;
+    return String.join(" ", tokens.subList(start, tokens.size()))
+        .replace("\\n", "\n")
+        .replace("\\r", "\r")
+        .trim();
+  }
+
+  private boolean matchesRelayPayload(String payload, String expectedRequest) {
+    if (payload == null || expectedRequest == null) {
+      return false;
+    }
+    return java.util.regex.Pattern.compile(
+            "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE)
+        .matcher(payload)
+        .find();
+  }
+
+  private String extractOutputFile(String input) {
+    List<String> tokens = tokenizeCommand(input);
+    for (int i = 0; i < tokens.size(); i++) {
+      String token = tokens.get(i);
+      if ((">".equals(token) || ">>".equals(token)) && i + 1 < tokens.size()) {
+        return tokens.get(i + 1);
+      }
+      if (token != null && token.startsWith(">") && token.length() > 1) {
+        return token.replaceFirst("^>+", "");
+      }
+      if ("tee".equals(token) && i + 1 < tokens.size()) {
+        int targetIndex = i + 1;
+        if (tokens.get(targetIndex).startsWith("-") && targetIndex + 1 < tokens.size()) {
+          targetIndex++;
+        }
+        return tokens.get(targetIndex);
+      }
+    }
+    return null;
+  }
+
+  private boolean matchesKnowledgeRequirements(JsonNode config, JsonNode latestSnapshot) {
+    JsonNode requiredKnowledge = config.get("requiredKnowledge");
+    if (requiredKnowledge == null || !requiredKnowledge.isObject()) {
+      return true;
+    }
+
+    JsonNode flags = latestSnapshot == null ? null : latestSnapshot.path("flags");
+    var fields = requiredKnowledge.fields();
+    while (fields.hasNext()) {
+      Map.Entry<String, JsonNode> entry = fields.next();
+      JsonNode alternatives = entry.getValue();
+      if (alternatives == null || !alternatives.isArray()) {
+        continue;
+      }
+
+      boolean anySatisfied = false;
+      for (JsonNode alternative : alternatives) {
+        if (alternative.isTextual()
+            && flags != null
+            && flags.path(alternative.asText()).asBoolean(false)) {
+          anySatisfied = true;
+          break;
+        }
+      }
+      if (!anySatisfied) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean targetsOutputFile(String input, String expectedFile, JsonNode latestSnapshot) {
+    String outputFile = extractOutputFile(input);
+    if (outputFile != null
+        && expectedFile.equals(resolveSnapshotPath(latestSnapshot, outputFile))) {
+      return true;
+    }
+    return input.contains(expectedFile) || input.contains(fileNameOf(expectedFile));
+  }
+
+  private List<String> extractStatusLines(String input, JsonNode config) {
+    List<String> lines = new ArrayList<>();
+    String normalized = input.replace("\\n", "\n").replace("\\r", "\r");
+
+    for (String canonicalLine : getTextArrayField(config, "canonicalAllowedLines")) {
+      if (normalized.contains(canonicalLine)) {
+        lines.add(canonicalLine);
+      }
+    }
+
+    java.util.regex.Matcher matcher =
+        java.util.regex.Pattern.compile("\\b[\\w_]+\\s+(ACTIVE|DELETED|UNKNOWN)\\b")
+            .matcher(normalized);
+    while (matcher.find()) {
+      String line = matcher.group().trim();
+      if (!lines.contains(line)) {
+        lines.add(line);
+      }
+    }
+    return lines;
+  }
+
+  /**
+   * core_group.dat 검증에 사용할 상태 라인 목록을 추출한다.
+   *
+   * <p>직접 파일 내용을 작성한 입력은 기존처럼 상태 라인을 바로 읽고, 사용자가 PEOPLE 덤프 파일을 grep/awk/sed로 필터링한 입력은
+   * sourceStatusLines를 기준으로 실제 결과 파일에 들어갈 상태 라인을 추론한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return core_group.dat에 들어간 것으로 판단되는 상태 라인 목록
+   */
+  private List<String> extractCoreGroupStatusLines(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // printf처럼 파일 내용을 직접 쓴 입력은 명령 문자열 안에서 상태 라인을 바로 뽑는다.
+    List<String> directStatusLines = extractStatusLines(input, config);
+
+    // 직접 작성한 상태 라인이 있으면 기존 검증 경로를 그대로 사용한다.
+    if (!directStatusLines.isEmpty()) {
+      return directStatusLines;
+    }
+
+    // 상태 라인이 직접 보이지 않으면 PEOPLE 덤프를 필터링한 명령인지 확인한다.
+    return extractFilteredCoreGroupStatusLines(input, config, latestSnapshot);
+  }
+
+  /**
+   * PEOPLE 덤프 파일을 필터링해 core_group.dat를 만드는 명령의 결과 상태 라인을 추론한다.
+   *
+   * <p>실제 shell을 실행하지 않으므로, 사용자가 만든 relay 덤프 파일(contentKey)과 grep/awk/sed 필터 의도를 함께 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 필터링 결과로 만들어진 상태 라인 목록, 인식할 수 없으면 빈 목록
+   */
+  private List<String> extractFilteredCoreGroupStatusLines(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // 입력이 없으면 필터링 명령을 판정할 수 없다.
+    if (input == null || input.isBlank()) {
+      return List.of();
+    }
+
+    // 현재 snapshot에 PEOPLE relay 덤프 파일이 생성되어 있어야 파일 가공 흐름으로 인정한다.
+    if (!referencesRelayDumpSource(input, config, latestSnapshot)) {
+      return List.of();
+    }
+
+    // grep/awk/sed 중 하나를 사용하지 않았다면 파일 필터링 의도로 보지 않는다.
+    if (!usesCoreGroupFilterCommand(input)) {
+      return List.of();
+    }
+
+    // seed에 정의된 원본 PEOPLE 상태 라인을 읽는다.
+    List<String> sourceStatusLines = getCoreGroupSourceStatusLines(config);
+
+    // 원본 상태 라인이 없으면 결과를 추론할 기준이 없다.
+    if (sourceStatusLines.isEmpty()) {
+      return List.of();
+    }
+
+    // 사용자가 ACTIVE 줄을 선택하는 필터를 작성했으면 보호 가능한 노드만 남긴다.
+    if (selectsActiveCoreGroupLines(input)) {
+      return filterStatusLinesByStatus(sourceStatusLines, "ACTIVE");
+    }
+
+    // DELETED/UNKNOWN 또는 ACTIVE 반전 필터는 실패 branch가 잡을 수 있도록 위험 상태 라인을 반환한다.
+    if (selectsRejectedCoreGroupLines(input, config)) {
+      return filterRejectedStatusLines(sourceStatusLines, config);
+    }
+
+    // 어떤 상태를 남기려는지 모호한 필터는 이 rule에서 처리하지 않는다.
+    return List.of();
+  }
+
+  /**
+   * 명령 문자열이 snapshot에 생성된 PEOPLE relay 덤프 파일을 참조하는지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @param latestSnapshot 현재 진행 snapshot
+   * @return 명령 토큰 중 하나가 PEOPLE 덤프 파일 경로와 일치하면 true
+   */
+  private boolean referencesRelayDumpSource(
+      String input, JsonNode config, JsonNode latestSnapshot) {
+    // validator_config에서 허용할 relay 덤프 contentKey 목록을 읽는다.
+    List<String> contentKeys = getTextArrayField(config, "filterSourceContentKeys");
+
+    // 설정이 없으면 Chapter 3 PEOPLE 덤프 contentKey를 기본값으로 사용한다.
+    if (contentKeys.isEmpty()) {
+      contentKeys = List.of("CH3_MY_PEOPLE_LIST");
+    }
+
+    // 현재 snapshot에서 해당 contentKey를 가진 생성 파일 경로를 모은다.
+    Set<String> sourcePaths = findCreatedPathsByContentKeys(latestSnapshot, contentKeys);
+
+    // 생성된 PEOPLE 덤프 파일이 없으면 필터링 명령을 인정할 수 없다.
+    if (sourcePaths.isEmpty()) {
+      return false;
+    }
+
+    // 명령을 shell-like tokenizer로 나눠 파일명 후보를 검사한다.
+    for (String token : tokenizeCommand(input)) {
+      // shell 제어 토큰은 파일 경로 후보가 아니므로 건너뛴다.
+      if (isShellOperatorToken(token)) {
+        continue;
+      }
+
+      // 현재 cwd 기준으로 해소한 경로가 PEOPLE 덤프 파일이면 참조가 맞다.
+      if (sourcePaths.contains(resolveSnapshotPath(latestSnapshot, token))) {
+        return true;
+      }
+    }
+
+    // PEOPLE 덤프 파일을 참조하지 않았다.
+    return false;
+  }
+
+  /**
+   * snapshot overlay에서 지정 contentKey를 가진 생성 파일 경로를 찾는다.
+   *
+   * @param latestSnapshot 현재 진행 snapshot
+   * @param contentKeys 허용할 contentKey 목록
+   * @return 삭제되지 않은 생성 파일의 절대 경로 집합
+   */
+  private Set<String> findCreatedPathsByContentKeys(
+      JsonNode latestSnapshot, List<String> contentKeys) {
+    // 결과 경로는 중복 없이 순서를 유지한다.
+    Set<String> paths = new LinkedHashSet<>();
+
+    // createdNodes 배열을 읽는다.
+    JsonNode createdNodes =
+        latestSnapshot == null ? null : latestSnapshot.path("vfsOverlay").path("createdNodes");
+
+    // createdNodes가 없으면 동적 생성 파일이 없다.
+    if (createdNodes == null || !createdNodes.isArray()) {
+      return paths;
+    }
+
+    // snapshot에 남은 생성 파일을 하나씩 확인한다.
+    for (JsonNode createdNode : createdNodes) {
+      // contentKey가 허용 목록에 없으면 대상 파일이 아니다.
+      if (!contentKeys.contains(createdNode.path("contentKey").asText())) {
+        continue;
+      }
+
+      // path 필드를 읽는다.
+      String path = createdNode.path("path").asText();
+
+      // path가 없거나 삭제된 파일이면 사용할 수 없다.
+      if (path.isBlank() || isRemovedPath(latestSnapshot, path)) {
+        continue;
+      }
+
+      // 사용할 수 있는 생성 파일 경로로 추가한다.
+      paths.add(path);
+    }
+
+    // 수집한 경로 집합을 반환한다.
+    return paths;
+  }
+
+  /**
+   * core_group.dat 생성에 허용할 리눅스 필터 명령인지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return grep/awk/sed 중 하나가 명령 토큰에 있으면 true
+   */
+  private boolean usesCoreGroupFilterCommand(String input) {
+    // 명령 토큰을 순회하며 필터 명령 존재 여부를 확인한다.
+    for (String token : tokenizeCommand(input)) {
+      // grep/awk/sed는 PEOPLE 덤프에서 상태 줄을 추려내는 실제 리눅스식 도구다.
+      if ("grep".equals(token) || "awk".equals(token) || "sed".equals(token)) {
+        return true;
+      }
+    }
+
+    // 허용한 필터 명령이 없다.
+    return false;
+  }
+
+  /**
+   * 사용자의 필터가 ACTIVE 상태 라인을 선택하는지 판정한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return ACTIVE를 포함하고 ACTIVE 반전 조건이 아니면 true
+   */
+  private boolean selectsActiveCoreGroupLines(String input) {
+    // 대소문자 영향을 없애기 위해 비교용 문자열을 대문자로 정규화한다.
+    String normalized = input.toUpperCase(java.util.Locale.ROOT);
+
+    // ACTIVE가 언급되지 않으면 활성 노드 선택 필터가 아니다.
+    if (!normalized.contains("ACTIVE")) {
+      return false;
+    }
+
+    // grep -v ACTIVE처럼 ACTIVE를 제외하는 명령은 성공 필터가 아니다.
+    return !containsInvertMatchOption(input);
+  }
+
+  /**
+   * 사용자의 필터가 DELETED/UNKNOWN 같은 제외 대상 상태를 선택하는지 판정한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
+   * @return 제외 상태를 선택하거나 ACTIVE를 반전하면 true
+   */
+  private boolean selectsRejectedCoreGroupLines(String input, JsonNode config) {
+    // 비교용 문자열을 대문자로 정규화한다.
+    String normalized = input.toUpperCase(java.util.Locale.ROOT);
+
+    // ACTIVE 반전은 결과적으로 비활성/위험 상태를 남긴다.
+    if (normalized.contains("ACTIVE") && containsInvertMatchOption(input)) {
+      return true;
+    }
+
+    // rejectStatuses에 등록된 상태를 직접 고르면 실패 branch 대상이다.
+    for (String rejectStatus : getTextArrayField(config, "rejectStatuses")) {
+      if (normalized.contains(rejectStatus.toUpperCase(java.util.Locale.ROOT))) {
+        return true;
+      }
+    }
+
+    // 제외 상태 선택으로 보이지 않는다.
+    return false;
+  }
+
+  /**
+   * grep의 반전 매칭 옵션이 입력에 포함되어 있는지 확인한다.
+   *
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @return -v 또는 --invert-match가 있으면 true
+   */
+  private boolean containsInvertMatchOption(String input) {
+    // 토큰 단위로 옵션을 확인한다.
+    for (String token : tokenizeCommand(input)) {
+      // grep -v 또는 grep --invert-match는 선택 의미가 반대로 바뀐다.
+      if ("-v".equals(token) || "--invert-match".equals(token)) {
+        return true;
+      }
+    }
+
+    // 반전 옵션이 없다.
+    return false;
+  }
+
+  /**
+   * config에 정의된 PEOPLE 원본 상태 라인을 읽는다.
+   *
+   * @param config transition validator_config
+   * @return PEOPLE 덤프에 들어 있는 상태 라인 목록
+   */
+  private List<String> getCoreGroupSourceStatusLines(JsonNode config) {
+    // sourceStatusLines가 있으면 seed가 정의한 원본 데이터로 사용한다.
+    List<String> sourceStatusLines = getTextArrayField(config, "sourceStatusLines");
+
+    // 명시된 원본 데이터가 있으면 그대로 반환한다.
+    if (!sourceStatusLines.isEmpty()) {
+      return sourceStatusLines;
+    }
+
+    // 하위 호환을 위해 기존 canonical active 라인만으로 최소 원본을 구성한다.
+    return getTextArrayField(config, "canonicalAllowedLines");
+  }
+
+  /**
+   * 상태 라인 목록에서 특정 상태로 끝나는 라인만 남긴다.
+   *
+   * @param statusLines 원본 상태 라인 목록
+   * @param status 선택할 상태 문자열
+   * @return 지정 상태 라인 목록
+   */
+  private List<String> filterStatusLinesByStatus(List<String> statusLines, String status) {
+    // 결과를 순서대로 담는다.
+    List<String> filteredLines = new ArrayList<>();
+
+    // 각 상태 라인을 확인한다.
+    for (String statusLine : statusLines) {
+      // "노드명 상태" 형식에서 기대 상태로 끝나는 라인만 선택한다.
+      if (statusLine.endsWith(" " + status)) {
+        filteredLines.add(statusLine);
+      }
+    }
+
+    // 필터링된 상태 라인을 반환한다.
+    return filteredLines;
+  }
+
+  /**
+   * 상태 라인 목록에서 rejectStatuses에 해당하는 라인만 남긴다.
+   *
+   * @param statusLines 원본 상태 라인 목록
+   * @param config transition validator_config
+   * @return 실패 branch가 검증할 수 있는 제외 대상 상태 라인 목록
+   */
+  private List<String> filterRejectedStatusLines(List<String> statusLines, JsonNode config) {
+    // rejectStatuses 설정을 읽는다.
+    List<String> rejectStatuses = getTextArrayField(config, "rejectStatuses");
+
+    // 결과를 순서대로 담는다.
+    List<String> rejectedLines = new ArrayList<>();
+
+    // 각 상태 라인을 확인한다.
+    for (String statusLine : statusLines) {
+      // 설정된 제외 상태 중 하나로 끝나는지 검사한다.
+      for (String rejectStatus : rejectStatuses) {
+        if (statusLine.endsWith(" " + rejectStatus)) {
+          rejectedLines.add(statusLine);
+          break;
+        }
+      }
+    }
+
+    // 실패 branch용 위험 상태 라인을 반환한다.
+    return rejectedLines;
+  }
+
+  /**
+   * shell 제어 토큰인지 확인한다.
+   *
+   * @param token 명령 토큰
+   * @return 파이프/리다이렉션 계열 토큰이면 true
+   */
+  private boolean isShellOperatorToken(String token) {
+    // null은 파일 경로 후보가 아니다.
+    if (token == null) {
+      return true;
+    }
+
+    // shell 제어 문자 토큰은 경로로 해소하지 않는다.
+    return "|".equals(token)
+        || ">".equals(token)
+        || ">>".equals(token)
+        || "<".equals(token)
+        || "<<".equals(token)
+        || "<<<".equals(token);
+  }
+
+  private boolean isValidCoreGroupDat(List<String> statusLines, JsonNode config) {
+    List<String> canonicalLines = getTextArrayField(config, "canonicalAllowedLines");
+    List<String> rejectStatuses = getTextArrayField(config, "rejectStatuses");
+    Set<String> uniqueLines = new LinkedHashSet<>(statusLines);
+
+    if (!config.path("allowDuplicateLines").asBoolean(true)
+        && uniqueLines.size() != statusLines.size()) {
+      return false;
+    }
+
+    for (String line : statusLines) {
+      for (String rejectStatus : rejectStatuses) {
+        if (line.endsWith(" " + rejectStatus)) {
+          return false;
+        }
+      }
+      if (!canonicalLines.contains(line)) {
+        return false;
+      }
+    }
+    return config.path("allowMissingActiveNode").asBoolean(false)
+        || uniqueLines.containsAll(canonicalLines);
+  }
+
+  private String resolveGpgOutputFile(List<String> args) {
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if (("-o".equals(arg) || "--output".equals(arg)) && i + 1 < args.size()) {
+        return args.get(i + 1);
+      }
+    }
+    String inputFile = resolveGpgInputFile(args);
+    return inputFile == null ? "" : inputFile + ".gpg";
+  }
+
+  private String resolveGpgInputFile(List<String> args) {
+    String inputFile = null;
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if (("-o".equals(arg) || "--output".equals(arg)) && i + 1 < args.size()) {
+        i++;
+        continue;
+      }
+      if (arg.startsWith("-")) {
+        continue;
+      }
+      inputFile = arg;
+    }
+    return inputFile;
+  }
+
+  private ParsedFileCopyCommand parseFileCopyCommand(String input, JsonNode latestSnapshot) {
+    ParsedCommand command = parseCommand(input);
+    if (command == null) {
+      return null;
+    }
+
+    if (("cp".equals(command.command()) || "mv".equals(command.command()))
+        && command.args().size() >= 2) {
+      String source = resolveSnapshotPath(latestSnapshot, command.args().get(0));
+      String target = resolveSnapshotPath(latestSnapshot, command.args().get(1));
+      return new ParsedFileCopyCommand(command.command(), source, target);
+    }
+
+    if ("cat".equals(command.command())) {
+      String outputFile = extractOutputFile(input);
+      if (outputFile == null || command.args().isEmpty()) {
+        return null;
+      }
+      String source = resolveSnapshotPath(latestSnapshot, command.args().get(0));
+      String target = resolveSnapshotPath(latestSnapshot, outputFile);
+      return new ParsedFileCopyCommand("cat", source, target);
+    }
+    return null;
+  }
+
+  private boolean targetsShellScript(String input, String scriptPath, JsonNode latestSnapshot) {
+    if (scriptPath == null) {
+      return false;
+    }
+
+    List<String> tokens = tokenizeCommand(input);
+    for (int i = 0; i + 1 < tokens.size(); i++) {
+      if ("sh".equals(tokens.get(i))
+          && scriptPath.equals(resolveSnapshotPath(latestSnapshot, tokens.get(i + 1)))) {
+        return true;
+      }
+    }
+    return input.contains(scriptPath);
+  }
+
+  private int countConfirmationTokens(String input, List<String> acceptedTokens) {
+    String normalized = input.replace("\\n", "\n").replace(";", "\n");
+    int count = 0;
+    for (String token : normalized.split("\\s+")) {
+      String cleaned = token.replaceAll("[^A-Za-z]", "").toLowerCase();
+      if (acceptedTokens.contains(cleaned)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private boolean streamsInfiniteConfirmation(String input, List<String> acceptedTokens) {
+    String normalized = input.toLowerCase();
+    return (normalized.startsWith("yes ")
+            || normalized.startsWith("yes|")
+            || normalized.startsWith("yes |"))
+        || (normalized.contains("while") && acceptedTokens.stream().anyMatch(normalized::contains));
+  }
+
+  private String fileNameOf(String path) {
+    int index = path.lastIndexOf('/');
+    return index < 0 ? path : path.substring(index + 1);
+  }
+
+  private String parentPathOf(String path) {
+    int index = path.lastIndexOf('/');
+    return index <= 0 ? "/" : path.substring(0, index);
+  }
+
+  private List<String> resolveCatSourcePaths(String input, JsonNode latestSnapshot) {
+    List<String> sources = new ArrayList<>();
+    for (String rawCommand : input.split("\\s*&&\\s*")) {
+      ParsedCommand command = parseCommand(rawCommand);
+      if (command == null || !"cat".equals(command.command())) {
+        continue;
+      }
+
+      for (String arg : command.args()) {
+        if (arg.startsWith(">") || ">".equals(arg) || ">>".equals(arg)) {
+          break;
+        }
+        if (containsShellGlob(arg)) {
+          sources.addAll(expandVfsGlob(latestSnapshot, createVfsContext(latestSnapshot), arg));
+        } else {
+          sources.add(resolveSnapshotPath(latestSnapshot, arg));
+        }
+      }
+    }
+    return sources;
+  }
+
+  private boolean appearsInOrder(List<String> actual, List<String> required) {
+    int searchIndex = 0;
+    for (String requiredPath : required) {
+      int foundIndex = actual.subList(searchIndex, actual.size()).indexOf(requiredPath);
+      if (foundIndex < 0) {
+        return false;
+      }
+      searchIndex += foundIndex + 1;
+    }
+    return true;
+  }
+
+  private boolean matchesHashCommand(
+      JsonNode acceptedCommand, ParsedCommand command, JsonNode config, JsonNode latestSnapshot) {
+    String expectedCommand = getTextField(acceptedCommand, "command");
+    if (expectedCommand == null || !expectedCommand.equals(command.command())) {
+      return false;
+    }
+    if (!containsRequiredArgs(command.args(), getTextArrayField(acceptedCommand, "requiredArgs"))) {
+      return false;
+    }
+
+    String targetFile = getTextField(config, "targetFile");
+    for (String arg : command.args()) {
+      if (arg.startsWith("-") || "256".equals(arg)) {
+        continue;
+      }
+      if (targetFile.equals(resolveSnapshotPath(latestSnapshot, arg))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private List<String> tokenizeCommand(String input) {
     // 결과 토큰을 순서대로 담을 목록을 생성한다.
     List<String> tokens = new ArrayList<>();
@@ -1799,17 +3482,37 @@ public class StoryServiceImpl implements StoryService {
     // snapshot에서 현재 cwd를 읽는다.
     String cwd = extractText(latestSnapshot, "/terminal/cwd");
 
-    // cwd가 없으면 Chapter 2 기본 cwd를 사용한다.
+    // cwd가 없으면 현재 챕터 프로필의 기본 cwd를 사용한다.
     if (cwd == null || cwd.isBlank()) {
       // 초기 snapshot 또는 잘못된 snapshot에 대한 fallback이다.
-      cwd = CHAPTER_02_DEFAULT_CWD;
+      cwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
     }
 
-    // 정적 VFS의 rootPath를 가져온다.
-    String rootPath = createVfsContext(latestSnapshot).getRootPath();
+    VfsContext vfs = createVfsContext(latestSnapshot);
 
     // PathResolver를 사용해 루트 이탈을 막은 절대 경로로 변환한다.
-    return pathResolver.resolve(cwd, rawPath, rootPath);
+    return pathResolver.resolve(cwd, rawPath, vfs);
+  }
+
+  /**
+   * 지정한 cwd 기준으로 입력 경로를 VFS 절대 경로로 정규화한다.
+   *
+   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @param cwd 경로 해석에 사용할 기준 cwd
+   * @param rawPath 유저가 입력한 경로
+   * @return 정규화된 VFS 절대 경로
+   */
+  private String resolveSnapshotPathFromCwd(JsonNode latestSnapshot, String cwd, String rawPath) {
+    // cwd가 비어 있으면 일반 snapshot cwd 해석으로 위임한다.
+    if (cwd == null || cwd.isBlank()) {
+      return resolveSnapshotPath(latestSnapshot, rawPath);
+    }
+
+    // 현재 snapshot의 정적 VFS와 overlay를 반영한 컨텍스트를 만든다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+
+    // 지정된 cwd를 기준으로 입력 경로를 정규화한다.
+    return pathResolver.resolve(cwd, rawPath, vfs);
   }
 
   /**
@@ -1935,11 +3638,89 @@ public class StoryServiceImpl implements StoryService {
             ? objectMapper.createObjectNode()
             : latestSnapshot.path("vfsOverlay");
 
-    // chapter02Vfs가 로드되지 않았을 때도 NPE가 나지 않도록 빈 객체를 fallback으로 둔다.
-    JsonNode staticVfs = chapter02Vfs == null ? objectMapper.createObjectNode() : chapter02Vfs;
+    String chapterCode = extractText(latestSnapshot, "/chapterCode");
+    JsonNode staticVfs = getStaticVfs(chapterCode);
 
     // VfsContext가 정적 VFS와 overlay를 함께 보도록 구성한다.
     return VfsContext.of(staticVfs, overlay);
+  }
+
+  /**
+   * 챕터 코드에 맞는 정적 VFS JSON을 조회합니다.
+   *
+   * <p>진행 중인 snapshot이 오래되었거나 챕터 코드가 비어 있으면 기존 Chapter 2 VFS를 fallback으로 사용해 기존 저장 데이터와의 호환성을
+   * 유지합니다.
+   *
+   * @param chapterCode snapshot 또는 Chapter 엔티티에서 확인한 챕터 코드
+   * @return 챕터별 vfs.json 루트 노드, 없으면 비어 있는 JSON object
+   */
+  private JsonNode getStaticVfs(String chapterCode) {
+    // 명시적인 챕터 코드가 있고 해당 VFS가 로드되어 있으면 그 리소스를 우선 사용한다.
+    if (chapterCode != null && vfsByChapterCode.containsKey(chapterCode)) {
+      return vfsByChapterCode.get(chapterCode);
+    }
+
+    // 챕터 정보가 없는 오래된 snapshot은 Chapter 2 리소스로 해석한다.
+    JsonNode fallback = vfsByChapterCode.get(CHAPTER_02_CODE);
+    return fallback == null ? objectMapper.createObjectNode() : fallback;
+  }
+
+  /**
+   * 지정한 챕터가 터미널/VFS 공통 런타임을 사용하는지 확인합니다.
+   *
+   * @param chapterCode DB chapters.code 값
+   * @return 터미널 프로필이 등록된 챕터이면 true
+   */
+  private boolean isTerminalChapter(String chapterCode) {
+    // 프로필 맵에 등록된 챕터만 확장 snapshot과 터미널 fallback을 사용한다.
+    return chapterCode != null && TERMINAL_CHAPTER_PROFILES.containsKey(chapterCode);
+  }
+
+  /**
+   * 챕터 코드로 터미널 런타임 프로필을 조회합니다.
+   *
+   * @param chapterCode DB chapters.code 값
+   * @return 등록된 프로필, 없으면 null
+   */
+  private TerminalChapterProfile getTerminalChapterProfile(String chapterCode) {
+    // Map 조회만 수행해 호출부가 null 여부로 지원 챕터를 판단하게 한다.
+    return TERMINAL_CHAPTER_PROFILES.get(chapterCode);
+  }
+
+  /**
+   * prompt_meta.terminalProfile 값으로 터미널 런타임 프로필을 조회합니다.
+   *
+   * @param terminalProfile story_nodes.prompt_meta.terminalProfile 값
+   * @return 등록된 프로필, 없으면 null
+   */
+  private TerminalChapterProfile getTerminalChapterProfileByTerminalProfile(
+      String terminalProfile) {
+    // prompt_meta가 없거나 빈 값이면 fallback을 수행하지 않는다.
+    if (terminalProfile == null || terminalProfile.isBlank()) {
+      return null;
+    }
+
+    // chapter2, chapter3 같은 프론트/백엔드 프로필명을 기준으로 프로필을 찾는다.
+    return TERMINAL_CHAPTER_PROFILES.values().stream()
+        .filter(profile -> profile.terminalProfile().equals(terminalProfile))
+        .findFirst()
+        .orElse(null);
+  }
+
+  /**
+   * snapshot의 chapterCode를 기준으로 터미널 런타임 프로필을 결정합니다.
+   *
+   * <p>기존 Chapter 2 데이터는 snapshot에 chapterCode가 없을 수 있으므로, 확인할 수 없는 경우 Chapter 2 프로필을 기본값으로 사용합니다.
+   *
+   * @param latestSnapshot 최신 진행 snapshot
+   * @return snapshot에 대응하는 터미널 프로필
+   */
+  private TerminalChapterProfile resolveTerminalChapterProfile(JsonNode latestSnapshot) {
+    // snapshot에 기록된 chapterCode를 읽어 현재 챕터의 프로필을 찾는다.
+    String chapterCode = extractText(latestSnapshot, "/chapterCode");
+    TerminalChapterProfile profile = getTerminalChapterProfile(chapterCode);
+    // 구버전 snapshot 또는 비정상 데이터는 Chapter 2 기준으로 해석해 기존 흐름을 유지한다.
+    return profile == null ? getTerminalChapterProfile(CHAPTER_02_CODE) : profile;
   }
 
   /**
@@ -2014,13 +3795,10 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 기대값이 파일명인 경우 정규화 경로의 마지막 세그먼트와 비교한다.
-    // 상대 파일명 기대값은 Chapter 2 기본 cwd에서 생성되는 실제 절대 경로와 비교합니다.
-    return pathResolver
-        .resolve(
-            CHAPTER_02_DEFAULT_CWD,
-            expectedOutputFile,
-            createVfsContext(latestSnapshot).getRootPath())
-        .equals(resolvedOutputFile);
+    // 상대 파일명 기대값은 현재 챕터 기본 cwd에서 생성되는 실제 절대 경로와 비교한다.
+    VfsContext vfs = createVfsContext(latestSnapshot);
+    String defaultCwd = resolveTerminalChapterProfile(latestSnapshot).defaultCwd();
+    return pathResolver.resolve(defaultCwd, expectedOutputFile, vfs).equals(resolvedOutputFile);
   }
 
   /**
@@ -2468,18 +4246,19 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 시작 또는 전이 시 사용할 빈 스냅샷(JSON)을 생성한다.
    *
-   * <p>Chapter 2는 결정 문서의 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
+   * <p>터미널/VFS 기반 챕터는 공통 확장 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
    */
   private JsonNode createEmptySnapshot(Chapter chapter, StoryNode node) {
     // 빈 JSON 객체 생성
     ObjectNode snapshot = objectMapper.createObjectNode();
 
-    // Chapter 2는 VFS/terminal 기반 진행 상태를 담는 확장 snapshot을 사용한다.
-    if (CHAPTER_02_CODE.equals(chapter.getCode())) {
-      // Chapter 2 전용 기본 snapshot 구조를 채운다.
-      populateChapter2Snapshot(snapshot, chapter, node);
+    // 터미널/VFS 기반 챕터는 챕터별 프로필에 맞춘 확장 snapshot을 사용한다.
+    if (isTerminalChapter(chapter.getCode())) {
+      // 등록된 프로필을 기준으로 vfsVersion, terminal, flags, overlay 기본 구조를 채운다.
+      populateTerminalSnapshot(
+          snapshot, chapter, node, getTerminalChapterProfile(chapter.getCode()));
 
-      // Chapter 2 snapshot은 전용 구조 생성이 끝났으므로 바로 반환한다.
+      // 확장 snapshot은 여기서 필요한 필드를 모두 채웠으므로 바로 반환한다.
       return snapshot;
     }
 
@@ -2511,17 +4290,17 @@ public class StoryServiceImpl implements StoryService {
     // 먼저 챕터에 맞는 기본 snapshot 구조를 생성한다.
     ObjectNode snapshot = (ObjectNode) createEmptySnapshot(chapter, node);
 
-    // Chapter 2가 아니면 기존 챕터 호환성을 위해 별도 병합 없이 반환한다.
-    if (!CHAPTER_02_CODE.equals(chapter.getCode())) {
+    // 터미널/VFS 챕터가 아니면 기존 챕터 호환성을 위해 별도 상태 병합 없이 반환한다.
+    if (!isTerminalChapter(chapter.getCode())) {
       // 기존 챕터 snapshot은 위치 식별 정보만 유지한다.
       return snapshot;
     }
 
-    // Chapter 2 snapshotVersion은 이전 버전에서 1 증가시킨다.
+    // 터미널 snapshotVersion은 이전 버전에서 1 증가시켜 상태 변경 순서를 추적한다.
     snapshot.put("snapshotVersion", resolveNextSnapshotVersion(previousSnapshot));
 
     // 이전 terminal 상태를 새 snapshot으로 이어받는다.
-    carryChapter2Terminal(snapshot, previousSnapshot, request);
+    carryTerminal(snapshot, previousSnapshot, request);
 
     // 이전 vfsOverlay 상태를 새 snapshot으로 이어받는다.
     carryObjectField(snapshot, previousSnapshot, "vfsOverlay");
@@ -2533,9 +4312,9 @@ public class StoryServiceImpl implements StoryService {
     carryIntegerField(snapshot, previousSnapshot, "scanPercent");
 
     // transition effect_bundle의 상태 변경 지시를 snapshot에 병합한다.
-    applyEffectBundleToSnapshot(snapshot, effectBundle);
+    applyEffectBundleToSnapshot(snapshot, effectBundle, request);
 
-    // 이전 상태를 반영한 Chapter 2 transition snapshot을 반환한다.
+    // 이전 상태를 반영한 터미널 transition snapshot을 반환한다.
     return snapshot;
   }
 
@@ -2551,7 +4330,7 @@ public class StoryServiceImpl implements StoryService {
 
     // 이전 버전이 없으면 신규 snapshot의 최초 버전 1을 사용한다.
     if (previousVersion == null) {
-      // 새로 시작한 Chapter 2 snapshot은 1부터 시작한다.
+      // 새로 시작한 터미널 snapshot은 1부터 시작한다.
       return 1;
     }
 
@@ -2560,13 +4339,13 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 이전 snapshot의 terminal 상태를 새 Chapter 2 snapshot으로 이어받는다.
+   * 이전 snapshot의 terminal 상태를 새 터미널 snapshot으로 이어받는다.
    *
    * @param snapshot 값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
    * @param request 유저의 transition 요청
    */
-  private void carryChapter2Terminal(
+  private void carryTerminal(
       ObjectNode snapshot, JsonNode previousSnapshot, TransitionRequestDto request) {
     // 새 snapshot의 terminal 객체를 가져온다.
     ObjectNode terminal = (ObjectNode) snapshot.get("terminal");
@@ -2677,12 +4456,14 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * transition effect_bundle의 상태 변경 지시를 Chapter 2 snapshot에 반영한다.
+   * transition effect_bundle의 상태 변경 지시를 터미널 snapshot에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param effectBundle transition의 effect_bundle JSON
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void applyEffectBundleToSnapshot(ObjectNode snapshot, JsonNode effectBundle) {
+  private void applyEffectBundleToSnapshot(
+      ObjectNode snapshot, JsonNode effectBundle, TransitionRequestDto request) {
     // effect_bundle이 없으면 반영할 상태 변경도 없다.
     if (effectBundle == null || effectBundle.isNull() || effectBundle.isEmpty()) {
       // 기존 snapshot 상태를 그대로 유지한다.
@@ -2696,13 +4477,16 @@ public class StoryServiceImpl implements StoryService {
     applySetScanPercent(snapshot, effectBundle.get("setScanPercent"));
 
     // vfsOverlay 변경 지시를 snapshot.vfsOverlay에 병합한다.
-    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"));
+    applyVfsOverlayEffect(snapshot, effectBundle.get("vfsOverlay"), request);
+
+    // dotted path 기반 snapshotPatch를 마지막에 반영해 terminal.cwd 등 세부 상태를 갱신한다.
+    applySnapshotPatch(snapshot, effectBundle.get("snapshotPatch"));
   }
 
   /**
    * effect_bundle.setFlags를 snapshot.flags에 병합한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param setFlags setFlags JSON object
    */
   private void applySetFlags(ObjectNode snapshot, JsonNode setFlags) {
@@ -2728,7 +4512,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.setScanPercent를 snapshot.scanPercent에 반영한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param setScanPercent scanPercent JSON value
    */
   private void applySetScanPercent(ObjectNode snapshot, JsonNode setScanPercent) {
@@ -2743,12 +4527,68 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
+   * effect_bundle.snapshotPatch를 dotted path 기준으로 snapshot에 반영한다.
+   *
+   * @param snapshot 값을 갱신할 snapshot
+   * @param snapshotPatch dotted path를 key로 가진 patch JSON object
+   */
+  private void applySnapshotPatch(ObjectNode snapshot, JsonNode snapshotPatch) {
+    // snapshotPatch가 object가 아니면 적용할 세부 patch가 없다.
+    if (snapshotPatch == null || !snapshotPatch.isObject()) {
+      return;
+    }
+
+    // 각 dotted path를 순회하며 필요한 중간 object를 생성한다.
+    snapshotPatch
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              // key가 비어 있으면 잘못된 patch이므로 건너뛴다.
+              if (entry.getKey() == null || entry.getKey().isBlank()) {
+                return;
+              }
+
+              // nodeCode처럼 dot이 없는 key도 top-level field로 그대로 반영한다.
+              applySnapshotPatchValue(snapshot, entry.getKey().split("\\."), 0, entry.getValue());
+            });
+  }
+
+  /**
+   * dotted path의 특정 위치에 patch 값을 저장한다.
+   *
+   * @param current 현재 object node
+   * @param pathParts dotted path를 분해한 배열
+   * @param index 현재 처리 중인 path index
+   * @param value 저장할 JSON 값
+   */
+  private void applySnapshotPatchValue(
+      ObjectNode current, String[] pathParts, int index, JsonNode value) {
+    // 마지막 path 조각이면 값을 deep copy로 저장한다.
+    if (index >= pathParts.length - 1) {
+      current.set(pathParts[index], value == null ? objectMapper.nullNode() : value.deepCopy());
+      return;
+    }
+
+    // 중간 path는 object여야 하므로 없거나 object가 아니면 새 object로 교체한다.
+    JsonNode child = current.get(pathParts[index]);
+    ObjectNode childObject =
+        child != null && child.isObject()
+            ? (ObjectNode) child
+            : current.putObject(pathParts[index]);
+
+    // 다음 path 조각을 재귀적으로 처리한다.
+    applySnapshotPatchValue(childObject, pathParts, index + 1, value);
+  }
+
+  /**
    * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
    *
-   * @param snapshot 값을 갱신할 Chapter 2 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param overlayEffect vfsOverlay effect JSON object
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void applyVfsOverlayEffect(ObjectNode snapshot, JsonNode overlayEffect) {
+  private void applyVfsOverlayEffect(
+      ObjectNode snapshot, JsonNode overlayEffect, TransitionRequestDto request) {
     // overlay effect가 object가 아니면 병합할 VFS 변경이 없다.
     if (overlayEffect == null || !overlayEffect.isObject()) {
       // VFS overlay 변경 없이 종료한다.
@@ -2759,7 +4599,7 @@ public class StoryServiceImpl implements StoryService {
     ObjectNode targetOverlay = ensureObject(snapshot, "vfsOverlay");
 
     // createdNodes 배열 변경을 병합한다.
-    mergeCreatedNodes(targetOverlay, overlayEffect.get("createdNodes"));
+    mergeCreatedNodes(snapshot, targetOverlay, overlayEffect.get("createdNodes"), request);
 
     // removedPaths 배열 변경을 병합한다.
     mergeRemovedPaths(targetOverlay, overlayEffect.get("removedPaths"));
@@ -2771,10 +4611,16 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect createdNodes를 snapshot.vfsOverlay.createdNodes에 path 기준으로 병합한다.
    *
+   * @param snapshot transition 이후 snapshot
    * @param targetOverlay snapshot의 vfsOverlay object
    * @param createdNodes effect_bundle의 createdNodes array
+   * @param request transition을 발생시킨 사용자 요청
    */
-  private void mergeCreatedNodes(ObjectNode targetOverlay, JsonNode createdNodes) {
+  private void mergeCreatedNodes(
+      ObjectNode snapshot,
+      ObjectNode targetOverlay,
+      JsonNode createdNodes,
+      TransitionRequestDto request) {
     // createdNodes가 배열이 아니면 병합할 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
       // 생성 노드 병합 없이 종료한다.
@@ -2787,7 +4633,7 @@ public class StoryServiceImpl implements StoryService {
     // effect createdNodes를 순회한다.
     for (JsonNode createdNode : createdNodes) {
       // path가 있는 object만 VFS node로 인정한다.
-      String path = getTextField(createdNode, "path");
+      String path = resolveCreatedNodePath(snapshot, createdNode, request);
 
       // path가 없으면 병합할 수 없다.
       if (path == null) {
@@ -2799,11 +4645,57 @@ public class StoryServiceImpl implements StoryService {
       removeObjectWithPath(targetCreatedNodes, path);
 
       // 새 created node를 deep copy해 추가한다.
-      targetCreatedNodes.add(createdNode.deepCopy());
+      targetCreatedNodes.add(rewriteCreatedNodePath(createdNode, path));
 
       // 새로 생성된 path는 removedPaths에 남아 있으면 안 된다.
       removeTextValue(ensureArray(targetOverlay, "removedPaths"), path);
     }
+  }
+
+  /**
+   * createdNode에 저장할 실제 VFS 경로를 결정한다.
+   *
+   * @param snapshot 현재 transition 이후 snapshot
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param request transition을 발생시킨 사용자 요청
+   * @return snapshot에 저장할 절대 VFS 경로
+   */
+  private String resolveCreatedNodePath(
+      ObjectNode snapshot, JsonNode createdNode, TransitionRequestDto request) {
+    // pathFromOutputFile이 true이면 redirect/tee 대상 파일명을 사용자 입력에서 가져온다.
+    if (createdNode.path("pathFromOutputFile").asBoolean(false)) {
+      // command 입력에서 >, >>, tee 뒤의 출력 파일명을 추출한다.
+      String outputFile = request == null ? null : extractOutputFile(request.getInputValue());
+
+      // 출력 파일명이 있으면 현재 snapshot cwd 기준의 절대 경로로 정규화한다.
+      if (outputFile != null && !outputFile.isBlank()) {
+        return resolveSnapshotPath(snapshot, outputFile);
+      }
+    }
+
+    // 동적 출력 경로가 아니거나 추출에 실패하면 seed에 명시된 고정 path를 사용한다.
+    return getTextField(createdNode, "path");
+  }
+
+  /**
+   * createdNode의 path만 실제 저장 경로로 바꾼 사본을 만든다.
+   *
+   * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
+   * @param path snapshot에 저장할 절대 VFS 경로
+   * @return path가 보정된 createdNode 사본
+   */
+  private JsonNode rewriteCreatedNodePath(JsonNode createdNode, String path) {
+    // 원본 seed effect를 직접 수정하지 않도록 object node를 deep copy 한다.
+    ObjectNode copiedNode = createdNode.deepCopy();
+
+    // 사용자 입력에서 계산한 실제 저장 경로를 path에 덮어쓴다.
+    copiedNode.put("path", path);
+
+    // pathFromOutputFile은 런타임 해석용 힌트이므로 snapshot에는 남기지 않는다.
+    copiedNode.remove("pathFromOutputFile");
+
+    // 경로가 보정된 createdNode를 반환한다.
+    return copiedNode;
   }
 
   /**
@@ -2979,13 +4871,15 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 결정 문서에 맞는 기본 snapshot 필드를 채운다.
+   * 터미널/VFS 기반 챕터에 공통으로 필요한 기본 snapshot 필드를 채운다.
    *
    * @param snapshot 값을 채울 빈 snapshot JSON
-   * @param chapter Chapter 2 챕터 엔티티
+   * @param chapter 현재 챕터 엔티티
    * @param node 현재 스토리 노드 엔티티
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Snapshot(ObjectNode snapshot, Chapter chapter, StoryNode node) {
+  private void populateTerminalSnapshot(
+      ObjectNode snapshot, Chapter chapter, StoryNode node, TerminalChapterProfile profile) {
     // snapshot 구조 자체의 버전을 저장한다.
     snapshot.put("schemaVersion", 1);
 
@@ -2993,7 +4887,7 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("snapshotVersion", 1);
 
     // 현재 snapshot이 기준으로 삼는 VFS JSON 버전을 저장한다.
-    snapshot.put("vfsVersion", CHAPTER_02_VFS_VERSION);
+    snapshot.put("vfsVersion", profile.vfsVersion());
 
     // 현재 챕터 코드를 snapshot에 저장한다.
     snapshot.put("chapterCode", chapter.getCode());
@@ -3008,46 +4902,47 @@ public class StoryServiceImpl implements StoryService {
     snapshot.put("nodeCode", node.getCode());
 
     // 가상 터미널의 현재 세션 상태를 채운다.
-    populateChapter2Terminal(snapshot);
+    populateTerminal(snapshot, profile);
 
     // 유저별 동적 VFS 변경 영역을 빈 구조로 초기화한다.
-    populateChapter2VfsOverlay(snapshot);
+    populateTerminalVfsOverlay(snapshot);
 
-    // Chapter 2 진행 플래그를 기본값으로 초기화한다.
-    populateChapter2Flags(snapshot);
+    // 챕터별 진행 플래그를 기본값으로 초기화한다.
+    populateTerminalFlags(snapshot, profile);
 
     // GC 스캔율은 top-level 숫자로 저장하며 초기값은 0이다.
     snapshot.put("scanPercent", 0);
   }
 
   /**
-   * Chapter 2 snapshot의 terminal 객체를 기본값으로 채운다.
+   * snapshot의 terminal 객체를 챕터 프로필 기본값으로 채운다.
    *
    * @param snapshot terminal 객체를 추가할 snapshot JSON
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Terminal(ObjectNode snapshot) {
+  private void populateTerminal(ObjectNode snapshot, TerminalChapterProfile profile) {
     // terminal 객체를 snapshot 하위에 생성한다.
     ObjectNode terminal = snapshot.putObject("terminal");
 
-    // Chapter 2 기본 cwd를 VFS 결정 문서의 defaultCwd와 맞춘다.
-    terminal.put("cwd", CHAPTER_02_DEFAULT_CWD);
+    // 기본 cwd를 챕터별 VFS 결정 문서의 defaultCwd와 맞춘다.
+    terminal.put("cwd", profile.defaultCwd());
 
     // 터미널 프롬프트 사용자명을 저장한다.
-    terminal.put("promptUser", CHAPTER_02_PROMPT_USER);
+    terminal.put("promptUser", profile.promptUser());
 
     // 터미널 프롬프트 호스트명을 저장한다.
-    terminal.put("promptHost", CHAPTER_02_PROMPT_HOST);
+    terminal.put("promptHost", profile.promptHost());
 
     // 아직 처리한 명령이 없으므로 lastCommand는 null로 둔다.
     terminal.putNull("lastCommand");
   }
 
   /**
-   * Chapter 2 snapshot의 vfsOverlay 객체를 빈 변경 목록으로 초기화한다.
+   * snapshot의 vfsOverlay 객체를 빈 변경 목록으로 초기화한다.
    *
    * @param snapshot vfsOverlay 객체를 추가할 snapshot JSON
    */
-  private void populateChapter2VfsOverlay(ObjectNode snapshot) {
+  private void populateTerminalVfsOverlay(ObjectNode snapshot) {
     // vfsOverlay 객체를 snapshot 하위에 생성한다.
     ObjectNode vfsOverlay = snapshot.putObject("vfsOverlay");
 
@@ -3062,13 +4957,98 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 snapshot의 flags 객체를 결정 문서의 기본값으로 초기화한다.
+   * snapshot의 flags 객체를 챕터별 기본 진행 상태로 초기화한다.
    *
    * @param snapshot flags 객체를 추가할 snapshot JSON
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
-  private void populateChapter2Flags(ObjectNode snapshot) {
+  private void populateTerminalFlags(ObjectNode snapshot, TerminalChapterProfile profile) {
     // flags 객체를 snapshot 하위에 생성한다.
     ObjectNode flags = snapshot.putObject("flags");
+
+    // Chapter 3가 시작된 snapshot이므로 시작 플래그는 true로 둔다.
+    if (CHAPTER_03_CODE.equals(profile.chapterCode())) {
+      flags.put("chapter3_started", true);
+
+      // Chapter 3 도입 통화 이벤트 확인 여부는 아직 false다.
+      flags.put("friend_deleted_event_seen", false);
+
+      // 홈 디렉터리 재확인 여부는 아직 false다.
+      flags.put("home_rechecked", false);
+
+      // .bash_history 확인 여부는 아직 false다.
+      flags.put("bash_history_checked", false);
+
+      // 9091 포트 발견 여부는 아직 false다.
+      flags.put("port_9091_discovered", false);
+
+      // relay 접속 여부는 아직 false다.
+      flags.put("relay_contacted", false);
+
+      // relay 상태 확인 여부는 아직 false다.
+      flags.put("relay_status_checked", false);
+
+      // people 데이터 조회 여부는 아직 false다.
+      flags.put("people_viewed", false);
+
+      // people 덤프 파일 생성 여부는 아직 false다.
+      flags.put("people_dumped", false);
+
+      // monitor 데이터 조회 여부는 아직 false다.
+      flags.put("monitor_viewed", false);
+
+      // monitor 덤프 파일 생성 여부는 아직 false다.
+      flags.put("monitor_dumped", false);
+
+      // fragment 02 확인 여부는 아직 false다.
+      flags.put("fragment02_viewed", false);
+
+      // fragment 02 덤프 파일 생성 여부는 아직 false다.
+      flags.put("fragment02_dumped", false);
+
+      // relay route 확인 여부는 아직 false다.
+      flags.put("relay_route_checked", false);
+
+      // relay policy 확인 여부는 아직 false다.
+      flags.put("relay_policy_checked", false);
+
+      // social isolation 준비 여부는 아직 false다.
+      flags.put("social_isolation_ready", false);
+
+      // core group 생성 여부는 아직 false다.
+      flags.put("core_group_created", false);
+
+      // core group 검증 여부는 아직 false다.
+      flags.put("core_group_validated", false);
+
+      // core group 암호화 여부는 아직 false다.
+      flags.put("core_group_encrypted", false);
+
+      // safe zone 등록 여부는 아직 false다.
+      flags.put("safe_zone_registered", false);
+
+      // 외부 노드 sever 시도 여부는 아직 false다.
+      flags.put("external_sever_attempted", false);
+
+      // ghost mode 활성화 여부는 아직 false다.
+      flags.put("ghost_mode_enabled", false);
+
+      // fragment 03 발견 여부는 아직 false다.
+      flags.put("fragment03_found", false);
+
+      // fragment 03 복사 여부는 아직 false다.
+      flags.put("fragment03_copied", false);
+
+      // laplace.qasm 생성 여부는 아직 false다.
+      flags.put("laplace_qasm_created", false);
+
+      // core 접근 차단 확인 여부는 아직 false다.
+      flags.put("core_access_blocked", false);
+
+      // Chapter 3 완료 여부는 아직 false다.
+      flags.put("chapter3_completed", false);
+      return;
+    }
 
     // Chapter 2가 시작된 snapshot이므로 시작 플래그는 true로 둔다.
     flags.put("chapter2_started", true);
@@ -3119,8 +5099,9 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * Chapter 2 터미널 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다. DB 전이 검색에 실패한 경우 호출되며, VFS 로직을
-   * 통해 결과를 생성합니다.
+   * 터미널 프로필 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다.
+   *
+   * <p>DB 전이 검색에 실패한 경우 호출되며, 현재 챕터의 VFS 로직을 통해 STAY 결과를 생성합니다.
    *
    * @param user 요청을 보낸 인증 유저 객체
    * @param progress 유저의 현재 스토리 진행 상태 기록
@@ -3128,13 +5109,17 @@ public class StoryServiceImpl implements StoryService {
    * @param request 전이 요청 데이터 (입력된 명령어 포함)
    * @return STAY 타입의 전이 결과 응답 (터미널 출력값 포함) 또는 처리 불가 시 null
    */
-  private TransitionResponseDto handleChapter2TerminalFallback(
+  private TransitionResponseDto handleTerminalFallback(
       User user, UserStoryProgress progress, StoryNode currentNode, TransitionRequestDto request) {
 
-    // 1. 현재 노드의 메타데이터를 확인하여 Chapter 2 터미널 프로필인지 검증합니다.
+    // 1. 현재 노드의 메타데이터를 확인하여 지원하는 터미널 프로필인지 검증합니다.
     JsonNode promptMeta = currentNode.getPromptMeta();
-    // 프로필 정보가 없거나 chapter2가 아니면 폴백 처리를 하지 않습니다.
-    if (promptMeta == null || !"chapter2".equals(promptMeta.path("terminalProfile").asText())) {
+    // prompt_meta.terminalProfile 값으로 챕터별 런타임 프로필을 찾는다.
+    String terminalProfile =
+        promptMeta == null ? null : promptMeta.path("terminalProfile").asText(null);
+    TerminalChapterProfile profile = getTerminalChapterProfileByTerminalProfile(terminalProfile);
+    // 프로필 정보가 없거나 현재 노드의 챕터와 불일치하면 폴백 처리를 하지 않는다.
+    if (profile == null || !profile.chapterCode().equals(currentNode.getChapter().getCode())) {
       return null;
     }
 
@@ -3150,10 +5135,79 @@ public class StoryServiceImpl implements StoryService {
       return null;
     }
 
-    // 4. 유저 진행 상태에서 최신 스냅샷을 꺼내고, 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
+    // 3-1. 유저 진행 상태에서 최신 스냅샷을 꺼냅니다.
     JsonNode latestSnapshot = progress.getLatestSnapshotJson();
+
+    // 3-2. Near-miss 감지: 커맨드 패턴은 맞지만 플래그 조건이 불충족한 transition이 있는지 확인합니다.
+    // 있다면 터미널 실행 대신 LUCAS 넛지 메시지를 반환합니다.
+    String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
+    if (nudgeMessage != null) {
+      String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+
+      // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
+      // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
+      ObjectNode customOutputBundle = (ObjectNode) currentNode.getOutputBundle().deepCopy();
+
+      // 1. 말풍선 덮어쓰기
+      ArrayNode messages = (ArrayNode) customOutputBundle.path("messages");
+      if (messages != null && messages.isArray()) {
+        messages.removeAll();
+        ObjectNode msg = messages.addObject();
+        msg.put("speaker", "LUCAS");
+        msg.put("channel", "bubble");
+        msg.put("text", nudgeMessage);
+      }
+
+      // 2. 컷씬 제거
+      ObjectNode content = (ObjectNode) customOutputBundle.path("content");
+      if (content == null || !content.isObject()) {
+        content = customOutputBundle.putObject("content");
+      }
+      content.remove("consoleLogs");
+      content.remove("completionTitle");
+      content.remove("completionText");
+
+      // 유저 피드백: 오답 제출 시에도 터미널에 내역이 남아야 하므로 __REMOVE_LAST_INPUT__ 제거
+      // ArrayNode termOut = content.putArray("terminalOutput");
+      // termOut.add("__REMOVE_LAST_INPUT__");
+
+      ObjectNode scene = (ObjectNode) customOutputBundle.path("scene");
+      if (scene != null && scene.isObject()) {
+        scene.remove("preVideo");
+      }
+
+      return TransitionResponseDto.builder()
+          .result("move") // 말풍선 갱신을 위해 move로 응답
+          .nextNode(
+              TransitionResponseDto.NextNodeDto.builder()
+                  .id(currentNode.getId())
+                  .code(currentNode.getCode())
+                  .nodeType(currentNode.getNodeType())
+                  .outputBundle(customOutputBundle)
+                  .promptType(currentNode.getPromptType())
+                  .promptMeta(currentNode.getPromptMeta())
+                  .isCheckpoint(currentNode.isCheckpoint())
+                  .isTerminal(currentNode.isTerminal())
+                  .build())
+          .snapshot(
+              objectMapper.convertValue(
+                  latestSnapshot,
+                  new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
+          // 터미널에는 별다른 에러 없이 프롬프트만 갱신
+          .terminalResult(
+              TransitionResponseDto.TerminalResultDto.builder()
+                  .stdout(List.of())
+                  .stderr(List.of())
+                  .cwd(cwd)
+                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .resultCode("NUDGE")
+                  .build())
+          .build();
+    }
+
+    // 4. 가상 파일 시스템(VFS) 컨텍스트를 구성합니다.
     // 정적 VFS 구조와 스냅샷 내의 동적 변경사항(vfsOverlay)을 병합합니다.
-    VfsContext vfs = VfsContext.of(chapter02Vfs, latestSnapshot.path("vfsOverlay"));
+    VfsContext vfs = createVfsContext(latestSnapshot);
 
     // 5. TerminalCommandService를 통해 명령어를 실행하고 결과를 받아옵니다.
     // 스냅샷 내의 terminal 섹션 데이터(현재 CWD 등)를 함께 전달합니다.
@@ -3213,6 +5267,82 @@ public class StoryServiceImpl implements StoryService {
                 updatedSnapshot,
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
         .build();
+  }
+
+  /**
+   * 현재 노드의 transition 중 커맨드 패턴은 매칭되지만 플래그 조건만 불충족한 "near-miss"를 감지한다.
+   *
+   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만 requiredFlags를 만족하지 못하면
+   * 해당 넛지 메시지를 반환한다.
+   *
+   * @param currentNode 유저가 현재 위치한 스토리 노드
+   * @param command 유저가 입력한 파싱된 커맨드 객체
+   * @param latestSnapshot 유저의 현재 진행 snapshot
+   * @return 넛지 메시지 (near-miss가 없으면 null)
+   */
+  private String findNudgeForCommand(
+      StoryNode currentNode, ParsedCommand command, JsonNode latestSnapshot) {
+    // 현재 노드에서 출발하는 모든 transition을 우선순위 순으로 조회한다.
+    List<StoryTransition> transitions =
+        storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+
+    for (StoryTransition t : transitions) {
+      // server_rule 이외의 validator는 near-miss 감지 대상이 아니다.
+      if (!"server_rule".equals(t.getValidatorType())) continue;
+
+      JsonNode config = t.getValidatorConfig();
+      if (config == null || config.isNull()) continue;
+
+      String rule = getTextField(config, "rule");
+
+      // 저장형 relay 명령의 리다이렉션 near-miss 문구가 있는지 먼저 확인한다.
+      String relayRedirectionNudge = findRelayRedirectionNudge(config, command, latestSnapshot);
+      // near-miss 문구가 있으면 일반 터미널 fallback으로 넘기지 않고 바로 반환한다.
+      if (relayRedirectionNudge != null) {
+        return relayRedirectionNudge;
+      }
+
+      if ("PARSED_TAR_COMMAND".equals(rule)) {
+        if (!"tar".equals(command.command())) continue;
+
+        // tar 생성 옵션(-c)이 있는지 확인
+        boolean isCreate =
+            command.args().stream().anyMatch(arg -> arg.startsWith("-") && arg.contains("c"));
+        if (!isCreate) continue;
+
+        // DB 트랜지션을 수정하지 않고 하드코딩으로 안전하게 넛지를 생성
+        String expectedFile = getTextField(config, "outputFile");
+        if (expectedFile != null) {
+          return "명령어 형식은 완벽해! 하지만 추적을 분산시키려면 파일 이름을 정확히 '" + expectedFile + "'로 지정해야 해.";
+        }
+        continue;
+      }
+
+      // nudgeOnFlagMiss가 없는 일반 transition은 넛지 대상이 아니다.
+      String nudge = getTextField(config, "nudgeOnFlagMiss");
+      if (nudge == null || nudge.isBlank()) continue;
+
+      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+      String expectedCommand = getTextField(config, "command");
+      if (expectedCommand == null || !command.command().equals(expectedCommand)) continue;
+
+      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+      String expectedPath = getTextField(config, "resolvedPath");
+      if (expectedPath != null) {
+        String rawPath = firstNonOptionArgument(command.args());
+        if (rawPath == null) continue;
+        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+        if (!expectedPath.equals(actualPath)) continue;
+      }
+
+      // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
+      if (!matchesFlagRequirements(config, latestSnapshot)) {
+        return nudge;
+      }
+    }
+
+    // near-miss가 없으면 일반 터미널 실행으로 진행한다.
+    return null;
   }
 
   /**
@@ -3282,31 +5412,31 @@ public class StoryServiceImpl implements StoryService {
     // 경로 정규화를 위한 리졸버 객체를 생성합니다.
     PathResolver pathResolver = new PathResolver();
     // 프론트엔드에서 "~"와 같이 넘겨준 cwd를 실제 절대 경로(/home/guest 등)로 정규화합니다.
-    safeCwd = pathResolver.resolve(rootPath, safeCwd, rootPath);
+    safeCwd = pathResolver.resolve(rootPath, safeCwd, vfs);
 
     String searchDir;
     String prefix;
 
-    if (input.isEmpty() || input.endsWith("/")) {
+    if (target.isEmpty() || target.endsWith("/")) {
       // 입력이 비어있거나 '/'로 끝나면, 해당 경로 자체를 부모 디렉토리로 간주하고 하위 모든 요소를 대상으로 합니다.
-      searchDir = pathResolver.resolve(safeCwd, input, rootPath);
+      searchDir = pathResolver.resolve(safeCwd, target, vfs);
       prefix = "";
     } else {
       // 입력의 마지막 '/' 위치를 기준으로 부모 디렉토리와 검색 접두사(prefix)를 분리합니다.
-      int inputLastSlash = input.lastIndexOf('/');
+      int inputLastSlash = target.lastIndexOf('/');
       if (inputLastSlash == -1) {
         // '/'가 없으면 현재 작업 디렉토리에서 입력을 접두사로 검색합니다.
         searchDir = safeCwd;
-        prefix = input;
+        prefix = target;
       } else {
         // '/'가 있으면 마지막 '/' 이전까지를 부모 경로로, 이후를 접두사로 처리합니다.
-        String parentPart = input.substring(0, inputLastSlash);
+        String parentPart = target.substring(0, inputLastSlash);
         // 부모 경로 조각이 비어있으면(예: "/a") 루트('/')를 부모로 설정합니다.
         if (parentPart.isEmpty()) {
           parentPart = "/";
         }
-        searchDir = pathResolver.resolve(safeCwd, parentPart, rootPath);
-        prefix = input.substring(inputLastSlash + 1);
+        searchDir = pathResolver.resolve(safeCwd, parentPart, vfs);
+        prefix = target.substring(inputLastSlash + 1);
       }
     }
 
@@ -3317,12 +5447,13 @@ public class StoryServiceImpl implements StoryService {
       return Collections.emptyList();
     }
 
+    final String finalPrefix = prefix.toLowerCase();
     // 부모 디렉토리의 하위 노드 목록을 가져와 스트림으로 처리합니다.
     return vfs.listChildren(searchDir).stream()
-        // 숨김 처리(hidden)된 파일이나 디렉토리는 자동완성 목록에서 제외합니다.
-        .filter(n -> !n.hidden())
-        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다.
-        .filter(n -> n.name().startsWith(prefix))
+        // 접두사가 '.'으로 시작하는 경우에만 숨김 파일을 포함하고, 그렇지 않으면 숨김 파일을 제외합니다.
+        .filter(n -> !n.hidden() || finalPrefix.startsWith("."))
+        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다. (대소문자 구분 없음)
+        .filter(n -> n.name().toLowerCase().startsWith(finalPrefix))
         // 디렉토리일 경우 이름 뒤에 '/'를 붙여 반환하고, 파일이면 이름 그대로 반환합니다.
         .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
         // 자동완성 후보군을 알파벳 순으로 정렬합니다.

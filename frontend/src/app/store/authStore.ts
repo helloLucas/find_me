@@ -14,7 +14,7 @@ interface AuthState {
   role: UserRole | null;
   nickname: string;
   isInitialized: boolean;
-  
+
   // Actions
   checkAuth: () => void;
   setAuth: (accessToken: string) => void;
@@ -62,15 +62,15 @@ export const useAuthStore = create<AuthState>((set) => ({
    */
   setAuth: (accessToken: string) => {
     try {
-        const decoded: any = jwtDecode(accessToken);
-        set({
-          isLoggedIn: true,
-          role: decoded.role || null,
-          nickname: decoded.nickname || "UNKNOWN_AGENT",
-          isInitialized: true,
-        });
+      const decoded: any = jwtDecode(accessToken);
+      set({
+        isLoggedIn: true,
+        role: decoded.role || null,
+        nickname: decoded.nickname || "UNKNOWN_AGENT",
+        isInitialized: true,
+      });
     } catch (e) {
-        console.error("유효하지 않은 토큰입니다:", e);
+      console.error("유효하지 않은 토큰입니다:", e);
     }
   },
 
@@ -84,10 +84,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   /**
-   * 인증 상태 초기화
+   * 인증 상태 완전 초기화 (로그아웃 / refresh 실패)
+   * - 토큰을 모두 정리하고 role을 null로 설정
    */
   clearAuth: () => {
     tokenManager.clearTokens();
-    set({ isLoggedIn: false, role: null, nickname: "ANONYMOUS" });
+    set({ isLoggedIn: false, role: null, nickname: 'ANONYMOUS', isInitialized: true });
   },
 }));

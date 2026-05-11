@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tokenManager } from '../../shared/utils/tokenManager';
 import { useUpdateNickname } from '../../features/User/useUpdateNickname';
@@ -10,6 +11,7 @@ import { useUpdateNickname } from '../../features/User/useUpdateNickname';
  * URL 파라미터에서 토큰과 신규 유저 여부를 파싱하여 초기화 및 라우팅을 수행합니다.
  */
 const OAuthCallbackPage = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { mutate } = useUpdateNickname();
@@ -22,8 +24,8 @@ const OAuthCallbackPage = () => {
         const isNewUser = searchParams.get('isNewUser') === 'true';
         const tempKey = searchParams.get('tempKey');
         const guestId = searchParams.get('guestId');
-        const nickname = searchParams.get('nickname');
         const isConflict = searchParams.get('isConflict') === 'true';
+        const isAccountLinking = searchParams.get('isAccountLinking') === 'true';
 
         // 1. 이미 가입된 회원이거나 게스트 승격 완료된 경우
         if (accessToken) {
@@ -49,9 +51,44 @@ const OAuthCallbackPage = () => {
             return;
         }
 
-        // 2. 신규 가입 대기 상태 또는 계정 전환 대기 상태
+        // 2. 신규 가입 대기 상태 또는 계정 전환/연동 대기 상태
         if (tempKey) {
             processedRef.current = true;
+
+            // [계정 연동(Account Linking) 케이스]: 동일 이메일로 이미 가입된 계정이 있는 경우
+            if (isAccountLinking) {
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'AUTH_ACCOUNT_LINKING',
+                        tempKey
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
+                import('../../app/store/modalStore').then((module) => {
+                    const openModal = module.useModalStore.getState().openModal;
+                    openModal({
+                        title: t('auth.accountLinkingTitle'),
+                        message: t('auth.accountLinkingMsg'),
+                        type: 'confirm',
+                        onConfirm: () => {
+                            mutate({
+                                tempKey,
+                                nickname: '',
+                                confirmAccountLinking: true
+                            });
+                        },
+                        onCancel: () => {
+                            navigate('/', { replace: true });
+                        }
+                    });
+                }).catch(err => {
+                    console.error('Failed to load modalStore:', err);
+                    navigate('/', { replace: true });
+                });
+                return;
+            }
 
             // [계정 전환(Switch) 케이스]: 이미 가입된 소셜 계정이 있는 경우
             if (isConflict) {
@@ -70,8 +107,8 @@ const OAuthCallbackPage = () => {
                 import('../../app/store/modalStore').then((module) => {
                     const openModal = module.useModalStore.getState().openModal;
                     openModal({
-                        title: 'ACCOUNT_CONFLICT',
-                        message: '이미 이 소셜 계정으로 가입된 정보가 존재합니다.\n해당 계정으로 전환하시겠습니까?\n(현재 게스트 정보는 사라집니다.)',
+                        title: t('auth.accountConflictTitle'),
+                        message: t('auth.accountConflictMsg'),
                         type: 'confirm',
                         onConfirm: () => {
                             mutate({
@@ -92,11 +129,11 @@ const OAuthCallbackPage = () => {
             }
 
             // [자동 승격(Upgrade) 케이스]: 게스트 정보가 있으면 바로 register 호출
-            if (guestId && nickname) {
+            if (guestId) {
                 console.log('Detected guest session. Performing automatic linking...');
                 mutate({
                     tempKey,
-                    nickname,
+                    nickname: '',
                     guestId: parseInt(guestId, 10),
                     confirmSwitch: false
                 });
@@ -136,10 +173,10 @@ const OAuthCallbackPage = () => {
             <div className="relative">
                 {/* 메인 로딩 텍스트 */}
                 <div className="text-2xl md:text-3xl mb-12 animate-pulse tracking-[0.2em] text-center leading-relaxed">
-                    AUTHENTICATING...
+                    {t('auth.authenticating')}
                     <br />
                     <span className="text-xs md:text-sm opacity-50 mt-2 block">
-                        ESTABLISHING SECURE RELAY
+                        {t('auth.establishingRelay')}
                     </span>
                 </div>
 
