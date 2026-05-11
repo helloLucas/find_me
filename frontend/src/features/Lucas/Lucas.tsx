@@ -131,6 +131,7 @@ export const Lucas: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [isDialogueActive, currentMessage]);
 
+  // 채팅창이 열릴 때 또는 새로운 메시지가 추가될 때 무조건 맨 아래로 스크롤
   useEffect(() => {
     const wasVisible = wasHintPanelVisibleRef.current;
     const isVisible = isHintPanelVisible;
@@ -144,30 +145,12 @@ export const Lucas: React.FC = () => {
       const container = hintMessagesRef.current;
       if (container) {
         const currentLen = chatHistory.length;
-        const lastRead = lastReadIndicesRef.current[chatScopeKey] ?? currentLen;
         isRestoringScrollRef.current = true;
 
         window.requestAnimationFrame(() => {
-          const savedScrollTop = savedScrollTopRef.current[chatScopeKey];
-
-          if (typeof savedScrollTop === 'number' && Number.isFinite(savedScrollTop)) {
-            container.scrollTop = savedScrollTop;
-          } else if (currentLen > lastRead) {
-            const scrollTargetIdx = Math.max(0, lastRead - 1);
-            const msgToScroll = chatHistory[scrollTargetIdx];
-
-            if (msgToScroll) {
-              const element = document.getElementById(`lucas-msg-${msgToScroll.id}`);
-              if (element) {
-                element.scrollIntoView({ behavior: 'auto', block: 'start' });
-              } else {
-                container.scrollTop = container.scrollHeight;
-              }
-            } else {
-              container.scrollTop = container.scrollHeight;
-            }
-          } else {
-            container.scrollTop = container.scrollHeight;
+          container.scrollTop = container.scrollHeight;
+          if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
           }
 
           savedScrollTopRef.current[chatScopeKey] = container.scrollTop;
