@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: shyunnnn/find-me-frontend:219-dev
+          image: shyunnnn/find-me-frontend:221-dev
           imagePullPolicy: Always
           ports:
             - containerPort: 80
