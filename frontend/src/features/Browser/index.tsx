@@ -59,10 +59,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   // 챕터 3 전용 상태 및 더 보기 관리
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<"home" | "history_list" | "hint_detail">("home");
+  const [currentView, setCurrentView] = useState<"home" | "history_list" | "search_result">("home");
   const [selectedHint, setSelectedHint] = useState<Chapter3Hint | null>(null);
   const [hasClickedMoreBtn, setHasClickedMoreBtn] = useState(false);
   const [detailOrigin, setDetailOrigin] = useState<"home" | "history_list" | null>(null);
+  const [currentSearchQuery, setCurrentSearchQuery] = useState<string | null>(null);
+
+  // 챕터 3가 아닐 때 전역 검색 기록 리셋 보조
+  useEffect(() => {
+    if (!isChapter3Mode) {
+      useBrowserContentStore.getState().resetSearchHistory();
+    }
+  }, [isChapter3Mode]);
 
   // 더 보기 드롭다운 외부 클릭 감지용 ref
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -643,14 +651,17 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                 setCurrentView("home");
                 setSelectedHint(null);
                 setDetailOrigin(null);
-              } else if (currentView === "hint_detail") {
+                setCurrentSearchQuery(null);
+              } else if (currentView === "search_result") {
                 if (detailOrigin === "history_list") {
                   setCurrentView("history_list");
                   setSelectedHint(null);
+                  setCurrentSearchQuery(null);
                 } else {
                   setCurrentView("home");
                   setSelectedHint(null);
                   setDetailOrigin(null);
+                  setCurrentSearchQuery(null);
                 }
               }
             } else {
@@ -731,7 +742,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       </div>
 
       <div className="flex-1 relative overflow-hidden flex flex-row">
-        <div className="flex-1 relative z-0 h-full overflow-hidden">
+        <div className="flex-1 relative z-0 h-full overflow-hidden flex flex-col items-stretch">
           {activeTab?.component === "news" && (
             <NewsTab
               viewMode={newsViewMode}
@@ -755,6 +766,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
               setSelectedHint={setSelectedHint}
               detailOrigin={detailOrigin}
               setDetailOrigin={setDetailOrigin}
+              currentSearchQuery={currentSearchQuery}
+              setCurrentSearchQuery={setCurrentSearchQuery}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
