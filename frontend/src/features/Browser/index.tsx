@@ -12,6 +12,7 @@ import { CyberPacketDashTab } from "./components/CyberPacketDashTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { type Chapter3Hint } from "./data/chapter3Hints";
 import type { DesktopWindowId } from "../../shared/config/desktopWindows";
 import {
   canSubmitStoryAction,
@@ -52,6 +53,31 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       setIsChapter2Mode(true);
     }
   }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
+
+  // 챕터 3 여부 감지 (현재 노드 기준 실시간 판단)
+  const isChapter3Mode = Boolean(currentNode?.code?.startsWith("CH3_"));
+
+  // 챕터 3 전용 상태 및 더 보기 관리
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<"home" | "history_list" | "hint_detail">("home");
+  const [selectedHint, setSelectedHint] = useState<Chapter3Hint | null>(null);
+  const [hasClickedMoreBtn, setHasClickedMoreBtn] = useState(false);
+  const [detailOrigin, setDetailOrigin] = useState<"home" | "history_list" | null>(null);
+
+  // 더 보기 드롭다운 외부 클릭 감지용 ref
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // 브라우저가 종료될 때(언마운트 시) 메신저 기사 추가 클릭 트리거 상태를 0으로 초기화
   useEffect(() => {
@@ -552,12 +578,26 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   return (
     <div
-      ref={containerRef}
-      className="flex flex-col w-full h-full bg-[#0a0514] font-browser-chrome outline-none"
-      tabIndex={-1}
-      onContextMenu={handleContextMenu}
+      className="w-full h-full bg-[#0a0514] flex flex-col relative"
       onClick={() => focusWindow(windowId)}
     >
+      <style>{`
+        @keyframes slow-pulse-border {
+          0%, 100% {
+            opacity: 1;
+            border-color: rgba(255, 226, 89, 0.8);
+            box-shadow: 0 0 8px rgba(255, 226, 89, 0.6);
+          }
+          50% {
+            opacity: 0.4;
+            border-color: rgba(255, 226, 89, 0.15);
+            box-shadow: 0 0 0px transparent;
+          }
+        }
+        .pulse-border-hint {
+          animation: slow-pulse-border 2.5s ease-in-out infinite;
+        }
+      `}</style>
       <div className="flex bg-[#110a26] border-b-2 border-[#543ab7] pt-1 px-1 h-8">
         {tabs.map((tab) => (
           <div
@@ -590,20 +630,39 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         </button>
       </div>
 
-      <div className="flex bg-[#0f0c29] p-1.5 border-b-2 border-[#543ab7]">
+      <div className="flex bg-[#0f0c29] p-1.5 border-b-2 border-[#543ab7] items-center">
         <button
           type="button"
-          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${canGoBack
+          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${(canGoBack || (isChapter3Mode && currentView !== "home"))
               ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
               : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
             }`}
-          onClick={handleBack}
-          disabled={!canGoBack}
+          onClick={() => {
+            if (isChapter3Mode && currentView !== "home") {
+              if (currentView === "history_list") {
+                setCurrentView("home");
+                setSelectedHint(null);
+                setDetailOrigin(null);
+              } else if (currentView === "hint_detail") {
+                if (detailOrigin === "history_list") {
+                  setCurrentView("history_list");
+                  setSelectedHint(null);
+                } else {
+                  setCurrentView("home");
+                  setSelectedHint(null);
+                  setDetailOrigin(null);
+                }
+              }
+            } else {
+              handleBack();
+            }
+          }}
+          disabled={!canGoBack && !(isChapter3Mode && currentView !== "home")}
           aria-label="Back"
         >
           {"<"}
         </button>
-        <div className="flex-1 min-w-0 bg-[#0a0514] border-2 border-[#543ab7] rounded px-2 py-1 text-[#c7b3ff] text-sm flex items-center shadow-[inset_0_0_10px_rgba(84,58,183,0.3)]">
+        <div className="flex-1 min-w-0 bg-[#0a0514] border-2 border-[#543ab7] rounded px-2 py-1 text-[#c7b3ff] text-sm flex items-center shadow-[inset_0_0_10px_rgba(84,58,183,0.3)] mr-2">
           <span className="opacity-50 mr-2">&gt;</span>
           <span
             className="min-w-0 flex-1 truncate whitespace-nowrap"
@@ -611,6 +670,64 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             {formatAddressBarUrl(activeTab?.url || "about:blank")}
           </span>
         </div>
+
+        {/* 챕터 3 전용: 더 보기(⋮) 버튼 및 드롭다운 */}
+        {isChapter3Mode && (
+          <div ref={moreMenuRef} className="relative shrink-0 flex items-center z-[1002]">
+            <button
+              type="button"
+              onClick={() => {
+                setHasClickedMoreBtn(true);
+                setIsMoreMenuOpen((prev) => !prev);
+              }}
+              className={`w-8 h-8 flex items-center justify-center text-base rounded-sm border-2 transition-all text-[#a48cff] active:text-[#4ce2fc] select-none
+                ${!hasClickedMoreBtn ? "pulse-border-hint text-[#ffe259]" : "border-transparent hover:border-[#543ab7] hover:bg-[#1a1130]"}
+              `}
+              title="더 보기"
+            >
+              ⋮
+            </button>
+
+            {/* 더 보기 드롭다운 메뉴 */}
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-44 border-2 border-[#543ab7] rounded-sm bg-[#0d0920]/95 backdrop-blur-md overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.8)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoreMenuOpen(false);
+                    // 검색기록 클릭 시, 현재 탭이 search가 아니라면 search 탭으로 전환
+                    const searchTab = tabs.find((t) => t.component === "search");
+                    if (searchTab) {
+                      setActiveTabId(searchTab.id);
+                    } else {
+                      const newId = `tab_${Date.now()}`;
+                      setTabs((prev) => [
+                        ...prev,
+                        {
+                          id: newId,
+                          title: "Search",
+                          url: "https://void-search.net",
+                          component: "search",
+                          history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
+                          historyIndex: 0,
+                        }
+                      ]);
+                      setActiveTabId(newId);
+                    }
+                    setCurrentView("history_list");
+                    setSelectedHint(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  검색 기록 (History)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative overflow-hidden flex flex-row">
@@ -631,6 +748,13 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === "search" && (
             <SearchTab
               onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
+              isChapter3Mode={isChapter3Mode}
+              currentView={currentView}
+              setCurrentView={setCurrentView}
+              selectedHint={selectedHint}
+              setSelectedHint={setSelectedHint}
+              detailOrigin={detailOrigin}
+              setDetailOrigin={setDetailOrigin}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
