@@ -75,6 +75,43 @@ async def set_pattern_embedding(
     _memory_state[redis_key] = {"vector": embedding}
 
 
+async def get_one_time_hint_served(
+    *,
+    session_id: str,
+    chapter_code: str,
+    hint_key: str,
+) -> bool:
+    global _redis_client
+    redis_key = _one_time_hint_key(session_id=session_id, chapter_code=chapter_code, hint_key=hint_key)
+    if _redis_client is not None:
+        try:
+            raw = await _redis_client.get(redis_key)
+            return str(raw).strip().lower() == "1"
+        except Exception:
+            pass
+    state = _memory_state.get(redis_key)
+    return bool(state and state.get("served") is True)
+
+
+async def set_one_time_hint_served(
+    *,
+    session_id: str,
+    chapter_code: str,
+    hint_key: str,
+    ttl_seconds: int,
+) -> None:
+    global _redis_client
+    redis_key = _one_time_hint_key(session_id=session_id, chapter_code=chapter_code, hint_key=hint_key)
+    ttl = _resolve_ttl_seconds(ttl_seconds)
+    if _redis_client is not None:
+        try:
+            await _redis_client.setex(redis_key, ttl, "1")
+            return
+        except Exception:
+            pass
+    _memory_state[redis_key] = {"served": True}
+
+
 async def check_and_update_repeat_count(
     *,
     session_id: str,
@@ -237,6 +274,10 @@ async def _cleanup_previous_node_keys(
 
 def _scope_key(session_id: str, chapter_code: str, from_node_code: str) -> str:
     return f"{_safe_key(session_id)}:{_safe_key(chapter_code)}:{_safe_key(from_node_code)}"
+
+
+def _one_time_hint_key(*, session_id: str, chapter_code: str, hint_key: str) -> str:
+    return f"lucas:hint:one-time:{_safe_key(hint_key)}:{_safe_key(session_id)}:{_safe_key(chapter_code)}"
 
 
 def _safe_key(value: str | None) -> str:
