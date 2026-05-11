@@ -15,7 +15,7 @@ spec:
         spec:
           containers:
           - name: hint-worker
-            image: shyunnnn/find-me-hint:221-dev
+            image: shyunnnn/find-me-hint:222-dev
             imagePullPolicy: Always
             env:
             - name: ELASTICSEARCH_URL
