@@ -1,6 +1,7 @@
 package com.lucas.hint.dto.response;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,8 +16,13 @@ public class HintLiveRetrieveResponseDto {
   private String fromNodeCode;
   private String messageType;
   private String routeDecision;
+  private String intentSubtype;
   private String actionType;
   private int failCountAfterAction;
+  private int repeatCountAfterAction;
+  private int stressScore;
+  private String hintLevel;
+  private String repeatDecision;
   private int queryVectorDimension;
   private String queryText;
   private String selectedPhase;
@@ -25,5 +31,6 @@ public class HintLiveRetrieveResponseDto {
   private int evidenceLimit;
   private double minSimilarity;
   private int candidateCount;
+  private Map<String, Object> commandUsageContext;
   private List<HintEvidenceResponseDto> evidences;
 }

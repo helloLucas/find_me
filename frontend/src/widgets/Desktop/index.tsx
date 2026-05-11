@@ -9,6 +9,7 @@ import { Browser } from "../../features/Browser";
 import { MessengerNotificationCard, MessengerWindow } from "../../features/messenger";
 import { Lucas } from "../../features/Lucas/Lucas";
 import { DocumentViewer } from "../../features/DocumentViewer/DocumentViewer";
+import { CallOverlay } from "../../features/story-runtime/ui/CallOverlay";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import {
@@ -16,10 +17,19 @@ import {
   DESKTOP_WINDOW_DEFINITIONS,
 } from "../../shared/config/desktopWindows";
 import { BugReportModal } from "../BugReportModal";
+import { trackAnalyticsEvent } from "../../shared/analytics";
+import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
+import { NotepadWindow } from "../../features/notepad/NotepadWindow";
+import { TrashWindow } from "../../features/trash/TrashWindow";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
+  const desktopViewRef = useTrackVisible<HTMLDivElement>({
+    eventName: "desktop_visible_10s",
+    params: { page: "play" },
+    minVisibleMs: 10000,
+  });
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
     startY: number;
@@ -46,11 +56,18 @@ export const Desktop: React.FC = () => {
     { id: "terminal", label: "Terminal", icon: DESKTOP_WINDOW_DEFINITIONS.terminal.iconPath },
     { id: "chrome", label: "Browser", icon: DESKTOP_WINDOW_DEFINITIONS.chrome.iconPath },
     { id: "notepad", label: "Notebook", icon: "/pixel_notepad_icon.svg" },
-    { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" },
     { id: "email", label: "Bug Report", icon: "/pixel_email_cyberpunk.png" },
   ];
 
+  if (currentNode?.code?.startsWith("CH3_")) {
+    icons.splice(3, 0, { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" });
+  }
+
   const handleIconDoubleClick = (id: string) => {
+    trackAnalyticsEvent("desktop_icon_opened", {
+      icon_id: id,
+    });
+
     if (id === "terminal") {
       openWindow("terminal");
       if (canSubmitStoryAction(currentNode, "click", "open_terminal")) {
@@ -66,6 +83,18 @@ export const Desktop: React.FC = () => {
 
     if (id === "email") {
       openWindow("email");
+      return;
+    }
+
+    if (id === "notepad") {
+      openWindow("notepad");
+      return;
+    }
+
+    if (id === "trash") {
+      if (currentNode?.code?.startsWith("CH3_")) {
+        openWindow("trash");
+      }
       return;
     }
 
@@ -102,6 +131,7 @@ export const Desktop: React.FC = () => {
 
   return (
     <div
+      ref={desktopViewRef}
       className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none font-desktop-ui"
       style={{ backgroundImage: 'url("/display_background.png")' }}
       onContextMenu={(event) => event.preventDefault()}
@@ -204,10 +234,41 @@ export const Desktop: React.FC = () => {
             );
           }
 
+          if (windowState.type === "notepad") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon="/pixel_notepad_icon.svg"
+                defaultWidth={400}
+                defaultHeight={500}
+              >
+                <NotepadWindow />
+              </Window>
+            );
+          }
+
+          if (windowState.type === "trash") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon="/pixel_trash_icon.svg"
+                defaultWidth={400}
+                defaultHeight={300}
+              >
+                <TrashWindow />
+              </Window>
+            );
+          }
+
           return <MessengerWindow key={windowState.id} windowId={windowState.id} />;
         })}
 
         <MessengerNotificationCard />
+        <CallOverlay />
         <Lucas />
       </div>
 

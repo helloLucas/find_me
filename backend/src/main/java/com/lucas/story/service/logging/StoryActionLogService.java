@@ -25,7 +25,7 @@ public class StoryActionLogService {
 
   // Session 기반 Fail Count Redis Key
   private static final String FAIL_COUNT_KEY_FORMAT = "play:session:%s:fail_count";
-  private static final long FAIL_COUNT_TTL_HOURS = 24;
+  private static final long FAIL_COUNT_TTL_MINUTES = 10;
 
   /** 액션 로깅 DTO를 JSON 형태로 직렬화하여 logger를 통해 출력합니다. */
   public void logAction(StoryActionLogEvent event) {
@@ -70,14 +70,14 @@ public class StoryActionLogService {
     try {
       if (isFail) {
         Long count = redisTemplate.opsForValue().increment(key);
-        redisTemplate.expire(key, FAIL_COUNT_TTL_HOURS, TimeUnit.HOURS);
+        redisTemplate.expire(key, FAIL_COUNT_TTL_MINUTES, TimeUnit.MINUTES);
         return count != null ? count.intValue() : 1;
       } else {
         if (resetOnSuccess) {
           redisTemplate.delete(key);
           return 0;
         }
-        redisTemplate.expire(key, FAIL_COUNT_TTL_HOURS, TimeUnit.HOURS);
+        redisTemplate.expire(key, FAIL_COUNT_TTL_MINUTES, TimeUnit.MINUTES);
         String current = redisTemplate.opsForValue().get(key);
         if (current == null || current.isBlank()) {
           return 0;

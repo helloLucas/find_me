@@ -3,6 +3,7 @@ package com.lucas.auth.handler;
 import com.lucas.auth.dto.PendingUserInfo;
 import com.lucas.auth.principal.CustomOAuth2User;
 import com.lucas.auth.service.AuthService;
+import com.lucas.global.util.CookieUtil;
 import com.lucas.global.util.JwtUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +12,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -25,6 +24,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtUtil jwtUtil;
   private final AuthService authService;
+  private final CookieUtil cookieUtil;
 
   @Value("${app.frontend.url}")
   private String frontendUrl;
@@ -51,7 +51,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
-    // 닉네임 입력 대기 또는 계정 전환 확인이 필요한 경우
+    // 닉네임 입력 대기, 계정 전환 확인, 계정 연동 확인이 필요한 경우
     if (customOAuth2User.isPendingRegistration()) {
       PendingUserInfo pendingInfo =
           PendingUserInfo.builder()
@@ -74,16 +74,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
               .queryParam("isNewUser", customOAuth2User.isNewUser())
               .queryParam("isGuest", customOAuth2User.isGuest())
               .queryParam("isConflict", customOAuth2User.isConflict())
+              .queryParam("isAccountLinking", customOAuth2User.isAccountLinking())
               .queryParam(
                   "guestId",
                   (customOAuth2User.isGuest() && !customOAuth2User.isConflict()) ? targetId : "")
-              .queryParam(
-                  "nickname",
-                  customOAuth2User.isGuest()
-                      ? (customOAuth2User.getNickname() != null
-                          ? customOAuth2User.getNickname()
-                          : "")
-                      : "")
               .encode(StandardCharsets.UTF_8)
               .build()
               .toUriString();
@@ -107,20 +101,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     String refreshToken = jwtUtil.createRefreshToken(userId, email, refreshTokenExpiration);
 
-    // refresh token 을 Redis에 저장
-    authService.replaceRefreshToken(userId, refreshToken);
+    // 성공 로그인 시각 갱신 및 refresh token 저장
+    authService.completeSuccessfulLogin(userId, refreshToken);
 
     // 1. Refresh Token을 HttpOnly 쿠키에 안전하게 저장 (XSS 방어 및 Cross-Origin 통신 허용)
-    ResponseCookie cookie =
-        ResponseCookie.from("refresh_token", refreshToken)
-            .httpOnly(true)
-            .secure(true) // SameSite=None 옵션을 위해 필요 (localhost에서는 보통 예외적으로 허용됨)
-            .path("/")
-            .maxAge(refreshTokenExpiration / 1000)
-            .sameSite("None") // 프론트와 백엔드의 포트/도메인이 다를 때 필수
-            .build();
-
-    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    cookieUtil.setRefreshTokenCookie(response, refreshToken);
 
     // 2. Access Token과 신규 유저 여부만 프론트엔드 콜백 URL 파라미터로 전달
     String targetUrl =

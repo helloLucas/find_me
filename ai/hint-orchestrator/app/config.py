@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     gms_llm_provider: str = Field(default="openai", alias="GMS_LLM_PROVIDER")
     gms_router_provider: str = Field(default="openai", alias="GMS_ROUTER_PROVIDER")
     gms_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LLM_MODEL")
+    gms_light_llm_model: str = Field(default="gpt-5-mini", alias="GMS_LIGHT_LLM_MODEL")
+    gms_command_usage_llm_model: str = Field(
+        default="gpt-5-mini", alias="GMS_COMMAND_USAGE_LLM_MODEL"
+    )
     gms_router_model: str = Field(default="gpt-5-mini", alias="GMS_ROUTER_MODEL")
     gms_openai_chat_path: str = Field(
         default="api.openai.com/v1/chat/completions", alias="GMS_OPENAI_CHAT_PATH"
@@ -36,12 +40,24 @@ class Settings(BaseSettings):
     pg_user: str = Field(default="lucas_admin", alias="PG_USER")
     pg_password: str = Field(default="", alias="PG_PASSWORD")
 
-    retrieve_default_search_top_k: int = Field(default=7, alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
-    retrieve_default_evidence_limit: int = Field(default=3, alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
-    retrieve_default_min_similarity: float = Field(default=0.70, alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
+    redis_host: str = Field(alias="REDIS_HOST")
+    redis_port: int = Field(alias="REDIS_PORT")
+    redis_password: str = Field(alias="REDIS_PASSWORD")
 
-    hint_level_medium_fail_threshold: int = Field(default=3, alias="HINT_LEVEL_MEDIUM_FAIL_THRESHOLD")
-    hint_level_strong_fail_threshold: int = Field(default=6, alias="HINT_LEVEL_STRONG_FAIL_THRESHOLD")
+    retrieve_default_search_top_k: int = Field(alias="RETRIEVE_DEFAULT_SEARCH_TOP_K")
+    retrieve_default_evidence_limit: int = Field(alias="RETRIEVE_DEFAULT_EVIDENCE_LIMIT")
+    retrieve_default_min_similarity: float = Field(alias="RETRIEVE_DEFAULT_MIN_SIMILARITY")
+    retrieve_evidence_limit_light: int = Field(default=2, alias="RETRIEVE_EVIDENCE_LIMIT_LIGHT")
+    retrieve_evidence_limit_medium: int = Field(default=2, alias="RETRIEVE_EVIDENCE_LIMIT_MEDIUM")
+    retrieve_evidence_limit_strong: int = Field(default=3, alias="RETRIEVE_EVIDENCE_LIMIT_STRONG")
+
+    hint_stress_fail_weight: int = Field(alias="HINT_STRESS_FAIL_WEIGHT")
+    hint_stress_repeat_weight: int = Field(alias="HINT_STRESS_REPEAT_WEIGHT")
+    hint_level_medium_stress_threshold: int = Field(alias="HINT_LEVEL_MEDIUM_STRESS_THRESHOLD")
+    hint_level_strong_stress_threshold: int = Field(alias="HINT_LEVEL_STRONG_STRESS_THRESHOLD")
+    hint_repeat_similarity_threshold: float = Field(alias="HINT_REPEAT_SIMILARITY_THRESHOLD")
+    hint_repeat_ttl_seconds: int = Field(alias="HINT_REPEAT_TTL_SECONDS")
+    hint_repeat_sliding_ttl: bool = Field(default=True, alias="HINT_REPEAT_SLIDING_TTL")
 
     vector_source_filter: str = Field(default="story_transitions", alias="VECTOR_SOURCE_FILTER")
     vector_knowledge_kind_filter: str = Field(
@@ -49,6 +65,43 @@ class Settings(BaseSettings):
     )
 
     hint_user_message_max_length: int = Field(default=200, alias="HINT_USER_MESSAGE_MAX_LENGTH")
+
+    hint_command_usage_routing_enabled: bool = Field(
+        default=False, alias="HINT_COMMAND_USAGE_ROUTING_ENABLED"
+    )
+    hint_command_usage_embed_resolver_enabled: bool = Field(
+        default=False, alias="HINT_COMMAND_USAGE_EMBED_RESOLVER_ENABLED"
+    )
+    hint_command_usage_candidate_top_k: int = Field(
+        default=20, alias="HINT_COMMAND_USAGE_CANDIDATE_TOP_K"
+    )
+    hint_command_usage_high_confidence: float = Field(
+        default=0.62, alias="HINT_COMMAND_USAGE_HIGH_CONFIDENCE"
+    )
+    hint_command_usage_medium_confidence: float = Field(
+        default=0.48, alias="HINT_COMMAND_USAGE_MEDIUM_CONFIDENCE"
+    )
+
+    hint_runtime_pattern_rerank_enabled: bool = Field(
+        default=True, alias="HINT_RUNTIME_PATTERN_RERANK_ENABLED"
+    )
+    hint_runtime_pattern_cache_size: int = Field(
+        default=4000, alias="HINT_RUNTIME_PATTERN_CACHE_SIZE"
+    )
+    hint_runtime_pattern_cache_ttl_seconds: int = Field(
+        default=86400, alias="HINT_RUNTIME_PATTERN_CACHE_TTL_SECONDS"
+    )
+    hint_status_file_bootstrap_enabled: bool = Field(
+        default=False, alias="HINT_STATUS_FILE_BOOTSTRAP_ENABLED"
+    )
+    hint_status_file_bootstrap_nodes: str = Field(
+        default="CH3_PORT_DISCOVERED,CH3_RELAY_EMPTY_RESPONSE,CH3_RELAY_STATUS_VIEW,CH3_PEOPLE_VIEWED,CH3_MONITOR_VIEWED",
+        alias="HINT_STATUS_FILE_BOOTSTRAP_NODES",
+    )
+    hint_status_file_bootstrap_message: str = Field(
+        default="터미널 말고 너의 컴퓨터 어딘가에 내가 파일을 전송했어. 일반적인 방식으로 전송할 수 없어서 꼼수를 써뒀으니 확인해봐.",
+        alias="HINT_STATUS_FILE_BOOTSTRAP_MESSAGE",
+    )
 
 
 @lru_cache

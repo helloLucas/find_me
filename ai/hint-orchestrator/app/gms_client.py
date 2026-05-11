@@ -7,7 +7,9 @@ import httpx
 
 from app.config import Settings
 
-_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "lucas_developer_prompt.txt"
+_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_PROGRESS_HINT_PROMPT_PATH = _PROMPTS_DIR / "lucas_progress_hint_prompt.txt"
+_COMMAND_USAGE_PROMPT_PATH = _PROMPTS_DIR / "lucas_command_usage_prompt.txt"
 _FALLBACK_DEVELOPER_PROMPT = "You must answer in Korean and output exactly one JSON object."
 
 
@@ -22,17 +24,32 @@ class GmsLlmClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._http = httpx.AsyncClient(timeout=httpx.Timeout(settings.gms_timeout_seconds))
-        self._developer_prompt = self._load_developer_prompt()
+        self._progress_hint_prompt = self._load_developer_prompt(
+            primary=_PROGRESS_HINT_PROMPT_PATH,
+            fallback=_PROGRESS_HINT_PROMPT_PATH,
+        )
+        self._command_usage_prompt = self._load_developer_prompt(
+            primary=_COMMAND_USAGE_PROMPT_PATH,
+            fallback=_PROGRESS_HINT_PROMPT_PATH,
+        )
 
     async def close(self) -> None:
         await self._http.aclose()
 
-    async def generate_text(self, prompt: str) -> str:
+    async def generate_text(
+        self,
+        prompt: str,
+        *,
+        model_name: str | None = None,
+        prompt_mode: str = "progress_hint",
+    ) -> str:
         provider = _normalize_provider(self._settings.gms_llm_provider)
+        selected_model = model_name or self._settings.gms_llm_model
+        developer_prompt = self._resolve_developer_prompt(prompt_mode)
         return await self._chat(
             provider=provider,
-            model_name=self._settings.gms_llm_model,
-            developer_prompt=self._developer_prompt,
+            model_name=selected_model,
+            developer_prompt=developer_prompt,
             user_prompt=prompt,
             max_output_tokens=self._settings.gms_max_output_tokens,
             reasoning_effort=self._settings.gms_llm_reasoning_effort,
@@ -51,8 +68,10 @@ class GmsLlmClient:
         developer_prompt = (
             "Route classifier. Output one JSON object only. "
             "Allowed labels: message_type=hint_question|lore_question|other. "
+            "Allowed intent_subtype=progress_hint|command_usage|lore|other. "
             "Rules: progress-solving question=>hint_question; lore/world/story question=>lore_question; "
-            "small talk/abuse/unrelated/answer-only request=>other; ambiguous=>hint_question."
+            "command usage/explanation/examples for terminal commands=>hint_question + command_usage; "
+            "small talk/abuse/unrelated/answer-only request=>other; ambiguous=>hint_question + progress_hint."
         )
         user_prompt = (
             f"c={chapter_code or '-'}\n"
@@ -60,7 +79,7 @@ class GmsLlmClient:
             f"a={action_type or '-'}\n"
             f"f={fail_count_after_action}\n"
             f"m={user_message}\n"
-            'json={"message_type":"hint_question|lore_question|other","route_decision":"RAG_HINT|BLOCKED_NON_HINT"}'
+            'json={"message_type":"hint_question|lore_question|other","intent_subtype":"progress_hint|command_usage|lore|other","route_decision":"RAG_HINT|BLOCKED_NON_HINT"}'
         )
 
         provider = _normalize_provider(self._settings.gms_router_provider or self._settings.gms_llm_provider)
@@ -213,11 +232,22 @@ class GmsLlmClient:
             return []
         return [float(v) for v in values]
 
-    def _load_developer_prompt(self) -> str:
+    def _load_developer_prompt(self, *, primary: Path, fallback: Path) -> str:
+        for path in (primary, fallback):
+            try:
+                text = path.read_text(encoding="utf-8").strip()
+                if text:
+                    return text
+            except OSError:
+                continue
+        return _FALLBACK_DEVELOPER_PROMPT
+
+    def _resolve_developer_prompt(self, prompt_mode: str) -> str:
+        if (prompt_mode or "").strip().lower() == "command_usage":
+            return self._command_usage_prompt
         try:
-            text = _PROMPT_PATH.read_text(encoding="utf-8").strip()
-            return text or _FALLBACK_DEVELOPER_PROMPT
-        except OSError:
+            return self._progress_hint_prompt or _FALLBACK_DEVELOPER_PROMPT
+        except Exception:
             return _FALLBACK_DEVELOPER_PROMPT
 
     @staticmethod

@@ -49,8 +49,12 @@ export const useMessengerStore = create<MessengerState>((set) => ({
         (newMsg) => !existingMessages.some((msg) => msg.text === newMsg.text)
       );
       const mergedMessages = [...existingMessages, ...newMessages];
+
+      const hasCardMatchingLink = conv.actions?.some((act) => act.actionType === "friend_message_link_ch3");
+      const shouldSuppressNotification = Boolean(hasCardMatchingLink);
+
       const nextRoomUnread =
-        newMessages.length > 0 ? true : existingRoom?.unread ?? conv.unread;
+        shouldSuppressNotification ? false : (newMessages.length > 0 ? true : existingRoom?.unread ?? conv.unread);
       const nextConversations = {
         ...state.conversations,
         [roomId]: {
@@ -64,8 +68,8 @@ export const useMessengerStore = create<MessengerState>((set) => ({
         conversations: nextConversations,
         activeRoomId: roomId,
         isNotificationVisible:
-          newMessages.length > 0 ? true : state.isNotificationVisible,
-        isUnread: hasUnreadConversations(nextConversations),
+          shouldSuppressNotification ? false : (newMessages.length > 0 ? true : state.isNotificationVisible),
+        isUnread: shouldSuppressNotification ? false : hasUnreadConversations(nextConversations),
       };
     }),
 

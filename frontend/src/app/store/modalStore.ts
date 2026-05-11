@@ -6,7 +6,7 @@ interface ModalOptions {
   title?: string;
   message: string;
   type?: ModalType;
-  onConfirm?: () => void;
+  onConfirm?: () => boolean | void | Promise<boolean | void>;
   onCancel?: () => void;
 }
 
@@ -15,7 +15,7 @@ interface ModalStore {
   title: string;
   message: string;
   type: ModalType;
-  onConfirm: (() => void) | null;
+  onConfirm: (() => boolean | void | Promise<boolean | void>) | null;
   onCancel: (() => void) | null;
 
   /**

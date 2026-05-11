@@ -9,6 +9,7 @@ import { useBrowserContentStore } from '../../app/store/browserContentStore';
 import { useWindowStore } from '../../app/store/windowStore';
 import { tokenManager } from '../../shared/utils/tokenManager';
 import { env } from '../../shared/config/env';
+import { trackAnalyticsEvent } from '../../shared/analytics';
 
 /**
  * 인증 관련 사용자 액션을 처리하는 커스텀 훅
@@ -44,6 +45,11 @@ export const useAuthActions = () => {
 
     const popup = window.open(authUrl, `${provider}Login`, features);
 
+    trackAnalyticsEvent('auth_popup_opened', {
+      provider,
+      popup_opened: Boolean(popup),
+    });
+
     if (popup) popup.focus();
   };
 
@@ -54,6 +60,7 @@ export const useAuthActions = () => {
    */
   const handleGuestAccess = () => {
     if (isGuestInitializing) return;
+    trackAnalyticsEvent('guest_access_started');
     initGuest();
   };
 
@@ -62,6 +69,8 @@ export const useAuthActions = () => {
    * 백엔드의 로그아웃 API를 호출하여 세션을 종료하고 쿠키를 삭제합니다.
    */
   const handleLogout = () => {
+    trackAnalyticsEvent('logout_confirmed');
+
     // 1. [핵심] 상태를 지우기 전에 통신에 필요한 Access Token을 변수에 미리 빼둡니다.
     const currentToken = tokenManager.getAccessToken();
 

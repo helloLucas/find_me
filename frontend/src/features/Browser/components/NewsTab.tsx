@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
+import { useWindowStore } from "../../../app/store/windowStore";
 import { useBrowserContentStore } from "../../../app/store/browserContentStore";
 import type { ArticleCorruption } from "../../../shared/types/story";
 import { useStoryRuntimeStore } from "../../story-runtime/storyRuntime.store";
@@ -8,48 +9,16 @@ import {
 } from "../../story-runtime/storyActionGuards";
 import { CorruptedParagraph } from "./CorruptedParagraph";
 import "./NewsTab.css";
-
-type NewsCard = {
-  id: string;
-  title: string;
-  summary?: string;
-  publisher?: string;
-  thumbnail?: string;
-};
-
-const DEFAULT_NEWS_CARDS: NewsCard[] = [
-  {
-    id: "good_article",
-    title: "넥서스, 인류의 삶을 바꾼 완전 연결 시스템",
-    summary: "도시 운영부터 개인 건강관리까지, 넥서스 플랫폼이 바꾼 일상의 변화.",
-    publisher: "Nexus Daily",
-    thumbnail: "news_good_01",
-  },
-  {
-    id: "missing_people_article",
-    title: "최근 늘어나는 실종 사례, 단순 통계 이상인가?",
-    summary: "최근 세 달간 보고된 실종 건수가 예년 대비 급증하며 원인 분석이 이어지고 있다.",
-    publisher: "Central News",
-    thumbnail: "news_missing_01",
-  },
-  {
-    id: "dark_article",
-    title: "넥서스의 어두운 면: 사라진 기록들에 대한 제보",
-    summary: "삭제된 문서와 누락된 기록을 추적한 익명 제보가 공개됐다.",
-    publisher: "Unknown Archive",
-    thumbnail: "news_dark_01",
-  },
-];
-
+import { DEFAULT_NEWS_CARDS, FALLBACK_ARTICLES, type NewsCard } from "../data/newsData";
 type NewsViewMode = "auto" | "list" | "article";
 
 interface NewsTabProps {
   viewMode?: NewsViewMode;
+  activeTabTitle?: string;
   onFallbackOpenArticle?: (card: NewsCard) => void;
 }
 
-const CORRUPTION_TRIGGER_SCROLL_PX = 24;
-const CORRUPTION_TRIGGER_SCROLL_PROGRESS = 0.05;
+const SCROLL_BOTTOM_TOLERANCE_PX = 2;
 const CORRUPTION_CASCADE_DURATION_MS = 1400;
 
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
@@ -58,8 +27,8 @@ function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   const record = value as Record<string, unknown>;
   const paragraphIndexes = Array.isArray(record.paragraphIndexes)
     ? record.paragraphIndexes
-        .map((entry) => Number(entry))
-        .filter((entry) => Number.isInteger(entry) && entry >= 0)
+      .map((entry) => Number(entry))
+      .filter((entry) => Number.isInteger(entry) && entry >= 0)
     : [];
 
   const intensity = record.intensity === "active" ? "active" : record.intensity === "subtle" ? "subtle" : null;
@@ -76,30 +45,57 @@ function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
 
 export const NewsTab: React.FC<NewsTabProps> = ({
   viewMode = "auto",
+  activeTabTitle,
   onFallbackOpenArticle,
 }) => {
   const { currentNode, submitStoryAction, submitStoryClick, submitStoryInspect } =
     useStoryRuntimeStore();
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollCorruptionTriggered, setScrollCorruptionTriggered] = React.useState(false);
+  const [scrollCorruptionNodeId, setScrollCorruptionNodeId] = React.useState<number | null>(null);
   const [corruptionProgress, setCorruptionProgress] = React.useState(0);
   const corruptionAnimationFrameRef = useRef<number | null>(null);
   const corruptionStartTimeRef = useRef<number | null>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
-  const articleTitle = typeof content.articleTitle === "string" ? content.articleTitle : null;
+
+  const activeFallbackArticle = Object.values(FALLBACK_ARTICLES).find(
+    (art) => art.title === activeTabTitle
+  );
+
+  const useFallback = Boolean(activeFallbackArticle && (!content.articleTitle || content.articleTitle !== activeTabTitle));
+
+  const articleTitle = useFallback 
+    ? activeFallbackArticle!.title 
+    : (typeof content.articleTitle === "string" && content.articleTitle.trim() !== "" 
+      ? content.articleTitle 
+      : activeTabTitle);
   const hasArticle = Boolean(articleTitle);
   const showArticle = viewMode === "list" ? false : viewMode === "article" ? hasArticle : hasArticle;
-  const articleBody: string[] = Array.isArray(content.articleBody) ? content.articleBody.map(String) : [];
-  const articleCorruption = normalizeArticleCorruption(content.articleCorruption);
-  const corruptedParagraphIndexes = new Set(articleCorruption?.paragraphIndexes ?? []);
+  const articleBody: string[] = useFallback
+    ? activeFallbackArticle!.body
+    : (Array.isArray(content.articleBody) ? content.articleBody.map(String) : []);
+  const articleCorruption = useFallback ? null : normalizeArticleCorruption(content.articleCorruption);
+  const corruptedParagraphIndexes = new Set(
+    articleCorruption
+      ? articleBody.map((_, index) => index)
+      : []
+  );
   const isScrollTriggeredArticleNode = currentNode?.code === "CH1_DARK_ARTICLE_OPEN";
   const isArticleScrollCorruptionNode =
     currentNode?.code === "CH1_ARTICLE_SCROLL_CORRUPTION";
   const usesScrollCascadeCorruption =
-    showArticle && (isScrollTriggeredArticleNode || isArticleScrollCorruptionNode);
+    showArticle && !useFallback && (isScrollTriggeredArticleNode || isArticleScrollCorruptionNode);
+  const isCurrentNodeScrollCorruptionTriggered =
+    currentNode != null && scrollCorruptionNodeId === currentNode.id;
+  const scrollCorruptionTriggered =
+    !useFallback && (isArticleScrollCorruptionNode || isCurrentNodeScrollCorruptionTriggered);
+  const displayedCorruptionProgress = isArticleScrollCorruptionNode
+    ? 1
+    : isCurrentNodeScrollCorruptionTriggered
+      ? corruptionProgress
+      : 0;
   const articleBodyClassName = [
     "flex",
     "flex-col",
@@ -116,24 +112,15 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   useEffect(() => {
     lastScrollTriggeredNodeIdRef.current = null;
     corruptionStartTimeRef.current = null;
-    setScrollCorruptionTriggered(false);
-    setCorruptionProgress(0);
 
     if (corruptionAnimationFrameRef.current !== null) {
       window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
       corruptionAnimationFrameRef.current = null;
     }
-
-    if (isArticleScrollCorruptionNode) {
-      corruptionStartTimeRef.current =
-        performance.now() - CORRUPTION_CASCADE_DURATION_MS;
-      setScrollCorruptionTriggered(true);
-      setCorruptionProgress(1);
-    }
-  }, [currentNode?.id, isArticleScrollCorruptionNode]);
+  }, [currentNode?.id]);
 
   useEffect(() => {
-    if (!scrollCorruptionTriggered) return;
+    if (!scrollCorruptionTriggered || isArticleScrollCorruptionNode) return;
 
     const animateCorruption = (timestamp: number) => {
       if (corruptionStartTimeRef.current === null) {
@@ -160,7 +147,24 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         corruptionAnimationFrameRef.current = null;
       }
     };
-  }, [scrollCorruptionTriggered]);
+  }, [isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
+
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
+
+  useEffect(() => {
+    if (showArticle && activeWindowId === "chrome" && scrollContainerRef.current) {
+      const savedScrollTop = useBrowserContentStore.getState().newsScrollTop;
+      if (savedScrollTop > 0) {
+        // 창 포커스가 변경될 때 DOM이 재배치되며 스크롤이 초기화되는 현상 방지
+        const timeoutId = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = savedScrollTop;
+          }
+        }, 30);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [showArticle, activeWindowId]);
 
   const triggerArticleScrollTransition = useCallback(() => {
     if (!currentNode || !isScrollTriggeredArticleNode) return;
@@ -180,29 +184,29 @@ export const NewsTab: React.FC<NewsTabProps> = ({
       const element = event.currentTarget;
       const { scrollTop, scrollHeight, clientHeight } = element;
 
-      const maxScroll = Math.max(scrollHeight - clientHeight, 1);
-      const currentProgress = scrollTop / maxScroll;
+      useBrowserContentStore.getState().setNewsScrollTop(scrollTop);
+
+      const isAtBottom =
+        scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
 
       if (
         usesScrollCascadeCorruption &&
         !scrollCorruptionTriggered &&
-        (scrollTop >= CORRUPTION_TRIGGER_SCROLL_PX ||
-          currentProgress >= CORRUPTION_TRIGGER_SCROLL_PROGRESS)
+        isAtBottom
       ) {
         corruptionStartTimeRef.current = null;
-        setScrollCorruptionTriggered(true);
+        setCorruptionProgress(0);
+        setScrollCorruptionNodeId(currentNode?.id ?? null);
       }
 
       if (!isScrollTriggeredArticleNode || !showArticle) return;
-
-      const scrollThreshold = Math.max(16, clientHeight * 0.1);
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - scrollThreshold;
 
       if (isAtBottom) {
         triggerArticleScrollTransition();
       }
     },
     [
+      currentNode?.id,
       isScrollTriggeredArticleNode,
       scrollCorruptionTriggered,
       showArticle,
@@ -238,12 +242,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                 const isCorruptedByScrollCascade =
                   usesScrollCascadeCorruption &&
                   scrollCorruptionTriggered &&
-                  corruptionProgress >= cascadeThreshold;
+                  displayedCorruptionProgress >= cascadeThreshold;
                 const isCorruptedByMetadata =
                   !usesScrollCascadeCorruption && corruptedParagraphIndexes.has(index);
                 const isCorrupted = isCorruptedByMetadata || isCorruptedByScrollCascade;
                 const dynamicIntensity =
-                  scrollCorruptionTriggered && corruptionProgress >= 0.65
+                  scrollCorruptionTriggered && displayedCorruptionProgress >= 0.65
                     ? "active"
                     : (articleCorruption?.intensity ?? "subtle");
 
@@ -292,7 +296,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
             {newsCards.length > 0 ? (
               newsCards.map((card) => {
                 const canSubmitCardClick = canSubmitStoryAction(currentNode, "click", card.id);
-                const canFallbackOpenArticle = card.id === "dark_article" && hasArticle;
+                const canFallbackOpenArticle = currentNode?.code === "CH1_NEWS_PORTAL" || hasArticle || canSubmitCardClick;
                 const isCardClickable = canSubmitCardClick || canFallbackOpenArticle;
 
                 return (
@@ -317,12 +321,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                       onClick={() => {
                         if (canSubmitCardClick) {
                           void submitStoryClick(card.id);
-                          return;
+                          if (card.id === "dark_article") {
+                            return;
+                          }
                         }
 
-                        if (canFallbackOpenArticle) {
-                          onFallbackOpenArticle?.(card);
-                        }
+                        onFallbackOpenArticle?.(card);
                       }}
                     >
                       <p className="text-[11px] uppercase tracking-[0.25em] text-[#a48cff] mb-2">

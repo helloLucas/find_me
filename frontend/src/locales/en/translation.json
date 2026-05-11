@@ -1,0 +1,116 @@
+{
+  "common": {
+    "systemError": "SYSTEM ERROR",
+    "errorOccurred": "An error occurred.",
+    "accessing": "SYSTEM ACCESSING...",
+    "reauthenticating": "RE-AUTHENTICATING...",
+    "back": "BACK",
+    "login": "LOGIN",
+    "logout": "LOGOUT",
+    "guest": "GUEST"
+  },
+  "auth": {
+    "sessionExpiredTitle": "SESSION EXPIRED",
+    "sessionExpiredMsg": "Session has expired.\nPlease login again.",
+    "accountLinkingTitle": "ACCOUNT LINKING",
+    "accountLinkingMsg": "An account with the same email already exists.\nWould you like to link your social login to this account?",
+    "accountLinkingFailed": "Failed to process account linking.",
+    "accountConflictTitle": "ACCOUNT CONFLICT",
+    "accountConflictMsg": "An account with this social login already exists.\nSwitch to that account?\n(Current guest data will be lost.)",
+    "accountSwitchFailed": "Failed to process account switch.",
+    "authErrorTitle": "AUTH ERROR",
+    "authErrorMsg": ">> AUTHENTICATION_FAILED: ACCESS_DENIED",
+    "accessTokenExpired": "Access token has expired. Clearing session...",
+    "guestWarningTitle": "ANONYMOUS_ACCESS_WARNING",
+    "guestWarningMsg": "Your progress may not be saved during anonymous access.\nDo you want to continue?",
+    "logoutConfirmTitle": "LOGOUT_CONFIRMATION",
+    "logoutConfirmMsg": "Are you sure you want to logout?\nThe session will be terminated.",
+    "authenticating": "AUTHENTICATING...",
+    "establishingRelay": "ESTABLISHING SECURE RELAY"
+  },
+  "story": {
+    "incomingCall": "INCOMING CALL",
+    "unknownSpeaker": "UNKNOWN",
+    "webBrowser": "Web Browser",
+    "terminal": "Terminal",
+    "error": {
+      "applyOutputFailed": "Failed to apply story output.",
+      "commandNotFound": "{{command}}: command not found",
+      "initFailed": "Failed to initialize story.",
+      "nodeNotFound": "Current story node not found.",
+      "nextNodeNotFound": "Next node not found in transition response.",
+      "transitionFailed": "Failed to transition story."
+    }
+  },
+  "lobby": {
+    "guestTooltip": "You can change nickname after social login",
+    "editTooltip": "Click to change nickname",
+    "agent": "AGENT",
+    "edit": "EDIT",
+    "sess": "SESS",
+    "selectChapter": "SELECT CHAPTER",
+    "updateAlias": "UPDATE AGENT ALIAS",
+    "placeholder": "Enter new nickname",
+    "maxChars": "Max 15 characters.",
+    "cancel": "CANCEL",
+    "confirm": "CONFIRM",
+    "updating": "UPDATING...",
+    "errorEmpty": "Please enter a nickname.",
+    "errorTooLong": "Please enter within 15 characters.",
+    "errorUpdateFailed": "Failed to update nickname.",
+    "chapter": "CHAPTER",
+    "cleared": "CLEARED",
+    "status": {
+      "notAvailable": "NOT_AVAILABLE",
+      "accessLocked": "ACCESS_LOCKED",
+      "readyToSync": "READY_TO_SYNC",
+      "systemCleared": "SYSTEM_CLEARED"
+    },
+    "modal": {
+      "lockTitle": "SYSTEM_LOCK",
+      "lockMsg": "This chapter has not been deployed to the system yet.",
+      "securityTitle": "SECURITY_ENFORCEMENT",
+      "securityMsg": "Access denied.\nPlease clear previous chapters first."
+    }
+  },
+  "setup": {
+    "back": "BACK",
+    "inputNickname": "INPUT NICKNAME",
+    "errorTooShort": ">> [ERROR]: NICKNAME_TOO_SHORT (MIN_2_CHARS)",
+    "noticeUnmodifiable": ">> [NOTICE]: ONCE_STABILIZED_NICKNAME_CANNOT_BE_MODIFIED",
+    "sessionExpired": "Sign-up session expired or state lost. Redirecting to login.",
+    "stabilizing": "STABILIZING...",
+    "establish": "ESTABLISH"
+  },
+  "bug": {
+    "title": "Bug Report System",
+    "header": "[TRANSMIT SYSTEM ERROR LOG]",
+    "agent": "AGENT",
+    "loc": "LOC",
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "Summary of error data...",
+      "detailsLabel": "Details",
+      "detailsPlaceholder": "What were you doing when the error occurred?",
+      "attachmentsLabel": "Attachments (Optional)",
+      "dropFiles": "File Upload",
+      "dropFilesActive": "DROP FILES HERE",
+      "compressing": "COMPRESSING IMAGES...",
+      "sizeLimit": "[Size Limit: Total 10MB]"
+    },
+    "status": {
+      "transmitting": "TRANSMITTING...",
+      "optimizing": "OPTIMIZING...",
+      "transmit": "TRANSMIT",
+      "compressing": "Compressing high-res visual data",
+      "successTitle": "SYSTEM ERROR LOG TRANSMITTED",
+      "successMsg": "Thank you for your report.",
+      "sendingMsg": "Transmitting data packets...",
+      "transmission": "TRANSMISSION",
+      "complete": "COMPLETE",
+      "inProgress": "IN PROGRESS"
+    },
+    "confirm": "CONFIRM",
+    "cancel": "CANCEL"
+  }
+}

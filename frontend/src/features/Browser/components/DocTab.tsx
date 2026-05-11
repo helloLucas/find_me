@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useBrowserContentStore } from '../../../app/store/browserContentStore';
 
+import { useClipboardStore } from '../../../app/store/clipboardStore';
+
 interface DocTabProps {
   url: string;
 }
@@ -12,6 +14,7 @@ const CodeBlock: React.FC<{ code: string }> = ({ code }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(code).then(() => {
       setLastCopiedCommand(code);
+      useClipboardStore.getState().setClipboardText(code); // 게임 전용 내부 클립보드에도 동일하게 저장!
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

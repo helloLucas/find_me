@@ -6,6 +6,7 @@ import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../story-runtime/storyActionGuards";
 import { WindowFrame } from "../../shared/ui/WindowFrame";
+import { useClipboardStore } from "../../app/store/clipboardStore";
 import { storyApi } from "../../shared/api/storyApi";
 import {
   DESKTOP_TASKBAR_HEIGHT,
@@ -16,6 +17,7 @@ import {
   UNAVAILABLE_COMMAND_TOAST_MESSAGE,
 } from "./terminalCommandFeedback";
 import { AnimatedTerminalLine } from "./AnimatedTerminalLine";
+import { trackAnalyticsEvent } from "../../shared/analytics";
 
 interface TerminalSceneProps {
   windowId: DesktopWindowId;
@@ -201,6 +203,10 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     if (
       shouldBlockUnavailableTerminalCommand(activeNode?.code, rawCommand)
     ) {
+      trackAnalyticsEvent("terminal_command_blocked", {
+        node_code: activeNode?.code ?? "unknown",
+        reason: "unavailable_command",
+      });
       showToast(UNAVAILABLE_COMMAND_TOAST_MESSAGE);
       setInputValue("");
       setTimeout(() => inputRef.current?.focus(), 10);
@@ -219,15 +225,25 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     setInputValue("");
 
     setIsProcessing(true);
+    trackAnalyticsEvent("terminal_command_submitted", {
+      node_code: activeNode?.code ?? "unknown",
+    });
 
     try {
       if (!canSubmitStoryAction(activeNode, "command", command)) {
+        trackAnalyticsEvent("terminal_command_rejected", {
+          node_code: activeNode?.code ?? "unknown",
+          reason: "story_guard",
+        });
         const firstWord = rawCommand.split(" ")[0];
         appendTerminalOutput("error", `${firstWord}: command not found`);
         return;
       }
 
       await submitStoryCommand(command, { directory: terminalPath });
+      trackAnalyticsEvent("terminal_command_accepted", {
+        node_code: activeNode?.code ?? "unknown",
+      });
 
       const runtimeError = useStoryRuntimeStore.getState().error;
       if (runtimeError) {
@@ -247,6 +263,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // OS 교차 붙여넣기 단축키(Ctrl+V / Cmd+V) 명시적 감지 및 가로채기
+    const isPasteCombo = (event.ctrlKey || event.metaKey) && (event.key === "v" || event.key === "V");
+    if (isPasteCombo) {
+      event.preventDefault();
+      handlePaste(event);
+      return;
+    }
+
     if (event.key !== "Tab") {
       setAutocompleteSuggestions([]);
     }
@@ -315,15 +339,40 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     }
   };
 
-  const handlePaste = (event: React.ClipboardEvent) => {
-    const pastedText = event.clipboardData.getData("text");
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
+    event.preventDefault(); // 외부 기본 붙여넣기 동작 완전 차단 (외부 텍스트 유입 원천 불가)
+
+    // 게임 전용 내부 클립보드 텍스트 가져오기
+    const gameClipboardText = useClipboardStore.getState().text;
     const lastCopiedCommand = useBrowserContentStore.getState().lastCopiedCommand;
 
-    // 복사된 명령어가 없거나, 붙여넣으려는 텍스트가 마지막으로 복사된 '허용된' 명령어와 다르면 차단
-    if (!lastCopiedCommand || pastedText !== lastCopiedCommand) {
-      event.preventDefault();
+    // 둘 중 우선적으로 적재된 신뢰 가능한 내부 복사 텍스트 채택
+    const textToInsert = gameClipboardText || lastCopiedCommand || "";
+
+    if (!textToInsert) {
+      trackAnalyticsEvent("terminal_paste_blocked");
       showToast("보안 정책상 허용된 명령어 외에는 붙여넣기가 제한됩니다.");
+      return;
     }
+
+    // 허용된 텍스트를 현재 입력창의 커서 위치에 수동 삽입
+    const input = inputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+
+    const nextValue =
+      inputValue.substring(0, start) +
+      textToInsert +
+      inputValue.substring(end);
+
+    setInputValue(nextValue);
+
+    const newCursorPos = start + textToInsert.length;
+    setTimeout(() => {
+      input.selectionStart = input.selectionEnd = newCursorPos;
+    }, 0);
   };
 
   if (!windowState) return null;
@@ -349,6 +398,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     >
       <div
         ref={scrollContainerRef}
+        data-clarity-mask="true"
         className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-xs leading-tight terminal-scrollbar"
         onClick={() => {
           focusWindow(windowState.id);
@@ -395,6 +445,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                   >
                     <input
                       ref={inputRef}
+                      data-clarity-mask="true"
                       type="text"
                       value={inputValue}
                       onChange={(event) => setInputValue(event.target.value)}
@@ -448,6 +499,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
               <form onSubmit={handleCommandSubmit} className="flex-1 flex items-center">
                 <input
                   ref={inputRef}
+                  data-clarity-mask="true"
                   type="text"
                   value={inputValue}
                   onChange={(event) => {

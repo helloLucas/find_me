@@ -3,13 +3,16 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
 import { HomeTab } from "./components/HomeTab";
+import { SearchTab } from "./components/SearchTab";
 import { PacmanTab } from "./components/PacmanTab";
 import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { DocTab } from "./components/DocTab";
+import { CyberPacketDashTab } from "./components/CyberPacketDashTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
+import { type Chapter3Hint } from "./data/chapter3Hints";
 import type { DesktopWindowId } from "../../shared/config/desktopWindows";
 import {
   canSubmitStoryAction,
@@ -20,13 +23,17 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
     title: string;
   }>;
   historyIndex: number;
+  currentView?: "home" | "history_list" | "search_result";
+  selectedHint?: Chapter3Hint | null;
+  detailOrigin?: "home" | "history_list" | null;
+  currentSearchQuery?: string | null;
 }
 
 interface BrowserProps {
@@ -42,7 +49,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger } = useBrowserContentStore();
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -50,6 +57,43 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       setIsChapter2Mode(true);
     }
   }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
+
+  // 챕터 3 여부 감지 (현재 노드 기준 실시간 판단)
+  const isChapter3Mode = Boolean(currentNode?.code?.startsWith("CH3_"));
+
+  // 챕터 3 전용 상태 및 더 보기 관리
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [hasClickedMoreBtn, setHasClickedMoreBtn] = useState(false);
+
+  // 챕터 3가 아닐 때 전역 검색 기록 리셋 보조
+  useEffect(() => {
+    if (!isChapter3Mode) {
+      useBrowserContentStore.getState().resetSearchHistory();
+    }
+  }, [isChapter3Mode]);
+
+  // 더 보기 드롭다운 외부 클릭 감지용 ref
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // 브라우저가 종료될 때(언마운트 시) 메신저 기사 추가 클릭 트리거 상태를 0으로 초기화
+  useEffect(() => {
+    return () => {
+      useBrowserContentStore.getState().resetNewsTabClickTrigger();
+      useBrowserContentStore.getState().resetCyberPacketDashTabClickTrigger();
+    };
+  }, []);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
     if (windowId === "terminal2") {
@@ -60,6 +104,47 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "starforce",
         history: [{ url: "system://terminal2/starforce", component: "starforce", title: "Starforce Core" }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
+      }];
+    }
+
+    const initialCardTrigger = useBrowserContentStore.getState().cyberPacketDashTabClickTrigger;
+    if (initialCardTrigger > 0) {
+      return [{
+        id: "tab1",
+        title: "Cyber Packet Dash",
+        url: "system://cyberpacketdash",
+        component: "cyberpacketdash" as const,
+        history: [{ url: "system://cyberpacketdash", component: "cyberpacketdash" as const, title: "Cyber Packet Dash" }],
+        historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
+      }];
+    }
+
+    // 메신저 기사 클릭 트리거가 활성화된 경우, 기사 탭을 기본 첫 탭으로 노출하여 중복 생성 방지
+    const initialTrigger = useBrowserContentStore.getState().newsTabClickTrigger;
+    if (initialTrigger > 0) {
+      const snapshot = resolveNewsSnapshot(currentNode?.code, typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined) || {
+        url: "https://voidcity-news/recent/1",
+        title: "News",
+      };
+      return [{
+        id: "tab1",
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
+        historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
 
@@ -72,30 +157,145 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         component: "history",
         history: [{ url: "system://history", component: "history", title: "History" }],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       }];
     }
-    
-    // 기본값 (챕터 1 등)
     return [{
       id: "tab1",
-      title: "Home",
-      url: "https://voidcity-news/recent/1",
-      component: "news",
-      history: [{ url: "https://voidcity-news/recent/1", component: "news", title: "Home" }],
+      title: "Search",
+      url: "https://void-search.net",
+      component: "search",
+      history: [{ url: "https://void-search.net", component: "search", title: "Search" }],
       historyIndex: 0,
+      currentView: "home",
+      selectedHint: null,
+      detailOrigin: null,
+      currentSearchQuery: null,
     }];
   });
   const [activeTabId, setActiveTabId] = useState("tab1");
+
+  // 탭 전환 시 더 보기 드롭다운 메뉴 자동 폐쇄 처리
+  useEffect(() => {
+    setIsMoreMenuOpen(false);
+  }, [activeTabId]);
+
   const [showDevTools, setShowDevTools] = useState(false);
   const [devToolsWidth, setDevToolsWidth] = useState(320);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastAutoInspectNodeIdRef = useRef<number | null>(null);
   const skipAutoSyncNodeIdByTabRef = useRef<Record<string, number>>({});
+  const lastSynchronizedNodeIdRef = useRef<number | null>(null);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+
+  // 현재 활성 탭 상태 업데이트 헬퍼
+  const updateActiveTab = (updates: Partial<Tab>) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, ...updates } : tab
+      )
+    );
+  };
+
+  // 챕터 3 전용 활성 탭의 개별 독립 상태 동적 바인딩
+  const currentView = activeTab?.currentView ?? "home";
+  const selectedHint = activeTab?.selectedHint ?? null;
+  const detailOrigin = activeTab?.detailOrigin ?? null;
+  const currentSearchQuery = activeTab?.currentSearchQuery ?? null;
+
   const articleTitleFromContent =
     typeof browserContent.articleTitle === "string" ? browserContent.articleTitle : undefined;
+
+  const lastNewsTabClickTriggerRef = useRef(0);
+
+  // 기사 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 갱신
+  useEffect(() => {
+    if (newsTabClickTrigger === 0) return;
+    if (newsTabClickTrigger === lastNewsTabClickTriggerRef.current) return;
+    lastNewsTabClickTriggerRef.current = newsTabClickTrigger;
+
+    const snapshot = resolveNewsSnapshot(currentNode?.code, articleTitleFromContent) || {
+      url: "https://voidcity-news/recent/1",
+      title: "News",
+    };
+
+    setTabs((prev) => {
+      const existingNewsTab = prev.find((tab) => tab.component === "news");
+      if (existingNewsTab) {
+        queueMicrotask(() => setActiveTabId(existingNewsTab.id));
+
+        return prev.map((tab) => {
+          if (tab.id !== existingNewsTab.id) return tab;
+
+          if (tab.url !== snapshot.url) {
+            const truncatedHistory = tab.history.slice(0, tab.historyIndex + 1);
+            const nextHistory = [
+              ...truncatedHistory,
+              {
+                url: snapshot.url,
+                title: snapshot.title,
+                component: "news" as const,
+              },
+            ];
+            return {
+              ...tab,
+              url: snapshot.url,
+              title: snapshot.title,
+              history: nextHistory,
+              historyIndex: nextHistory.length - 1,
+            };
+          }
+          return tab;
+        });
+      }
+
+      const newId = `tab_news_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: snapshot.title,
+        url: snapshot.url,
+        component: "news" as const,
+        history: [{ url: snapshot.url, component: "news" as const, title: snapshot.title }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [newsTabClickTrigger, currentNode, articleTitleFromContent]);
+
+  const lastCyberPacketDashTabClickTriggerRef = useRef(0);
+
+  // 사이버 패킷 대시 링크 추가 클릭 시 해당 탭으로 강제 포커싱 및 생성
+  useEffect(() => {
+    if (cyberPacketDashTabClickTrigger === 0) return;
+    if (cyberPacketDashTabClickTrigger === lastCyberPacketDashTabClickTriggerRef.current) return;
+    lastCyberPacketDashTabClickTriggerRef.current = cyberPacketDashTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingCardTab = prev.find((tab) => tab.component === "cyberpacketdash" || tab.component === "cardmatching");
+      if (existingCardTab) {
+        queueMicrotask(() => setActiveTabId(existingCardTab.id));
+        return prev;
+      }
+
+      const newId = `tab_card_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Cyber Packet Dash",
+        url: "system://cyberpacketdash",
+        component: "cyberpacketdash" as const,
+        history: [{ url: "system://cyberpacketdash", component: "cyberpacketdash" as const, title: "Cyber Packet Dash" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [cyberPacketDashTabClickTrigger]);
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
@@ -103,17 +303,21 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       ...prev,
       {
         id: newId,
-        title: "New Tab",
-        url: "",
-        component: "home",
+        title: "Search",
+        url: "https://void-search.net",
+        component: "search",
         history: [
           {
-            url: "",
-            component: "home",
-            title: "New Tab",
+            url: "https://void-search.net",
+            component: "search",
+            title: "Search",
           },
         ],
         historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
       },
     ]);
     setActiveTabId(newId);
@@ -181,7 +385,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const openDevTools = () => {
     setShowDevTools(true);
-    
+
     // DevTools 너비가 브라우저 전체 너비의 70%를 넘지 않도록 제한
     if (containerRef.current) {
       const maxAllowedWidth = containerRef.current.offsetWidth * 0.7;
@@ -222,7 +426,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   useEffect(() => {
     const keyboard = (navigator as KeyboardLockNavigator).keyboard;
     if (keyboard?.lock) {
-      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => {});
+      keyboard.lock(["ControlLeft", "KeyW", "ControlRight", "KeyW"]).catch(() => { });
     }
 
     const handleCaptureKeyDown = (event: KeyboardEvent) => {
@@ -284,11 +488,27 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     const snapshot = resolveNewsSnapshot(currentNode.code, articleTitleFromContent);
     if (!snapshot) return;
 
+    if (lastSynchronizedNodeIdRef.current === currentNode.id) {
+      if (activeTab.component !== "news") {
+        return;
+      }
+    }
+
+    if (activeTab.url?.includes("/article/") && snapshot.url?.includes("/recent/")) {
+      return;
+    }
+
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
+      lastSynchronizedNodeIdRef.current = currentNode.id;
 
       setTabs((prev) => {
+        const hasNewsTab = prev.some((tab) => tab.component === "news");
+        if (!hasNewsTab) {
+          return prev;
+        }
+
         let changed = false;
 
         const nextTabs = prev.map((tab) => {
@@ -348,8 +568,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const newsViewMode: "auto" | "list" | "article" =
     activeTab?.url?.includes("/recent/") ? "list" : activeTab?.url?.includes("/article/") ? "article" : "auto";
 
-  const handleFallbackOpenArticle = () => {
-    const fallbackTitle = articleTitleFromContent?.trim();
+  const handleFallbackOpenArticle = (card?: { id: string; title: string }) => {
+    const fallbackTitle = card?.title || articleTitleFromContent?.trim();
     if (!fallbackTitle) return;
 
     const fallbackUrl = `https://voidcity-news/article/${encodeURIComponent(fallbackTitle)}`;
@@ -412,12 +632,27 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   return (
     <div
-      ref={containerRef}
-      className="flex flex-col w-full h-full bg-[#0a0514] font-browser-chrome outline-none"
-      tabIndex={-1}
-      onContextMenu={handleContextMenu}
+      className="w-full h-full bg-[#0a0514] flex flex-col relative"
       onClick={() => focusWindow(windowId)}
+      onContextMenu={handleContextMenu}
     >
+      <style>{`
+        @keyframes slow-pulse-border {
+          0%, 100% {
+            opacity: 1;
+            border-color: rgba(255, 226, 89, 0.8);
+            box-shadow: 0 0 8px rgba(255, 226, 89, 0.6);
+          }
+          50% {
+            opacity: 0.4;
+            border-color: rgba(255, 226, 89, 0.15);
+            box-shadow: 0 0 0px transparent;
+          }
+        }
+        .pulse-border-hint {
+          animation: slow-pulse-border 2.5s ease-in-out infinite;
+        }
+      `}</style>
       <div className="flex bg-[#110a26] border-b-2 border-[#543ab7] pt-1 px-1 h-8">
         {tabs.map((tab) => (
           <div
@@ -450,21 +685,48 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         </button>
       </div>
 
-      <div className="flex bg-[#0f0c29] p-1.5 border-b-2 border-[#543ab7]">
+      <div className="flex bg-[#0f0c29] p-1.5 border-b-2 border-[#543ab7] items-center">
         <button
           type="button"
-          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${
-            canGoBack
-              ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
-              : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
-          }`}
-          onClick={handleBack}
-          disabled={!canGoBack}
+          className={`mr-2 h-8 min-w-8 rounded border-2 px-2 text-sm ${(canGoBack || (isChapter3Mode && currentView !== "home"))
+            ? "border-[#543ab7] text-[#c7b3ff] hover:bg-[#1a1130]"
+            : "border-[#2f244f] text-[#5f5a74] cursor-not-allowed"
+            }`}
+          onClick={() => {
+            if (isChapter3Mode && currentView !== "home") {
+              if (currentView === "history_list") {
+                updateActiveTab({
+                  currentView: "home",
+                  selectedHint: null,
+                  detailOrigin: null,
+                  currentSearchQuery: null,
+                });
+              } else if (currentView === "search_result") {
+                if (detailOrigin === "history_list") {
+                  updateActiveTab({
+                    currentView: "history_list",
+                    selectedHint: null,
+                    currentSearchQuery: null,
+                  });
+                } else {
+                  updateActiveTab({
+                    currentView: "home",
+                    selectedHint: null,
+                    detailOrigin: null,
+                    currentSearchQuery: null,
+                  });
+                }
+              }
+            } else {
+              handleBack();
+            }
+          }}
+          disabled={!canGoBack && !(isChapter3Mode && currentView !== "home")}
           aria-label="Back"
         >
           {"<"}
         </button>
-        <div className="flex-1 min-w-0 bg-[#0a0514] border-2 border-[#543ab7] rounded px-2 py-1 text-[#c7b3ff] text-sm flex items-center shadow-[inset_0_0_10px_rgba(84,58,183,0.3)]">
+        <div className="flex-1 min-w-0 bg-[#0a0514] border-2 border-[#543ab7] rounded px-2 py-1 text-[#c7b3ff] text-sm flex items-center shadow-[inset_0_0_10px_rgba(84,58,183,0.3)] mr-2">
           <span className="opacity-50 mr-2">&gt;</span>
           <span
             className="min-w-0 flex-1 truncate whitespace-nowrap"
@@ -472,20 +734,79 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             {formatAddressBarUrl(activeTab?.url || "about:blank")}
           </span>
         </div>
+
+        {/* 챕터 3 전용: 더 보기(⋮) 버튼 및 드롭다운 */}
+        {isChapter3Mode && (
+          <div ref={moreMenuRef} className="relative shrink-0 flex items-center z-[1002]">
+            <button
+              type="button"
+              onClick={() => {
+                setHasClickedMoreBtn(true);
+                setIsMoreMenuOpen((prev) => !prev);
+              }}
+              className={`w-8 h-8 flex items-center justify-center text-base rounded-sm border-2 transition-all text-[#a48cff] active:text-[#4ce2fc] select-none
+                ${!hasClickedMoreBtn ? "pulse-border-hint text-[#ffe259]" : "border-transparent hover:border-[#543ab7] hover:bg-[#1a1130]"}
+              `}
+              title="더 보기"
+            >
+              ⋮
+            </button>
+
+            {/* 더 보기 드롭다운 메뉴 */}
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-44 border-2 border-[#543ab7] rounded-sm bg-[#0d0920]/95 backdrop-blur-md overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.8)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoreMenuOpen(false);
+                    // 현재 활성화된 탭(activeTabId)의 화면 상태만 'history_list'로 업데이트
+                    updateActiveTab({
+                      currentView: "history_list",
+                      selectedHint: null,
+                      currentSearchQuery: null,
+                      detailOrigin: null,
+                    });
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  검색 기록 (History)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative overflow-hidden flex flex-row">
-        <div className="flex-1 relative z-0 h-full overflow-hidden">
+        <div className="flex-1 relative z-0 h-full overflow-hidden flex flex-col items-stretch">
           {activeTab?.component === "news" && (
             <NewsTab
               viewMode={newsViewMode}
-              onFallbackOpenArticle={() => handleFallbackOpenArticle()}
+              activeTabTitle={activeTab?.title}
+              onFallbackOpenArticle={(card) => handleFallbackOpenArticle(card)}
             />
           )}
           {activeTab?.component === "home" && (
-            <HomeTab 
-              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)} 
+            <HomeTab
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
               isChapter2Mode={isChapter2Mode}
+            />
+          )}
+          {activeTab?.component === "search" && (
+            <SearchTab
+              onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
+              isChapter3Mode={isChapter3Mode}
+              currentView={currentView}
+              setCurrentView={(val) => updateActiveTab({ currentView: val })}
+              selectedHint={selectedHint}
+              setSelectedHint={(val) => updateActiveTab({ selectedHint: val })}
+              detailOrigin={detailOrigin}
+              setDetailOrigin={(val) => updateActiveTab({ detailOrigin: val })}
+              currentSearchQuery={currentSearchQuery}
+              setCurrentSearchQuery={(val) => updateActiveTab({ currentSearchQuery: val })}
             />
           )}
           {activeTab?.component === 'pacman' && <PacmanTab windowId={windowId} />}
@@ -496,6 +817,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           {activeTab?.component === 'doc' && (
             <DocTab url={activeTab.url} />
           )}
+          {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
         </div>
 
         {showDevTools && (
@@ -554,12 +876,19 @@ function resolveNewsSnapshot(nodeCode: string | undefined, articleTitle?: string
   if (nodeCode === "CH1_NEWS_PORTAL") {
     return {
       url: "https://voidcity-news/recent/1",
-      title: "Home",
+      title: "News",
     };
   }
 
   if (nodeCode.includes("ARTICLE")) {
-    const title = articleTitle?.trim() || "Article";
+    let title = articleTitle?.trim();
+    if (!title) {
+      if (nodeCode.includes("DARK_ARTICLE") || nodeCode.includes("SCROLL_CORRUPTION")) {
+        title = "넥서스의 어두운 면: 사라진 기록들에 대한 제보";
+      } else {
+        title = "Article";
+      }
+    }
     return {
       url: `https://voidcity-news/article/${encodeURIComponent(title)}`,
       title,

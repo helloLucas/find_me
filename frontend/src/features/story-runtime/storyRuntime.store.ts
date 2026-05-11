@@ -1,11 +1,14 @@
+import i18n from "../../i18n";
 import { create } from "zustand";
 import { useAuthStore } from "../../app/store/authStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
+import { useCallOverlayStore } from "../../app/store/callOverlayStore";
 import { useClientStore } from "../../app/store/clientStore";
 import { useToastStore } from "../../app/store/toastStore";
 import { useLucasStore } from "../../app/store/lucasStore";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
+import { useNotepadStore } from "../../app/store/notepadStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
 import type {
@@ -59,6 +62,7 @@ type StoryRuntimeState = {
   currentNode: StoryNode | null;
   isLoading: boolean;
   error: string | null;
+  initializationId: number;
   initializeStory: (chapterCode: string) => Promise<void>;
   setCurrentNode: (node: StoryNode, options?: SetCurrentNodeOptions) => void;
   submitStoryAction: (
@@ -83,6 +87,7 @@ const MAPLE_STORY_TERMINAL_SIGNAL = "terminal://maple-story";
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
 const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
+const RING_TONE_SOUND = "chapter3_ringtone.mp3";
 const CLEAR_TERMINAL_SIGNAL = "__CLEAR_TERMINAL__";
 
 
@@ -92,12 +97,6 @@ function resolveChapterCode(chapterCode: string) {
   }
 
   return chapterCode || "week01";
-}
-
-function buildLucasChatScope(chapterCode: string) {
-  const auth = useAuthStore.getState();
-  const actor = auth.isLoggedIn ? auth.nickname || "member" : "guest";
-  return `lucas:${actor}:${chapterCode}`;
 }
 
 function getAuthenticatedPlayerName() {
@@ -186,14 +185,102 @@ function parseTerminalPromptContext(line: string): TerminalPromptContext | undef
   };
 }
 
+function getTerminalProfile(node: StoryNode | null | undefined) {
+  const promptMeta = objectRecord(node?.promptMeta) ?? {};
+  return stringValue(promptMeta.terminalProfile);
+}
+
+function getPromptPlaceholderContext(node: StoryNode) {
+  const promptMeta = objectRecord(node.promptMeta) ?? {};
+  const placeholder = stringValue(promptMeta.placeholder);
+  return placeholder ? parseTerminalPromptContext(placeholder) : undefined;
+}
+
+function isTerminalRuntimeNode(
+  node: StoryNode,
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>
+) {
+  return (
+    normalizedOutput.scene.mode === "terminal" ||
+    Boolean(getTerminalProfile(node)) ||
+    node.isTerminal
+  );
+}
+
+function shouldOpenCallOverlay(normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>) {
+  return (
+    normalizedOutput.scene.mode === "call" ||
+    normalizedOutput.uiMarkers.showCallOverlay === true
+  );
+}
+
+function getCallOverlayButtons(node: StoryNode) {
+  if (node.promptType !== "click") return [];
+
+  const promptMeta = objectRecord(node.promptMeta) ?? {};
+  const buttons = Array.isArray(promptMeta.buttons) ? promptMeta.buttons : [];
+
+  return buttons
+    .map((button) => {
+      const buttonRecord = objectRecord(button);
+      if (!buttonRecord) return undefined;
+
+      const value = stringValue(buttonRecord.value);
+      if (!value) return undefined;
+
+      return {
+        label: stringValue(buttonRecord.label) ?? value,
+        value,
+      };
+    })
+    .filter((button): button is { label: string; value: string } => Boolean(button));
+}
+
+function applyCallOverlayOutput(
+  node: StoryNode,
+  normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>
+) {
+  if (!shouldOpenCallOverlay(normalizedOutput)) {
+    useCallOverlayStore.getState().closeCallOverlay();
+    return;
+  }
+
+  const playerName = getAuthenticatedPlayerName();
+  const callMessages = normalizedOutput.messages.filter((message) => {
+    const channel = stringValue(message.channel);
+    return channel === "call" || channel === "terminal_notice";
+  });
+  const callNotification = normalizedOutput.notifications.find(
+    (notification) => stringValue(notification.type) === "call"
+  );
+
+  useCallOverlayStore.getState().openCallOverlay({
+    nodeCode: node.code,
+    title: stringValue(callNotification?.title) ?? i18n.t("story.incomingCall"),
+    status:
+      stringValue(normalizedOutput.uiMarkers.callStatus) ??
+      stringValue(callNotification?.body),
+    messages: callMessages.map((message) => ({
+      speaker: stringValue(message.speaker) ?? i18n.t("story.unknownSpeaker"),
+      channel: stringValue(message.channel) ?? "call",
+      text: resolveStoryText(message.text, { playerName }),
+    })),
+    buttons: getCallOverlayButtons(node),
+  });
+}
+
 function applyStoryNodeOutputBundle(
   node: StoryNode,
   options: ApplyStoryNodeOutputOptions = {}
 ) {
   const outputBundle = node.outputBundle;
-  if (!outputBundle) return;
+  if (!outputBundle) {
+    useCallOverlayStore.getState().closeCallOverlay();
+    return;
+  }
 
   const normalizedOutput = normalizeStoryOutputBundle(outputBundle);
+  applyCallOverlayOutput(node, normalizedOutput);
 
   const entrySfx = resolveNodeEntrySfx(
     normalizedOutput,
@@ -228,11 +315,14 @@ function applyStoryNodeOutputBundle(
   const documentId = stringValue(content.documentId);
 
   if (shouldOpenBrowserForStoryNode(node, normalizedOutput)) {
-    useWindowStore.getState().openWindow("browser", "Web Browser", undefined, "chrome");
+    useWindowStore.getState().openWindow("browser", i18n.t("story.webBrowser"), undefined, "chrome");
   }
 
-  if (node.code.startsWith("CH2_") || node.isTerminal) {
-    useWindowStore.getState().openWindow("terminal", "Terminal", undefined, "terminal");
+  const terminalProfile = getTerminalProfile(node);
+  const isTerminalContext = isTerminalRuntimeNode(node, normalizedOutput);
+
+  if (isTerminalContext) {
+    useWindowStore.getState().openWindow("terminal", i18n.t("story.terminal"), undefined, "terminal");
   }
 
   if (node.code === "CH2_RECOVERED_DOCUMENT") {
@@ -283,7 +373,7 @@ function applyStoryNodeOutputBundle(
   const completionText = normalizedOutput.content.completionText;
   const terminalOutputLines = Array.isArray(terminalOutput) ? terminalOutput.map(String) : [];
   const connectedPromptContext =
-    node.code === "CH1_SSH_CONNECTED" || node.code === "CH2_SERVER_HOME"
+    isTerminalContext || node.code === "CH1_SSH_CONNECTED"
       ? terminalOutputLines.map(parseTerminalPromptContext).find(Boolean)
       : undefined;
   const visibleTerminalOutputLines = connectedPromptContext
@@ -303,9 +393,13 @@ function applyStoryNodeOutputBundle(
       connectedPromptContext.host,
       connectedPromptContext.path
     );
-  } else if (node.code.startsWith("CH2_")) {
-    // Automatically switch to lucas-server context when in Chapter 2
-    clientStore.setTerminalContext("guest", "lucas-server", "~");
+  } else if (terminalProfile) {
+    const placeholderContext = getPromptPlaceholderContext(node);
+    clientStore.setTerminalContext(
+      placeholderContext?.user ?? "guest",
+      placeholderContext?.host ?? "lucas-server",
+      placeholderContext?.path ?? "~"
+    );
   }
 
   // 브라우저에서 실행된 액션이라면 터미널 출력을 건너뜀
@@ -320,6 +414,10 @@ function applyStoryNodeOutputBundle(
         .map((line) => line.text)
     );
     const filteredTerminalLines = terminalLines.filter((line) => {
+      if (line === "__REMOVE_LAST_INPUT__") {
+        clientStore.removeLastTerminalOutput();
+        return false;
+      }
       if (!line.startsWith("terminal://")) return true;
       return !existingSystemLines.has(line);
     });
@@ -344,7 +442,7 @@ function safelyApplyStoryNodeOutputBundle(
 
     return error instanceof Error
       ? error.message
-      : "스토리 출력 반영에 실패했습니다.";
+      : i18n.t("story.error.applyOutputFailed");
   }
 
   return null;
@@ -356,7 +454,7 @@ function getAutoSystemInputValue(node: StoryNode) {
 
 function getCommandNotFoundLine(inputValue: string | undefined) {
   const commandName = inputValue?.trim().split(/\s+/)[0];
-  return `${commandName || "command"}: command not found`;
+  return i18n.t("story.error.commandNotFound", { command: commandName || "command" });
 }
 
 function showUnavailableCommandToast() {
@@ -482,40 +580,84 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   currentNode: null,
   isLoading: false,
   error: null,
+  initializationId: 0,
   initializeStory: async (chapterCode) => {
-    if (get().isLoading) return;
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
+    
+    // 중복 호출 및 레이스 컨디션 방지를 위한 세션 ID 증가
+    const currentId = get().initializationId + 1;
+    set({ 
+      initializationId: currentId,
+      isLoading: true, 
+      error: null 
+    });
+
     useBrowserContentStore.getState().resetContent();
     useClientStore.getState().resetClientStore();
     useMessengerStore.getState().resetMessenger();
     useLucasStore.getState().resetLucas();
+    useCallOverlayStore.getState().resetCallOverlay();
     useWindowStore.getState().resetWindows();
 
-    set({ isLoading: true, error: null });
     useAuthStore.getState().checkAuth();
-
     await syncAuthenticatedUserProfile();
 
     try {
       const node = normalizeStoryNodeResponse(
         await storyApi.startStory(resolveChapterCode(chapterCode))
       );
+      
+      // 세션이 유효한지 확인
+      if (get().initializationId !== currentId) return;
+
       get().setCurrentNode(node);
+
+      // Chapter 3 도입 시 벨소리 재생 (Node 1: CH3_FRIEND_CALL)
+      if (node.code === "CH3_FRIEND_CALL") {
+        const callStore = useCallOverlayStore.getState();
+        callStore.setRinging(true);
+        audioManager.playSfx(RING_TONE_SOUND);
+        // 벨소리를 충분히 들려주기 위해 6초 대기 후 콘텐츠 표시
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+        
+        // 대기 후 세션이 여전히 유효한지 재확인
+        if (get().initializationId !== currentId) return;
+        
+        callStore.setRinging(false);
+      }
     } catch (startError) {
+      if (get().initializationId !== currentId) return;
+
       try {
         const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
+        if (get().initializationId !== currentId) return;
+
         get().setCurrentNode(fallbackNode);
+
+        // Resume 시에도 Chapter 3 첫 노드라면 벨소리 재생
+        if (fallbackNode.code === "CH3_FRIEND_CALL") {
+          const callStore = useCallOverlayStore.getState();
+          callStore.setRinging(true);
+          audioManager.playSfx(RING_TONE_SOUND);
+          await new Promise((resolve) => setTimeout(resolve, 6000));
+          
+          if (get().initializationId !== currentId) return;
+          callStore.setRinging(false);
+        }
       } catch {
+        if (get().initializationId !== currentId) return;
         set({
           error:
             startError instanceof Error
               ? startError.message
-              : "스토리 초기화에 실패했습니다.",
+              : i18n.t("story.error.initFailed"),
         });
       }
     } finally {
-      set({ isLoading: false });
+      if (get().initializationId === currentId) {
+        set({ isLoading: false });
+      }
     }
   },
 
@@ -560,7 +702,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   submitStoryAction: async (actionType, inputValue, meta) => {
     const currentNode = get().currentNode;
     if (!currentNode) {
-      set({ error: "현재 스토리 노드를 찾을 수 없습니다." });
+      set({ error: i18n.t("story.error.nodeNotFound") });
       return;
     }
 
@@ -582,7 +724,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       }
 
       if (!response.nextNode) {
-        throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+        throw new Error(i18n.t("story.error.nextNodeNotFound"));
       }
 
       const normalizedNextNode = normalizeTransitionNodeResponse(response.nextNode);
@@ -627,7 +769,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
               inputValue: "dismiss",
             });
             if (!dismissResponse.nextNode) {
-              throw new Error("스토리 전이 응답에 다음 노드 정보가 없습니다.");
+              throw new Error(i18n.t("story.error.nextNodeNotFound"));
             }
 
             const normalizedDismissNode = normalizeTransitionNodeResponse(dismissResponse.nextNode);
@@ -674,7 +816,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     } catch (error) {
       set({
         error:
-          error instanceof Error ? error.message : "스토리 전이에 실패했습니다.",
+          error instanceof Error ? error.message : i18n.t("story.error.transitionFailed"),
       });
     } finally {
       set({ isLoading: false });
@@ -693,9 +835,18 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     await get().submitStoryAction("command", inputValue, meta);
   },
 
-  resetStoryRuntime: () => set({
-    currentNode: null,
-    isLoading: false,
-    error: null,
-  }),
+  resetStoryRuntime: () => {
+    useCallOverlayStore.getState().resetCallOverlay();
+    useNotepadStore.getState().resetNotepad();
+    // 벨소리나 대화 등의 진행 중인 시각적 효과가 있으면 여기서 명시적으로 닫아줌
+    useLucasStore.getState().resetLucas();
+    
+    set((state) => ({
+      currentNode: null,
+      isLoading: false,
+      error: null,
+      // initializationId는 리셋하지 않음 (monotonically increasing)
+      initializationId: state.initializationId,
+    }));
+  },
 }));
