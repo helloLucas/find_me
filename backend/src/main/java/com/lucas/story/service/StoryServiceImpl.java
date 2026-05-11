@@ -5239,31 +5239,31 @@ public class StoryServiceImpl implements StoryService {
     // 경로 정규화를 위한 리졸버 객체를 생성합니다.
     PathResolver pathResolver = new PathResolver();
     // 프론트엔드에서 "~"와 같이 넘겨준 cwd를 실제 절대 경로(/home/guest 등)로 정규화합니다.
-    safeCwd = pathResolver.resolve(rootPath, safeCwd, rootPath);
+    safeCwd = pathResolver.resolve(rootPath, safeCwd, vfs);
 
     String searchDir;
     String prefix;
 
-    if (input.isEmpty() || input.endsWith("/")) {
+    if (target.isEmpty() || target.endsWith("/")) {
       // 입력이 비어있거나 '/'로 끝나면, 해당 경로 자체를 부모 디렉토리로 간주하고 하위 모든 요소를 대상으로 합니다.
-      searchDir = pathResolver.resolve(safeCwd, input, rootPath);
+      searchDir = pathResolver.resolve(safeCwd, target, vfs);
       prefix = "";
     } else {
       // 입력의 마지막 '/' 위치를 기준으로 부모 디렉토리와 검색 접두사(prefix)를 분리합니다.
-      int inputLastSlash = input.lastIndexOf('/');
+      int inputLastSlash = target.lastIndexOf('/');
       if (inputLastSlash == -1) {
         // '/'가 없으면 현재 작업 디렉토리에서 입력을 접두사로 검색합니다.
         searchDir = safeCwd;
-        prefix = input;
+        prefix = target;
       } else {
         // '/'가 있으면 마지막 '/' 이전까지를 부모 경로로, 이후를 접두사로 처리합니다.
-        String parentPart = input.substring(0, inputLastSlash);
+        String parentPart = target.substring(0, inputLastSlash);
         // 부모 경로 조각이 비어있으면(예: "/a") 루트('/')를 부모로 설정합니다.
         if (parentPart.isEmpty()) {
           parentPart = "/";
         }
-        searchDir = pathResolver.resolve(safeCwd, parentPart, rootPath);
-        prefix = input.substring(inputLastSlash + 1);
+        searchDir = pathResolver.resolve(safeCwd, parentPart, vfs);
+        prefix = target.substring(inputLastSlash + 1);
       }
     }
 
@@ -5274,12 +5274,13 @@ public class StoryServiceImpl implements StoryService {
       return Collections.emptyList();
     }
 
+    final String finalPrefix = prefix.toLowerCase();
     // 부모 디렉토리의 하위 노드 목록을 가져와 스트림으로 처리합니다.
     return vfs.listChildren(searchDir).stream()
-        // 숨김 처리(hidden)된 파일이나 디렉토리는 자동완성 목록에서 제외합니다.
-        .filter(n -> !n.hidden())
-        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다.
-        .filter(n -> n.name().startsWith(prefix))
+        // 접두사가 '.'으로 시작하는 경우에만 숨김 파일을 포함하고, 그렇지 않으면 숨김 파일을 제외합니다.
+        .filter(n -> !n.hidden() || finalPrefix.startsWith("."))
+        // 노드의 이름이 사용자가 입력한 접두사(prefix)로 시작하는 것만 필터링합니다. (대소문자 구분 없음)
+        .filter(n -> n.name().toLowerCase().startsWith(finalPrefix))
         // 디렉토리일 경우 이름 뒤에 '/'를 붙여 반환하고, 파일이면 이름 그대로 반환합니다.
         .map(n -> n.isDirectory() ? n.name() + "/" : n.name())
         // 자동완성 후보군을 알파벳 순으로 정렬합니다.
