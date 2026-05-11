@@ -5158,7 +5158,7 @@ public class StoryServiceImpl implements StoryService {
         msg.put("text", nudgeMessage);
       }
 
-      // 2. 컷씬 제거 및 터미널 이력에서 방금 입력한 명령어 지우기 (__REMOVE_LAST_INPUT__)
+      // 2. 컷씬 제거
       ObjectNode content = (ObjectNode) customOutputBundle.path("content");
       if (content == null || !content.isObject()) {
         content = customOutputBundle.putObject("content");
@@ -5167,8 +5167,9 @@ public class StoryServiceImpl implements StoryService {
       content.remove("completionTitle");
       content.remove("completionText");
 
-      ArrayNode termOut = content.putArray("terminalOutput");
-      termOut.add("__REMOVE_LAST_INPUT__");
+      // 유저 피드백: 오답 제출 시에도 터미널에 내역이 남아야 하므로 __REMOVE_LAST_INPUT__ 제거
+      // ArrayNode termOut = content.putArray("terminalOutput");
+      // termOut.add("__REMOVE_LAST_INPUT__");
 
       ObjectNode scene = (ObjectNode) customOutputBundle.path("scene");
       if (scene != null && scene.isObject()) {
