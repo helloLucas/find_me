@@ -25,9 +25,13 @@ export default function AppShell({ children }: PropsWithChildren) {
   const isAtRoot = location.pathname === "/";
 
   const [isRefreshingUI, setIsRefreshingUI] = useState(false);
+
+  // refreshLock: useRef로 관리. 리렌더링마다 동일한 mutable 객체를 참조하므로
+  // isRefreshingUI 변경으로 인한 리렌더링이 발생해도 값이 초기화되지 않습니다.
+  // 단, cleanup에서 절대 .current를 건드리지 않는 것이 이 패턴의 핵심 규칙입니다.
   const refreshLock = useRef(false);
 
-  // 선제적 토큰 만료 여부 판별
+  // 선제적 토큰 만료 여부 판별 (렌더링마다 최신 상태 계산)
   const isExpired = (() => {
     const accessToken = tokenManager.getAccessToken();
     if (!accessToken) return false;
@@ -40,68 +44,78 @@ export default function AppShell({ children }: PropsWithChildren) {
   })();
 
   // [중요] 자식 컴포넌트의 useEffect보다 먼저 실행되도록 렌더링 단계에서 동기적으로 플래그 설정
+  // refreshLock이 걸려있지 않을 때만 플래그를 세팅하여 중복 실행 방지
   if (isExpired && !isAtRoot && !refreshLock.current) {
     sessionStorage.setItem('is_silent_refreshing', 'true');
   }
 
   // 선제적 토큰 만료 감지 시 '조용한 자동 리프레시' 시도
   useEffect(() => {
-    let isMounted = true;
+    // refreshLock.current가 true인 동안은 이 블록에 절대 진입하지 않습니다.
+    // isRefreshingUI 변경으로 리렌더링이 발생해도 중복 실행이 차단됩니다.
+    if (!isExpired || isAtRoot || refreshLock.current) return;
 
-    if (isExpired && !isAtRoot && !refreshLock.current) {
-      console.warn(t("auth.accessTokenExpired"));
-      refreshLock.current = true;
-      setIsRefreshingUI(true);
+    console.warn(t("auth.accessTokenExpired"));
 
-      const attemptRefresh = async () => {
-        try {
-          const cleanAxios = axios.create();
-          const baseURL = import.meta.env.VITE_API_BASE_URL || '';
-          const response = await cleanAxios.post(`${baseURL}/api/v1/auth/refresh`, undefined, { withCredentials: true });
+    // 동기적으로 즉시 락 획득 (await 이전, 어떤 비동기 컨텍스트 스위치도 없이)
+    refreshLock.current = true;
+    setIsRefreshingUI(true);
 
-          const newAccessToken = response.data?.data?.accessToken;
+    const attemptRefresh = async () => {
+      // 네트워크 에러 여부를 finally에서 판단하기 위한 플래그
+      let isNetworkOrServerError = false;
+      let refreshSucceeded = false;
 
-          if (newAccessToken && isMounted) {
-            tokenManager.setAccessToken(newAccessToken);
-            checkAuth(); // authStore 갱신
-            refreshLock.current = false;
-            setIsRefreshingUI(false);
-            sessionStorage.removeItem('is_silent_refreshing');
-          }
-        } catch (error: any) {
-          // 네트워크 에러이거나 500번대 서버 에러인 경우
-          const isNetworkOrServerError = !error.response || error.response.status >= 500;
+      try {
+        const cleanAxios = axios.create();
+        const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+        const response = await cleanAxios.post(
+          `${baseURL}/api/v1/auth/refresh`,
+          undefined,
+          { withCredentials: true }
+        );
 
-          if (isNetworkOrServerError) {
-            console.warn("Silent refresh paused due to network/server issue. Will wait for active user request.");
-            if (isMounted) {
-              refreshLock.current = false;
-              setIsRefreshingUI(false);
-              sessionStorage.removeItem('is_silent_refreshing');
-            }
-            return;
-          }
-
-          // 리프레시 토큰 자체도 만료되었거나 변조된 경우 (4xx 에러)
-          console.error("Silent refresh finally failed (Refresh Token Expired):", error);
-          if (isMounted) {
-            clearAuth();
-            sessionStorage.setItem('show_session_expired_popup', 'true');
-            sessionStorage.removeItem('is_silent_refreshing');
-            navigate("/", { replace: true });
-            refreshLock.current = false;
-            setIsRefreshingUI(false);
-          }
+        const newAccessToken = response.data?.data?.accessToken;
+        if (!newAccessToken) {
+          // 응답은 성공했지만 토큰이 없는 경우 (비정상 응답)
+          throw new Error('Silent refresh: no token in response body');
         }
-      };
 
-      attemptRefresh();
-    }
-    return () => {
-      isMounted = false;
-      refreshLock.current = false;
-      sessionStorage.removeItem('is_silent_refreshing');
+        tokenManager.setAccessToken(newAccessToken);
+        checkAuth(); // authStore 동기화
+        refreshSucceeded = true;
+
+      } catch (error: any) {
+        isNetworkOrServerError = !error.response || error.response.status >= 500;
+
+        if (isNetworkOrServerError) {
+          // 네트워크/서버 에러: 락 해제 후 axiosInstance 인터셉터의 대기열에 위임
+          console.warn('Silent refresh paused (network/server error). Delegating to interceptor queue.');
+        } else {
+          // 4xx 에러: 리프레시 토큰 자체 만료 → 세션 완전 종료
+          console.error('Silent refresh failed (Refresh Token expired):', error);
+          clearAuth();
+          sessionStorage.setItem('show_session_expired_popup', 'true');
+          navigate('/', { replace: true });
+        }
+
+      } finally {
+        // ✅ [핵심] 성공/실패/예외 모든 경우에 finally에서 단 한 번만 락 해제
+        // try/catch 각 분기에서 개별 해제하면 경쟁 조건 발생 가능성이 있습니다.
+        // cleanup 함수에서는 이 값을 절대 건드리지 않습니다.
+        refreshLock.current = false;
+        setIsRefreshingUI(false);
+        sessionStorage.removeItem('is_silent_refreshing');
+      }
     };
+
+    attemptRefresh();
+
+    // ✅ [cleanup 규칙] refreshLock.current와 sessionStorage 플래그를 절대 건드리지 않습니다.
+    // cleanup에서 이 값들을 초기화하면, setIsRefreshingUI(true)로 인한 리렌더링 시
+    // React가 cleanup → re-effect 사이클을 돌면서 진행 중인 락이 풀려버리는
+    // 경쟁 조건이 발생합니다. 모든 정리는 finally 블록이 책임집니다.
+    return () => { /* intentionally empty: lock/flag cleanup is handled in finally */ };
   }, [isExpired, isAtRoot, clearAuth, navigate, checkAuth, t]);
 
   // 세션 만료 팝업 감지
