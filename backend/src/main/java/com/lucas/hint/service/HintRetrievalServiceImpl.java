@@ -105,6 +105,7 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
         .fromNodeCode(fromNodeCode)
         .messageType(result.messageType())
         .routeDecision(result.routeDecision())
+        .intentSubtype(result.intentSubtype())
         .actionType(actionType)
         .failCountAfterAction(failCount)
         .repeatCountAfterAction(result.repeatCountAfterAction())
@@ -119,6 +120,7 @@ public class HintRetrievalServiceImpl implements HintRetrievalService {
         .evidenceLimit(evidenceLimit)
         .minSimilarity(minSimilarity)
         .candidateCount(result.candidateCount())
+        .commandUsageContext(result.commandUsageContext())
         .evidences(result.evidences())
         .build();
   }

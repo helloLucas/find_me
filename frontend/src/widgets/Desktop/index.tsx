@@ -20,6 +20,7 @@ import { BugReportModal } from "../BugReportModal";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import { NotepadWindow } from "../../features/notepad/NotepadWindow";
+import { TrashWindow } from "../../features/trash/TrashWindow";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
@@ -55,9 +56,12 @@ export const Desktop: React.FC = () => {
     { id: "terminal", label: "Terminal", icon: DESKTOP_WINDOW_DEFINITIONS.terminal.iconPath },
     { id: "chrome", label: "Browser", icon: DESKTOP_WINDOW_DEFINITIONS.chrome.iconPath },
     { id: "notepad", label: "Notebook", icon: "/pixel_notepad_icon.svg" },
-    { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" },
     { id: "email", label: "Bug Report", icon: "/pixel_email_cyberpunk.png" },
   ];
+
+  if (currentNode?.code?.startsWith("CH3_")) {
+    icons.splice(3, 0, { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" });
+  }
 
   const handleIconDoubleClick = (id: string) => {
     trackAnalyticsEvent("desktop_icon_opened", {
@@ -84,6 +88,13 @@ export const Desktop: React.FC = () => {
 
     if (id === "notepad") {
       openWindow("notepad");
+      return;
+    }
+
+    if (id === "trash") {
+      if (currentNode?.code?.startsWith("CH3_")) {
+        openWindow("trash");
+      }
       return;
     }
 
@@ -234,6 +245,21 @@ export const Desktop: React.FC = () => {
                 defaultHeight={500}
               >
                 <NotepadWindow />
+              </Window>
+            );
+          }
+
+          if (windowState.type === "trash") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon="/pixel_trash_icon.svg"
+                defaultWidth={400}
+                defaultHeight={300}
+              >
+                <TrashWindow />
               </Window>
             );
           }

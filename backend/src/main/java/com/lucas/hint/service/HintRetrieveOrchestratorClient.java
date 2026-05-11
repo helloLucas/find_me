@@ -68,6 +68,7 @@ public class HintRetrieveOrchestratorClient {
       JsonNode body = objectMapper.readTree(response.body());
       String messageType = body.path("message_type").asText("none");
       String routeDecision = body.path("route_decision").asText("RAG_HINT");
+      String intentSubtype = body.path("intent_subtype").asText("progress_hint");
       String selectedPhase = body.path("selected_phase").asText(null);
       boolean lowConfidence = body.path("low_confidence").asBoolean(false);
       int queryVectorDimension = body.path("query_vector_dimension").asInt(0);
@@ -76,6 +77,7 @@ public class HintRetrieveOrchestratorClient {
       int repeatCountAfterAction = body.path("repeat_count_after_action").asInt(0);
       int stressScore = body.path("stress_score").asInt(0);
       String hintLevel = body.path("hint_level").asText("LIGHT");
+      Map<String, Object> commandUsageContext = readOptionalObject(body.path("command_usage_context"));
 
       boolean blockedNonHint = "BLOCKED_NON_HINT".equals(routeDecision);
       if (selectedPhase == null || selectedPhase.isBlank()) {
@@ -110,6 +112,7 @@ public class HintRetrieveOrchestratorClient {
       return new HintRetrieveResult(
           messageType,
           routeDecision,
+          intentSubtype,
           selectedPhase,
           lowConfidence,
           queryVectorDimension,
@@ -118,6 +121,7 @@ public class HintRetrieveOrchestratorClient {
           repeatCountAfterAction,
           stressScore,
           hintLevel,
+          commandUsageContext,
           evidences);
     } catch (CustomException e) {
       throw e;
@@ -145,6 +149,13 @@ public class HintRetrieveOrchestratorClient {
     return result;
   }
 
+  private Map<String, Object> readOptionalObject(JsonNode node) {
+    if (node == null || node.isMissingNode() || node.isNull() || !node.isObject()) {
+      return null;
+    }
+    return readMetadata(node);
+  }
+
   private Object objectValue(JsonNode value) {
     if (value == null || value.isNull()) {
       return null;
@@ -161,8 +172,13 @@ public class HintRetrieveOrchestratorClient {
     if (value.isTextual()) {
       return value.asText();
     }
-    if (value.isObject() || value.isArray()) {
-      return value.toString();
+    if (value.isObject()) {
+      return readMetadata(value);
+    }
+    if (value.isArray()) {
+      List<Object> result = new ArrayList<>();
+      value.forEach(item -> result.add(objectValue(item)));
+      return result;
     }
     return value.asText();
   }
@@ -211,6 +227,7 @@ public class HintRetrieveOrchestratorClient {
   public record HintRetrieveResult(
       String messageType,
       String routeDecision,
+      String intentSubtype,
       String selectedPhase,
       boolean lowConfidence,
       int queryVectorDimension,
@@ -219,5 +236,6 @@ public class HintRetrieveOrchestratorClient {
       int repeatCountAfterAction,
       int stressScore,
       String hintLevel,
+      Map<String, Object> commandUsageContext,
       List<HintEvidenceResponseDto> evidences) {}
 }

@@ -50,6 +50,16 @@ export const NotepadWindow: React.FC = () => {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 외부(예: TrashWindow)에서 업데이트 되었을 때 감지
+  useEffect(() => {
+    const handleUpdate = () => {
+      setContent(localStorage.getItem("notebook_memo_content") ?? "");
+    };
+    window.addEventListener("notepad-update", handleUpdate);
+    return () => window.removeEventListener("notepad-update", handleUpdate);
+  }, []);
+
+  // 입력 변경 시 실시간으로 localStorage에 저장
   // 현재 활성화된 탭 객체 계산
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0] || { id: "tab-default", title: "제목 없음", content: "" };
   const content = activeTab.content;

@@ -37,6 +37,44 @@ async def close_redis() -> None:
     _redis_client = None
 
 
+async def get_pattern_embedding(cache_key: str) -> list[float] | None:
+    global _redis_client
+    redis_key = f"lucas:hint:pattern-embed:{cache_key}"
+    if _redis_client is not None:
+        try:
+            raw = await _redis_client.get(redis_key)
+            parsed = _parse_vector(raw)
+            if parsed:
+                return parsed
+        except Exception:
+            pass
+
+    state = _memory_state.get(redis_key)
+    if not state:
+        return None
+    return _safe_vector(state.get("vector"))
+
+
+async def set_pattern_embedding(
+    cache_key: str,
+    embedding: list[float],
+    *,
+    ttl_seconds: int,
+) -> None:
+    global _redis_client
+    redis_key = f"lucas:hint:pattern-embed:{cache_key}"
+    ttl = _resolve_ttl_seconds(ttl_seconds)
+
+    if _redis_client is not None:
+        try:
+            await _redis_client.setex(redis_key, ttl, json.dumps(embedding))
+            return
+        except Exception:
+            pass
+
+    _memory_state[redis_key] = {"vector": embedding}
+
+
 async def check_and_update_repeat_count(
     *,
     session_id: str,

@@ -448,6 +448,51 @@ class StoryServiceImplChapter3RuleTest {
 
     assertThat(
             matches(
+                "DISCOVER_FILE",
+                """
+                {
+                  "rule": "DISCOVER_FILE",
+                  "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
+                  "acceptedCommands": ["ls", "find"],
+                  "requiredFlags": ["ghost_mode_enabled"]
+                }
+                """,
+                "cd /usr/bin/local && ls",
+                snapshot))
+        .isTrue();
+
+    assertThat(
+            matches(
+                "DISCOVER_FILE",
+                """
+                {
+                  "rule": "DISCOVER_FILE",
+                  "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
+                  "acceptedCommands": ["ls", "find"],
+                  "requiredFlags": ["ghost_mode_enabled"]
+                }
+                """,
+                "find /usr/bin/local -name laplace_fragment_03.sh",
+                snapshot))
+        .isTrue();
+
+    assertThat(
+            matches(
+                "DISCOVER_FILE",
+                """
+                {
+                  "rule": "DISCOVER_FILE",
+                  "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
+                  "acceptedCommands": ["ls", "find"],
+                  "requiredFlags": ["ghost_mode_enabled"]
+                }
+                """,
+                "ls",
+                localSnapshot))
+        .isTrue();
+
+    assertThat(
+            matches(
                 "CREATE_FILE_EQUIVALENT",
                 """
                 {
