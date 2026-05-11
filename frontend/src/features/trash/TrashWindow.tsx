@@ -23,10 +23,7 @@ export const TrashWindow: React.FC = () => {
 - 예시: echo 'hello' | nc [IP] 22
 `;
 
-        const currentContent = localStorage.getItem("notebook_memo_content") ?? "";
-        const newContent = currentContent ? currentContent + "\n\n" + hintContent : hintContent;
-
-        localStorage.setItem("notebook_memo_content", newContent);
+        localStorage.setItem("notebook_memo_content", hintContent);
         window.dispatchEvent(new Event("notepad-update"));
 
         const { openWindow, focusWindow } = useWindowStore.getState();

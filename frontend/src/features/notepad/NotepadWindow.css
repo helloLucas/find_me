@@ -83,16 +83,23 @@
 
 /* 탭 바 가로 스크롤 가리기 및 스무스 터치 */
 .notepad-tabs-scroll-area::-webkit-scrollbar {
-  height: 4px;
+  height: 7px; /* 조작 및 인지가 용이하도록 두께 스케일업 */
 }
 
 .notepad-tabs-scroll-area::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(11, 15, 25, 0.8);
+  border-radius: 4px;
 }
 
 .notepad-tabs-scroll-area::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.4);
-  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0.7) 0%, rgba(56, 189, 248, 0.7) 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
+}
+
+.notepad-tabs-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.9) 0%, rgba(103, 232, 249, 0.9) 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
 }
 
 /* 대각선 경사 컷팅 사이버네틱 탭 스타일 (Angled Tab Design) */
