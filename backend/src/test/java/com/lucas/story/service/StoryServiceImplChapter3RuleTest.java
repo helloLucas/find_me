@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lucas.chapter.entity.Chapter;
+import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.story.dto.request.TransitionRequestDto;
 import com.lucas.story.entity.StoryNode;
 import com.lucas.story.entity.StoryTransition;
@@ -29,7 +30,7 @@ class StoryServiceImplChapter3RuleTest {
   void setUp() {
     storyService =
         new StoryServiceImpl(
-            null, null, null, null, null, null, null, null, null, null, objectMapper);
+            null, null, null, null, null, null, null, null, null, null, null, objectMapper);
     storyService.init();
   }
 
@@ -43,6 +44,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             storyNodeRepository,
+            null,
             null,
             null,
             null,
@@ -229,6 +231,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             storyTransitionRepository,
+            null,
             null,
             null,
             null,
@@ -545,6 +548,88 @@ class StoryServiceImplChapter3RuleTest {
         .isTrue();
   }
 
+  @Test
+  void userFragmentsPresentRuleRequiresOneFragmentFromEveryGroup() throws Exception {
+    UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
+    storyService.init();
+
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "MINIGAME_STARFORCE"))
+        .thenReturn(true);
+
+    assertThat(
+            matchesWithUser(
+                "USER_FRAGMENTS_PRESENT",
+                """
+                {
+                  "rule": "USER_FRAGMENTS_PRESENT",
+                  "commandRegex": "(?is)^\\\\s*sha256sum\\\\s+process_index\\\\.db\\\\s*$",
+                  "requiredFragmentGroups": [
+                    ["1", "MINIGAME_PACMAN"],
+                    ["2", "MINIGAME_STARFORCE"]
+                  ]
+                }
+                """,
+                "sha256sum process_index.db",
+                baseSnapshot(),
+                42L))
+        .isTrue();
+  }
+
+  @Test
+  void userFragmentsIncompleteRuleMatchesWhenAGroupIsMissing() throws Exception {
+    UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
+    storyService.init();
+
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
+
+    assertThat(
+            matchesWithUser(
+                "USER_FRAGMENTS_INCOMPLETE",
+                """
+                {
+                  "rule": "USER_FRAGMENTS_INCOMPLETE",
+                  "commandRegex": "(?is)^\\\\s*sha256sum\\\\s+process_index\\\\.db\\\\s*$",
+                  "requiredFragmentGroups": [
+                    ["1", "MINIGAME_PACMAN"],
+                    ["2", "MINIGAME_STARFORCE"]
+                  ]
+                }
+                """,
+                "sha256sum process_index.db",
+                baseSnapshot(),
+                42L))
+        .isTrue();
+  }
+
   private boolean matches(String rule, String configJson, String input, JsonNode snapshot)
       throws Exception {
     StoryTransition transition =
@@ -559,6 +644,28 @@ class StoryServiceImplChapter3RuleTest {
     return Boolean.TRUE.equals(
         ReflectionTestUtils.invokeMethod(
             storyService, "matchesServerRuleTransition", transition, request(input), snapshot));
+  }
+
+  private boolean matchesWithUser(
+      String rule, String configJson, String input, JsonNode snapshot, Long userId)
+      throws Exception {
+    StoryTransition transition =
+        StoryTransition.builder()
+            .actionType("command")
+            .expectedInput(rule)
+            .validatorType("server_rule")
+            .validatorConfig(json(configJson))
+            .priority(100)
+            .build();
+
+    return Boolean.TRUE.equals(
+        ReflectionTestUtils.invokeMethod(
+            storyService,
+            "matchesServerRuleTransition",
+            transition,
+            request(input),
+            snapshot,
+            userId));
   }
 
   private TransitionRequestDto request(String input) {

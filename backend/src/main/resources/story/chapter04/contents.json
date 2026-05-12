@@ -1,0 +1,107 @@
+{
+  "CH4_GATE_04_TRACE": [
+    "[GATE_04 TRACE]",
+    "last command: execute /home/guest/laplace.qasm",
+    "dispatch: lucas-server -> gate_04 -> 10.2.2.2",
+    "remote label: universe-core",
+    "payload: laplace.qasm",
+    "anchor: /tmp/safe_zone.dat.gpg",
+    "",
+    "[RESULT]",
+    "dispatch accepted",
+    "core execution blocked",
+    "current privilege: guest",
+    "required privilege: root",
+    "",
+    "[PENDING]",
+    "job: LAPLACE_PENDING_04",
+    "state: waiting_for_root_signature"
+  ],
+  "CH4_LAPLACE_QASM_PENDING": [
+    "[LAPLACE.QASM]",
+    "- sandbox isolate: ENABLED",
+    "- social_graph_exception: ENABLED",
+    "- drop_unobserved_nodes: ENABLED",
+    "- anchor: /tmp/safe_zone.dat.gpg",
+    "",
+    "status: queued as /var/spool/core/pending/LAPLACE_PENDING_04.job",
+    "required privilege: root"
+  ],
+  "CH4_SAFE_ZONE_GPG": [
+    "<encrypted: safe_zone.dat.gpg>"
+  ],
+  "CH4_SSHNUKE_HELP": [
+    "usage: sshnuke <host> -rootpw=\"<seed>\"",
+    "legacy target: SSHv1 CRC32 password reset path",
+    "fictionalized exploit route for in-game terminal puzzle only"
+  ],
+  "CH4_LUCAS_ROUTE_SH": [
+    "#!/bin/sh",
+    "# route packet: YUSEONG_METEOR -> NY_LUCAS_SERVER",
+    "# detached minigame process",
+    "# reward: /home/guest/.route_cache/lucas_authority_patch.bin",
+    "",
+    "echo \"[LUCAS ROUTE PROCESS]\"",
+    "echo \"Launching detached minigame process...\""
+  ],
+  "CH4_ROUTE_CACHE_MANIFEST": [
+    "[LUCAS ROUTE CACHE]",
+    "delivered_from: YUSEONG_METEOR",
+    "delivered_to: NY_LUCAS_SERVER",
+    "payload: lucas_authority_patch.bin",
+    "effect: bind PID 000_LUCAS directly to universe-core root session",
+    "warning: external observer signature required"
+  ],
+  "CH4_LUCAS_AUTHORITY_PATCH": [
+    "[LUCAS AUTHORITY PATCH]",
+    "route: YUSEONG_METEOR -> NY_LUCAS_SERVER",
+    "bind: PID 000_LUCAS -> root@universe-core",
+    "safe_zone exception: bypass candidate",
+    "observer exception: bypass candidate",
+    "",
+    "Do not execute unless the observer accepts absolute reboot."
+  ],
+  "CH4_ORIGIN_TRACE": [
+    "[TOKEN_GENERATION_LOG]",
+    "- source: 7,904,212,859 severed external nodes",
+    "- material: discarded life-cycle residue from override --force",
+    "- product: temporary root bridge",
+    "",
+    "Lucas process binding: piggybacked on Observer input authority."
+  ],
+  "CH4_ROLLBACK_PROTOCOL": [
+    "# rollback_protocol.md",
+    "",
+    "The pending Laplace job can be cancelled before final commit.",
+    "",
+    "Allowed root recovery command:",
+    "systemctl rollback --target global_connect.db",
+    "",
+    "Expected result:",
+    "- cancel LAPLACE_PENDING_04",
+    "- restore disconnected external nodes",
+    "- invalidate Lucas process binding",
+    "- hand orphan process to garbage collector",
+    "",
+    "Warning:",
+    "NEXUS telemetry tap remains active during rollback."
+  ],
+  "CH4_GLOBAL_CONNECT_DB": [
+    "[global_connect.db]",
+    "primary table: nodes",
+    "shadow table : social_graph_exception",
+    "pending diff  : LAPLACE_PENDING_04",
+    "restore point : before Social Isolation approval"
+  ],
+  "CH4_LAPLACE_PENDING_JOB": [
+    "[LAPLACE_PENDING_04.job]",
+    "source: /home/guest/laplace.qasm",
+    "state : WAITING_ROOT_CONFIRMATION",
+    "anchor: /tmp/safe_zone.dat.gpg",
+    "commit: not executed",
+    "",
+    "risk:",
+    "- drop_unobserved_nodes will erase nodes outside safe zone.",
+    "- rollback remains possible until final commit."
+  ]
+}

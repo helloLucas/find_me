@@ -706,6 +706,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       return;
     }
 
+    if (currentNode.nodeType === "ending" || currentNode.isTerminal) {
+      return;
+    }
+
     set({ isLoading: true, error: null });
     try {
       const response = await storyApi.submitTransition({

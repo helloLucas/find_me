@@ -41,6 +41,9 @@ public class FileContentService {
 
     // 새 Chapter 3 VFS 파일 내용을 같은 캐시 구조로 로드한다.
     loadContentsJson("week03", "/story/chapter03/contents.json");
+
+    // Chapter 4 VFS 파일 내용을 로드한다.
+    loadContentsJson("week04", "/story/chapter04/contents.json");
   }
 
   /**
