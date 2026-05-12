@@ -9,18 +9,23 @@ import com.lucas.admin.service.AdminDashboardService;
 import com.lucas.auth.entity.UserRole;
 import com.lucas.auth.principal.CustomUserPrincipal;
 import com.lucas.global.dto.BaseResponse;
+import com.lucas.global.util.JwtUtil;
 import com.lucas.user.repository.UserRepository;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -31,13 +36,44 @@ public class AdminDashboardController {
   private final AdminDashboardService adminDashboardService;
   private final AdminAnalyticsService adminAnalyticsService;
   private final UserRepository userRepository;
+  private final JwtUtil jwtUtil;
+
+  @Value("${app.admin.security.pin-code:}")
+  private String adminPinCode;
+
+  @Value("${app.admin.security.pin-token-expired-ms:600000}")
+  private long adminPinTokenExpiredMs;
 
   public record AdminMeResponse(Long userId, String role, boolean admin) {}
+  public record AdminPinVerifyRequest(String pin) {}
+  public record AdminPinVerifyResponse(boolean verified, String pinToken) {}
+
+  @PostMapping("/pin/verify")
+  public ResponseEntity<BaseResponse<AdminPinVerifyResponse>> verifyPin(
+      @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestBody AdminPinVerifyRequest request) {
+    assertAdminFromDb(principal);
+    String configuredPin = sanitize(adminPinCode);
+    String inputPin = sanitize(request != null ? request.pin() : null);
+
+    if (configuredPin == null) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
+    }
+    if (inputPin == null || !configuredPin.equals(inputPin)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid admin PIN");
+    }
+
+    String pinToken = jwtUtil.createAdminPinToken(principal.getUserId(), adminPinTokenExpiredMs);
+    return ResponseEntity.ok(
+        BaseResponse.success("admin pin verified", new AdminPinVerifyResponse(true, pinToken)));
+  }
 
   @GetMapping("/me")
   public ResponseEntity<BaseResponse<AdminMeResponse>> me(
-      @AuthenticationPrincipal CustomUserPrincipal principal) {
+      @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken) {
     UserRole role = assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     return ResponseEntity.ok(
         BaseResponse.success(
             "admin access verified",
@@ -47,8 +83,10 @@ public class AdminDashboardController {
   @GetMapping("/dashboard")
   public ResponseEntity<BaseResponse<AdminDashboardResponse>> getDashboard(
       @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken,
       @RequestParam(name = "limit", defaultValue = "100") int limit) {
     assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     return ResponseEntity.ok(
         BaseResponse.success("admin dashboard loaded", adminDashboardService.getDashboard(limit)));
   }
@@ -56,6 +94,7 @@ public class AdminDashboardController {
   @GetMapping("/insights")
   public ResponseEntity<BaseResponse<AdminInsightsResponse>> getInsights(
       @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken,
       @RequestParam(name = "userIds", required = false) String userIds,
       @RequestParam(name = "chapterCode", required = false) String chapterCode,
       @RequestParam(name = "nodeCode", required = false) String nodeCode,
@@ -63,6 +102,7 @@ public class AdminDashboardController {
       @RequestParam(name = "recentLimit", defaultValue = "50") int recentLimit,
       @RequestParam(name = "days", defaultValue = "14") int days) {
     assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     List<Long> parsedUserIds = parseUserIds(userIds);
     AdminInsightsResponse response =
         adminDashboardService.getInsights(
@@ -73,9 +113,11 @@ public class AdminDashboardController {
   @GetMapping("/users/search")
   public ResponseEntity<BaseResponse<List<AdminEsAnalyticsResponse.UserOption>>> searchUsers(
       @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken,
       @RequestParam(name = "q", required = false) String keyword,
       @RequestParam(name = "limit", defaultValue = "20") int limit) {
     assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     List<AdminEsAnalyticsResponse.UserOption> users =
         adminAnalyticsService.searchUsers(sanitize(keyword), limit);
     return ResponseEntity.ok(BaseResponse.success("admin users loaded", users));
@@ -84,8 +126,10 @@ public class AdminDashboardController {
   @GetMapping("/filter-options")
   public ResponseEntity<BaseResponse<AdminFilterOptionsResponse>> getFilterOptions(
       @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken,
       @RequestParam(name = "chapterCode", required = false) String chapterCode) {
     assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     AdminFilterOptionsResponse response =
         adminAnalyticsService.getFilterOptions(sanitize(chapterCode));
     return ResponseEntity.ok(BaseResponse.success("admin filters loaded", response));
@@ -94,6 +138,7 @@ public class AdminDashboardController {
   @GetMapping("/analytics/insights")
   public ResponseEntity<BaseResponse<AdminEsAnalyticsResponse>> getEsInsights(
       @AuthenticationPrincipal CustomUserPrincipal principal,
+      @RequestHeader(name = "X-Admin-Pin-Token", required = false) String pinToken,
       @RequestParam(name = "from", required = false) String from,
       @RequestParam(name = "to", required = false) String to,
       @RequestParam(name = "timezone", required = false) String timezone,
@@ -102,6 +147,7 @@ public class AdminDashboardController {
       @RequestParam(name = "nodeCode", required = false) String nodeCode,
       @RequestParam(name = "topN", defaultValue = "20") int topN) {
     assertAdminFromDb(principal);
+    assertAdminPin(principal, pinToken);
     List<Long> parsedUserIds = parseUserIds(userIds);
     AdminEsAnalyticsResponse response =
         adminAnalyticsService.getEsInsights(
@@ -128,6 +174,31 @@ public class AdminDashboardController {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
     }
     return role;
+  }
+
+  private void assertAdminPin(CustomUserPrincipal principal, String pinToken) {
+    String configuredPin = sanitize(adminPinCode);
+    if (configuredPin == null) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
+    }
+    if (pinToken == null || pinToken.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin PIN verification required");
+    }
+    try {
+      String category = jwtUtil.getCategory(pinToken);
+      Long tokenUserId = jwtUtil.getUserId(pinToken);
+      if (!"admin_pin".equals(category)
+          || principal == null
+          || principal.getUserId() == null
+          || !principal.getUserId().equals(tokenUserId)
+          || jwtUtil.isExpired(pinToken)) {
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin PIN verification required");
+      }
+    } catch (ResponseStatusException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin PIN verification required");
+    }
   }
 
   private List<Long> parseUserIds(String userIds) {

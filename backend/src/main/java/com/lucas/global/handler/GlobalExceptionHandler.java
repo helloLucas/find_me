@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 @Slf4j
@@ -86,6 +87,19 @@ public class GlobalExceptionHandler {
     problemDetail.setProperty("code", "Q1000");
 
     return ResponseEntity.badRequest().body(problemDetail);
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ProblemDetail> handleResponseStatusException(
+      ResponseStatusException e, HttpServletRequest request) {
+    String detail = e.getReason() != null ? e.getReason() : "Request failed";
+    ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(e.getStatusCode(), detail);
+    problemDetail.setTitle(e.getStatusCode().toString());
+    problemDetail.setType(URI.create("/problems/http-status-exception"));
+    problemDetail.setInstance(URI.create(request.getRequestURI()));
+    problemDetail.setProperty("code", "H0000");
+
+    return ResponseEntity.status(e.getStatusCode()).body(problemDetail);
   }
 
   /**

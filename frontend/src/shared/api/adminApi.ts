@@ -1,6 +1,40 @@
 import axiosInstance from "./axiosInstance";
 import type { BaseResponse } from "../types/api";
 
+const ADMIN_PIN_TOKEN_KEY = "adminPinToken";
+
+function getAdminPinHeaders() {
+  const token = window.sessionStorage.getItem(ADMIN_PIN_TOKEN_KEY);
+  return token ? { "X-Admin-Pin-Token": token } : {};
+}
+
+function decodeBase64Url(input: string): string | null {
+  try {
+    const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return atob(padded);
+  } catch {
+    return null;
+  }
+}
+
+function getAdminPinExpMs(): number | null {
+  const token = window.sessionStorage.getItem(ADMIN_PIN_TOKEN_KEY);
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  const payloadRaw = decodeBase64Url(parts[1]);
+  if (!payloadRaw) return null;
+
+  try {
+    const payload = JSON.parse(payloadRaw) as { exp?: number };
+    if (typeof payload.exp !== "number") return null;
+    return payload.exp * 1000;
+  } catch {
+    return null;
+  }
+}
+
 export type AdminDashboardResponse = {
   summary: {
     totalUsers: number;
@@ -347,10 +381,16 @@ export type AdminMeResponse = {
   admin: boolean;
 };
 
+export type AdminPinVerifyResponse = {
+  verified: boolean;
+  pinToken: string;
+};
+
 export const adminApi = {
   getDashboard: async (limit = 100): Promise<AdminDashboardResponse> => {
     const response = await axiosInstance.get<BaseResponse<AdminDashboardResponse>>(
-      `/api/v1/admin/dashboard?limit=${limit}`
+      `/api/v1/admin/dashboard?limit=${limit}`,
+      { headers: getAdminPinHeaders() }
     );
     return response.data.data;
   },
@@ -371,7 +411,8 @@ export const adminApi = {
     if (params.days) q.set("days", String(params.days));
 
     const response = await axiosInstance.get<BaseResponse<AdminInsightsResponse>>(
-      `/api/v1/admin/insights?${q.toString()}`
+      `/api/v1/admin/insights?${q.toString()}`,
+      { headers: getAdminPinHeaders() }
     );
     return response.data.data;
   },
@@ -380,7 +421,8 @@ export const adminApi = {
     if (params.q) q.set("q", params.q);
     if (params.limit) q.set("limit", String(params.limit));
     const response = await axiosInstance.get<BaseResponse<AdminUserOption[]>>(
-      `/api/v1/admin/users/search?${q.toString()}`
+      `/api/v1/admin/users/search?${q.toString()}`,
+      { headers: getAdminPinHeaders() }
     );
     return response.data.data;
   },
@@ -388,13 +430,42 @@ export const adminApi = {
     const q = new URLSearchParams();
     if (params.chapterCode) q.set("chapterCode", params.chapterCode);
     const response = await axiosInstance.get<BaseResponse<AdminFilterOptionsResponse>>(
-      `/api/v1/admin/filter-options?${q.toString()}`
+      `/api/v1/admin/filter-options?${q.toString()}`,
+      { headers: getAdminPinHeaders() }
     );
     return response.data.data;
   },
   getAdminMe: async (): Promise<AdminMeResponse> => {
-    const response = await axiosInstance.get<BaseResponse<AdminMeResponse>>(`/api/v1/admin/me`);
+    const response = await axiosInstance.get<BaseResponse<AdminMeResponse>>(`/api/v1/admin/me`, {
+      headers: getAdminPinHeaders(),
+    });
     return response.data.data;
+  },
+  verifyAdminPin: async (pin: string): Promise<AdminPinVerifyResponse> => {
+    const response = await axiosInstance.post<BaseResponse<AdminPinVerifyResponse>>(
+      `/api/v1/admin/pin/verify`,
+      { pin },
+      { skipGlobalError: true }
+    );
+    const data = response.data.data;
+    if (data?.verified && data?.pinToken) {
+      window.sessionStorage.setItem(ADMIN_PIN_TOKEN_KEY, data.pinToken);
+    }
+    return data;
+  },
+  clearAdminPinToken: () => {
+    window.sessionStorage.removeItem(ADMIN_PIN_TOKEN_KEY);
+  },
+  getAdminPinToken: (): string | null => {
+    return window.sessionStorage.getItem(ADMIN_PIN_TOKEN_KEY);
+  },
+  getAdminPinTokenExpMs: (): number | null => {
+    return getAdminPinExpMs();
+  },
+  getAdminPinTokenRemainingMs: (): number | null => {
+    const expMs = getAdminPinExpMs();
+    if (!expMs) return null;
+    return expMs - Date.now();
   },
   getEsInsights: async (params: {
     from?: string;
@@ -414,7 +485,8 @@ export const adminApi = {
     if (params.nodeCode) q.set("nodeCode", params.nodeCode);
     if (params.topN) q.set("topN", String(params.topN));
     const response = await axiosInstance.get<BaseResponse<AdminEsAnalyticsResponse>>(
-      `/api/v1/admin/analytics/insights?${q.toString()}`
+      `/api/v1/admin/analytics/insights?${q.toString()}`,
+      { headers: getAdminPinHeaders() }
     );
     return response.data.data;
   },
