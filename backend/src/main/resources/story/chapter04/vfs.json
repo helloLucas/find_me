@@ -1,0 +1,239 @@
+{
+  "vfsVersion": "chapter04-v1",
+  "chapterCode": "week04",
+  "rootPath": "/home/guest",
+  "defaultCwd": "/home/guest",
+  "prompt": {
+    "user": "guest",
+    "host": "lucas-server"
+  },
+  "policies": {
+    "allowAbsolutePath": true,
+    "allowRelativePath": true,
+    "allowParentPath": true,
+    "denyOutsideRoot": false,
+    "allowedExternalPaths": [
+      "/",
+      "/home",
+      "/home/guest",
+      "/root",
+      "/tmp",
+      "/usr",
+      "/usr/bin",
+      "/var",
+      "/var/spool",
+      "/var/spool/core",
+      "/var/spool/core/pending"
+    ],
+    "defaultListSort": "alphabetical",
+    "showHiddenFiles": false
+  },
+  "nodes": {
+    "/": {
+      "type": "directory",
+      "name": "root",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home": {
+      "type": "directory",
+      "name": "home",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home/guest": {
+      "type": "directory",
+      "name": "guest",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/home/guest/gate_04.trace": {
+      "type": "file",
+      "name": "gate_04.trace",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH4_GATE_04_TRACE",
+      "storyKey": "GATE_TRACE"
+    },
+    "/home/guest/laplace.qasm": {
+      "type": "file",
+      "name": "laplace.qasm",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH4_LAPLACE_QASM_PENDING",
+      "storyKey": "LAPLACE_QASM"
+    },
+    "/home/guest/.route_cache": {
+      "type": "directory",
+      "name": ".route_cache",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": true
+    },
+    "/tmp": {
+      "type": "directory",
+      "name": "tmp",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/tmp/safe_zone.dat.gpg": {
+      "type": "file",
+      "name": "safe_zone.dat.gpg",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_SAFE_ZONE_GPG",
+      "storyKey": "SAFE_ZONE"
+    },
+    "/usr": {
+      "type": "directory",
+      "name": "usr",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/usr/bin": {
+      "type": "directory",
+      "name": "bin",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/usr/bin/sshnuke": {
+      "type": "file",
+      "name": "sshnuke",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH4_SSHNUKE_HELP",
+      "storyKey": "EXPLOIT_HELP"
+    },
+    "/root": {
+      "type": "directory",
+      "name": "root",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/root/gate_04.trace": {
+      "type": "file",
+      "name": "gate_04.trace",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_GATE_04_TRACE",
+      "storyKey": "GATE_TRACE"
+    },
+    "/root/laplace.qasm": {
+      "type": "file",
+      "name": "laplace.qasm",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_LAPLACE_QASM_PENDING",
+      "storyKey": "LAPLACE_QASM"
+    },
+    "/root/lucas_route.sh": {
+      "type": "file",
+      "name": "lucas_route.sh",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_LUCAS_ROUTE_SH",
+      "storyKey": "LUCAS_ROUTE"
+    },
+    "/root/origin_trace.log": {
+      "type": "file",
+      "name": "origin_trace.log",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_ORIGIN_TRACE",
+      "storyKey": "ORIGIN_TRACE"
+    },
+    "/root/rollback_protocol.md": {
+      "type": "file",
+      "name": "rollback_protocol.md",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_ROLLBACK_PROTOCOL",
+      "storyKey": "ROLLBACK_PROTOCOL"
+    },
+    "/var": {
+      "type": "directory",
+      "name": "var",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/var/spool": {
+      "type": "directory",
+      "name": "spool",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
+    },
+    "/var/spool/core": {
+      "type": "directory",
+      "name": "core",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/var/spool/core/global_connect.db": {
+      "type": "file",
+      "name": "global_connect.db",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_GLOBAL_CONNECT_DB",
+      "storyKey": "GLOBAL_CONNECT"
+    },
+    "/var/spool/core/pending": {
+      "type": "directory",
+      "name": "pending",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/var/spool/core/pending/LAPLACE_PENDING_04.job": {
+      "type": "file",
+      "name": "LAPLACE_PENDING_04.job",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_LAPLACE_PENDING_JOB",
+      "storyKey": "LAPLACE_PENDING"
+    }
+  }
+}
