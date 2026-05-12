@@ -785,6 +785,12 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   }, [gameState]);
 
   const startContinuousRun = () => {
+    if (windowId && maximizeWindow) {
+      maximizeWindow(windowId);
+    }
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
     initLevel();
     isHoldingJumpRef.current = false;
     setGameState('playing');
