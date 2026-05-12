@@ -5,6 +5,7 @@ import GlobalRollbackScene from './scenes/GlobalRollbackScene';
 import NexusObservationScene from './scenes/NexusObservationScene';
 import LucasDisintegrationScene from './scenes/LucasDisintegrationScene';
 import LucasExpansionScene from './scenes/LucasExpansionScene';
+import NullBootScene from './scenes/NullBootScene';
 import './index.css';
 
 function Home() {
@@ -20,6 +21,7 @@ function Home() {
       <Link to="/nexus" className="menu-button">NEXUS OBSERVATION</Link>
       <h3 className="menu-subtitle">8-3</h3>
       <Link to="/lucas-expansion" className="menu-button">LUCAS INTEGRATION</Link>
+      <Link to="/null-boot" className="menu-button">NULL BOOT</Link>
       <h3 className="menu-subtitle">8-4</h3>
     </div>
   );
@@ -40,6 +42,7 @@ function App() {
         <Route path="/rollback" element={<GlobalRollbackScene />} />
         <Route path="/lucas" element={<LucasDisintegrationScene />} />
         <Route path="/lucas-expansion" element={<LucasExpansionScene />} />
+        <Route path="/null-boot" element={<NullBootScene />} />
       </Routes>
     </Router>
   );
