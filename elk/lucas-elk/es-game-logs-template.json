@@ -28,7 +28,7 @@
         "input_value_norm": { "type": "keyword" },
         "result": { "type": "keyword" },
         "fail_count_after_action": { "type": "integer" },
-        "hint_requested": { "type": "boolean" },
+        "hint_requested": { "type": "string" },
         "state_version": { "type": "integer" }
       }
     }

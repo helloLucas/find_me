@@ -54,6 +54,12 @@ spec:
       labels:
         app: elasticsearch
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       terminationGracePeriodSeconds: 120
       securityContext:
         fsGroup: 1000
@@ -106,7 +112,7 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 6
-            
+
   volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
@@ -130,6 +136,22 @@ data:
     input {
       beats {
         port => 5044
+      }
+    }
+
+    filter {
+      if [message] =~ /StoryActionLogger/ {
+        grok {
+          match => { "message" => "StoryActionLogger\s*:\s*%{GREEDYDATA:json_payload}" }
+        }
+        if [json_payload] {
+          json {
+            source => "json_payload"
+            remove_field => ["json_payload", "message"]
+          }
+        }
+      } else {
+        drop {}
       }
     }
 
@@ -176,6 +198,12 @@ spec:
       labels:
         app: logstash
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: logstash
           image: docker.elastic.co/logstash/logstash:7.17.10
@@ -188,6 +216,13 @@ spec:
           env:
             - name: LS_JAVA_OPTS
               value: "-Xms512m -Xmx512m"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "768Mi"
+            limits:
+              cpu: "1"
+              memory: "1536Mi"
           volumeMounts:
             - name: pipeline
               mountPath: /usr/share/logstash/pipeline/logstash.conf
@@ -230,7 +265,8 @@ spec:
     - name: http
       port: 5601
       targetPort: 5601
-  type: ClusterIP
+      nodePort: 30239
+  type: NodePort
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -249,6 +285,12 @@ spec:
       labels:
         app: kibana
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: kibana
           image: docker.elastic.co/kibana/kibana:7.17.10
@@ -259,6 +301,13 @@ spec:
           env:
             - name: ELASTICSEARCH_HOSTS
               value: http://elasticsearch.lucas-elk.svc.cluster.local:9200
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
           readinessProbe:
             httpGet:
               path: /api/status
@@ -299,24 +348,14 @@ data:
               matchers:
                 - logs_path:
                     logs_path: /var/log/containers/
-
-          # Keep only game namespaces; drop infra/system logs.
           - drop_event:
               when:
                 not:
-                  or:
+                  and:
                     - equals:
-                        kubernetes.namespace: "lucas"
+                        kubernetes.namespace: "prod"
                     - equals:
-                        kubernetes.namespace: "lucas-dev"
-                    - equals:
-                        kubernetes.namespace: "lucas-prod"
-
-          - decode_json_fields:
-              fields: ["message"]
-              target: ""
-              overwrite_keys: true
-              add_error_key: true
+                        kubernetes.labels.app: "backend"
 
     output.logstash:
       hosts: ["logstash.lucas-elk.svc.cluster.local:5044"]
@@ -375,6 +414,8 @@ spec:
         app: filebeat
     spec:
       serviceAccountName: filebeat
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 30
       tolerations:
         - key: node-role.kubernetes.io/master

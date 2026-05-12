@@ -9,8 +9,25 @@ export const DESKTOP_LAYER = {
   overlay: 10000,
 } as const;
 
-export type DesktopWindowId = "chrome" | "terminal" | "terminal2" | "messenger" | "document_viewer" | "email" | "notepad" | "trash";
-export type DesktopWindowType = "browser" | "terminal" | "messenger" | "document_viewer" | "email" | "notepad" | "trash";
+export type DesktopWindowId =
+  | "chrome"
+  | "terminal"
+  | "terminal2"
+  | "messenger"
+  | "document_viewer"
+  | "email"
+  | "notepad"
+  | "trash"
+  | "lucas_survival";
+export type DesktopWindowType =
+  | "browser"
+  | "terminal"
+  | "messenger"
+  | "document_viewer"
+  | "email"
+  | "notepad"
+  | "trash"
+  | "minigame";
 
 export interface DesktopWindowDefinition {
   id: DesktopWindowId;
@@ -67,5 +84,11 @@ export const DESKTOP_WINDOW_DEFINITIONS: Record<DesktopWindowId, DesktopWindowDe
     type: "trash",
     title: "Recycle Bin",
     iconPath: "/pixel_trash_icon.svg",
+  },
+  lucas_survival: {
+    id: "lucas_survival",
+    type: "minigame",
+    title: "Lucas Survival",
+    iconPath: "/pixel_lucas_survival_icon.svg",
   },
 };

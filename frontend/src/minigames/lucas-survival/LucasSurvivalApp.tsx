@@ -1066,7 +1066,7 @@ function createRuntime(): RuntimeState {
       },
       dataLightning: {
         damage: 22,
-        cooldown: 3.2,
+        cooldown: 2,
         chainCount: 4,
         chainRange: 150,
         nextCastAt: 5,
@@ -1435,9 +1435,9 @@ export function LucasSurvivalApp() {
     const base = ENEMY_BASE[kind];
     const mul = getEnemyMultipliers(rt.elapsed);
     const isBoss = kind === 'corrupted_cache' || kind === 'broken_process' || kind === 'firewall_guardian' || kind === 'kernel_reaper';
-    const hpMul = isBoss ? 1 : mul.hpMul;
-    const speedMul = isBoss ? 1 : mul.speedMul;
-    const damageMul = isBoss ? 1 : mul.damageMul;
+    const hpMul = isBoss ? 1.5 : mul.hpMul;
+    const speedMul = isBoss ? 1.5 : mul.speedMul;
+    const damageMul = isBoss ? 1.5 : mul.damageMul;
 
     const enemy: Enemy = {
       id: nextId(rt),
@@ -1597,10 +1597,10 @@ export function LucasSurvivalApp() {
     }
 
     const chance =
-      enemy.kind === 'kernel_reaper' ? 0.8 :
-      enemy.kind === 'memory_golem' ? 0.18 :
-      enemy.kind === 'error_drone' ? 0.13 :
-      0.08;
+      enemy.kind === 'kernel_reaper' ? 0.4 :
+      enemy.kind === 'memory_golem' ? 0.09 :
+      enemy.kind === 'error_drone' ? 0.06 :
+      0.03;
     if (Math.random() > chance) return;
 
     const roll = Math.random();

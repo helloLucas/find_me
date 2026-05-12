@@ -15,6 +15,12 @@ spec:
       labels:
         app: kibana
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: kibana
           image: docker.elastic.co/kibana/kibana:7.17.10
@@ -25,6 +31,13 @@ spec:
           env:
             - name: ELASTICSEARCH_HOSTS
               value: http://elasticsearch.lucas-elk.svc.cluster.local:9200
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
           readinessProbe:
             httpGet:
               path: /api/status

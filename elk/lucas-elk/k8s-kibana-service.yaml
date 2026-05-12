@@ -12,4 +12,5 @@ spec:
     - name: http
       port: 5601
       targetPort: 5601
-  type: ClusterIP
+      nodePort: 30239
+  type: NodePort

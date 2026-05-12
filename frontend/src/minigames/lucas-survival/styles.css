@@ -3,6 +3,11 @@
   src: url("/fonts/NeoDunggeunmoPro-Regular.ttf") format("truetype");
 }
 
+.ls-window-embed .ls-root,
+.ls-window-embed .ls-shell {
+  height: 100%;
+}
+
 .ls-root,
 .ls-root * {
   box-sizing: border-box;
