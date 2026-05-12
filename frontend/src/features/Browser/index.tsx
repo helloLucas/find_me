@@ -163,6 +163,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         currentSearchQuery: null,
       }];
     }
+
     return [{
       id: "tab1",
       title: "Search",
@@ -299,27 +300,47 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
-    setTabs((prev) => [
-      ...prev,
-      {
-        id: newId,
-        title: "Search",
-        url: "https://void-search.net",
-        component: "search",
-        history: [
-          {
-            url: "https://void-search.net",
-            component: "search",
-            title: "Search",
-          },
-        ],
-        historyIndex: 0,
-        currentView: "home",
-        selectedHint: null,
-        detailOrigin: null,
-        currentSearchQuery: null,
-      },
-    ]);
+    const isCh1 = !currentNode?.code?.startsWith("CH2_") && !currentNode?.code?.startsWith("CH3_");
+
+    const newTab: Tab = isCh1
+      ? {
+          id: newId,
+          title: "New Tab",
+          url: "system://home",
+          component: "home",
+          history: [
+            {
+              url: "system://home",
+              component: "home",
+              title: "New Tab",
+            },
+          ],
+          historyIndex: 0,
+          currentView: "home",
+          selectedHint: null,
+          detailOrigin: null,
+          currentSearchQuery: null,
+        }
+      : {
+          id: newId,
+          title: "Search",
+          url: "https://void-search.net",
+          component: "search",
+          history: [
+            {
+              url: "https://void-search.net",
+              component: "search",
+              title: "Search",
+            },
+          ],
+          historyIndex: 0,
+          currentView: "home",
+          selectedHint: null,
+          detailOrigin: null,
+          currentSearchQuery: null,
+        };
+
+    setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newId);
   };
 
