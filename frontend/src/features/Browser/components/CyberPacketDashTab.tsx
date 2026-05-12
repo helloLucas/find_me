@@ -87,11 +87,17 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   const queryClient = useQueryClient();
   const { currentNode } = useStoryRuntimeStore();
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
 
-  // 컴포넌트 마운트 시 브라우저 창 전체화면(최대화) 자동 적용
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // 컴포넌트 마운트 시 브라우저 창 전체화면(최대화) 자동 적용 및 포커스
   useEffect(() => {
     if (windowId && maximizeWindow) {
       maximizeWindow(windowId);
+    }
+    if (containerRef.current) {
+      containerRef.current.focus();
     }
   }, [windowId, maximizeWindow]);
 
@@ -277,46 +283,49 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     isHoldingJumpRef.current = false;
   };
 
+  const handleContainerClick = () => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  };
+
   // 키보드 방향키 및 스페이스바 점프 이벤트 리스너
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
-        e.preventDefault();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 포커스 상태 검사 (Active Window Guard Clause)
+    if (windowId && activeWindowId !== windowId) return;
 
-        if (isCleared && !forceReplay) {
-          setForceReplay(true);
-          startContinuousRun();
-          return;
-        }
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+      e.preventDefault();
 
-        if (gameState === 'intro' || gameState === 'crashed') {
-          startContinuousRun();
-          return;
-        }
+      if (isCleared && !forceReplay) {
+        setForceReplay(true);
+        startContinuousRun();
+        return;
+      }
 
-        if (gameState === 'playing') {
-          isHoldingJumpRef.current = true;
-          const isShipMode = trackOffsetRef.current >= 3100 && trackOffsetRef.current < 7500;
-          if (!isShipMode) {
-            handleJump();
-          }
+      if (gameState === 'intro' || gameState === 'crashed') {
+        startContinuousRun();
+        return;
+      }
+
+      if (gameState === 'playing') {
+        isHoldingJumpRef.current = true;
+        const isShipMode = trackOffsetRef.current >= 3100 && trackOffsetRef.current < 7500;
+        if (!isShipMode) {
+          handleJump();
         }
       }
-    };
+    }
+  };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
-        isHoldingJumpRef.current = false;
-      }
-    };
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 포커스 상태 검사 (Active Window Guard Clause)
+    if (windowId && activeWindowId !== windowId) return;
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState, isCleared, forceReplay]);
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+      isHoldingJumpRef.current = false;
+    }
+  };
 
   // 60FPS 실시간 초정밀 렌더링 및 물리 처리 메인 루프
   useEffect(() => {
@@ -809,7 +818,14 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   }
 
   return (
-    <div className="h-full bg-[#040112] text-cyan-50 font-mono select-none flex flex-col overflow-hidden">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onClick={handleContainerClick}
+      className="h-full bg-[#040112] text-cyan-50 font-mono select-none flex flex-col overflow-hidden outline-none focus:ring-1 focus:ring-emerald-500/20"
+    >
       {/* 게임 상단 네비 바 */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-[#00ff66]/15 bg-[#08031d]">
         <div className="flex items-center gap-3">
