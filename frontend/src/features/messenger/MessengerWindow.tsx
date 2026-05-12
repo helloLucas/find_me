@@ -185,7 +185,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
 
         <div className="flex-1 flex flex-col overflow-hidden bg-[#1a1028]">
           <div
-            className="flex items-center justify-between h-9 px-3 bg-[#1a1028] select-none cursor-move flex-shrink-0"
+            className="flex h-9 cursor-default select-none items-center justify-between bg-[#1a1028] px-3 flex-shrink-0"
             onMouseDown={handleHeaderMouseDown}
           >
             <div className="flex items-center gap-2">

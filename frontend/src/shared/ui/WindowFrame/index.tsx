@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { WindowControlButton } from "../WindowControls";
+import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
 
 interface WindowFrameProps {
   title: string;
@@ -18,6 +19,10 @@ interface WindowFrameProps {
   allowMaximize?: boolean;
   allowResize?: boolean;
   theme?: "green" | "magenta" | "cyan";
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export const WindowFrame: React.FC<WindowFrameProps> = ({
@@ -65,7 +70,68 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   const handleHeaderMouseDown = (event: React.MouseEvent) => {
     onFocus?.();
-    if (isMaximized) return;
+
+    if (isMaximized) {
+      if (!onToggleMaximize || event.button !== 0) return;
+      if (event.target instanceof HTMLElement && event.target.closest("button")) return;
+
+      event.preventDefault();
+
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const headerRect = event.currentTarget.getBoundingClientRect();
+      const pointerOffsetY = event.clientY - headerRect.top;
+      const pointerRatioX = window.innerWidth > 0 ? event.clientX / window.innerWidth : 0.5;
+      let hasRestored = false;
+
+      const moveRestoredWindow = (moveEvent: MouseEvent) => {
+        const availableHeight = Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT);
+        geom.current.x = clamp(
+          moveEvent.clientX - geom.current.w * pointerRatioX,
+          0,
+          Math.max(0, window.innerWidth - geom.current.w)
+        );
+        geom.current.y = clamp(
+          moveEvent.clientY - pointerOffsetY,
+          0,
+          Math.max(0, availableHeight - geom.current.h)
+        );
+
+        if (windowRef.current) {
+          windowRef.current.style.transform = `translate(${geom.current.x}px, ${geom.current.y}px)`;
+          windowRef.current.style.width = `${geom.current.w}px`;
+          windowRef.current.style.height = `${geom.current.h}px`;
+        }
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!hasRestored) {
+          const movedX = moveEvent.clientX - startX;
+          const movedY = moveEvent.clientY - startY;
+          if (Math.hypot(movedX, movedY) < 4) return;
+
+          hasRestored = true;
+          geom.current.isDragging = true;
+          if (windowRef.current) windowRef.current.style.transition = "none";
+          moveRestoredWindow(moveEvent);
+          onToggleMaximize();
+          return;
+        }
+
+        moveRestoredWindow(moveEvent);
+      };
+
+      const handleMouseUp = () => {
+        geom.current.isDragging = false;
+        if (windowRef.current) windowRef.current.style.transition = "";
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return;
+    }
 
     geom.current.isDragging = true;
     geom.current.startX = event.clientX;
@@ -209,11 +275,11 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       onMouseDownCapture={onFocus}
     >
       <div
-        className={`flex items-center justify-between select-none cursor-move h-8 px-1 ${headerClasses}`}
+        className={`flex h-8 cursor-default items-center justify-between select-none px-1 ${headerClasses}`}
         onMouseDown={handleHeaderMouseDown}
         onDoubleClick={allowMaximize ? onToggleMaximize : undefined}
       >
-        <div className={`flex items-center space-x-2 px-2 font-mono text-sm tracking-wide font-bold ${titleClasses}`}>
+        <div className={`flex items-center space-x-2 px-2 font-window-title text-sm tracking-wide font-bold ${titleClasses}`}>
           <div className={`w-3 h-3 rounded-sm opacity-80 ${iconClasses}`} />
           <span>{title}</span>
         </div>

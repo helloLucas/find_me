@@ -77,7 +77,8 @@ public class HintRetrieveOrchestratorClient {
       int repeatCountAfterAction = body.path("repeat_count_after_action").asInt(0);
       int stressScore = body.path("stress_score").asInt(0);
       String hintLevel = body.path("hint_level").asText("LIGHT");
-      Map<String, Object> commandUsageContext = readOptionalObject(body.path("command_usage_context"));
+      Map<String, Object> commandUsageContext =
+          readOptionalObject(body.path("command_usage_context"));
 
       boolean blockedNonHint = "BLOCKED_NON_HINT".equals(routeDecision);
       if (selectedPhase == null || selectedPhase.isBlank()) {

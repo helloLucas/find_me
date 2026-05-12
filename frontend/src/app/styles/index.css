@@ -79,6 +79,8 @@
   --lucas-font-desktop-ui: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --lucas-font-window-title: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --lucas-font-messenger: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lucas-font-notepad: var(--lucas-font-desktop-ui);
+  --lucas-font-trash: var(--lucas-font-desktop-ui);
   --lucas-font-assistant: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --lucas-font-landing-title: "Cafe24PROUP", "NeoDunggeunGothicPro", sans-serif;
@@ -103,6 +105,8 @@
   --font-desktop-ui: var(--lucas-font-desktop-ui);
   --font-window-title: var(--lucas-font-window-title);
   --font-messenger: var(--lucas-font-messenger);
+  --font-notepad: var(--lucas-font-notepad);
+  --font-trash: var(--lucas-font-trash);
   --font-browser-chrome: var(--lucas-font-browser-chrome);
   --font-browser-article: var(--lucas-font-browser-article);
   --font-browser-game: var(--lucas-font-browser-game);
