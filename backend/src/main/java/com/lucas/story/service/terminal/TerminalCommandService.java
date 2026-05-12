@@ -62,10 +62,20 @@ public class TerminalCommandService {
       case "ls" -> handleLs(command, cwd, vfs); // 디렉토리 목록 조회
       case "cd" -> handleCd(command, cwd, vfs); // 경로 이동
       case "cat" -> handleCat(command, cwd, vfs); // 파일 내용 조회
-      case "sh" -> handleSh(command, cwd, vfs); // 스크립트 실행 (특수 처리 포함)
+      case "sh", "bash" -> handleSh(command, cwd, vfs); // 스크립트 실행 (특수 처리 포함)
       case "clear" -> handleClear(cwd, vfs); // 터미널 초기화 시그널 전송
       case "echo" -> handleEcho(command, cwd, vfs); // 텍스트 출력
       case "printf" -> handlePrintf(command, cwd, vfs); // 포맷 텍스트 출력
+      case "hostname" -> handleHostname(cwd, vfs);
+      case "whoami" -> handleWhoami(cwd, vfs);
+      case "id" -> handleId(cwd, vfs);
+      case "ps" -> handlePs(command, cwd, vfs);
+      case "mount" -> handleMount(command, cwd, vfs);
+      case "execute" -> handleExecute(command, cwd, vfs);
+      case "systemctl" -> handleSystemctl(command, cwd, vfs);
+      case "file" -> handleFile(command, cwd, vfs);
+      case "head" -> handleHead(command, cwd, vfs);
+      case "shred", "unlink" -> handleDeleteLikeCommand(command, cwd, vfs);
       default -> handleUnknownOrMisusedCommand(command, cwd, vfs); // 알 수 없는 명령어 또는 잘못된 사용 처리
     };
   }
@@ -103,6 +113,27 @@ public class TerminalCommandService {
           return buildErrorResult(
               cwd, vfs, "nmap: missing host or network. Try \"nmap -h\" for help");
         }
+        String nmapTarget = args.get(args.size() - 1);
+        boolean versionScan =
+            args.stream().anyMatch(arg -> "-sV".equals(arg) || "--version-all".equals(arg));
+        if (isUniverseCoreTarget(nmapTarget)) {
+          List<String> scanLines = new ArrayList<>();
+          scanLines.add("Starting Nmap 7.93 ( https://nmap.org )");
+          scanLines.add("Nmap scan report for " + nmapTarget + " (10.2.2.2)");
+          scanLines.add("Host is up (0.00004s latency).");
+          scanLines.add("Not shown: 999 filtered ports");
+          scanLines.add(versionScan ? "PORT   STATE SERVICE VERSION" : "PORT   STATE SERVICE");
+          scanLines.add(
+              versionScan ? "22/tcp open  ssh     SSH-1.2 universe bridge" : "22/tcp open  ssh");
+          scanLines.add("");
+          scanLines.add("Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds");
+          return TerminalResult.builder()
+              .stdout(scanLines)
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
         return TerminalResult.builder()
             .stdout(
                 Arrays.asList(
@@ -120,6 +151,106 @@ public class TerminalCommandService {
             .prompt(buildPrompt(cwd, vfs))
             .resultCode("SUCCESS")
             .build();
+
+      case "sshnuke":
+        if (args.contains("-h") || args.contains("--help")) {
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "usage: sshnuke <host> -rootpw=\"<seed>\"",
+                      "legacy target: SSHv1 CRC32 password reset path",
+                      "required target: 10.2.2.2 or universe-core"))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
+
+        String sshnukeTarget = findSshnukeTarget(args);
+        String rootPassword = findSshnukeRootPassword(args);
+
+        if (sshnukeTarget == null) {
+          return buildErrorResult(
+              cwd, vfs, "sshnuke: missing target host. Try \"sshnuke --help\" for usage");
+        }
+
+        if (!isUniverseCoreTarget(sshnukeTarget)) {
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "Connecting to " + sshnukeTarget + ":ssh ... failed.",
+                      "No SSHv1 CRC32 reset path exposed on this target."))
+              .stderr(Collections.singletonList("sshnuke: target rejected"))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("ERROR")
+              .build();
+        }
+
+        if (rootPassword == null) {
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "Connecting to " + sshnukeTarget + ":ssh ... successful.",
+                      "Legacy SSHv1 CRC32 reset path detected."))
+              .stderr(Collections.singletonList("sshnuke: missing -rootpw=\"<seed>\""))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("ERROR")
+              .build();
+        }
+
+        return TerminalResult.builder()
+            .stdout(
+                Arrays.asList(
+                    "Connecting to " + sshnukeTarget + ":ssh ... successful.",
+                    "Attempting to exploit SSHv1 CRC32 ... successful.",
+                    "Flooding auth buffer ... successful.",
+                    "Resetting root password to \"" + rootPassword + "\" ...",
+                    "System open: Access Level <9>"))
+            .cwd(cwd)
+            .prompt(buildPrompt(cwd, vfs))
+            .resultCode("SUCCESS")
+            .build();
+
+      case "ssh":
+        if (args.contains("-V")) {
+          return TerminalResult.builder()
+              .stdout(
+                  Collections.singletonList("OpenSSH_3.1p1 universe-compat, SSH protocols 1.5/2.0"))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
+        if (args.contains("-h") || args.contains("--help")) {
+          return TerminalResult.builder()
+              .stdout(
+                  Arrays.asList(
+                      "usage: ssh [-l login_name] destination",
+                      "examples:",
+                      "  ssh root@10.2.2.2",
+                      "  ssh 10.2.2.2 -l root"))
+              .cwd(cwd)
+              .prompt(buildPrompt(cwd, vfs))
+              .resultCode("SUCCESS")
+              .build();
+        }
+
+        String sshTarget = findSshTarget(args);
+        if (sshTarget == null) {
+          return buildErrorResult(cwd, vfs, "ssh: missing destination");
+        }
+
+        if (!isUniverseCoreSshTarget(sshTarget)) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "ssh: Could not resolve hostname " + sshTarget + ": Name or service not known");
+        }
+
+        return buildErrorResult(
+            cwd, vfs, resolveSshPrincipal(sshTarget) + ": Permission denied (publickey,password).");
 
       case "tar":
         if (args.isEmpty()) {
@@ -441,6 +572,9 @@ public class TerminalCommandService {
         return buildErrorResult(cwd, vfs, "history: invalid usage");
 
       default:
+        if (cmd.contains("/")) {
+          return handleExecutablePath(command, cwd, vfs);
+        }
         return buildErrorResult(cwd, vfs, cmd + ": command not found");
     }
   }
@@ -490,6 +624,359 @@ public class TerminalCommandService {
     // 파싱된 여러 줄의 문자열을 표준 출력(stdout)에 담아 성공 결과를 반환합니다.
     return TerminalResult.builder()
         .stdout(output)
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleHostname(String cwd, VfsContext vfs) {
+    String hostname = isRootShell(cwd) ? "universe-core" : vfs.getPromptHost();
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(hostname))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleWhoami(String cwd, VfsContext vfs) {
+    String user = isRootShell(cwd) ? "root" : vfs.getPromptUser();
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(user))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleId(String cwd, VfsContext vfs) {
+    String output =
+        isRootShell(cwd)
+            ? "uid=0(root) gid=0(root) groups=0(root)"
+            : "uid=1000(guest) gid=1000(guest) groups=1000(guest)";
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(output))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handlePs(ParsedCommand command, String cwd, VfsContext vfs) {
+    List<String> args = command.args();
+    boolean full = args.contains("-ef") || args.contains("aux") || args.contains("-aux");
+    List<String> lines =
+        full
+            ? Arrays.asList(
+                "UID        PID  PPID  C STIME TTY          TIME CMD",
+                "root         1     0  0 23:08 ?        00:00:01 universe-kernel",
+                "nexus       44     1  0 23:08 ?        00:00:00 observation-layer --passive",
+                "gc         404     1  0 23:08 ?        00:00:00 garbage-collector --watch PID=000_LUCAS",
+                "lucas        0     1  0 23:08 ?        00:00:00 observer-proxy --attach root-session")
+            : Arrays.asList(
+                "PID TTY          TIME CMD",
+                "1   ?        00:00:01 universe-kernel",
+                "44  ?        00:00:00 observation-layer",
+                "404 ?        00:00:00 garbage-collector",
+                "0   ?        00:00:00 observer-proxy");
+    return TerminalResult.builder()
+        .stdout(lines)
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleSystemctl(ParsedCommand command, String cwd, VfsContext vfs) {
+    List<String> args = command.args();
+    if (args.isEmpty()) {
+      return buildErrorResult(cwd, vfs, "systemctl: missing command");
+    }
+
+    if (args.contains("--help") || args.contains("-h")) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "systemctl [OPTIONS...] COMMAND [UNIT...]",
+                  "Commands:",
+                  "  status UNIT",
+                  "  start UNIT",
+                  "  restart UNIT",
+                  "  list-jobs",
+                  "  isolate UNIT"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if (args.size() == 1 && "list-jobs".equals(args.get(0))) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "JOB UNIT                       TYPE  STATE",
+                  "404 laplace-pending-04.service start waiting"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    String action = args.get(0);
+    String unit = args.size() > 1 ? args.get(1) : "";
+    if ("status".equals(action) && "laplace-pending-04.service".equals(unit)) {
+      boolean lucasServerMounted = vfs.resolve("/mnt/lucas-server/laplace.qasm") != null;
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "● laplace-pending-04.service - Pending Laplace core job",
+                  "   Loaded: loaded (/etc/systemd/system/laplace-pending-04.service; static)",
+                  "   Active: inactive (dead)",
+                  "   State : waiting_for_root_signature",
+                  "   Job   : LAPLACE_PENDING_04",
+                  lucasServerMounted
+                      ? "   Source: /mnt/lucas-server/laplace.qasm"
+                      : "   Source: missing (/mnt/lucas-server/laplace.qasm is not mounted)",
+                  lucasServerMounted
+                      ? "   Mount : guest@lucas-server:/home/guest -> /mnt/lucas-server"
+                      : "   Mount : required before start"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if (("start".equals(action) || "restart".equals(action))
+        && "laplace-pending-04.service".equals(unit)) {
+      if (vfs.resolve("/mnt/lucas-server/laplace.qasm") == null) {
+        return buildErrorResult(
+            cwd,
+            vfs,
+            "systemctl: cannot start laplace-pending-04.service: /mnt/lucas-server/laplace.qasm is not mounted");
+      }
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Starting laplace-pending-04.service...",
+                  "Confirmation required before committing pending core job."))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if ("start".equals(action)
+        && ("global-rollback.service".equals(unit)
+            || "rollback@global_connect.service".equals(unit))) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Starting " + unit + "...", "Global rollback request accepted by universe-core."))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if ("isolate".equals(action) && "rollback.target".equals(unit)) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Isolating rollback.target...",
+                  "Global rollback request accepted by universe-core."))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    return buildErrorResult(cwd, vfs, "systemctl: Unit or command not recognized");
+  }
+
+  private TerminalResult handleMount(ParsedCommand command, String cwd, VfsContext vfs) {
+    List<String> args = command.args();
+    boolean lucasServerMounted = vfs.resolve("/mnt/lucas-server/laplace.qasm") != null;
+
+    if (args.isEmpty()) {
+      List<String> stdout = new ArrayList<>();
+      if (lucasServerMounted) {
+        stdout.add("guest@lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)");
+      }
+      return TerminalResult.builder()
+          .stdout(stdout)
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    boolean mountsLucasServer =
+        args.equals(Collections.singletonList("/mnt/lucas-server"))
+            || args.equals(Collections.singletonList("-a"))
+            || (args.contains("guest@lucas-server:/home/guest")
+                && args.contains("/mnt/lucas-server"));
+    if (!mountsLucasServer) {
+      return buildErrorResult(cwd, vfs, "mount: unsupported mount target");
+    }
+
+    if (lucasServerMounted) {
+      return TerminalResult.builder()
+          .stdout(
+              Collections.singletonList(
+                  "mount: /mnt/lucas-server is already mounted"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    return buildErrorResult(
+        cwd,
+        vfs,
+        "mount: /mnt/lucas-server: not mounted yet; use the current root session prompt to attach lucas-server");
+  }
+
+  private TerminalResult handleExecute(ParsedCommand command, String cwd, VfsContext vfs) {
+    List<String> args = command.args();
+    if (args.isEmpty()) {
+      return buildErrorResult(cwd, vfs, "execute: missing file operand");
+    }
+
+    String target = args.get(0);
+    String resolvedPath = pathResolver.resolve(cwd, target, vfs);
+    VfsNode node = vfs.resolve(resolvedPath);
+    if (node == null) {
+      String message =
+          target.startsWith("/mnt/lucas-server")
+              ? "execute: "
+                  + target
+                  + ": No such file or directory. mount /mnt/lucas-server first"
+              : "execute: " + target + ": No such file or directory";
+      return buildErrorResult(cwd, vfs, message);
+    }
+
+    if (!"laplace.qasm".equals(node.name())) {
+      return buildErrorResult(cwd, vfs, "execute: " + target + ": unsupported payload");
+    }
+
+    return TerminalResult.builder()
+        .stdout(
+            Arrays.asList(
+                "execute: " + resolvedPath,
+                "Laplace execution requires explicit confirmation."))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleFile(ParsedCommand command, String cwd, VfsContext vfs) {
+    if (command.args().isEmpty()) {
+      return buildErrorResult(cwd, vfs, "file: missing file operand");
+    }
+
+    String rawTarget = firstNonOption(command.args());
+    if (rawTarget == null) {
+      return buildErrorResult(cwd, vfs, "file: missing file operand");
+    }
+
+    String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    VfsNode node = vfs.resolve(targetPath);
+    if (node == null) {
+      return buildErrorResult(cwd, vfs, rawTarget + ": cannot open `" + rawTarget + "'");
+    }
+
+    String type;
+    if (node.isDirectory()) {
+      type = "directory";
+    } else if (node.name().endsWith(".sh")) {
+      type = "POSIX shell script, ASCII text executable";
+    } else if (node.name().endsWith(".bin")) {
+      type = "data, executable payload";
+    } else if (node.name().endsWith(".gpg")) {
+      type = "GPG symmetrically encrypted data";
+    } else {
+      type = "ASCII text";
+    }
+
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(rawTarget + ": " + type))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleHead(ParsedCommand command, String cwd, VfsContext vfs) {
+    if (command.args().isEmpty()) {
+      return buildErrorResult(cwd, vfs, "head: missing file operand");
+    }
+
+    String rawTarget = command.args().get(command.args().size() - 1);
+    String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    VfsNode node = vfs.resolve(targetPath);
+    if (node == null) {
+      return buildErrorResult(cwd, vfs, "head: cannot open '" + rawTarget + "' for reading");
+    }
+    if (node.isDirectory()) {
+      return buildErrorResult(cwd, vfs, "head: error reading '" + rawTarget + "': Is a directory");
+    }
+    if (!canReadNode(node, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "head: cannot open '" + rawTarget + "' for reading: Permission denied");
+    }
+
+    List<String> content = fileContentService.getContent(vfs.getChapterCode(), node.contentKey());
+    return TerminalResult.builder()
+        .stdout(content.stream().limit(10).collect(Collectors.toList()))
+        .cwd(cwd)
+        .prompt(buildPrompt(cwd, vfs))
+        .resultCode("SUCCESS")
+        .build();
+  }
+
+  private TerminalResult handleDeleteLikeCommand(
+      ParsedCommand command, String cwd, VfsContext vfs) {
+    if (command.args().isEmpty()) {
+      return buildErrorResult(cwd, vfs, command.command() + ": missing operand");
+    }
+
+    String rawTarget = firstNonOption(command.args());
+    if (rawTarget == null) {
+      return buildErrorResult(cwd, vfs, command.command() + ": missing operand");
+    }
+
+    String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    VfsNode node = vfs.resolve(targetPath);
+    if (node == null) {
+      return buildErrorResult(
+          cwd,
+          vfs,
+          command.command() + ": cannot remove '" + rawTarget + "': No such file or directory");
+    }
+
+    return buildErrorResult(
+        cwd,
+        vfs,
+        command.command() + ": refusing to mutate story filesystem outside a validated transition");
+  }
+
+  private TerminalResult handleExecutablePath(ParsedCommand command, String cwd, VfsContext vfs) {
+    String targetPath = pathResolver.resolve(cwd, command.command(), vfs);
+    VfsNode node = vfs.resolve(targetPath);
+    if (node == null) {
+      return buildErrorResult(cwd, vfs, command.command() + ": No such file or directory");
+    }
+    if (node.isDirectory()) {
+      return buildErrorResult(cwd, vfs, command.command() + ": Is a directory");
+    }
+    if (!node.executable()) {
+      return buildErrorResult(cwd, vfs, command.command() + ": Permission denied");
+    }
+
+    return TerminalResult.builder()
+        .stdout(Collections.singletonList(node.name() + ": executable payload acknowledged"))
         .cwd(cwd)
         .prompt(buildPrompt(cwd, vfs))
         .resultCode("SUCCESS")
@@ -548,7 +1035,7 @@ public class TerminalCommandService {
     }
 
     // 대상이 디렉토리면 하위 노드 목록을 가져옵니다.
-    if (!node.readable() || node.isProtected()) {
+    if (!canReadNode(node, vfs)) {
       String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
       return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
     }
@@ -646,7 +1133,7 @@ public class TerminalCommandService {
       }
 
       // 읽을 수 없거나 보호된 노드는 권한 오류로 처리합니다.
-      if (!node.readable() || node.isProtected()) {
+      if (!canReadNode(node, vfs)) {
         return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
       }
 
@@ -709,7 +1196,7 @@ public class TerminalCommandService {
             .filter(VfsNode::isDirectory)
             .collect(Collectors.toList())) {
       // 읽을 수 없거나 보호된 하위 디렉토리는 목록 확장을 건너뜁니다.
-      if (!child.readable() || child.isProtected()) {
+      if (!canReadNode(child, vfs)) {
         continue;
       }
       // 현재 표시 경로가 . 이면 ./child 형식으로 실제 ls -R 출력과 유사하게 만듭니다.
@@ -950,7 +1437,7 @@ public class TerminalCommandService {
       if (node == null) {
         return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
       }
-      if (!node.readable() || node.isProtected()) {
+      if (!canReadNode(node, vfs)) {
         return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': Permission denied");
       }
       collectFindMatches(vfs, node, query.typeFileOnly(), namePattern, matches);
@@ -1023,7 +1510,7 @@ public class TerminalCommandService {
       matches.add(node.path());
     }
 
-    if (!node.isDirectory() || !node.readable() || node.isProtected()) {
+    if (!node.isDirectory() || !canReadNode(node, vfs)) {
       return;
     }
 
@@ -1066,11 +1553,12 @@ public class TerminalCommandService {
   private record FindQuery(List<String> roots, boolean typeFileOnly, String namePattern) {}
 
   private TerminalResult handleCd(ParsedCommand command, String cwd, VfsContext vfs) {
-    // 인자가 없으면 루트 디렉토리로 이동합니다.
+    // 인자가 없으면 현재 프롬프트 사용자의 홈 디렉토리로 이동합니다.
     if (command.args().isEmpty()) {
+      String homePath = getShellHomePath(vfs);
       return TerminalResult.builder()
-          .cwd(vfs.getRootPath())
-          .prompt(buildPrompt(vfs.getRootPath(), vfs))
+          .cwd(homePath)
+          .prompt(buildPrompt(homePath, vfs))
           .resultCode("SUCCESS")
           .build();
     }
@@ -1091,8 +1579,8 @@ public class TerminalCommandService {
       return buildErrorResult(cwd, vfs, "cd: " + command.args().get(0) + ": Not a directory");
     }
 
-    // 대상이 읽기 권한이 없거나 보호된 영역이면 접근 거부를 반환합니다.
-    if (node.isProtected()) {
+    // 대상 디렉토리에 진입 권한이 없으면 접근 거부를 반환합니다.
+    if (!canEnterDirectory(node, vfs)) {
       return buildErrorResult(cwd, vfs, "cd: " + command.args().get(0) + ": Permission denied");
     }
 
@@ -1139,7 +1627,7 @@ public class TerminalCommandService {
     }
 
     // 읽기 권한이 없으면 접근 거부 에러를 반환합니다.
-    if (!node.readable()) {
+    if (!canReadNode(node, vfs)) {
       return buildErrorResult(cwd, vfs, "cat: " + command.args().get(0) + ": Permission denied");
     }
 
@@ -1223,6 +1711,112 @@ public class TerminalCommandService {
         .build();
   }
 
+  private String findSshnukeTarget(List<String> args) {
+    for (String arg : args) {
+      if (!arg.startsWith("-")) {
+        return arg;
+      }
+    }
+    return null;
+  }
+
+  private String findSshnukeRootPassword(List<String> args) {
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if (arg.startsWith("-rootpw=") || arg.startsWith("--rootpw=")) {
+        return stripWrappingQuotes(arg.substring(arg.indexOf('=') + 1));
+      }
+      if (("-rootpw".equals(arg) || "--rootpw".equals(arg)) && i + 1 < args.size()) {
+        return stripWrappingQuotes(args.get(i + 1));
+      }
+    }
+    return null;
+  }
+
+  private boolean isUniverseCoreTarget(String target) {
+    return "10.2.2.2".equals(target) || "universe-core".equals(target);
+  }
+
+  private String findSshTarget(List<String> args) {
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-l".equals(arg)) {
+        i++;
+        continue;
+      }
+      if (!arg.startsWith("-")) {
+        return arg;
+      }
+    }
+    return null;
+  }
+
+  private boolean isUniverseCoreSshTarget(String target) {
+    String host = extractSshHost(target);
+    return isUniverseCoreTarget(host);
+  }
+
+  private String extractSshHost(String target) {
+    int atIndex = target.indexOf('@');
+    if (atIndex >= 0 && atIndex + 1 < target.length()) {
+      return target.substring(atIndex + 1);
+    }
+    return target;
+  }
+
+  private String resolveSshPrincipal(String target) {
+    if (target.contains("@")) {
+      return target;
+    }
+    return "root@" + target;
+  }
+
+  private String stripWrappingQuotes(String value) {
+    if (value == null || value.length() < 2) {
+      return value;
+    }
+
+    boolean wrappedInDoubleQuotes = value.startsWith("\"") && value.endsWith("\"");
+    boolean wrappedInSingleQuotes = value.startsWith("'") && value.endsWith("'");
+    if (wrappedInDoubleQuotes || wrappedInSingleQuotes) {
+      return value.substring(1, value.length() - 1);
+    }
+    return value;
+  }
+
+  private String firstNonOption(List<String> args) {
+    for (String arg : args) {
+      if (!arg.startsWith("-")) {
+        return arg;
+      }
+    }
+    return null;
+  }
+
+  private String getShellHomePath(VfsContext vfs) {
+    return isPrivilegedShell(vfs) ? "/root" : vfs.getRootPath();
+  }
+
+  private boolean canReadNode(VfsNode node, VfsContext vfs) {
+    return node.readable() && canAccessProtectedNode(node, vfs);
+  }
+
+  private boolean canEnterDirectory(VfsNode node, VfsContext vfs) {
+    return node.isDirectory() && node.executable() && canAccessProtectedNode(node, vfs);
+  }
+
+  private boolean canAccessProtectedNode(VfsNode node, VfsContext vfs) {
+    return !node.isProtected() || isPrivilegedShell(vfs);
+  }
+
+  private boolean isPrivilegedShell(VfsContext vfs) {
+    return vfs != null && "root".equals(vfs.getPromptUser());
+  }
+
+  private boolean isRootShell(String cwd) {
+    return cwd != null && ("/root".equals(cwd) || cwd.startsWith("/root/"));
+  }
+
   /**
    * 에러 메시지를 포함한 터미널 실행 결과를 생성하는 공통 헬퍼 메소드입니다.
    *
@@ -1250,7 +1844,8 @@ public class TerminalCommandService {
   private String buildPrompt(String cwd, VfsContext vfs) {
     // 현재 경로가 루트면 ~, 아니면 루트 경로 문자열을 ~로 바꾼 상대적 느낌의 경로를 생성합니다.
     String displayCwd = cwd.equals(vfs.getRootPath()) ? "~" : cwd.replace(vfs.getRootPath(), "~");
+    String promptSymbol = "root".equals(vfs.getPromptUser()) ? "#" : "$";
     // 설정된 유저명과 호스트명을 조합하여 표준적인 Bash 형태의 프롬프트를 완성합니다.
-    return vfs.getPromptUser() + "@" + vfs.getPromptHost() + ":" + displayCwd + "$";
+    return vfs.getPromptUser() + "@" + vfs.getPromptHost() + ":" + displayCwd + promptSymbol;
   }
 }

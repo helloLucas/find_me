@@ -43,6 +43,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +94,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_HASH_FILE_CHECK = "HASH_FILE_CHECK";
   private static final String RULE_USER_FRAGMENTS_PRESENT = "USER_FRAGMENTS_PRESENT";
   private static final String RULE_USER_FRAGMENTS_INCOMPLETE = "USER_FRAGMENTS_INCOMPLETE";
+  private static final String RULE_REGEX_FALLBACK = "REGEX_FALLBACK";
   private static final String CHAPTER_02_CODE = "week02";
   private static final String CHAPTER_03_CODE = "week03";
   private static final String CHAPTER_04_CODE = "week04";
@@ -1068,8 +1071,47 @@ public class StoryServiceImpl implements StoryService {
           matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, true);
       case RULE_USER_FRAGMENTS_INCOMPLETE ->
           matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
+      case RULE_REGEX_FALLBACK -> matchesRegexFallbackRule(config, request, latestSnapshot);
       default -> false;
     };
+  }
+
+  /**
+   * 현재 노드에서 명시적으로 처리해야 하는 오답 입력을 잡기 위한 fallback 정규식 룰입니다.
+   *
+   * <p>예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고
+   * password retry 노드로 이동시킵니다.
+   */
+  private boolean matchesRegexFallbackRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (request == null) {
+      return false;
+    }
+
+    if (!matchesFlagRequirements(config, latestSnapshot)) {
+      return false;
+    }
+
+    if (!matchesCwdRequirement(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    if (input == null || input.isBlank()) {
+      return false;
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex == null || commandRegex.isBlank()) {
+      return false;
+    }
+
+    try {
+      return Pattern.compile(commandRegex, Pattern.DOTALL).matcher(input).matches();
+    } catch (PatternSyntaxException e) {
+      log.warn("Invalid REGEX_FALLBACK rule: {}", commandRegex, e);
+      return false;
+    }
   }
 
   /**
@@ -1322,8 +1364,12 @@ public class StoryServiceImpl implements StoryService {
     // validator_config.command에는 cat, sh 같은 기대 명령이 들어 있다.
     String expectedCommand = getTextField(config, "command");
 
+    List<String> alternateCommands = getTextArrayField(config, "alternateCommands");
+    boolean commandMatches =
+        command.command().equals(expectedCommand) || alternateCommands.contains(command.command());
+
     // 명령어 이름이 다르면 해당 VFS transition은 대상이 아니다.
-    if (!command.command().equals(expectedCommand)) {
+    if (!commandMatches) {
       // 다른 명령은 우선순위가 낮은 다른 transition 또는 fallback이 처리한다.
       return false;
     }
@@ -2424,9 +2470,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    String commandRegex = getTextField(config, "commandRegex");
-    if (commandRegex != null && !commandRegex.isBlank()) {
-      if (!request.getInputValue().matches(commandRegex)) {
+    if (config.has("acceptedForms") || config.has("command")) {
+      if (!matchesNormalizedCommandRule(config, request, latestSnapshot)) {
         return false;
       }
     }
@@ -3742,7 +3787,24 @@ public class StoryServiceImpl implements StoryService {
     JsonNode overlay =
         latestSnapshot == null
             ? objectMapper.createObjectNode()
-            : latestSnapshot.path("vfsOverlay");
+            : latestSnapshot.path("vfsOverlay").deepCopy();
+
+    if (overlay == null || !overlay.isObject()) {
+      overlay = objectMapper.createObjectNode();
+    }
+
+    JsonNode terminal = latestSnapshot == null ? null : latestSnapshot.path("terminal");
+    if (terminal != null && terminal.isObject()) {
+      ObjectNode overlayObject = (ObjectNode) overlay;
+      String promptUser = terminal.path("promptUser").asText(null);
+      String promptHost = terminal.path("promptHost").asText(null);
+      if (promptUser != null && !promptUser.isBlank()) {
+        overlayObject.put("promptUser", promptUser);
+      }
+      if (promptHost != null && !promptHost.isBlank()) {
+        overlayObject.put("promptHost", promptHost);
+      }
+    }
 
     String chapterCode = extractText(latestSnapshot, "/chapterCode");
     JsonNode staticVfs = getStaticVfs(chapterCode);
