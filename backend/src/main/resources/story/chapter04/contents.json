@@ -1,4 +1,140 @@
 {
+  "CH3_BASH_HISTORY": [
+    "tar -cvf decoy.tar ./sys/temp/Memory_Dump_082.tmp ./cache/User_Behavior_88.tmp ./tmp/System_Temp_File.tmp",
+    "nc -w 3 127.0.0.1 8080 < decoy.tar",
+    "rm decoy.tar",
+    "nmap -sV 127.0.0.1",
+    "nc -w 3 127.0.0.1 9091",
+    "echo STATUS | nc -w 3 127.0.0.1 9091",
+    "echo PEOPLE | nc -w 3 127.0.0.1 9091 > my_people.list",
+    "echo MONITOR | nc -w 3 127.0.0.1 9091 > nexus_monitor.log",
+    "echo FRAGMENT | nc -w 3 127.0.0.1 9091 > laplace_fragment_02.sh",
+    "sh laplace_fragment_02.sh",
+    "grep \"ACTIVE$\" my_people.list > core_group.dat",
+    "gpg -c core_group.dat",
+    "mv core_group.dat.gpg /tmp/safe_zone.dat.gpg",
+    "yes | sh sever_external_nodes.sh",
+    "cp /usr/bin/local/laplace_fragment_03.sh ~/laplace_fragment_03.sh",
+    "cat laplace_fragment_01.sh laplace_fragment_02.sh laplace_fragment_03.sh > laplace.qasm",
+    "execute /home/guest/laplace.qasm"
+  ],
+  "CH3_OBSERVER_STATUS": [
+    "[OBSERVER STATUS LOG]",
+    "Observer ID        : GH-0104",
+    "Observer Class     : Abnormal",
+    "Session Link       : ACTIVE",
+    "Detection Risk     : CRITICAL",
+    "Privilege Level    : guest",
+    "Social Graph       : isolated",
+    "Safe Zone Anchor   : /tmp/safe_zone.dat.gpg",
+    "Pending Job        : LAPLACE_PENDING_04"
+  ],
+  "CH3_WORLD_MAP_AFTER_GC": [
+    "[SESSION MAP : NULL POINT / YEAR 2088]",
+    "",
+    "             [Dropped] [Dropped] [Dropped]",
+    "        [Dropped] [Null]    [Null]    [Dropped]",
+    "   [Dropped] [Null]   [PLAYER_ZONE]   [Null] [Dropped]",
+    "        [Dropped] [Null]    [Null]    [Dropped]",
+    "             [Dropped] [Dropped] [Dropped]",
+    "",
+    "Active Observer Region: PLAYER_ZONE",
+    "External Region Integrity: severed",
+    "Core Rewrite: blocked by guest privilege"
+  ],
+  "LUCAS_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# lucas_fragment_01.sh",
+    "# observer relay attempt :: partial",
+    "echo \"[TRACE FOUND]\"",
+    "echo \"[RELAY STATE: OPEN_PENDING]\""
+  ],
+  "LAPLACE_FRAGMENT_01": [
+    "#!/bin/sh",
+    "# laplace_fragment_01.sh",
+    "# LAPLACE FRAGMENT 01 :: DECOY PACKET",
+    "qreg q[4];",
+    "creg c[4];",
+    "h q[0];"
+  ],
+  "LAPLACE_FRAGMENT_02": [
+    "#!/bin/sh",
+    "# laplace_fragment_02.sh",
+    "# LAPLACE FRAGMENT 02 :: SOCIAL ISOLATION",
+    "echo \"[LAPLACE FRAGMENT 02 :: SOCIAL ISOLATION]\"",
+    "echo \"[NODE SCAN] Total Connected Nodes: 7,904,213,001\"",
+    "echo \"\"",
+    "echo \"Target:\"",
+    "echo \"- Create core_group.dat.\"",
+    "echo \"- core_group.dat must contain protectable nodes only.\"",
+    "echo \"- DELETED nodes require root permission.\"",
+    "echo \"- UNKNOWN nodes may expose observer route.\"",
+    "echo \"\"",
+    "echo \"Output:\"",
+    "echo \"./core_group.dat\""
+  ],
+  "LAPLACE_FRAGMENT_03": [
+    "#!/bin/sh",
+    "# laplace_fragment_03.sh",
+    "# LAPLACE FRAGMENT 03 :: CORE ACCESS GATE",
+    "cx q[0],q[1];",
+    "cx q[1],q[2];",
+    "measure q -> c;"
+  ],
+  "SEVER_EXTERNAL_NODES": [
+    "#!/bin/sh",
+    "# sever_external_nodes.sh",
+    "echo \"[SEVERING] External social graph links...\"",
+    "echo \"[CONFIRMATION REQUIRED]\"",
+    "echo \"This operation will sever all nodes outside safe zone.\""
+  ],
+  "NXR_RUNTIME": [
+    "NXR/0.3",
+    "mode: ro",
+    "origin: gate_04",
+    "session: redirected",
+    "window: unstable"
+  ],
+  "GC_CONTROLLER": [
+    "<binary: gc_controller>"
+  ],
+  "NEXUS_ENGINE": [
+    "<binary: nexus_engine>"
+  ],
+  "CH4_FSTAB": [
+    "# <fs>                              <mountpoint>        <type>  <opts>          <dump> <pass>",
+    "guest@lucas-server:/home/guest      /mnt/lucas-server   9p      ro,nofail       0      0"
+  ],
+  "CH3_MY_PEOPLE_LIST": [
+    "[MY PEOPLE / OBSERVER GH-0104]",
+    "",
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Friend_04 DELETED",
+    "Classmate_21 ACTIVE",
+    "Unknown_719 UNKNOWN"
+  ],
+  "CH3_NEXUS_MONITOR_LOG": [
+    "[NEXUS_MONITOR_LOG_DUMP_2088]",
+    "[2088-04-14 23:08] [INFO] Global Session Memory at 98.4%. Triggering Auto-Optimization.",
+    "[2088-04-14 23:09] [WARN] GC_Priority_Queue updated. Targeting Low-Activity Nodes.",
+    "[2088-04-14 23:10] [EXEC] Node_Group(Seoul_Sector_4) : 4,021 Connections Severed. Status -> DELETED",
+    "[2088-04-14 23:11] [CRITICAL] Observer(Player) anomaly detected. Allocating extra memory to local render.",
+    "[2088-04-14 23:11] [EXEC] Reclaiming memory from surrounding nodes to sustain Observer render.",
+    "[2088-04-14 23:11] [EXEC] Node(Friend_04) status changed: ACTIVE -> DELETED",
+    "[2088-04-14 23:11] [EXEC] Node(Friend_04) deallocation approved.",
+    "[2088-04-14 23:12] [WARN] DELETED nodes cannot be protected by guest permission.",
+    "[2088-04-14 23:12] [WARN] UNKNOWN nodes may expose observer route.",
+    "[2088-04-14 23:12] [INFO] Optimization complete. 1.2PB memory freed."
+  ],
+  "CH3_CORE_GROUP_DAT": [
+    "Home_Contact ACTIVE",
+    "Old_Contact ACTIVE",
+    "Classmate_21 ACTIVE"
+  ],
+  "CH3_CORE_GROUP_GPG": [
+    "<encrypted: core_group.dat.gpg>"
+  ],
   "CH4_GATE_04_TRACE": [
     "[GATE_04 TRACE]",
     "last command: execute /home/guest/laplace.qasm",
@@ -75,7 +211,7 @@
     "The pending Laplace job can be cancelled before final commit.",
     "",
     "Allowed root recovery command:",
-    "systemctl rollback --target global_connect.db",
+    "systemctl start global-rollback.service",
     "",
     "Expected result:",
     "- cancel LAPLACE_PENDING_04",
@@ -95,7 +231,8 @@
   ],
   "CH4_LAPLACE_PENDING_JOB": [
     "[LAPLACE_PENDING_04.job]",
-    "source: /home/guest/laplace.qasm",
+    "source: /mnt/lucas-server/laplace.qasm",
+    "mount : guest@lucas-server:/home/guest -> /mnt/lucas-server",
     "state : WAITING_ROOT_CONFIRMATION",
     "anchor: /tmp/safe_zone.dat.gpg",
     "commit: not executed",

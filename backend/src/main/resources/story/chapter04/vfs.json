@@ -16,10 +16,14 @@
       "/",
       "/home",
       "/home/guest",
+      "/etc",
       "/root",
+      "/mnt",
+      "/mnt/lucas-server",
       "/tmp",
       "/usr",
       "/usr/bin",
+      "/usr/bin/local",
       "/var",
       "/var/spool",
       "/var/spool/core",
@@ -53,6 +57,34 @@
       "protected": false,
       "hidden": false
     },
+    "/etc": {
+      "type": "directory",
+      "name": "etc",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/etc/fstab": {
+      "type": "file",
+      "name": "fstab",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_FSTAB",
+      "storyKey": "FSTAB"
+    },
+    "/home/guest/.bash_history": {
+      "type": "file",
+      "name": ".bash_history",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": true,
+      "contentKey": "CH3_BASH_HISTORY",
+      "storyKey": "BASH_HISTORY"
+    },
     "/home/guest/gate_04.trace": {
       "type": "file",
       "name": "gate_04.trace",
@@ -62,6 +94,66 @@
       "hidden": false,
       "contentKey": "CH4_GATE_04_TRACE",
       "storyKey": "GATE_TRACE"
+    },
+    "/home/guest/observer_status.log": {
+      "type": "file",
+      "name": "observer_status.log",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_OBSERVER_STATUS",
+      "storyKey": "OBSERVER_STATUS"
+    },
+    "/home/guest/world_map.map": {
+      "type": "file",
+      "name": "world_map.map",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_WORLD_MAP_AFTER_GC",
+      "storyKey": "WORLD_MAP"
+    },
+    "/home/guest/lucas_fragment_01.sh": {
+      "type": "file",
+      "name": "lucas_fragment_01.sh",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LUCAS_FRAGMENT_01",
+      "storyKey": "LUCAS_FRAGMENT"
+    },
+    "/home/guest/laplace_fragment_01.sh": {
+      "type": "file",
+      "name": "laplace_fragment_01.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_01",
+      "storyKey": "LAPLACE_FRAGMENT"
+    },
+    "/home/guest/laplace_fragment_02.sh": {
+      "type": "file",
+      "name": "laplace_fragment_02.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_02",
+      "storyKey": "LAPLACE_FRAGMENT"
+    },
+    "/home/guest/laplace_fragment_03.sh": {
+      "type": "file",
+      "name": "laplace_fragment_03.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_03",
+      "storyKey": "LAPLACE_FRAGMENT"
     },
     "/home/guest/laplace.qasm": {
       "type": "file",
@@ -73,6 +165,56 @@
       "contentKey": "CH4_LAPLACE_QASM_PENDING",
       "storyKey": "LAPLACE_QASM"
     },
+    "/home/guest/sever_external_nodes.sh": {
+      "type": "file",
+      "name": "sever_external_nodes.sh",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "SEVER_EXTERNAL_NODES",
+      "storyKey": "SEVER_SCRIPT"
+    },
+    "/home/guest/my_people.list": {
+      "type": "file",
+      "name": "my_people.list",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_MY_PEOPLE_LIST",
+      "storyKey": "PEOPLE_LIST"
+    },
+    "/home/guest/nexus_monitor.log": {
+      "type": "file",
+      "name": "nexus_monitor.log",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_NEXUS_MONITOR_LOG",
+      "storyKey": "MONITOR_LOG"
+    },
+    "/home/guest/core_group.dat": {
+      "type": "file",
+      "name": "core_group.dat",
+      "readable": true,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_CORE_GROUP_DAT",
+      "storyKey": "CORE_GROUP"
+    },
+    "/home/guest/core_group.dat.gpg": {
+      "type": "file",
+      "name": "core_group.dat.gpg",
+      "readable": false,
+      "executable": false,
+      "protected": false,
+      "hidden": false,
+      "contentKey": "CH3_CORE_GROUP_GPG",
+      "storyKey": "CORE_GROUP_GPG"
+    },
     "/home/guest/.route_cache": {
       "type": "directory",
       "name": ".route_cache",
@@ -80,6 +222,14 @@
       "executable": true,
       "protected": false,
       "hidden": true
+    },
+    "/home/guest/trash": {
+      "type": "directory",
+      "name": "trash",
+      "readable": true,
+      "executable": true,
+      "protected": false,
+      "hidden": false
     },
     "/tmp": {
       "type": "directory",
@@ -99,6 +249,32 @@
       "contentKey": "CH4_SAFE_ZONE_GPG",
       "storyKey": "SAFE_ZONE"
     },
+    "/tmp/.nxr_runtime": {
+      "type": "file",
+      "name": ".nxr_runtime",
+      "readable": false,
+      "executable": false,
+      "protected": false,
+      "hidden": true,
+      "contentKey": "NXR_RUNTIME",
+      "storyKey": "NXR_RUNTIME"
+    },
+    "/mnt": {
+      "type": "directory",
+      "name": "mnt",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/mnt/lucas-server": {
+      "type": "directory",
+      "name": "lucas-server",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
     "/usr": {
       "type": "directory",
       "name": "usr",
@@ -114,6 +290,44 @@
       "executable": true,
       "protected": false,
       "hidden": false
+    },
+    "/usr/bin/local": {
+      "type": "directory",
+      "name": "local",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false
+    },
+    "/usr/bin/local/gc_controller": {
+      "type": "file",
+      "name": "gc_controller",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "GC_CONTROLLER",
+      "storyKey": "CORE_BINARY"
+    },
+    "/usr/bin/local/nexus_engine": {
+      "type": "file",
+      "name": "nexus_engine",
+      "readable": false,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "NEXUS_ENGINE",
+      "storyKey": "CORE_BINARY"
+    },
+    "/usr/bin/local/laplace_fragment_03.sh": {
+      "type": "file",
+      "name": "laplace_fragment_03.sh",
+      "readable": true,
+      "executable": true,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "LAPLACE_FRAGMENT_03",
+      "storyKey": "LAPLACE_FRAGMENT"
     },
     "/usr/bin/sshnuke": {
       "type": "file",
@@ -142,16 +356,6 @@
       "hidden": false,
       "contentKey": "CH4_GATE_04_TRACE",
       "storyKey": "GATE_TRACE"
-    },
-    "/root/laplace.qasm": {
-      "type": "file",
-      "name": "laplace.qasm",
-      "readable": true,
-      "executable": false,
-      "protected": true,
-      "hidden": false,
-      "contentKey": "CH4_LAPLACE_QASM_PENDING",
-      "storyKey": "LAPLACE_QASM"
     },
     "/root/lucas_route.sh": {
       "type": "file",

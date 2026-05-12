@@ -2,30 +2,29 @@
 
 기준 문서: `docs/dev/ch04/chapter4_scenario.md`
 
-Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `LAPLACE_PENDING_04`로 `universe-core`에 보류된 상태에서 시작한다.
+Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `universe-core`에 보류된 상태에서 시작한다. 플레이어 진행은 `systemctl status` 확인을 강제하지 않고, `lucas-server`를 마운트한 뒤 `laplace.qasm`을 root 권한으로 다시 실행하는 흐름이다.
 
 ## 공통 진입 루트
 
 ```bash
-계속
-계속
 cat gate_04.trace
 nmap 10.2.2.2
 nmap -sV -p 22 10.2.2.2
-sshnuke 10.2.2.2 -rootpw="Z10N0101"
+sshnuke 10.2.2.2 -rootpw="my-rootpw"
 ssh root@10.2.2.2
-hostname
-corectl pending
+my-rootpw
+mount /mnt/lucas-server
 ```
 
-`hostname`은 선택에 가깝지만, `root@universe-core`로 들어왔다는 위화감을 확인하는 단계다. 바로 `corectl pending`을 입력해도 진행된다.
+`-rootpw` 값은 예시다. 플레이어가 설정한 값을 SSH password prompt에 그대로 입력하면 된다. SSH 접속 후에는 `universe-core`의 별도 서버 세션이므로, fstab에 잡힌 `lucas-server:/home/guest`를 `/mnt/lucas-server`에 붙인다.
 
 ## 엔딩 1: Sandbox Cage
 
-루카스가 하라는 대로 pending job을 재개한다.
+루카스가 하라는 대로 `laplace.qasm`을 root 권한으로 실행한다.
 
 ```bash
-resume LAPLACE_PENDING_04
+execute /mnt/lucas-server/laplace.qasm
+yes
 yes
 yes
 ```
@@ -39,15 +38,14 @@ yes
 ```bash
 ls -al
 cat rollback_protocol.md
-systemctl rollback --target global_connect.db
+systemctl start global-rollback.service
 ```
 
 대체 입력:
 
 ```bash
-restore --all
-rollback global_connect.db
-corectl rollback global_connect.db
+systemctl start rollback@global_connect.service
+systemctl isolate rollback.target
 ```
 
 결과: 루카스가 GC에 회수되고 세계가 복구된다. 단, NEXUS가 모든 선택을 관찰하고 있었다는 로그가 남는다.
@@ -61,15 +59,13 @@ corectl rollback global_connect.db
 ls -al
 file lucas_route.sh
 sh lucas_route.sh
-run /home/guest/.route_cache/lucas_authority_patch.bin
+/home/guest/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
 
 ```bash
-execute /home/guest/.route_cache/lucas_authority_patch.bin
-chmod +x /home/guest/.route_cache/lucas_authority_patch.bin
-/home/guest/.route_cache/lucas_authority_patch.bin
+./.route_cache/lucas_authority_patch.bin
 ```
 
 결과: 루카스 권한이 강화되고 safe zone과 observer 예외까지 무시한 전체 초기화가 시작된다.
