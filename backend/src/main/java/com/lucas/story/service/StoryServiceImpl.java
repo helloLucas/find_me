@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
+import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
 import com.lucas.progress.entity.ChapterStatus;
@@ -88,19 +89,29 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_CREATE_FILE_EQUIVALENT = "CREATE_FILE_EQUIVALENT";
   private static final String RULE_FILE_COMPOSITION = "FILE_COMPOSITION";
   private static final String RULE_HASH_FILE_CHECK = "HASH_FILE_CHECK";
+  private static final String RULE_USER_FRAGMENTS_PRESENT = "USER_FRAGMENTS_PRESENT";
+  private static final String RULE_USER_FRAGMENTS_INCOMPLETE = "USER_FRAGMENTS_INCOMPLETE";
   private static final String CHAPTER_02_CODE = "week02";
   private static final String CHAPTER_03_CODE = "week03";
+  private static final String CHAPTER_04_CODE = "week04";
   private static final String CHAPTER_03_START_NODE_CODE = "CH3_FRIEND_CALL";
+  private static final String CHAPTER_04_START_NODE_CODE = "CH4_CORE_BLOCKED";
   private static final String CHAPTER_02_TERMINAL_PROFILE = "chapter2";
   private static final String CHAPTER_03_TERMINAL_PROFILE = "chapter3";
+  private static final String CHAPTER_04_TERMINAL_PROFILE = "chapter4";
   private static final String CHAPTER_02_VFS_VERSION = "chapter02-v1";
   private static final String CHAPTER_03_VFS_VERSION = "chapter03-v1";
+  private static final String CHAPTER_04_VFS_VERSION = "chapter04-v1";
   private static final String CHAPTER_02_DEFAULT_CWD = "/home/guest";
   private static final String TERMINAL_PROMPT_USER = "guest";
   private static final String TERMINAL_PROMPT_HOST = "lucas-server";
   private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
   private static final Map<String, String> CHAPTER_START_NODE_CODES =
-      Map.of(CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE);
+      Map.of(
+          CHAPTER_03_CODE,
+          CHAPTER_03_START_NODE_CODE,
+          CHAPTER_04_CODE,
+          CHAPTER_04_START_NODE_CODE);
 
   /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
   private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
@@ -120,6 +131,15 @@ public class StoryServiceImpl implements StoryService {
               CHAPTER_03_TERMINAL_PROFILE,
               CHAPTER_03_VFS_VERSION,
               "/story/chapter03/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST),
+          CHAPTER_04_CODE,
+          new TerminalChapterProfile(
+              CHAPTER_04_CODE,
+              CHAPTER_04_TERMINAL_PROFILE,
+              CHAPTER_04_VFS_VERSION,
+              "/story/chapter04/vfs.json",
               CHAPTER_02_DEFAULT_CWD,
               TERMINAL_PROMPT_USER,
               TERMINAL_PROMPT_HOST));
@@ -154,6 +174,7 @@ public class StoryServiceImpl implements StoryService {
   private final TerminalCommandService terminalCommandService;
   private final StoryActionLogService storyActionLogService;
   private final StorySessionRedisService storySessionRedisService;
+  private final UserFragmentRepository userFragmentRepository;
   private final ObjectMapper objectMapper;
   private final PathResolver pathResolver = new PathResolver();
 
@@ -369,7 +390,7 @@ public class StoryServiceImpl implements StoryService {
       // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
       StoryTransition matched =
           transitions.stream()
-              .filter(t -> matchesTransition(t, request, latestSnapshot))
+              .filter(t -> matchesTransition(t, request, latestSnapshot, user.getId()))
               .findFirst()
               .orElse(null);
 
@@ -935,6 +956,11 @@ public class StoryServiceImpl implements StoryService {
    */
   private boolean matchesTransition(
       StoryTransition t, TransitionRequestDto request, JsonNode latestSnapshot) {
+    return matchesTransition(t, request, latestSnapshot, null);
+  }
+
+  private boolean matchesTransition(
+      StoryTransition t, TransitionRequestDto request, JsonNode latestSnapshot, Long userId) {
     // 액션 타입이 다르면 즉시 불일치
     if (!t.getActionType().equals(request.getActionType())) {
       return false;
@@ -948,7 +974,7 @@ public class StoryServiceImpl implements StoryService {
           matchesExactTransition(
               t.getExpectedInput(), request.getInputValue(), t.getValidatorConfig()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
-      case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot);
+      case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot, userId);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
     };
   }
@@ -978,6 +1004,14 @@ public class StoryServiceImpl implements StoryService {
    */
   private boolean matchesServerRuleTransition(
       StoryTransition transition, TransitionRequestDto request, JsonNode latestSnapshot) {
+    return matchesServerRuleTransition(transition, request, latestSnapshot, null);
+  }
+
+  private boolean matchesServerRuleTransition(
+      StoryTransition transition,
+      TransitionRequestDto request,
+      JsonNode latestSnapshot,
+      Long userId) {
     // transition에 저장된 validator_config JSON을 가져온다.
     JsonNode config = transition.getValidatorConfig();
 
@@ -1030,6 +1064,10 @@ public class StoryServiceImpl implements StoryService {
           matchesCreateFileEquivalentRule(config, request, latestSnapshot);
       case RULE_FILE_COMPOSITION -> matchesFileCompositionRule(config, request, latestSnapshot);
       case RULE_HASH_FILE_CHECK -> matchesHashFileCheckRule(config, request, latestSnapshot);
+      case RULE_USER_FRAGMENTS_PRESENT ->
+          matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, true);
+      case RULE_USER_FRAGMENTS_INCOMPLETE ->
+          matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
       default -> false;
     };
   }
@@ -2370,6 +2408,74 @@ public class StoryServiceImpl implements StoryService {
       }
     }
     return true;
+  }
+
+  private boolean matchesUserFragmentsGateRule(
+      JsonNode config,
+      TransitionRequestDto request,
+      JsonNode latestSnapshot,
+      Long userId,
+      boolean expectComplete) {
+    if (!matchesRulePrerequisites(config, latestSnapshot)) {
+      return false;
+    }
+
+    if (request == null || request.getInputValue() == null || request.getInputValue().isBlank()) {
+      return false;
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      if (!request.getInputValue().matches(commandRegex)) {
+        return false;
+      }
+    }
+
+    if (userId == null || userFragmentRepository == null) {
+      return false;
+    }
+
+    boolean complete = userHasRequiredFragmentGroups(userId, config.get("requiredFragmentGroups"));
+    return expectComplete == complete;
+  }
+
+  private boolean userHasRequiredFragmentGroups(Long userId, JsonNode requiredFragmentGroups) {
+    if (requiredFragmentGroups == null
+        || !requiredFragmentGroups.isArray()
+        || requiredFragmentGroups.isEmpty()) {
+      return false;
+    }
+
+    for (JsonNode group : requiredFragmentGroups) {
+      if (!userHasAnyFragmentInGroup(userId, group)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private boolean userHasAnyFragmentInGroup(Long userId, JsonNode group) {
+    if (group == null) {
+      return false;
+    }
+
+    if (group.isTextual()) {
+      return userFragmentRepository.existsByUserIdAndFragmentCode(userId, group.asText());
+    }
+
+    if (!group.isArray() || group.isEmpty()) {
+      return false;
+    }
+
+    for (JsonNode candidate : group) {
+      if (candidate.isTextual()
+          && userFragmentRepository.existsByUserIdAndFragmentCode(userId, candidate.asText())) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private boolean containsCliArg(List<String> actualArgs, String expectedArg) {
