@@ -30,6 +30,17 @@ function getInitialWindowPosition(defaultWidth: number, defaultHeight: number) {
   };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function toPixelSize(value: string | number, fallback: number) {
+  if (typeof value === "number") return value;
+
+  const numericValue = Number.parseFloat(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
 export const Window: React.FC<WindowProps> = ({
   id,
   title,
@@ -62,6 +73,62 @@ export const Window: React.FC<WindowProps> = ({
     }
 
     maximizeWindow(windowState.id);
+  };
+
+  const handleHeaderMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isMaximized || event.button !== 0) return;
+    if (event.target instanceof HTMLElement && event.target.closest("button")) return;
+
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const headerRect = event.currentTarget.getBoundingClientRect();
+    const pointerOffsetY = event.clientY - headerRect.top;
+    const pointerRatioX = window.innerWidth > 0 ? event.clientX / window.innerWidth : 0.5;
+    const restoredWidth = toPixelSize(size.width, defaultWidth);
+    const restoredHeight = toPixelSize(size.height, defaultHeight);
+    let hasRestored = false;
+
+    const moveRestoredWindow = (moveEvent: MouseEvent) => {
+      const availableHeight = Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT);
+      const nextX = clamp(
+        moveEvent.clientX - restoredWidth * pointerRatioX,
+        0,
+        Math.max(0, window.innerWidth - restoredWidth)
+      );
+      const nextY = clamp(
+        moveEvent.clientY - pointerOffsetY,
+        0,
+        Math.max(0, availableHeight - restoredHeight)
+      );
+
+      setPosition({ x: nextX, y: nextY });
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!hasRestored) {
+        const movedX = moveEvent.clientX - startX;
+        const movedY = moveEvent.clientY - startY;
+        if (Math.hypot(movedX, movedY) < 4) return;
+
+        hasRestored = true;
+        setSize({ width: restoredWidth, height: restoredHeight });
+        moveRestoredWindow(moveEvent);
+        restoreWindow(windowState.id);
+        return;
+      }
+
+      moveRestoredWindow(moveEvent);
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
   return (
@@ -99,7 +166,8 @@ export const Window: React.FC<WindowProps> = ({
         }}
       >
         <div
-          className={`window-drag-handle flex items-center justify-between px-2 py-1 bg-gradient-to-r from-[#240b36] to-[#0f0c29] border-b-2 border-[#543ab7] select-none ${!isMaximized ? "cursor-move" : ""}`}
+          className="window-drag-handle flex cursor-default items-center justify-between px-2 py-1 bg-gradient-to-r from-[#240b36] to-[#0f0c29] border-b-2 border-[#543ab7] select-none"
+          onMouseDown={handleHeaderMouseDown}
           onDoubleClick={handleToggleMaximize}
         >
           <div className="flex items-center gap-2">
