@@ -576,6 +576,7 @@ public class StoryServiceImpl implements StoryService {
         new StorySessionState(user.getId(), chapterId, toNodeId, stateVersion),
         new StoryRecentEvent(
             timestamp,
+            chapterId,
             actionType,
             rawInput,
             normInput,
