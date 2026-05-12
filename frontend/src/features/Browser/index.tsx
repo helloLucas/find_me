@@ -9,6 +9,8 @@ import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { DocTab } from "./components/DocTab";
 import { CyberPacketDashTab } from "./components/CyberPacketDashTab";
+import { LucasSurvivalTab } from "./components/LucasSurvivalTab";
+import { LucasRouteTab } from "./components/LucasRouteTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
@@ -23,10 +25,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash" | "lucasroute" | "lucassurvival";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash" | "lucasroute" | "lucassurvival";
     title: string;
   }>;
   historyIndex: number;
@@ -49,7 +51,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -92,6 +94,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     return () => {
       useBrowserContentStore.getState().resetNewsTabClickTrigger();
       useBrowserContentStore.getState().resetCyberPacketDashTabClickTrigger();
+      useBrowserContentStore.getState().resetLucasRouteTabClickTrigger();
+      useBrowserContentStore.getState().resetLucasSurvivalTabClickTrigger();
     };
   }, []);
 
@@ -297,6 +301,62 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       return [...prev, newTab];
     });
   }, [cyberPacketDashTabClickTrigger]);
+
+  const lastLucasRouteTabClickTriggerRef = useRef(0);
+
+  useEffect(() => {
+    if (lucasRouteTabClickTrigger === 0) return;
+    if (lucasRouteTabClickTrigger === lastLucasRouteTabClickTriggerRef.current) return;
+    lastLucasRouteTabClickTriggerRef.current = lucasRouteTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingTab = prev.find((tab) => tab.component === "lucasroute");
+      if (existingTab) {
+        queueMicrotask(() => setActiveTabId(existingTab.id));
+        return prev;
+      }
+
+      const newId = `tab_lucasroute_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Lucas Route",
+        url: "system://lucas-route",
+        component: "lucasroute" as const,
+        history: [{ url: "system://lucas-route", component: "lucasroute" as const, title: "Lucas Route" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [lucasRouteTabClickTrigger]);
+
+  const lastLucasSurvivalTabClickTriggerRef = useRef(0);
+
+  useEffect(() => {
+    if (lucasSurvivalTabClickTrigger === 0) return;
+    if (lucasSurvivalTabClickTrigger === lastLucasSurvivalTabClickTriggerRef.current) return;
+    lastLucasSurvivalTabClickTriggerRef.current = lucasSurvivalTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingTab = prev.find((tab) => tab.component === "lucassurvival");
+      if (existingTab) {
+        queueMicrotask(() => setActiveTabId(existingTab.id));
+        return prev;
+      }
+
+      const newId = `tab_lucassurvival_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Lucas Survival",
+        url: "system://lucas-survival",
+        component: "lucassurvival" as const,
+        history: [{ url: "system://lucas-survival", component: "lucassurvival" as const, title: "Lucas Survival" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [lucasSurvivalTabClickTrigger]);
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
@@ -839,6 +899,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             <DocTab url={activeTab.url} />
           )}
           {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
+          {activeTab?.component === 'lucassurvival' && <LucasSurvivalTab />}
+          {activeTab?.component === 'lucasroute' && <LucasRouteTab />}
         </div>
 
         {showDevTools && (
