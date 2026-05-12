@@ -33,7 +33,8 @@ USING chapter_row c
 WHERE n.chapter_id = c.id
   AND n.code NOT IN (
     'CH4_CORE_BLOCKED',
-        'CH4_UNIVERSE_WARNING',
+    'CH4_TERMINAL_RELOAD',
+    'CH4_UNIVERSE_WARNING',
     'CH4_GATE_TRACE_VIEWED',
     'CH4_TARGET_SCAN',
     'CH4_SSH_FINGERPRINTED',
@@ -43,6 +44,7 @@ WHERE n.chapter_id = c.id
     'CH4_PENDING_JOB_VIEWED',
     'CH4_INVESTIGATION_STARTED',
     'CH4_MINIGAME_DISCOVERED',
+    'CH4_MINIGAME_NOT_CLEARED',
     'CH4_MINIGAME_COMPLETED',
     'CH4_ORIGIN_TRACE_VIEWED',
     'CH4_PROCESS_LIST_VIEWED',
@@ -69,7 +71,7 @@ node_values AS (
     "id": "CH4_CORE_BLOCKED",
     "mode": "terminal",
     "bgm": "ch04_core_blocked.mp3",
-    "glitchLevel": 5,
+    "glitchLevel": 3,
     "resetTerminal": false
   },
   "content": {
@@ -104,8 +106,8 @@ node_values AS (
   ],
   "effects": {
     "showDogAvatar": true,
-    "playSound": "terminal_reload",
-    "glitchLevel": 5
+    "playSound": "core_access_blocked",
+    "glitchLevel": 3
   }
 }$json$::jsonb,
             'click',
@@ -122,7 +124,48 @@ node_values AS (
             TRUE,
             FALSE
         ),
-
+        (
+            'CH4_TERMINAL_RELOAD',
+            'narrative',
+            $json${
+  "scene": {
+    "id": "CH4_TERMINAL_RELOAD",
+    "mode": "terminal",
+    "bgm": "ch04_terminal_reload.mp3",
+    "preVideo": "ch04_terminal_reload.m3u8",
+    "glitchLevel": 5,
+    "resetTerminal": true
+  },
+  "content": {
+    "title": "Chapter 4: The Great Drop",
+    "body": [
+      "평화로워 보이던 레트로 RPG 메뉴가 한 줄씩 찢어진다.",
+      "색상 팔레트가 붉은 CRT 터미널로 강제 전환되고, 이전 챕터의 입력 기록이 노이즈처럼 되감긴다.",
+      "화면 중앙에는 하나의 보류 작업만 남는다.",
+      "",
+      "LAPLACE_PENDING_04"
+    ]
+  },
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "terminal_reload",
+    "glitchLevel": 5
+  }
+}$json$::jsonb,
+            'click',
+            $json${
+  "allowedActions": ["click"],
+  "buttons": [
+    {
+      "label": "터미널로 돌아가기",
+      "value": "continue"
+    }
+  ],
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
         (
             'CH4_UNIVERSE_WARNING',
             'console',
@@ -651,6 +694,58 @@ node_values AS (
             FALSE
         ),
         (
+            'CH4_MINIGAME_NOT_CLEARED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_MINIGAME_NOT_CLEARED",
+    "mode": "terminal",
+    "bgm": "ch04_investigation.mp3",
+    "glitchLevel": 2,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "root@universe-core:~# sh lucas_route.sh",
+      "",
+      "[LUCAS ROUTE PROCESS]",
+      "Detached minigame route is not complete.",
+      "",
+      "[REQUIRED]",
+      "Clear Lucas route minigame first.",
+      "Expected fragment: 4",
+      "",
+      "[NEXT]",
+      "Open /minigames/lucas-survival",
+      "Complete the route delivery.",
+      "Return here and run: sh lucas_route.sh"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "아직 패킷이 뉴욕까지 도착하지 않았어. 먼저 루트를 끝까지 통과해.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "route_not_delivered",
+    "glitchLevel": 2
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "sh lucas_route.sh",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
             'CH4_MINIGAME_COMPLETED',
             'console',
             $json${
@@ -664,7 +759,7 @@ node_values AS (
   "content": {
     "terminalOutput": [
       "[LUCAS ROUTE PROCESS]",
-      "Launching detached minigame process...",
+      "Detached route clear verified.",
       "route: YUSEONG_METEOR -> DAEJEON_ROUTER -> KR_BACKBONE -> SUBMARINE_CABLE -> US_EDGE -> NY_LUCAS_SERVER",
       "",
       "[PACKET DELIVERED]",

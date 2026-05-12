@@ -54,7 +54,8 @@ corectl rollback global_connect.db
 
 ## 엔딩 3: Absolute Reboot
 
-조사 루트에서 `lucas_route.sh`를 실행해 비밀 프로그램을 만든 뒤, 그 프로그램을 실행한다.
+먼저 `/minigames/lucas-survival`을 클리어해 fragment `4`를 저장해야 한다.
+그 뒤 조사 루트에서 `lucas_route.sh`를 실행해 비밀 프로그램을 만든 뒤, 그 프로그램을 실행한다.
 
 ```bash
 ls -al
@@ -75,7 +76,8 @@ chmod +x /home/guest/.route_cache/lucas_authority_patch.bin
 
 ## 엔딩 4: Clean Rollback
 
-`lucas_route.sh` 보상 파일을 실행하지 않고 삭제한다.
+먼저 `/minigames/lucas-survival`을 클리어해 fragment `4`를 저장해야 한다.
+그 뒤 `lucas_route.sh` 보상 파일을 실행하지 않고 삭제한다.
 
 ```bash
 ls -al

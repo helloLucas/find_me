@@ -16,9 +16,7 @@ function getIsFullscreen() {
 }
 
 function isChapterCompletionNode(node: StoryNode | null) {
-  if (!node?.code.endsWith("_COMPLETE")) return false;
-
-  return node.nodeType === "ending" || node.isTerminal;
+  return Boolean(node && (node.nodeType === "ending" || node.isTerminal));
 }
 
 export default function PlayPage() {
