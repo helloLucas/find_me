@@ -19,7 +19,8 @@ class TerminalCommandServiceRootPermissionTest {
     VfsContext vfs = VfsContext.of(staticVfs(), overlay("root", "universe-core"));
 
     TerminalResult result =
-        terminalCommandService.execute(new ParsedCommand("cd", List.of("root"), "cd root"), terminal("/"), vfs);
+        terminalCommandService.execute(
+            new ParsedCommand("cd", List.of("root"), "cd root"), terminal("/"), vfs);
 
     assertThat(result.resultCode()).isEqualTo("SUCCESS");
     assertThat(result.cwd()).isEqualTo("/root");
@@ -31,7 +32,8 @@ class TerminalCommandServiceRootPermissionTest {
     VfsContext vfs = VfsContext.of(staticVfs(), overlay("root", "universe-core"));
 
     TerminalResult result =
-        terminalCommandService.execute(new ParsedCommand("cd", List.of(), "cd"), terminal("/"), vfs);
+        terminalCommandService.execute(
+            new ParsedCommand("cd", List.of(), "cd"), terminal("/"), vfs);
 
     assertThat(result.resultCode()).isEqualTo("SUCCESS");
     assertThat(result.cwd()).isEqualTo("/root");
@@ -42,7 +44,8 @@ class TerminalCommandServiceRootPermissionTest {
     VfsContext vfs = VfsContext.of(staticVfs(), overlay("guest", "lucas-server"));
 
     TerminalResult result =
-        terminalCommandService.execute(new ParsedCommand("cd", List.of("/root"), "cd /root"), terminal("/"), vfs);
+        terminalCommandService.execute(
+            new ParsedCommand("cd", List.of("/root"), "cd /root"), terminal("/"), vfs);
 
     assertThat(result.resultCode()).isEqualTo("ERROR");
     assertThat(result.stderr()).containsExactly("cd: /root: Permission denied");
@@ -54,7 +57,9 @@ class TerminalCommandServiceRootPermissionTest {
 
     TerminalResult result =
         terminalCommandService.execute(
-            new ParsedCommand("cd", List.of("/home/guest"), "cd /home/guest"), terminal("/root"), vfs);
+            new ParsedCommand("cd", List.of("/home/guest"), "cd /home/guest"),
+            terminal("/root"),
+            vfs);
 
     assertThat(result.resultCode()).isEqualTo("ERROR");
     assertThat(result.stderr()).containsExactly("cd: /home/guest: No such file or directory");
@@ -96,7 +101,8 @@ class TerminalCommandServiceRootPermissionTest {
     assertThat(result.resultCode()).isEqualTo("ERROR");
     assertThat(result.stderr())
         .containsExactly(
-            "execute: /mnt/lucas-server/laplace.qasm: No such file or directory. mount /mnt/lucas-server first");
+            "execute: /mnt/lucas-server/laplace.qasm: No such file or directory. "
+                + "mount lucas-server:/home/guest /mnt/lucas-server first");
   }
 
   @Test
@@ -104,11 +110,41 @@ class TerminalCommandServiceRootPermissionTest {
     VfsContext vfs = VfsContext.of(staticVfs(), mountedOverlay());
 
     TerminalResult result =
-        terminalCommandService.execute(new ParsedCommand("mount", List.of(), "mount"), terminal("/root"), vfs);
+        terminalCommandService.execute(
+            new ParsedCommand("mount", List.of(), "mount"), terminal("/root"), vfs);
 
     assertThat(result.resultCode()).isEqualTo("SUCCESS");
     assertThat(result.stdout())
-        .containsExactly("guest@lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)");
+        .containsExactly("lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)");
+  }
+
+  @Test
+  void mountCommandAcceptsEquivalentLucasServerSources() throws Exception {
+    VfsContext vfs = VfsContext.of(staticVfs(), overlay("root", "universe-core"));
+
+    List<List<String>> acceptedArgs =
+        List.of(
+            List.of("/mnt/lucas-server"),
+            List.of("-a"),
+            List.of("lucas-server:/home/guest", "/mnt/lucas-server"),
+            List.of("lucas-server:/home/guest/", "/mnt/lucas-server"),
+            List.of("lucas-server:~/", "/mnt/lucas-server"),
+            List.of("guest@lucas-server:/home/guest", "/mnt/lucas-server"),
+            List.of("-t", "9p", "lucas-server:/home/guest", "/mnt/lucas-server"),
+            List.of("-t", "nfs", "-o", "ro", "lucas-server:~/", "/mnt/lucas-server/"));
+
+    for (List<String> args : acceptedArgs) {
+      TerminalResult result =
+          terminalCommandService.execute(
+              new ParsedCommand("mount", args, "mount " + String.join(" ", args)),
+              terminal("/root"),
+              vfs);
+
+      assertThat(result.stderr())
+          .as("accepted mount form: %s", args)
+          .containsExactly(
+              "mount: /mnt/lucas-server: not mounted yet; use the current root session prompt to attach lucas-server");
+    }
   }
 
   private JsonNode staticVfs() throws Exception {
@@ -211,7 +247,6 @@ class TerminalCommandServiceRootPermissionTest {
         {
           "cwd": "%s"
         }
-        """
-            .formatted(cwd));
+        """.formatted(cwd));
   }
 }

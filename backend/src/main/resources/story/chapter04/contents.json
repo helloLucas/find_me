@@ -103,7 +103,12 @@
   ],
   "CH4_FSTAB": [
     "# <fs>                              <mountpoint>        <type>  <opts>          <dump> <pass>",
-    "guest@lucas-server:/home/guest      /mnt/lucas-server   9p      ro,nofail       0      0"
+    "lucas-server:/home/guest            /mnt/lucas-server   9p      ro,nofail       0      0"
+  ],
+  "CH4_HOSTS": [
+    "127.0.0.1 localhost",
+    "10.2.2.1 lucas-server",
+    "10.2.2.2 universe-core"
   ],
   "CH3_MY_PEOPLE_LIST": [
     "[MY PEOPLE / OBSERVER GH-0104]",
@@ -232,7 +237,7 @@
   "CH4_LAPLACE_PENDING_JOB": [
     "[LAPLACE_PENDING_04.job]",
     "source: /mnt/lucas-server/laplace.qasm",
-    "mount : guest@lucas-server:/home/guest -> /mnt/lucas-server",
+    "mount : lucas-server:/home/guest -> /mnt/lucas-server",
     "state : WAITING_ROOT_CONFIRMATION",
     "anchor: /tmp/safe_zone.dat.gpg",
     "commit: not executed",

@@ -425,13 +425,19 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "좋아. 이제 root야.",
+      "text": "좋아. 이제 universe-core의 root야. 그런데 네가 만든 laplace.qasm은 이 서버의 /root에 없어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "여긴 lucas-server가 아니야. Chapter 3에서 만든 파일은 이 서버에 없어. fstab에 잡힌 루카스 서버를 붙여. mount /mnt/lucas-server.",
+      "text": "Chapter 3 산출물은 lucas-server:/home/guest에 남아 있어. 그걸 /mnt/lucas-server에 붙여. mount lucas-server:/home/guest /mnt/lucas-server.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "확실히 보려면 cat /etc/hosts랑 cat /etc/fstab을 봐. 하지만 지금은 마운트부터 해.",
       "blocking": true
     }
   ],
@@ -444,7 +450,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "mount /mnt/lucas-server",
+  "placeholder": "mount lucas-server:/home/guest /mnt/lucas-server",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -464,10 +470,10 @@ node_values AS (
   },
   "content": {
     "terminalOutput": [
-      "mount: guest@lucas-server:/home/guest mounted on /mnt/lucas-server",
+      "mount: lucas-server:/home/guest mounted on /mnt/lucas-server",
       "",
       "[MOUNT TABLE]",
-      "guest@lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)",
+      "lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)",
       "",
       "[ARTIFACTS: /mnt/lucas-server]",
       "laplace.qasm",
@@ -484,7 +490,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "이제 root 권한으로 다시 실행해. execute /mnt/lucas-server/laplace.qasm.",
+      "text": "마운트된 디렉터리 안의 파일을 root 권한으로 다시 실행해. execute /mnt/lucas-server/laplace.qasm.",
       "blocking": true
     }
   ],
@@ -532,13 +538,13 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "목록 보지 마. NEXUS랑 GC는 원래 떠 있는 시스템 프로세스야.",
+      "text": "봤지? 여긴 lucas-server가 아니라 universe-core야. 그래서 /root를 뒤져도 네가 만든 laplace.qasm은 안 나와.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "루카스 서버의 산출물을 먼저 붙여. mount /mnt/lucas-server.",
+      "text": "lucas-server:/home/guest를 /mnt/lucas-server로 마운트해. mount lucas-server:/home/guest /mnt/lucas-server.",
       "blocking": true
     }
   ],
@@ -550,7 +556,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "mount /mnt/lucas-server",
+  "placeholder": "mount lucas-server:/home/guest /mnt/lucas-server",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -574,7 +580,7 @@ node_values AS (
       "id: LAPLACE_PENDING_04",
       "original command: execute /mnt/lucas-server/laplace.qasm",
       "source: lucas-server mount",
-      "mount: guest@lucas-server:/home/guest -> /mnt/lucas-server",
+      "mount: lucas-server:/home/guest -> /mnt/lucas-server",
       "anchor: /tmp/safe_zone.dat.gpg",
       "state: BLOCKED",
       "reason: guest cannot modify Core Logic",
@@ -637,7 +643,13 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "왜 자꾸 옆길로 새? 실행만 하면 끝나.",
+      "text": "여기 /root에는 로그랑 보조 파일만 있어. laplace.qasm은 lucas-server:/home/guest 쪽이야.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "계속 진행하려면 mount lucas-server:/home/guest /mnt/lucas-server를 입력해. 의심되면 origin_trace.log나 rollback_protocol.md를 먼저 봐.",
       "blocking": true
     }
   ],

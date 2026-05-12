@@ -75,6 +75,16 @@
       "contentKey": "CH4_FSTAB",
       "storyKey": "FSTAB"
     },
+    "/etc/hosts": {
+      "type": "file",
+      "name": "hosts",
+      "readable": true,
+      "executable": false,
+      "protected": true,
+      "hidden": false,
+      "contentKey": "CH4_HOSTS",
+      "storyKey": "HOSTS"
+    },
     "/home/guest/.bash_history": {
       "type": "file",
       "name": ".bash_history",

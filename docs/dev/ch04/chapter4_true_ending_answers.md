@@ -13,10 +13,20 @@ nmap -sV -p 22 10.2.2.2
 sshnuke 10.2.2.2 -rootpw="my-rootpw"
 ssh root@10.2.2.2
 my-rootpw
-mount /mnt/lucas-server
+mount lucas-server:/home/guest /mnt/lucas-server
 ```
 
-`-rootpw` 값은 예시다. 플레이어가 설정한 값을 SSH password prompt에 그대로 입력하면 된다. SSH 접속 후에는 `universe-core`의 별도 서버 세션이므로, fstab에 잡힌 `lucas-server:/home/guest`를 `/mnt/lucas-server`에 붙인다.
+`-rootpw` 값은 예시다. 플레이어가 설정한 값을 SSH password prompt에 그대로 입력하면 된다. SSH 접속 후에는 `universe-core`의 별도 서버 세션이므로, hosts에 잡힌 `lucas-server` 별칭의 `/home/guest`를 `/mnt/lucas-server`에 붙인다.
+
+허용되는 마운트 대체 입력:
+
+```bash
+mount lucas-server:~/ /mnt/lucas-server
+mount guest@lucas-server:/home/guest /mnt/lucas-server
+mount -t 9p lucas-server:/home/guest /mnt/lucas-server
+mount /mnt/lucas-server
+mount -a
+```
 
 ## 엔딩 1: Sandbox Cage
 

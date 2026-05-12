@@ -339,21 +339,31 @@ root@universe-core:/root#
 ### 7-5. 루카스 서버 산출물 마운트
 
 `universe-core`는 `lucas-server`와 다른 서버입니다. 따라서 Chapter 3에서 만든 `laplace.qasm`은 `/root`에 직접 존재하지 않습니다.
-대신 `universe-core`의 `/etc/fstab`에 루카스 서버 export가 등록되어 있어 짧은 mount 명령만 입력하면 됩니다.
+`/etc/hosts`에는 `lucas-server` 별칭이 있고, `/etc/fstab`에는 `lucas-server:/home/guest` export가 남아 있습니다. 루카스는 이 단서를 이용해 원격 홈 디렉터리를 `/mnt/lucas-server`에 붙이라고 재촉합니다.
 
 플레이어 입력:
 
 ```bash
+mount lucas-server:/home/guest /mnt/lucas-server
+```
+
+동치 입력:
+
+```bash
+mount lucas-server:~/ /mnt/lucas-server
+mount guest@lucas-server:/home/guest /mnt/lucas-server
+mount -t 9p lucas-server:/home/guest /mnt/lucas-server
 mount /mnt/lucas-server
+mount -a
 ```
 
 출력:
 
 ```bash
-mount: guest@lucas-server:/home/guest mounted on /mnt/lucas-server
+mount: lucas-server:/home/guest mounted on /mnt/lucas-server
 
 [MOUNT TABLE]
-guest@lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)
+lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)
 
 [ARTIFACTS: /mnt/lucas-server]
 laplace.qasm

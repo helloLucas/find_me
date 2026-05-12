@@ -56,8 +56,7 @@ public class PathResolver {
     }
 
     String target;
-    String homePath =
-        vfs != null && "root".equals(vfs.getPromptUser()) ? "/root" : rootPath;
+    String homePath = vfs != null && "root".equals(vfs.getPromptUser()) ? "/root" : rootPath;
     // /로 시작하는 입력은 절대 경로로 해석한다.
     if (input.startsWith("/")) {
       target = input;

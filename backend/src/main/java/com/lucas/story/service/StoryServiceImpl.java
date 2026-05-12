@@ -1079,8 +1079,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 현재 노드에서 명시적으로 처리해야 하는 오답 입력을 잡기 위한 fallback 정규식 룰입니다.
    *
-   * <p>예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고
-   * password retry 노드로 이동시킵니다.
+   * <p>예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고 password retry 노드로
+   * 이동시킵니다.
    */
   private boolean matchesRegexFallbackRule(
       JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {

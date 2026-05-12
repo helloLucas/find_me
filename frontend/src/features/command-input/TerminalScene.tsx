@@ -38,7 +38,6 @@ const CH4_CONFIRM_PROMPT_NODE_CODES = new Set([
   "CH4_LAPLACE_CONFIRM_FAIL_3",
 ]);
 const INLINE_PROMPT_INPUT_PREFIX = "__inline_prompt_input__:";
-const CH4_ROOT_PASSWORD_STORAGE_KEY = "lucas:ch4:root-password";
 const CH4_SSH_PASSWORD_OK_COMMAND = "__CH4_SSH_PASSWORD_OK__";
 const CH4_SSH_PASSWORD_BAD_COMMAND = "__CH4_SSH_PASSWORD_BAD__";
 type InlinePromptMode = "ssh-auth" | "password" | "confirm";
@@ -94,19 +93,10 @@ function parseSshnukeRootPassword(command: string) {
 
 function storeChapter4RootPassword(password: string) {
   inMemoryChapter4RootPassword = password;
-  try {
-    window.sessionStorage.setItem(CH4_ROOT_PASSWORD_STORAGE_KEY, password);
-  } catch {
-    // sessionStorage가 막힌 환경에서는 현재 입력 세션 안의 fallback만 사용한다.
-  }
 }
 
 function getStoredChapter4RootPassword() {
-  try {
-    return window.sessionStorage.getItem(CH4_ROOT_PASSWORD_STORAGE_KEY) ?? inMemoryChapter4RootPassword;
-  } catch {
-    return inMemoryChapter4RootPassword;
-  }
+  return inMemoryChapter4RootPassword;
 }
 
 function isInternalStoryCommand(command: string) {
@@ -557,14 +547,18 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                     <input
                       ref={inputRef}
                       data-clarity-mask="true"
-                      type={outputInlinePromptMode === "password" ? "password" : "text"}
+                      type="text"
                       value={inputValue}
                       onChange={(event) => setInputValue(event.target.value)}
                       autoFocus
                       className="min-w-20 flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
                       autoComplete="off"
                       spellCheck="false"
-                      style={{ textShadow: "none" }}
+                      style={{
+                        textShadow: "none",
+                        color: outputInlinePromptMode === "password" ? "transparent" : undefined,
+                        caretColor: "rgb(156 163 175)",
+                      }}
                       onPaste={handlePaste}
                       onKeyDown={handleKeyDown}
                     />

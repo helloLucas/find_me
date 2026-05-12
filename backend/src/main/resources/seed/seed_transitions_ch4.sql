@@ -326,13 +326,8 @@ WITH transition_values AS (
             'mount_lucas_server_session',
             'server_rule',
             $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "mount", "args": ["/mnt/lucas-server"] },
-    { "command": "mount", "args": ["-a"] },
-    { "command": "mount", "argsAnyOrder": ["-t", "9p", "guest@lucas-server:/home/guest", "/mnt/lucas-server"] },
-    { "command": "mount", "argsAnyOrder": ["guest@lucas-server:/home/guest", "/mnt/lucas-server"] }
-  ]
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -461,13 +456,8 @@ WITH transition_values AS (
             'mount_lucas_server_session',
             'server_rule',
             $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "mount", "args": ["/mnt/lucas-server"] },
-    { "command": "mount", "args": ["-a"] },
-    { "command": "mount", "argsAnyOrder": ["-t", "9p", "guest@lucas-server:/home/guest", "/mnt/lucas-server"] },
-    { "command": "mount", "argsAnyOrder": ["guest@lucas-server:/home/guest", "/mnt/lucas-server"] }
-  ]
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -822,13 +812,8 @@ WITH transition_values AS (
             'mount_lucas_server_session',
             'server_rule',
             $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "mount", "args": ["/mnt/lucas-server"] },
-    { "command": "mount", "args": ["-a"] },
-    { "command": "mount", "argsAnyOrder": ["-t", "9p", "guest@lucas-server:/home/guest", "/mnt/lucas-server"] },
-    { "command": "mount", "argsAnyOrder": ["guest@lucas-server:/home/guest", "/mnt/lucas-server"] }
-  ]
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
 }$json$::jsonb,
             $json${
   "setFlags": {

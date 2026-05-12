@@ -739,7 +739,7 @@ public class TerminalCommandService {
                       ? "   Source: /mnt/lucas-server/laplace.qasm"
                       : "   Source: missing (/mnt/lucas-server/laplace.qasm is not mounted)",
                   lucasServerMounted
-                      ? "   Mount : guest@lucas-server:/home/guest -> /mnt/lucas-server"
+                      ? "   Mount : lucas-server:/home/guest -> /mnt/lucas-server"
                       : "   Mount : required before start"))
           .cwd(cwd)
           .prompt(buildPrompt(cwd, vfs))
@@ -801,7 +801,7 @@ public class TerminalCommandService {
     if (args.isEmpty()) {
       List<String> stdout = new ArrayList<>();
       if (lucasServerMounted) {
-        stdout.add("guest@lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)");
+        stdout.add("lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)");
       }
       return TerminalResult.builder()
           .stdout(stdout)
@@ -811,20 +811,14 @@ public class TerminalCommandService {
           .build();
     }
 
-    boolean mountsLucasServer =
-        args.equals(Collections.singletonList("/mnt/lucas-server"))
-            || args.equals(Collections.singletonList("-a"))
-            || (args.contains("guest@lucas-server:/home/guest")
-                && args.contains("/mnt/lucas-server"));
+    boolean mountsLucasServer = isLucasServerMountCommand(args);
     if (!mountsLucasServer) {
       return buildErrorResult(cwd, vfs, "mount: unsupported mount target");
     }
 
     if (lucasServerMounted) {
       return TerminalResult.builder()
-          .stdout(
-              Collections.singletonList(
-                  "mount: /mnt/lucas-server is already mounted"))
+          .stdout(Collections.singletonList("mount: /mnt/lucas-server is already mounted"))
           .cwd(cwd)
           .prompt(buildPrompt(cwd, vfs))
           .resultCode("SUCCESS")
@@ -835,6 +829,51 @@ public class TerminalCommandService {
         cwd,
         vfs,
         "mount: /mnt/lucas-server: not mounted yet; use the current root session prompt to attach lucas-server");
+  }
+
+  private boolean isLucasServerMountCommand(List<String> args) {
+    if (args.equals(Collections.singletonList("-a"))) {
+      return true;
+    }
+
+    List<String> operands = mountOperands(args);
+    if (operands.size() == 1) {
+      return isLucasServerMountPoint(operands.get(0));
+    }
+
+    if (operands.size() == 2) {
+      return isLucasServerMountSource(operands.get(0)) && isLucasServerMountPoint(operands.get(1));
+    }
+
+    return false;
+  }
+
+  private List<String> mountOperands(List<String> args) {
+    List<String> operands = new ArrayList<>();
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-t".equals(arg) || "-o".equals(arg)) {
+        i++;
+        continue;
+      }
+      operands.add(arg);
+    }
+    return operands;
+  }
+
+  private boolean isLucasServerMountSource(String value) {
+    if (value == null) {
+      return false;
+    }
+    String normalized = value.replaceFirst("^guest@", "");
+    return "lucas-server:/home/guest".equals(normalized)
+        || "lucas-server:/home/guest/".equals(normalized)
+        || "lucas-server:~".equals(normalized)
+        || "lucas-server:~/".equals(normalized);
+  }
+
+  private boolean isLucasServerMountPoint(String value) {
+    return "/mnt/lucas-server".equals(value) || "/mnt/lucas-server/".equals(value);
   }
 
   private TerminalResult handleExecute(ParsedCommand command, String cwd, VfsContext vfs) {
@@ -851,7 +890,7 @@ public class TerminalCommandService {
           target.startsWith("/mnt/lucas-server")
               ? "execute: "
                   + target
-                  + ": No such file or directory. mount /mnt/lucas-server first"
+                  + ": No such file or directory. mount lucas-server:/home/guest /mnt/lucas-server first"
               : "execute: " + target + ": No such file or directory";
       return buildErrorResult(cwd, vfs, message);
     }
@@ -863,8 +902,7 @@ public class TerminalCommandService {
     return TerminalResult.builder()
         .stdout(
             Arrays.asList(
-                "execute: " + resolvedPath,
-                "Laplace execution requires explicit confirmation."))
+                "execute: " + resolvedPath, "Laplace execution requires explicit confirmation."))
         .cwd(cwd)
         .prompt(buildPrompt(cwd, vfs))
         .resultCode("SUCCESS")
