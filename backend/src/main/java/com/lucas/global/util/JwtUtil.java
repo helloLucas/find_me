@@ -123,4 +123,14 @@ public class JwtUtil {
         .signWith(secretKey)
         .compact();
   }
+
+  public String createAdminPinToken(Long userId, Long expiredMs) {
+    return Jwts.builder()
+        .claim("category", "admin_pin")
+        .claim("userId", userId)
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + expiredMs))
+        .signWith(secretKey)
+        .compact();
+  }
 }

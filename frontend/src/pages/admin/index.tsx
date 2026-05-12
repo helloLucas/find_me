@@ -49,11 +49,20 @@ function makeDefaultFilters(): Filters {
   };
 }
 
+const ADMIN_PIN_REAUTH_WARNING_MS = 60_000;
+
 export default function AdminPage() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const checkAuth = useAuthStore((s) => s.checkAuth);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
   const [adminVerified, setAdminVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [reauthOpen, setReauthOpen] = useState(false);
+  const [reauthPinInput, setReauthPinInput] = useState("");
+  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthRemainingSec, setReauthRemainingSec] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +79,90 @@ export default function AdminPage() {
   });
 
   const selectedUserIds = useMemo(() => selectedUsers.map((u) => u.userId), [selectedUsers]);
+
+  const submitPinVerification = async (pin: string, onSuccess: () => void) => {
+    try {
+      await adminApi.verifyAdminPin(pin);
+      setPinVerified(true);
+      setPinError(null);
+      setAdminCheckDone(false);
+      onSuccess();
+    } catch (e: any) {
+      adminApi.clearAdminPinToken();
+      setPinVerified(false);
+      const status = e?.response?.status;
+      if (status === 403) {
+        setPinError("PIN 번호가 올바르지 않습니다.");
+        return;
+      }
+      if (status === 500) {
+        setPinError("관리자 PIN 설정 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      setPinError("PIN 검증 중 오류가 발생했습니다.");
+    }
+  };
+
+  const verifyPin = async () => {
+    await submitPinVerification(pinInput, () => {
+      setPinInput("");
+    });
+  };
+
+  const verifyPinFromReauth = async () => {
+    try {
+      await adminApi.verifyAdminPin(reauthPinInput);
+      setReauthOpen(false);
+      setReauthPinInput("");
+      setReauthError(null);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 403) {
+        setReauthError("PIN 번호가 올바르지 않습니다.");
+        return;
+      }
+      if (status === 500) {
+        setReauthError("관리자 PIN 설정 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      setReauthError("PIN 검증 중 오류가 발생했습니다.");
+    }
+  };
+
+  const appendPinDigit = (digit: string) => {
+    if (pinInput.length >= 4) return;
+    setPinInput((prev) => `${prev}${digit}`.slice(0, 4));
+    if (pinError) setPinError(null);
+  };
+
+  const removePinDigit = () => {
+    setPinInput((prev) => prev.slice(0, -1));
+    if (pinError) setPinError(null);
+  };
+
+  const resetPinInput = () => {
+    adminApi.clearAdminPinToken();
+    setPinInput("");
+    setPinError(null);
+    setPinVerified(false);
+  };
+
+  const appendReauthDigit = (digit: string) => {
+    if (reauthPinInput.length >= 4) return;
+    setReauthPinInput((prev) => `${prev}${digit}`.slice(0, 4));
+    if (reauthError) setReauthError(null);
+  };
+
+  const removeReauthDigit = () => {
+    setReauthPinInput((prev) => prev.slice(0, -1));
+    if (reauthError) setReauthError(null);
+  };
+
+  const resetReauthInput = () => {
+    setReauthPinInput("");
+    if (reauthError) setReauthError(null);
+  };
+
 
   const loadInsights = async (targetFilters: Filters, userIds: number[]) => {
     setLoading(true);
@@ -117,7 +210,64 @@ export default function AdminPage() {
   }, [isInitialized, checkAuth]);
 
   useEffect(() => {
-    if (!isInitialized) return;
+    const alreadyVerified = Boolean(adminApi.getAdminPinToken());
+    if (alreadyVerified) {
+      setPinVerified(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pinVerified) {
+      setReauthOpen(false);
+      return;
+    }
+
+    const remainingMs = adminApi.getAdminPinTokenRemainingMs();
+    if (remainingMs === null) return;
+
+    if (remainingMs <= 0) {
+      adminApi.clearAdminPinToken();
+      setPinVerified(false);
+      setAdminVerified(false);
+      setReauthOpen(false);
+      return;
+    }
+
+    if (remainingMs <= ADMIN_PIN_REAUTH_WARNING_MS) {
+      setReauthOpen(true);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setReauthOpen(true);
+    }, remainingMs - ADMIN_PIN_REAUTH_WARNING_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [pinVerified, adminVerified]);
+
+  useEffect(() => {
+    if (!reauthOpen) return;
+
+    const tick = () => {
+      const remainingMs = adminApi.getAdminPinTokenRemainingMs();
+      if (remainingMs === null || remainingMs <= 0) {
+        setReauthRemainingSec(0);
+        adminApi.clearAdminPinToken();
+        setReauthOpen(false);
+        setPinVerified(false);
+        setAdminVerified(false);
+        return;
+      }
+      setReauthRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [reauthOpen]);
+
+  useEffect(() => {
+    if (!isInitialized || !pinVerified) return;
     setAdminCheckDone(false);
     let mounted = true;
     const verifyAndLoad = async () => {
@@ -131,6 +281,8 @@ export default function AdminPage() {
         await loadInsights(defaults, []);
       } catch {
         if (!mounted) return;
+        adminApi.clearAdminPinToken();
+        setPinVerified(false);
         setAdminVerified(false);
       } finally {
         if (mounted) setAdminCheckDone(true);
@@ -140,7 +292,7 @@ export default function AdminPage() {
     return () => {
       mounted = false;
     };
-  }, [isInitialized]);
+  }, [isInitialized, pinVerified]);
 
   useEffect(() => {
     if (!isInitialized || !adminVerified) return;
@@ -293,6 +445,91 @@ export default function AdminPage() {
     return null;
   }
 
+  if (!pinVerified) {
+    return (
+      <div className="min-h-screen bg-[#060a12] text-slate-100 flex items-center justify-center p-6 font-desktop-ui">
+        <div className="w-full max-w-md rounded-2xl border border-cyan-800/60 bg-[#0a1020] p-6 shadow-[0_0_24px_rgba(34,211,238,0.16)]">
+          <h1 className="text-2xl font-semibold mb-1">관리자 3차 인증</h1>
+          <p className="text-sm text-slate-400 mb-5">보안 키패드로 4자리 PIN을 입력하세요.</p>
+
+          <input
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            value={pinInput}
+            onChange={(e) => {
+              const next = e.target.value.replace(/\D/g, "").slice(0, 4);
+              setPinInput(next);
+              if (pinError) setPinError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void verifyPin();
+            }}
+            className="absolute -left-[9999px] opacity-0 pointer-events-none"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+
+          <div className="mb-4 rounded-xl border border-cyan-900/50 bg-slate-950/70 p-4">
+            <div className="flex justify-center gap-3">
+              {[0, 1, 2, 3].map((idx) => (
+                <span
+                  key={idx}
+                  className={`h-3 w-3 rounded-full border ${idx < pinInput.length ? "bg-cyan-300 border-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.9)]" : "bg-slate-800 border-slate-600"}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {pinError && <p className="text-sm text-red-300 mb-3 text-center">{pinError}</p>}
+
+          <div className="grid grid-cols-3 gap-2">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
+              <button
+                key={digit}
+                type="button"
+                onClick={() => appendPinDigit(digit)}
+                className="h-12 rounded-lg border border-slate-700 bg-slate-900/70 text-lg font-semibold hover:border-cyan-500 hover:bg-slate-800"
+              >
+                {digit}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={removePinDigit}
+              className="h-12 rounded-lg border border-amber-700/70 bg-amber-950/30 text-sm font-semibold hover:bg-amber-900/40"
+            >
+              삭제
+            </button>
+            <button
+              type="button"
+              onClick={() => appendPinDigit("0")}
+              className="h-12 rounded-lg border border-slate-700 bg-slate-900/70 text-lg font-semibold hover:border-cyan-500 hover:bg-slate-800"
+            >
+              0
+            </button>
+            <button
+              type="button"
+              onClick={resetPinInput}
+              className="h-12 rounded-lg border border-slate-700 bg-slate-800/80 text-sm font-semibold hover:bg-slate-700"
+            >
+              초기화
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void verifyPin()}
+            disabled={pinInput.length !== 4}
+            className="mt-3 w-full h-12 rounded-lg bg-cyan-700 text-base font-semibold hover:bg-cyan-600 disabled:opacity-40"
+          >
+            인증 확인
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!adminCheckDone) {
     return null;
   }
@@ -315,6 +552,91 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 p-5 md:p-8 font-desktop-ui pb-12">
+      {reauthOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-md rounded-2xl border border-cyan-800/60 bg-[#0a1020] p-6 shadow-[0_0_24px_rgba(34,211,238,0.16)]">
+            <p className="text-center text-cyan-200 text-sm tracking-wide">재인증까지 남은 시간</p>
+            <p className="text-center text-5xl font-bold text-amber-300 mt-1 leading-none">{reauthRemainingSec}</p>
+            <h2 className="text-2xl font-semibold mt-5 mb-1">관리자 재인증</h2>
+            <p className="text-sm text-slate-400 mb-5">보안 키패드로 4자리 PIN을 다시 입력하세요.</p>
+
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={reauthPinInput}
+              onChange={(e) => {
+                const next = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setReauthPinInput(next);
+                if (reauthError) setReauthError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void verifyPinFromReauth();
+              }}
+              className="absolute -left-[9999px] opacity-0 pointer-events-none"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+
+            <div className="mb-4 rounded-xl border border-cyan-900/50 bg-slate-950/70 p-4">
+              <div className="flex justify-center gap-3">
+                {[0, 1, 2, 3].map((idx) => (
+                  <span
+                    key={idx}
+                    className={`h-3 w-3 rounded-full border ${idx < reauthPinInput.length ? "bg-cyan-300 border-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.9)]" : "bg-slate-800 border-slate-600"}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {reauthError && <p className="text-sm text-red-300 mb-3 text-center">{reauthError}</p>}
+
+            <div className="grid grid-cols-3 gap-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
+                <button
+                  key={digit}
+                  type="button"
+                  onClick={() => appendReauthDigit(digit)}
+                  className="h-12 rounded-lg border border-slate-700 bg-slate-900/70 text-lg font-semibold hover:border-cyan-500 hover:bg-slate-800"
+                >
+                  {digit}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={removeReauthDigit}
+                className="h-12 rounded-lg border border-amber-700/70 bg-amber-950/30 text-sm font-semibold hover:bg-amber-900/40"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={() => appendReauthDigit("0")}
+                className="h-12 rounded-lg border border-slate-700 bg-slate-900/70 text-lg font-semibold hover:border-cyan-500 hover:bg-slate-800"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={resetReauthInput}
+                className="h-12 rounded-lg border border-slate-700 bg-slate-800/80 text-sm font-semibold hover:bg-slate-700"
+              >
+                초기화
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void verifyPinFromReauth()}
+              disabled={reauthPinInput.length !== 4}
+              className="mt-3 w-full h-12 rounded-lg bg-cyan-700 text-base font-semibold hover:bg-cyan-600 disabled:opacity-40"
+            >
+              인증 확인
+            </button>
+          </div>
+        </div>
+      )}
       <header className="mb-6">
         <p className="text-xs text-cyan-300 uppercase tracking-wider">Admin Analytics</p>
         <h1 className="text-2xl md:text-4xl font-semibold mt-1">운영 분석 대시보드</h1>
@@ -851,4 +1173,7 @@ function Th({ children }: { children: ReactNode }) {
 function Td({ children }: { children: ReactNode }) {
   return <td className="px-3 py-2.5 whitespace-nowrap text-slate-100">{children}</td>;
 }
+
+
+
 
