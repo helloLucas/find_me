@@ -6,14 +6,33 @@ import MainMenu from '../widgets/MainMenu/MainMenu';
 import { useModalStore } from '../app/store/modalStore';
 import { AuthSelectionModal } from '../widgets/AuthSelection';
 import { useTrackVisible } from '../shared/analytics/useTrackVisible';
+import { endingApi } from '../shared/api/endingApi';
+import { tokenManager } from '../shared/utils/tokenManager';
+
+let alternateTitleSceneCache: { accessToken: string; videoUrl: string } | null = null;
+
+function getCachedAlternateTitleVideoUrl() {
+    const accessToken = tokenManager.getAccessToken();
+    if (!accessToken || alternateTitleSceneCache?.accessToken !== accessToken) {
+        return null;
+    }
+
+    return alternateTitleSceneCache.videoUrl;
+}
 
 const Home = () => {
     const { t } = useTranslation();
     const checkAuth = useAuthStore((state) => state.checkAuth);
+    const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+    const isInitialized = useAuthStore((state) => state.isInitialized);
     const { handleLoginWithProvider, handleGuestAccess, handleLogout } = useAuthActions();
 
     const openModal = useModalStore((state) => state.openModal);
+    const cachedAlternateTitleVideoUrl = getCachedAlternateTitleVideoUrl();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [hasAlternateTitleScene, setHasAlternateTitleScene] = useState(Boolean(cachedAlternateTitleVideoUrl));
+    const [alternateTitleVideoUrl, setAlternateTitleVideoUrl] = useState<string | null>(cachedAlternateTitleVideoUrl);
+    const [isTitleSceneResolving, setIsTitleSceneResolving] = useState(false);
     const landingViewRef = useTrackVisible<HTMLDivElement>({
         eventName: 'home_landing_visible_5s',
         params: { page: 'home' },
@@ -68,19 +87,95 @@ const Home = () => {
         };
     }, [checkAuth]);
 
+    useEffect(() => {
+        let isMounted = true;
+        const accessToken = tokenManager.getAccessToken();
+        const cachedVideoUrl = getCachedAlternateTitleVideoUrl();
+
+        if (!isInitialized || !isLoggedIn) {
+            setHasAlternateTitleScene(false);
+            setAlternateTitleVideoUrl(null);
+            setIsTitleSceneResolving(false);
+            return () => {
+                isMounted = false;
+            };
+        }
+
+        if (cachedVideoUrl) {
+            setHasAlternateTitleScene(true);
+            setAlternateTitleVideoUrl(cachedVideoUrl);
+            setIsTitleSceneResolving(false);
+        } else {
+            setIsTitleSceneResolving(true);
+        }
+
+        endingApi
+            .getProgress()
+            .then((progress) => {
+                if (isMounted) {
+                    setHasAlternateTitleScene(progress.allUnlocked);
+                }
+
+                if (!progress.allUnlocked) {
+                    if (accessToken && alternateTitleSceneCache?.accessToken === accessToken) {
+                        alternateTitleSceneCache = null;
+                    }
+                    return null;
+                }
+
+                return endingApi.getTitleScene();
+            })
+            .then((titleScene) => {
+                if (isMounted) {
+                    const videoUrl = titleScene?.videoUrl ?? null;
+                    setAlternateTitleVideoUrl(videoUrl);
+                    setIsTitleSceneResolving(false);
+
+                    if (accessToken && videoUrl) {
+                        alternateTitleSceneCache = { accessToken, videoUrl };
+                    }
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setHasAlternateTitleScene(false);
+                    setAlternateTitleVideoUrl(null);
+                    setIsTitleSceneResolving(false);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isInitialized, isLoggedIn]);
+
     const backgroundImageUrl = '/lucas_landing_user_bg.jpg';
+    const titleLinePrimary = 'FIND ME';
+    const titleLineSecondary = ': VOID CITY';
+    const pixelSliceText = 'FIND ME';
+    const shouldShowAlternateTitleVideo = hasAlternateTitleScene && alternateTitleVideoUrl;
+    const shouldHoldLanding = isTitleSceneResolving && !alternateTitleVideoUrl;
+    const landingStyle = shouldShowAlternateTitleVideo || shouldHoldLanding
+        ? {
+            backgroundImage: 'linear-gradient(90deg, #020204 0%, #05070c 42%, #020204 100%)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#000'
+        }
+        : {
+            backgroundImage: `linear-gradient(to right, #000 0%, #000 30%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImageUrl})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'right center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#000'
+        };
 
     return (
         <div
             ref={landingViewRef}
             className="min-h-screen w-full relative overflow-hidden bg-[#0a1118] flex flex-col justify-center select-none pixel-crisp"
-            style={{
-                backgroundImage: `linear-gradient(to right, #000 0%, #000 30%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0.4) 100%), url(${backgroundImageUrl})`,
-                backgroundSize: 'contain',
-                backgroundPosition: 'right center',
-                backgroundRepeat: 'no-repeat',
-                backgroundColor: '#000'
-            }}
+            style={landingStyle}
         >
             <style>{`
                 .pixel-crisp {
@@ -169,21 +264,41 @@ const Home = () => {
                 .corner-br { bottom: -4px; right: -4px; border-left: 0; border-top: 0; }
             `}</style>
 
+            {shouldShowAlternateTitleVideo && (
+                <>
+                    <video
+                        aria-hidden="true"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        disablePictureInPicture
+                        controlsList="nodownload noplaybackrate noremoteplayback"
+                        tabIndex={-1}
+                        onContextMenu={(event) => event.preventDefault()}
+                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                    >
+                        <source src={alternateTitleVideoUrl} type="video/mp4" />
+                    </video>
+                </>
+            )}
+
             <div className="absolute top-32 left-16 md:top-40 md:left-24 flex flex-col">
                 <header className="flex flex-col mb-20 select-none glitch-group">
                     <h1 
                         className="glitch-text-pro font-landing-title text-7xl md:text-8xl tracking-tighter"
-                        data-text="FIND ME"
+                        data-text={titleLinePrimary}
                     >
-                        FIND ME
+                        {titleLinePrimary}
                     </h1>
                     <h2 
                         className="glitch-text-pro font-landing-title text-4xl md:text-5xl tracking-widest self-end -mt-6 mr-4 opacity-80"
-                        data-text=": VOID CITY"
+                        data-text={titleLineSecondary}
                     >
-                        : VOID CITY
+                        {titleLineSecondary}
                     </h2>
-                    <div className="pixel-slice" data-text="FIND ME"></div>
+                    <div className="pixel-slice" data-text={pixelSliceText}></div>
                 </header>
 
                 <MainMenu

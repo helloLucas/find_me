@@ -30,7 +30,7 @@ class StoryServiceImplChapter3RuleTest {
   void setUp() {
     storyService =
         new StoryServiceImpl(
-            null, null, null, null, null, null, null, null, null, null, null, objectMapper);
+            null, null, null, null, null, null, null, null, null, null, null, null, objectMapper);
     storyService.init();
   }
 
@@ -44,6 +44,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             storyNodeRepository,
+            null,
             null,
             null,
             null,
@@ -231,6 +232,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             storyTransitionRepository,
+            null,
             null,
             null,
             null,
@@ -563,6 +565,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             null,
+            null,
             fragmentRepository,
             objectMapper);
     storyService.init();
@@ -595,6 +598,7 @@ class StoryServiceImplChapter3RuleTest {
     UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
     storyService =
         new StoryServiceImpl(
+            null,
             null,
             null,
             null,
