@@ -341,6 +341,12 @@ export type AdminFilterOptionsResponse = {
   }>;
 };
 
+export type AdminMeResponse = {
+  userId: number;
+  role: "ADMIN" | "MEMBER" | "GUEST" | string;
+  admin: boolean;
+};
+
 export const adminApi = {
   getDashboard: async (limit = 100): Promise<AdminDashboardResponse> => {
     const response = await axiosInstance.get<BaseResponse<AdminDashboardResponse>>(
@@ -384,6 +390,10 @@ export const adminApi = {
     const response = await axiosInstance.get<BaseResponse<AdminFilterOptionsResponse>>(
       `/api/v1/admin/filter-options?${q.toString()}`
     );
+    return response.data.data;
+  },
+  getAdminMe: async (): Promise<AdminMeResponse> => {
+    const response = await axiosInstance.get<BaseResponse<AdminMeResponse>>(`/api/v1/admin/me`);
     return response.data.data;
   },
   getEsInsights: async (params: {

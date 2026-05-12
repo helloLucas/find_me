@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -50,11 +50,12 @@ function makeDefaultFilters(): Filters {
 }
 
 export default function AdminPage() {
-  const navigate = useNavigate();
-  const role = useAuthStore((s) => s.role);
   const isInitialized = useAuthStore((s) => s.isInitialized);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
+  const [adminCheckDone, setAdminCheckDone] = useState(false);
+  const [adminVerified, setAdminVerified] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AdminEsAnalyticsResponse | null>(null);
 
@@ -110,23 +111,42 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (!isInitialized) return;
-    if (role !== "ADMIN") {
-      navigate("/lobby", { replace: true });
-      return;
+    if (!isInitialized) {
+      checkAuth();
     }
-
-    const defaults = makeDefaultFilters();
-    setFilters(defaults);
-    void loadFilterOptions();
-    void loadInsights(defaults, []);
-  }, [isInitialized, role, navigate]);
+  }, [isInitialized, checkAuth]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+    setAdminCheckDone(false);
+    let mounted = true;
+    const verifyAndLoad = async () => {
+      try {
+        await adminApi.getAdminMe();
+        if (!mounted) return;
+        setAdminVerified(true);
+        const defaults = makeDefaultFilters();
+        setFilters(defaults);
+        await loadFilterOptions();
+        await loadInsights(defaults, []);
+      } catch {
+        if (!mounted) return;
+        setAdminVerified(false);
+      } finally {
+        if (mounted) setAdminCheckDone(true);
+      }
+    };
+    void verifyAndLoad();
+    return () => {
+      mounted = false;
+    };
+  }, [isInitialized]);
+
+  useEffect(() => {
+    if (!isInitialized || !adminVerified) return;
     void loadFilterOptions(filters.chapterCode);
     setFilters((prev) => ({ ...prev, nodeCode: "" }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.chapterCode]);
+  }, [filters.chapterCode, isInitialized, adminVerified]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -149,12 +169,13 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (!isInitialized || !adminVerified) return;
     const keyword = userKeyword.trim();
     const timer = window.setTimeout(() => {
       void loadCandidates(keyword);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [userKeyword]);
+  }, [userKeyword, isInitialized, adminVerified]);
 
   const onApply = () => {
     void loadInsights(filters, selectedUserIds);
@@ -268,8 +289,20 @@ export default function AdminPage() {
     return journey.nodeActionSummaries.find((s) => s.nodeCode === nodeCode) ?? null;
   };
 
+  if (!isInitialized) {
+    return null;
+  }
+
+  if (!adminCheckDone) {
+    return null;
+  }
+
+  if (!adminVerified) {
+    return <Navigate to="/" replace />;
+  }
+
   if (loading) {
-    return <div className="min-h-screen bg-[#060a12] text-white p-8">관리자 분석 데이터 로딩 중...</div>;
+    return <div className="min-h-screen bg-[#060a12] text-white p-8">로딩 중...</div>;
   }
 
   if (error) {
@@ -818,3 +851,4 @@ function Th({ children }: { children: ReactNode }) {
 function Td({ children }: { children: ReactNode }) {
   return <td className="px-3 py-2.5 whitespace-nowrap text-slate-100">{children}</td>;
 }
+
