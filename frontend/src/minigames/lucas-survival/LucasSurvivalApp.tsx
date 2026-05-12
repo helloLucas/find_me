@@ -1200,7 +1200,7 @@ function createRuntime(): RuntimeState {
   };
 }
 
-export function LucasSurvivalApp() {
+export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<RuntimeState>(createRuntime());
   const spriteStoreRef = useRef<SpriteStore>({});
@@ -1243,14 +1243,14 @@ export function LucasSurvivalApp() {
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
 
   useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current) return;
+    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
 
     hasRecordedClearRef.current = true;
     void fragmentApi.acquireFragment('4').catch((error) => {
       hasRecordedClearRef.current = false;
       console.error('Failed to record Lucas survival clear:', error);
     });
-  }, [hud.status]);
+  }, [hud.status, isPractice]);
 
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -4615,35 +4615,36 @@ export function LucasSurvivalApp() {
     }
 
     if (hud.status === 'clear' || hud.status === 'failed') {
+      const isClear = hud.status === 'clear';
       return (
         <div className={`ls-overlay result ${hud.status}`}>
           <div className="ls-result-burst" />
-          <h1 className={hud.status === 'clear' ? 'clear' : 'failed'}>
-            {hud.result?.title}
+          <h1 className={isClear ? 'clear' : 'failed'}>
+            {isPractice && isClear ? 'ARCADE CLEAR!' : hud.result?.title}
           </h1>
           <p className="ls-result-subtitle">
-            {hud.status === 'clear' ? '시스템 복구 완료' : '연결이 끊어짐'}
+            {isClear ? (isPractice ? '아케이드 세션 종료' : '시스템 복구 완료') : '연결이 끊어짐'}
           </p>
           <div className={`ls-rank-badge rank-${hud.result?.rank ?? 'D'}`}>랭크 {hud.result?.rank}</div>
-          <p>{hud.result?.desc}</p>
-                    <div className="ls-result-grid">
+          <p>{isPractice && isClear ? 'Practice session complete. No data was synced.' : hud.result?.desc}</p>
+          <div className="ls-result-grid">
             <section className="ls-result-block summary">
-              <h3>{'\uC804\uD22C \uC694\uC57D'}</h3>
-              <div>{'\uC0DD\uC874 \uC2DC\uAC04'}: {hud.result?.elapsedText}</div>
-              <div>{'\uCC98\uCE58 \uC218'}: {hud.result?.kills}</div>
-              <div>{'\uB3C4\uB2EC \uB808\uBCA8'}: {hud.result?.level}</div>
-              <div>{'\uBCF4\uC2A4 \uCC98\uCE58'}: {hud.result?.bossKills}</div>
+              <h3>전투 요약</h3>
+              <div>생존 시간: {hud.result?.elapsedText}</div>
+              <div>처치 수: {hud.result?.kills}</div>
+              <div>도달 레벨: {hud.result?.level}</div>
+              <div>보스 처치: {hud.result?.bossKills}</div>
             </section>
             <section className="ls-result-block upgrades">
-              <h3>{'\uC120\uD0DD \uC5C5\uADF8\uB808\uC774\uB4DC'}</h3>
+              <h3>선택 업그레이드</h3>
               <ul>
                 {(hud.result?.upgradeNames.length ?? 0) > 0
                   ? hud.result?.upgradeNames.slice(-6).map((name, idx) => <li key={`${name}-${idx}`}>{name}</li>)
-                  : <li>{'\uC5C6\uC74C'}</li>}
+                  : <li>없음</li>}
               </ul>
             </section>
             <section className="ls-result-block skills">
-              <h3>{'\uD68D\uB4DD \uC2A4\uD0AC'}</h3>
+              <h3>획득 스킬</h3>
               <ul className="ls-result-skill-list">
                 {(hud.result?.skillNames.length ?? 0) > 0
                   ? hud.result?.skillNames.slice(0, 8).map((name) => <li key={name}>{name}</li>)
@@ -4651,12 +4652,23 @@ export function LucasSurvivalApp() {
               </ul>
             </section>
             <section className="ls-result-block rank">
-              <h3>{'\uC804\uD22C \uD3C9\uAC00'}</h3>
+              <h3>전투 평가</h3>
               <div className="ls-result-rank-text">랭크 {hud.result?.rank}</div>
-              <p>{'\uC0DD\uC874 \uC2DC\uAC04, \uCC98\uCE58 \uC218, \uB808\uBCA8, \uBCF4\uC2A4 \uCC98\uCE58\uB97C \uAE30\uBC18\uC73C\uB85C \uB7AD\uD06C\uAC00 \uACB0\uC815\uB41C\uB2E4.'}</p>
+              <p>생존 시간, 처치 수, 레벨, 보스 처치를 기반으로 랭크가 결정된다.</p>
             </section>
           </div>
-          <button className="ls-btn result-btn" onClick={startGame}>RESTART</button>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <button className="ls-btn result-btn" onClick={startGame}>RESTART</button>
+            {isPractice && isClear && (
+              <button 
+                className="ls-btn result-btn" 
+                style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
+                onClick={() => window.location.href = '/minigames'}
+              >
+                RETURN TO LOBBY
+              </button>
+            )}
+          </div>
         </div>
       );
     }
