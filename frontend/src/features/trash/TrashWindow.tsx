@@ -79,7 +79,7 @@ echo FRAGMENT | nc 127.0.0.1 9091 > laplace_fragment_02.sh
   const isChapter3 = chapterCode === "week03";
 
   return (
-    <div className="p-6 h-full bg-[#1e1e1e] select-none text-white font-mono overflow-y-auto">
+    <div className="p-6 h-full bg-[#1e1e1e] select-none text-white font-trash overflow-y-auto">
       {isChapter3 ? (
         <div className="grid grid-cols-3 gap-6">
           {trashItems.map((item) => (
@@ -94,7 +94,10 @@ echo FRAGMENT | nc 127.0.0.1 9091 > laplace_fragment_02.sh
                   !
                 </div>
               </div>
-              <span className="text-[11px] tracking-tight text-center break-all leading-tight">
+              <span
+                className="w-full max-w-[150px] truncate text-center text-xs font-medium leading-tight"
+                title={item.name}
+              >
                 {item.name}
               </span>
             </div>
