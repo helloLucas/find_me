@@ -55,6 +55,7 @@ function resolveWindowId(
   if (idOrType === "email") return "email";
   if (idOrType === "notepad") return "notepad";
   if (idOrType === "trash") return "trash";
+  if (idOrType === "lucas_survival") return "lucas_survival";
 
   return null;
 }
