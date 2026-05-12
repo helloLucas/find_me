@@ -174,7 +174,7 @@ function resolveMessageSfx(
 }
 
 function parseTerminalPromptContext(line: string): TerminalPromptContext | undefined {
-  const match = line.match(/^([^@\s]+)@([^:\s]+):([^\r\n$]+)\$$/);
+  const match = line.match(/^([^@\s]+)@([^:\s]+):([^\r\n$#]+)[$#]\s*$/);
   if (!match) return undefined;
 
   return {
@@ -395,11 +395,19 @@ function applyStoryNodeOutputBundle(
     );
   } else if (terminalProfile) {
     const placeholderContext = getPromptPlaceholderContext(node);
-    clientStore.setTerminalContext(
-      placeholderContext?.user ?? "guest",
-      placeholderContext?.host ?? "lucas-server",
-      placeholderContext?.path ?? "~"
-    );
+    if (placeholderContext) {
+      clientStore.setTerminalContext(
+        placeholderContext.user,
+        placeholderContext.host,
+        placeholderContext.path
+      );
+    } else if (
+      terminalProfile === "chapter4" &&
+      clientStore.terminalUser === "guest" &&
+      clientStore.terminalHost === "lucas-os"
+    ) {
+      clientStore.setTerminalContext("guest", "lucas-server", "~");
+    }
   }
 
   // 브라우저에서 실행된 액션이라면 터미널 출력을 건너뜀
@@ -565,6 +573,18 @@ function applyTerminalResult(terminalResult: TerminalResult | undefined, source?
 
     if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
       useWindowStore.getState().openWindow("terminal2");
+      continue;
+    }
+
+    if (line === "terminal://lucas-route") {
+      useWindowStore.getState().openWindow("browser");
+      useBrowserContentStore.getState().triggerLucasRouteTabClick();
+      continue;
+    }
+
+    if (line === "terminal://lucas-survival") {
+      useWindowStore.getState().openWindow("browser");
+      useBrowserContentStore.getState().triggerLucasSurvivalTabClick();
       continue;
     }
 
