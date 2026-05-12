@@ -117,3 +117,9 @@ app:
         es-base-url: ${HINT_ES_BASE_URL}
         es-index-pattern: ${HINT_ES_INDEX_PATTERN}
         es-timeout-ms: ${HINT_ES_TIMEOUT_MS}
+    admin:
+        analytics:
+            es-enabled: ${ADMIN_ANALYTICS_ES_ENABLED}
+            es-base-url: ${ADMIN_ANALYTICS_ES_BASE_URL}
+            es-index-pattern: ${ADMIN_ANALYTICS_ES_INDEX_PATTERN}
+            es-timeout-ms: ${ADMIN_ANALYTICS_ES_TIMEOUT_MS}
