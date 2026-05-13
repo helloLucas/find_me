@@ -1,4 +1,5 @@
 import React, { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWindowStore } from "../../../app/store/windowStore";
 import type { DesktopWindowId } from "../../../shared/config/desktopWindows";
 import { fragmentApi } from "../../../shared/api/fragmentApi";
@@ -198,6 +199,7 @@ function PerfectFireworks() {
 }
 
 export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("intro");
   const [roundIndex, setRoundIndex] = useState(0);
   const [hits, setHits] = useState(0);
@@ -712,7 +714,7 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice
               {isPractice && isClear && (
                 <button
                   type="button"
-                  onClick={() => window.location.href = '/minigames'}
+                  onClick={() => navigate('/minigames')}
                   className="h-11 w-44 border-2 border-emerald-300 bg-emerald-400 text-black font-bold transition hover:bg-emerald-200 active:translate-y-px"
                 >
                   RETURN TO LOBBY

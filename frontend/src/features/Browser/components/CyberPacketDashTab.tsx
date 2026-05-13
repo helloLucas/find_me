@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fragmentApi } from '../../../shared/api/fragmentApi';
 import { useWindowStore } from '../../../app/store/windowStore';
@@ -85,6 +86,7 @@ const TRACK_OBSTACLES: Obstacle[] = [
 ];
 
 export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentNode } = useStoryRuntimeStore();
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
@@ -1020,7 +1022,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
             </div>
             {isPractice ? (
               <button
-                onClick={() => window.location.href = '/minigames'}
+                onClick={() => navigate('/minigames')}
                 className="w-full py-3 rounded bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold text-sm tracking-widest shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
               >
                 RETURN TO ARCADE LOBBY

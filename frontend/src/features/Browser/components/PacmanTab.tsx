@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fragmentApi } from '../../../shared/api/fragmentApi';
 import { useWindowStore } from '../../../app/store/windowStore';
@@ -40,6 +41,7 @@ interface PacmanTabProps {
 }
 
 export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const [grid, setGrid] = useState<number[][]>(INITIAL_GRID.map(row => [...row]));
   const [pacman, setPacman] = useState<Entity>({ x: 7, y: 10 });
   const [ghosts, setGhosts] = useState<Ghost[]>([
@@ -460,7 +462,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) =>
             </span>
             {isPractice && (
               <button
-                onClick={() => window.location.href = '/minigames'}
+                onClick={() => navigate('/minigames')}
                 className="mt-10 px-8 py-3 bg-[#22ff55] text-black font-bold text-sm tracking-[0.2em] rounded-sm hover:bg-[#1add47] transition-all transform hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(34,255,85,0.4)]"
               >
                 RETURN TO LOBBY

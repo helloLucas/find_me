@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LUCAS_ROUTE_ASSETS,
   LUCAS_ROUTE_GAME_CONFIG,
@@ -768,6 +769,7 @@ function drawGame(
 }
 
 export default function LucasRouteGame({ isPractice }: { isPractice?: boolean }) {
+  const navigate = useNavigate();
   const [initialGame] = useState(() => createInitialGame());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const gameRef = useRef<GameState>(initialGame);
@@ -1049,7 +1051,7 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
                 </div>
                 <button
                   type="button"
-                  onClick={() => window.location.href = '/minigames'}
+                  onClick={() => navigate('/minigames')}
                   className="lucas-route-game__clear-btn"
                 >
                   RETURN TO ARCADE LOBBY

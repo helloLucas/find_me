@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fragmentApi } from '../../shared/api/fragmentApi';
 import {
   BASE_PLAYER_STATS,
@@ -1201,6 +1202,7 @@ function createRuntime(): RuntimeState {
 }
 
 export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
+  const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<RuntimeState>(createRuntime());
   const spriteStoreRef = useRef<SpriteStore>({});
@@ -4663,7 +4665,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
               <button
                 className="ls-btn result-btn"
                 style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
-                onClick={() => window.location.href = '/minigames'}
+                onClick={() => navigate('/minigames')}
               >
                 RETURN TO LOBBY
               </button>
