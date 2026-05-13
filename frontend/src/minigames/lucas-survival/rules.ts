@@ -9,9 +9,9 @@ export const MAIN_BOSS_TIMING = 180;
 export const FINAL_BOSS_TIMING = 270;
 
 export const RARITY_WEIGHT: Record<Rarity, number> = {
-  common: 60,
-  rare: 28,
-  epic: 10,
+  common: 70,
+  rare: 20,
+  epic: 8,
   legendary: 2,
 };
 
@@ -249,7 +249,7 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
     s.skills.nullGrenade.count = Math.min(3, s.skills.nullGrenade.count + 1);
   }, (s) => s.skills.unlocked.null_grenade),
   makeCard('turret-count', '프록시 터렛 증설', 'epic', 'skill_upgrade', 'PT+', '배치 포탑 개수를 늘린다.', '포탑 +1', (s) => {
-    s.skills.proxyTurret.turretCount = Math.min(3, s.skills.proxyTurret.turretCount + 1);
+    s.skills.proxyTurret.turretCount = Math.min(6, s.skills.proxyTurret.turretCount + 1);
   }, (s) => s.skills.unlocked.proxy_turret),
   makeCard('lightning-chain', '데이터 라이트닝 연쇄', 'epic', 'skill_upgrade', 'DL+', '연쇄 횟수를 늘린다.', '연쇄 +2', (s) => {
     s.skills.dataLightning.chainCount += 2;
@@ -325,13 +325,13 @@ export const getPhaseName = (elapsed: number) => {
 
 export const getSpawnRatePerSecond = (elapsed: number) => {
   if (elapsed < 30) return 1.0;
-  return 1 + elapsed * 0.015;
+  return 1 + elapsed * 0.028;
 };
 
 export const getEnemyMultipliers = (elapsed: number) => ({
-  hpMul: 1 + elapsed / 180,
-  speedMul: 1 + elapsed / 300,
-  damageMul: 1 + elapsed / 240,
+  hpMul: 1 + elapsed / 110,
+  speedMul: 1 + elapsed / 240,
+  damageMul: 1 + elapsed / 150,
 });
 
 export const getExpToNextLevel = (level: number) =>

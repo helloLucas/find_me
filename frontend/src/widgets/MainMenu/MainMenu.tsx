@@ -15,7 +15,7 @@ interface MainMenuProps {
  */
 const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogoutClick }) => {
   const { t } = useTranslation();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, role } = useAuthStore();
   const navigate = useNavigate();
 
   // 공통 스타일 클래스 정의
@@ -35,6 +35,17 @@ const MainMenu: React.FC<MainMenuProps> = ({ onLoginClick, onGuestClick, onLogou
           >
             {t('lobby.selectChapter')}
           </div>
+          {role === 'ADMIN' && (
+            <div
+              onClick={() => {
+                trackAnalyticsEvent('main_menu_dashboard_clicked');
+                navigate('/admin');
+              }}
+              className={`${baseClass} ${sizeClass} text-white`}
+            >
+              Dashboard
+            </div>
+          )}
           <div
             onClick={() => {
               trackAnalyticsEvent('main_menu_logout_clicked');

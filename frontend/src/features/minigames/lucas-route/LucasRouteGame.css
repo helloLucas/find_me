@@ -1,0 +1,389 @@
+.lucas-route-game {
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 16px;
+  color: #e8fbff;
+  background:
+    linear-gradient(90deg, rgba(69, 255, 224, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 18% 12%, rgba(255, 203, 107, 0.12), transparent 24%),
+    linear-gradient(135deg, #05090d 0%, #0d171a 48%, #1b1014 100%);
+  background-size: 28px 28px, 28px 28px, auto, auto;
+  font-family: var(--lucas-font-terminal);
+}
+
+.lucas-route-game *,
+.lucas-route-game *::before,
+.lucas-route-game *::after {
+  box-sizing: border-box;
+}
+
+.lucas-route-game__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  max-width: 1340px;
+  margin: 0 auto 12px;
+}
+
+.lucas-route-game__eyebrow {
+  margin: 0 0 6px;
+  color: #ffcb6b;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.lucas-route-game h1 {
+  margin: 0;
+  color: #45ffe0;
+  font-size: clamp(24px, 4vw, 44px);
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 0 16px rgba(69, 255, 224, 0.34);
+}
+
+.lucas-route-game__status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 190px;
+  justify-content: flex-end;
+  color: #dff9ff;
+  font-size: 14px;
+}
+
+.lucas-route-game__status span {
+  color: #9db8bf;
+}
+
+.lucas-route-game__status strong {
+  color: #e7f778;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.lucas-route-game[data-status="lost"] .lucas-route-game__status strong,
+.lucas-route-game[data-status="lost"] .lucas-route-game__status span {
+  color: #ff5777;
+}
+
+.lucas-route-game__shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1000px) 300px;
+  gap: 16px;
+  align-items: start;
+  max-width: 1340px;
+  margin: 0 auto;
+}
+
+.lucas-route-game__viewport {
+  position: relative;
+  min-width: 0;
+  border: 2px solid #33454d;
+  background: #05090d;
+  box-shadow:
+    0 0 0 2px rgba(69, 255, 224, 0.08),
+    0 22px 60px rgba(0, 0, 0, 0.48);
+}
+
+.lucas-route-game__viewport::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 50%, rgba(0, 0, 0, 0.12) 50%),
+    linear-gradient(90deg, rgba(255, 87, 119, 0.05), rgba(69, 255, 224, 0.02), rgba(231, 247, 120, 0.04));
+  background-size: 100% 4px, 5px 100%;
+  mix-blend-mode: screen;
+}
+
+.lucas-route-game__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1000 / 760;
+  image-rendering: pixelated;
+}
+
+.lucas-route-game__panel {
+  border: 2px solid #33454d;
+  background: rgba(5, 9, 13, 0.92);
+  padding: 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+}
+
+.lucas-route-game__metric {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(157, 184, 191, 0.22);
+}
+
+.lucas-route-game__metric span,
+.lucas-route-game__metric-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: #8ba0a7;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.lucas-route-game__metric strong {
+  display: block;
+  color: #dff9ff;
+  font-size: 16px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.lucas-route-game__metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.lucas-route-game__metric-grid div {
+  min-width: 0;
+  padding: 12px;
+  background: #111a20;
+  border: 1px solid rgba(69, 255, 224, 0.18);
+}
+
+.lucas-route-game__metric-grid strong {
+  color: #e7f778;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.lucas-route-game__message {
+  min-height: 58px;
+  margin: 16px 0;
+  color: #ffcb6b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.lucas-route-game[data-status="lost"] .lucas-route-game__message {
+  color: #ffb3c0;
+}
+
+.lucas-route-game__controls {
+  display: grid;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(3, 44px);
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.lucas-route-game__controls button {
+  width: 54px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid #33454d;
+  border-radius: 0;
+  color: #dff9ff;
+  background: #111a20;
+  font-family: var(--lucas-font-terminal);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lucas-route-game__controls button:hover,
+.lucas-route-game__controls button:focus-visible {
+  color: #05090d;
+  background: #45ffe0;
+  outline: none;
+}
+
+.lucas-route-game__controls button:nth-child(1) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.lucas-route-game__controls button:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.lucas-route-game__controls button:nth-child(3) {
+  grid-column: 2;
+  grid-row: 2;
+  color: #ffcb6b;
+}
+
+.lucas-route-game__controls button:nth-child(4) {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.lucas-route-game__controls button:nth-child(5) {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.lucas-route-game__hint {
+  margin: 0;
+  color: #9db8bf;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1120px) {
+  .lucas-route-game {
+    padding: 14px;
+  }
+
+  .lucas-route-game__shell {
+    grid-template-columns: 1fr;
+  }
+
+  .lucas-route-game__panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .lucas-route-game__metric,
+  .lucas-route-game__message,
+  .lucas-route-game__hint {
+    margin: 0;
+  }
+
+  .lucas-route-game__metric {
+    border-bottom: 0;
+  }
+
+  .lucas-route-game__controls {
+    margin: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .lucas-route-game__header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .lucas-route-game__status {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .lucas-route-game__panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Clear Overlay Styles */
+.lucas-route-game__clear-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 9, 13, 0.95);
+  backdrop-filter: blur(8px);
+  animation: lucas-clear-fade-in 0.4s ease-out;
+}
+
+.lucas-route-game__clear-content {
+  width: 90%;
+  max-width: 480px;
+  padding: 40px;
+  text-align: center;
+  border: 2px solid #45ffe0;
+  background: #0d171a;
+  box-shadow: 0 0 50px rgba(69, 255, 224, 0.2);
+  animation: lucas-clear-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lucas-route-game__clear-title {
+  margin: 0 0 12px;
+  color: #45ffe0;
+  font-size: 42px;
+  letter-spacing: -1px;
+  text-shadow: 0 0 20px rgba(69, 255, 224, 0.4);
+}
+
+.lucas-route-game__clear-subtitle {
+  margin-bottom: 30px;
+  color: #9db8bf;
+  font-size: 14px;
+}
+
+.lucas-route-game__clear-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 40px;
+  padding: 20px;
+  background: rgba(69, 255, 224, 0.05);
+  border: 1px solid rgba(69, 255, 224, 0.2);
+}
+
+.lucas-route-game__clear-stats span {
+  display: block;
+  margin-bottom: 4px;
+  color: #8ba0a7;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.lucas-route-game__clear-stats strong {
+  color: #e7f778;
+  font-size: 24px;
+}
+
+.lucas-route-game__clear-btn {
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 12px;
+  color: #05090d;
+  background: #45ffe0;
+  border: none;
+  font-family: var(--lucas-font-terminal);
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lucas-route-game__clear-btn:hover {
+  background: #dff9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(69, 255, 224, 0.3);
+}
+
+.lucas-route-game__retry-btn {
+  width: 100%;
+  padding: 12px;
+  color: #45ffe0;
+  background: transparent;
+  border: 1px solid #45ffe0;
+  font-family: var(--lucas-font-terminal);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lucas-route-game__retry-btn:hover {
+  background: rgba(69, 255, 224, 0.1);
+}
+
+@keyframes lucas-clear-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lucas-clear-slide-up {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

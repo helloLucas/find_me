@@ -7,6 +7,7 @@ import { normalizeStoryOutputBundle } from "../../features/story-runtime/outputB
 import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
+import { EndingResultOverlay } from "../../widgets/EndingResultOverlay";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import type { StoryNode } from "../../shared/types/story";
@@ -16,9 +17,17 @@ function getIsFullscreen() {
 }
 
 function isChapterCompletionNode(node: StoryNode | null) {
-  if (!node?.code.endsWith("_COMPLETE")) return false;
+  return Boolean(node && (node.nodeType === "ending" || node.isTerminal));
+}
 
-  return node.nodeType === "ending" || node.isTerminal;
+function getEndingType(node: StoryNode | null): string | null {
+  const effects = node?.outputBundle?.effects;
+  if (!effects || typeof effects !== "object" || Array.isArray(effects)) {
+    return null;
+  }
+
+  const endingType = (effects as Record<string, unknown>).endingType;
+  return typeof endingType === "string" && endingType.trim() ? endingType : null;
 }
 
 export default function PlayPage() {
@@ -107,7 +116,9 @@ export default function PlayPage() {
     }
   };
 
-  const shouldShowCompletionModal = !isPlayingVideo && isChapterCompletionNode(currentNode);
+  const shouldShowEndingOverlay = !isPlayingVideo && currentNode?.nodeType === "ending";
+  const shouldShowCompletionModal =
+    !isPlayingVideo && !shouldShowEndingOverlay && isChapterCompletionNode(currentNode);
 
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
@@ -120,14 +131,14 @@ export default function PlayPage() {
 
 
 
-      {shouldShowCompletionModal && (
-        <ChapterCompletionModal />
-      )}
+      {shouldShowCompletionModal && <ChapterCompletionModal />}
+
+      {shouldShowEndingOverlay && <EndingResultOverlay endingType={getEndingType(currentNode)} />}
 
       {/* Hidden info for development/debugging */}
       {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
         CODE: {chapterCode}
       </div> */}
-    </main>
+    </main >
   );
 }

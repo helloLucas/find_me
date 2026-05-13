@@ -16,6 +16,12 @@ spec:
       labels:
         app: elasticsearch
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       terminationGracePeriodSeconds: 120
       securityContext:
         fsGroup: 1000
@@ -68,7 +74,7 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 6
-            
+
   volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data

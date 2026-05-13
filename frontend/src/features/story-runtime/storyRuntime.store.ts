@@ -584,13 +584,13 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   initializeStory: async (chapterCode) => {
     // 이전 플레이 세션의 모든 게임 상태를 초기화하여 처음부터 시작
     get().resetStoryRuntime();
-    
+
     // 중복 호출 및 레이스 컨디션 방지를 위한 세션 ID 증가
     const currentId = get().initializationId + 1;
-    set({ 
+    set({
       initializationId: currentId,
-      isLoading: true, 
-      error: null 
+      isLoading: true,
+      error: null
     });
 
     useBrowserContentStore.getState().resetContent();
@@ -607,7 +607,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       const node = normalizeStoryNodeResponse(
         await storyApi.startStory(resolveChapterCode(chapterCode))
       );
-      
+
       // 세션이 유효한지 확인
       if (get().initializationId !== currentId) return;
 
@@ -620,10 +620,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
         audioManager.playSfx(RING_TONE_SOUND);
         // 벨소리를 충분히 들려주기 위해 6초 대기 후 콘텐츠 표시
         await new Promise((resolve) => setTimeout(resolve, 6000));
-        
+
         // 대기 후 세션이 여전히 유효한지 재확인
         if (get().initializationId !== currentId) return;
-        
+
         callStore.setRinging(false);
       }
     } catch (startError) {
@@ -641,7 +641,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
           callStore.setRinging(true);
           audioManager.playSfx(RING_TONE_SOUND);
           await new Promise((resolve) => setTimeout(resolve, 6000));
-          
+
           if (get().initializationId !== currentId) return;
           callStore.setRinging(false);
         }
@@ -703,6 +703,10 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     const currentNode = get().currentNode;
     if (!currentNode) {
       set({ error: i18n.t("story.error.nodeNotFound") });
+      return;
+    }
+
+    if (currentNode.nodeType === "ending" || currentNode.isTerminal) {
       return;
     }
 
@@ -840,7 +844,7 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     useNotepadStore.getState().resetNotepad();
     // 벨소리나 대화 등의 진행 중인 시각적 효과가 있으면 여기서 명시적으로 닫아줌
     useLucasStore.getState().resetLucas();
-    
+
     set((state) => ({
       currentNode: null,
       isLoading: false,

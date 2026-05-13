@@ -21,6 +21,7 @@ import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import { NotepadWindow } from "../../features/notepad/NotepadWindow";
 import { TrashWindow } from "../../features/trash/TrashWindow";
+import LucasSurvivalMinigamePage from "../../pages/minigames/lucas-survival";
 
 export const Desktop: React.FC = () => {
   const { windows, openWindow, blurAllWindows } = useWindowStore();
@@ -63,6 +64,14 @@ export const Desktop: React.FC = () => {
     icons.splice(3, 0, { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" });
   }
 
+  if (currentNode?.code?.startsWith("CH4_")) {
+    icons.splice(4, 0, {
+      id: "lucas_survival",
+      label: "Lucas Survival",
+      icon: DESKTOP_WINDOW_DEFINITIONS.lucas_survival.iconPath,
+    });
+  }
+
   const handleIconDoubleClick = (id: string) => {
     trackAnalyticsEvent("desktop_icon_opened", {
       icon_id: id,
@@ -94,6 +103,13 @@ export const Desktop: React.FC = () => {
     if (id === "trash") {
       if (currentNode?.code?.startsWith("CH3_")) {
         openWindow("trash");
+      }
+      return;
+    }
+
+    if (id === "lucas_survival") {
+      if (currentNode?.code?.startsWith("CH4_")) {
+        openWindow("lucas_survival");
       }
       return;
     }
@@ -256,10 +272,29 @@ export const Desktop: React.FC = () => {
                 id={windowState.id}
                 title={windowState.title}
                 icon="/pixel_trash_icon.svg"
-                defaultWidth={400}
+                defaultWidth={560}
                 defaultHeight={300}
               >
                 <TrashWindow />
+              </Window>
+            );
+          }
+
+          if (windowState.type === "minigame") {
+            return (
+              <Window
+                key={windowState.id}
+                id={windowState.id}
+                title={windowState.title}
+                icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
+                defaultWidth={1200}
+                defaultHeight={760}
+                minWidth={960}
+                minHeight={620}
+              >
+                <div className="ls-window-embed h-full w-full">
+                  <LucasSurvivalMinigamePage />
+                </div>
               </Window>
             );
           }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fragmentApi } from '../../../shared/api/fragmentApi';
 import { useWindowStore } from '../../../app/store/windowStore';
@@ -36,9 +37,11 @@ interface Ghost extends Entity {
 
 interface PacmanTabProps {
   windowId?: DesktopWindowId;
+  isPractice?: boolean;
 }
 
-export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
+export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const [grid, setGrid] = useState<number[][]>(INITIAL_GRID.map(row => [...row]));
   const [pacman, setPacman] = useState<Entity>({ x: 7, y: 10 });
   const [ghosts, setGhosts] = useState<Ghost[]>([
@@ -56,6 +59,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   const { data: isCleared, isLoading: isCheckLoading } = useQuery({
     queryKey: ['fragment', '1'],
     queryFn: () => fragmentApi.checkFragment('1'),
+    enabled: !isPractice, // Skip check in practice mode
     retry: 1,
     staleTime: 0, // Always check with server
     refetchOnMount: 'always'
@@ -293,7 +297,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
     const hasDots = grid.some(row => row.includes(2));
     if (!won && (!hasDots || (DEBUG_MODE && score >= 10))) {
       setWon(true);
-      if (!isCleared) {
+      if (!isCleared && !isPractice) {
         // Optimistically update the cache so new tabs immediately see it
         queryClient.setQueryData(['fragment', '1'], true);
         acquireMutation.mutate();
@@ -314,7 +318,7 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
   }
 
   // 2. If already cleared in DB AND we didn't just win it in this session, show 404
-  if (isCleared && !won) {
+  if (!isPractice && isCleared && !won) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-black text-[#ff2255] font-browser-game p-10 text-center select-none">
         <div className="text-8xl mb-6 opacity-80 drop-shadow-[0_0_20px_rgba(255,34,85,0.5)]">404</div>
@@ -442,11 +446,28 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId }) => {
       {won && (
         <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 animate-in fade-in duration-500">
           <div className="flex flex-col items-center justify-center scale-110">
-            <span className="text-7xl md:text-9xl text-[#22ff55] font-bold mb-6 animate-pulse drop-shadow-[0_0_30px_rgba(34,255,85,0.8)]">CLEAR!</span>
-            <span className="text-white text-xl md:text-2xl border-t border-[#22ff55] pt-6 tracking-widest text-center font-bold">
-              SYSTEM RESOURCE SECURED<br />
-              <span className="text-[#22ff55] text-sm opacity-70 mt-2 block">(FRAGMENT 1 ACQUIRED)</span>
+            <span className="text-7xl md:text-9xl text-[#22ff55] font-bold mb-6 animate-pulse drop-shadow-[0_0_30px_rgba(34,255,85,0.8)]">
+              {isPractice ? 'ARCADE CLEAR!' : 'CLEAR!'}
             </span>
+            <span className="text-white text-xl md:text-2xl border-t border-[#22ff55] pt-6 tracking-widest text-center font-bold">
+              {isPractice 
+                ? 'Practice session complete.' 
+                : 'SYSTEM RESOURCE SECURED'}
+              <br />
+              <span className="text-[#22ff55] text-sm opacity-70 mt-2 block">
+                {isPractice 
+                  ? '(No data was synced)' 
+                  : '(FRAGMENT 1 ACQUIRED)'}
+              </span>
+            </span>
+            {isPractice && (
+              <button
+                onClick={() => navigate('/minigames')}
+                className="mt-10 px-8 py-3 bg-[#22ff55] text-black font-bold text-sm tracking-[0.2em] rounded-sm hover:bg-[#1add47] transition-all transform hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(34,255,85,0.4)]"
+              >
+                RETURN TO LOBBY
+              </button>
+            )}
           </div>
         </div>
       )}

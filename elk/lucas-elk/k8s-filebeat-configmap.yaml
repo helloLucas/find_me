@@ -29,11 +29,6 @@ data:
                         kubernetes.namespace: "prod"
                     - equals:
                         kubernetes.labels.app: "backend"
-          - decode_json_fields:
-              fields: ["message"]
-              target: ""
-              overwrite_keys: true
-              add_error_key: true
 
     output.logstash:
       hosts: ["logstash.lucas-elk.svc.cluster.local:5044"]

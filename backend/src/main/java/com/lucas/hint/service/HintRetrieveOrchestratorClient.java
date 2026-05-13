@@ -30,11 +30,10 @@ public class HintRetrieveOrchestratorClient {
 
   private final ObjectMapper objectMapper;
 
-  private final HttpClient httpClient =
-      HttpClient.newBuilder()
-          .connectTimeout(Duration.ofSeconds(5))
-          .version(HttpClient.Version.HTTP_1_1)
-          .build();
+  private final HttpClient httpClient = HttpClient.newBuilder()
+      .connectTimeout(Duration.ofSeconds(5))
+      .version(HttpClient.Version.HTTP_1_1)
+      .build();
 
   @Value("${app.hint.orchestrator-service-url}")
   private String orchestratorServiceUrl;
@@ -45,17 +44,16 @@ public class HintRetrieveOrchestratorClient {
   public HintRetrieveResult retrieve(HintRetrieveRequest request) {
     try {
       String payload = objectMapper.writeValueAsString(request);
-      HttpRequest httpRequest =
-          HttpRequest.newBuilder()
-              .uri(URI.create(resolveEndpointUrl()))
-              .timeout(Duration.ofMillis(Math.max(1000, orchestratorTimeoutMs)))
-              .header("Accept", "application/json")
-              .header("Content-Type", "application/json")
-              .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
-              .build();
+      HttpRequest httpRequest = HttpRequest.newBuilder()
+          .uri(URI.create(resolveEndpointUrl()))
+          .timeout(Duration.ofMillis(Math.max(1000, orchestratorTimeoutMs)))
+          .header("Accept", "application/json")
+          .header("Content-Type", "application/json")
+          .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+          .build();
 
-      HttpResponse<String> response =
-          httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+      HttpResponse<String> response = httpClient.send(httpRequest,
+          HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
         log.error(
@@ -132,10 +130,9 @@ public class HintRetrieveOrchestratorClient {
   }
 
   private String resolveEndpointUrl() {
-    String base =
-        orchestratorServiceUrl.endsWith("/")
-            ? orchestratorServiceUrl.substring(0, orchestratorServiceUrl.length() - 1)
-            : orchestratorServiceUrl;
+    String base = orchestratorServiceUrl.endsWith("/")
+        ? orchestratorServiceUrl.substring(0, orchestratorServiceUrl.length() - 1)
+        : orchestratorServiceUrl;
     return base + "/v1/hints/retrieve";
   }
 
@@ -237,5 +234,6 @@ public class HintRetrieveOrchestratorClient {
       int stressScore,
       String hintLevel,
       Map<String, Object> commandUsageContext,
-      List<HintEvidenceResponseDto> evidences) {}
+      List<HintEvidenceResponseDto> evidences) {
+  }
 }

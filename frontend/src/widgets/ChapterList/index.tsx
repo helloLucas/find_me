@@ -1,5 +1,7 @@
-import { useChapterStatus } from '../../entities/Chapter/hooks/useChapterStatus';
+import { useQuery } from '@tanstack/react-query';
+import { CHAPTER_STATUS, useChapterStatus } from '../../entities/Chapter/hooks/useChapterStatus';
 import { useChapterNavigate } from '../../features/ChapterSelect/useChapterNavigate';
+import { endingApi } from '../../shared/api/endingApi';
 import { ChapterCard } from './ui/ChapterCard';
 
 /**
@@ -10,6 +12,15 @@ import { ChapterCard } from './ui/ChapterCard';
 export const ChapterList = () => {
     const { data: chapters, isLoading, isError } = useChapterStatus();
     const { selectChapter } = useChapterNavigate();
+    const shouldResolveEndingSignal = Boolean(
+        chapters?.some((chapter) => chapter.code === 'week04' && chapter.status === CHAPTER_STATUS.COMPLETED)
+    );
+    const { data: endingProgress } = useQuery({
+        queryKey: ['endings', 'progress', 'branch-signal'],
+        queryFn: endingApi.getProgress,
+        enabled: shouldResolveEndingSignal,
+        staleTime: 30_000,
+    });
 
     if (isLoading) return null; // 로딩 중 레이아웃 방해 방지
     if (isError) return null;
@@ -22,6 +33,12 @@ export const ChapterList = () => {
                     code={chapter.code}
                     title={chapter.title}
                     status={chapter.status}
+                    hasEndingBranchSignal={
+                        chapter.code === 'week04'
+                        && chapter.status === CHAPTER_STATUS.COMPLETED
+                        && Boolean(endingProgress?.hasUnlockedEnding)
+                        && !endingProgress?.allUnlocked
+                    }
                     onClick={() => selectChapter(chapter.code)}
                 />
             ))}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fragmentApi } from '../../../shared/api/fragmentApi';
 import { useWindowStore } from '../../../app/store/windowStore';
@@ -7,6 +8,7 @@ import type { DesktopWindowId } from '../../../shared/config/desktopWindows';
 
 interface CyberPacketDashTabProps {
   windowId?: DesktopWindowId;
+  isPractice?: boolean;
 }
 
 interface Obstacle {
@@ -83,15 +85,22 @@ const TRACK_OBSTACLES: Obstacle[] = [
   { id: 38, type: 'block', x: 16900, y: 0, w: 70, h: 40 }
 ];
 
-export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId }) => {
+export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentNode } = useStoryRuntimeStore();
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
 
-  // 컴포넌트 마운트 시 브라우저 창 전체화면(최대화) 자동 적용
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // 컴포넌트 마운트 시 브라우저 창 전체화면(최대화) 자동 적용 및 포커스
   useEffect(() => {
     if (windowId && maximizeWindow) {
       maximizeWindow(windowId);
+    }
+    if (containerRef.current) {
+      containerRef.current.focus();
     }
   }, [windowId, maximizeWindow]);
 
@@ -99,12 +108,13 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   const [forceReplay, setForceReplay] = useState(false);
 
   // 챕터 3 활성화 노드 구역 검증
-  const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_")) || forceBypassAccess;
+  const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_")) || forceBypassAccess || isPractice;
 
   // 세션 조각 동기화 유무 조회
   const { data: isCleared, isLoading: isCheckLoading } = useQuery({
     queryKey: ['fragment', '3'],
     queryFn: () => fragmentApi.checkFragment('3'),
+    enabled: !isPractice, // Skip check in practice mode
     retry: 1,
     staleTime: 0,
     refetchOnMount: 'always'
@@ -117,7 +127,14 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     }
   });
   const [gameState, setGameState] = useState<'intro' | 'playing' | 'crashed' | 'cleared'>('intro');
-  const [progressPercent, setProgressPercent] = useState(0);
+
+  // [최적화 ①] progressPercent를 useState → useRef + DOM 직접 제어로 전환
+  // 기존: setProgressPercent()가 tick()마다 호출 → 60fps × React 리렌더링 폭탄 유발
+  // 개선: ref로 값을 추적하고 DOM 엘리먼트를 직접 조작하여 React 렌더 사이클을 완전히 우회
+  const progressRef = useRef(0);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+  // 기존 코드와의 하위 호환성을 위해 crashedState 표시 등에 사용하는 progressPercent는 useRef로 추적
+  const progressPercentForDisplay = useRef(0);
 
   // --- BGM 오디오 인스턴스 (S3 저장소 연동) ---
   const bgmRef = useRef<HTMLAudioElement | null>(null);
@@ -154,6 +171,10 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // 60FPS 하이퍼 스무스 렌더링을 위해 물리 상태 값을 useRef로 관리
+  // [최적화 ②] 트레일 원형 큐 (Circular Queue Ring Buffer) 도입
+  // 기존: push()와 shift() 반복 호출 → 지속적인 가비지 컬렉션(GC) 유발 및 프레임 드랍
+  // 개선: 고정 길이(12개) 배열에 포인터(trailIndex, trailSize)를 두고 기존 객체 좌표만 덮어씀
+  const MAX_TRAIL = 12;
   const playerRef = useRef({
     x: 80,
     y: 326, // 기준 바닥 높이 Y=350. 플레이어 안착 좌표는 350 - 24 = 326
@@ -161,20 +182,55 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     onGround: true,
     jumpsCount: 0, // 점프 횟수 트래킹 (0: 바닥, 1: 1차 도약, 2: 2차 공중 이단점프)
     rotation: 0,
-    trail: [] as Array<{ x: number; y: number }>
+    trail: Array.from({ length: 12 }, () => ({ x: 0, y: 0, active: false })),
+    trailIndex: 0,
+    trailSize: 0
   });
 
   const trackOffsetRef = useRef(0);
-  const particlesRef = useRef<Array<{ x: number; y: number; vx: number; vy: number; color: string; life: number }>>([]);
+
+  // [최적화 ①] 파티클 오브젝트 풀 (Particle Object Pool) 도입
+  // 기존: 매번 새 요소를 push하고 splice/filter() 등으로 요소를 추가/삭제하여 GC 부하 유발
+  // 개선: 고정 크기(300개)를 갖는 풀을 미리 할당하고 active 플래그만 전환하여 재사용
+  const MAX_PARTICLES = 300;
+  const particlesRef = useRef<Array<{ x: number; y: number; vx: number; vy: number; color: string; life: number; active: boolean }>>(
+    Array.from({ length: 300 }, () => ({
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      color: '',
+      life: 0,
+      active: false
+    }))
+  );
   const screenShakeRef = useRef(0);
   const isHoldingJumpRef = useRef(false);
+
+  // [최적화 ③] AudioContext를 컴포넌트 수명 동안 단 하나만 유지
+  // 기존: playSynthesizedSound() 호출마다 new AudioContext() 생성 → 호출 횟수에 비례해 메모리 누수
+  // 개선: 최초 1회만 생성하고 이후 재사용
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const getAudioContext = (): AudioContext | null => {
+    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+      return audioCtxRef.current;
+    }
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return null;
+      audioCtxRef.current = new AudioCtx();
+      return audioCtxRef.current;
+    } catch {
+      return null;
+    }
+  };
 
   // --- WEB AUDIO API 실시간 8비트 주파수 합성기 ---
   const playSynthesizedSound = (type: 'jump' | 'crash' | 'win') => {
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -212,34 +268,70 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     }
   };
 
-  const initLevel = () => {
-    playerRef.current = {
-      x: 80,
-      y: 326,
-      vy: 0,
-      onGround: true,
-      jumpsCount: 0,
-      rotation: 0,
-      trail: []
+  // 컴포넌트 언마운트 시 AudioContext 정리
+  useEffect(() => {
+    return () => {
+      audioCtxRef.current?.close();
+      audioCtxRef.current = null;
     };
+  }, []);
+
+  const initLevel = () => {
+    const p = playerRef.current;
+    p.x = 80;
+    p.y = 326;
+    p.vy = 0;
+    p.onGround = true;
+    p.jumpsCount = 0;
+    p.rotation = 0;
+    p.trailIndex = 0;
+    p.trailSize = 0;
+
+    // 트레일 초기화
+    for (let i = 0; i < p.trail.length; i++) {
+      p.trail[i].x = 0;
+      p.trail[i].y = 0;
+      p.trail[i].active = false;
+    }
+
     trackOffsetRef.current = 0;
-    setProgressPercent(0);
-    particlesRef.current = [];
+    progressRef.current = 0;
+    progressPercentForDisplay.current = 0;
+    // 프로그레스 바 DOM 직접 초기화
+    if (progressBarRef.current) {
+      progressBarRef.current.style.width = '0%';
+    }
+
+    // 파티클 풀 초기화
+    const pool = particlesRef.current;
+    for (let i = 0; i < pool.length; i++) {
+      pool[i].active = false;
+    }
     screenShakeRef.current = 0;
   };
 
   const spawnParticles = (x: number, y: number, color: string, count = 10, speedMultiplier = 1.0) => {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = (Math.random() * 3 + 2) * speedMultiplier;
-      particlesRef.current.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.0,
-        color,
-        life: 25
-      });
+    const pool = particlesRef.current;
+    let spawned = 0;
+
+    for (let i = 0; i < pool.length; i++) {
+      if (spawned >= count) break;
+
+      const pt = pool[i];
+      if (!pt.active) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (Math.random() * 3 + 2) * speedMultiplier;
+
+        pt.x = x;
+        pt.y = y;
+        pt.vx = Math.cos(angle) * speed;
+        pt.vy = Math.sin(angle) * speed - 1.0;
+        pt.color = color;
+        pt.life = 25;
+        pt.active = true;
+
+        spawned++;
+      }
     }
   };
 
@@ -277,46 +369,49 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     isHoldingJumpRef.current = false;
   };
 
+  const handleContainerClick = () => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  };
+
   // 키보드 방향키 및 스페이스바 점프 이벤트 리스너
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
-        e.preventDefault();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 포커스 상태 검사 (Active Window Guard Clause)
+    if (windowId && activeWindowId !== windowId) return;
 
-        if (isCleared && !forceReplay) {
-          setForceReplay(true);
-          startContinuousRun();
-          return;
-        }
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+      e.preventDefault();
 
-        if (gameState === 'intro' || gameState === 'crashed') {
-          startContinuousRun();
-          return;
-        }
+      if (isCleared && !forceReplay) {
+        setForceReplay(true);
+        startContinuousRun();
+        return;
+      }
 
-        if (gameState === 'playing') {
-          isHoldingJumpRef.current = true;
-          const isShipMode = trackOffsetRef.current >= 3100 && trackOffsetRef.current < 7500;
-          if (!isShipMode) {
-            handleJump();
-          }
+      if (gameState === 'intro' || gameState === 'crashed') {
+        startContinuousRun();
+        return;
+      }
+
+      if (gameState === 'playing') {
+        isHoldingJumpRef.current = true;
+        const isShipMode = trackOffsetRef.current >= 3100 && trackOffsetRef.current < 7500;
+        if (!isShipMode) {
+          handleJump();
         }
       }
-    };
+    }
+  };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
-        isHoldingJumpRef.current = false;
-      }
-    };
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 포커스 상태 검사 (Active Window Guard Clause)
+    if (windowId && activeWindowId !== windowId) return;
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState, isCleared, forceReplay]);
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+      isHoldingJumpRef.current = false;
+    }
+  };
 
   // 60FPS 실시간 초정밀 렌더링 및 물리 처리 메인 루프
   useEffect(() => {
@@ -338,7 +433,17 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       trackOffsetRef.current += speed;
       const trackOffset = trackOffsetRef.current;
       const currentProgress = Math.min(100, (trackOffset / CONTINUOUS_TRACK_LENGTH) * 100);
-      setProgressPercent(Math.floor(currentProgress));
+
+      // [최적화 ①] React setState 대신 DOM 직접 제어로 리렌더링 폭탄 제거
+      // 값이 실제로 1% 단위로 바뀔 때만 DOM 업데이트하여 불필요한 스타일 연산도 최소화
+      const newProgressPercent = Math.floor(currentProgress);
+      if (newProgressPercent !== progressPercentForDisplay.current) {
+        progressPercentForDisplay.current = newProgressPercent;
+        if (progressBarRef.current) {
+          progressBarRef.current.style.width = `${newProgressPercent}%`;
+        }
+      }
+      progressRef.current = currentProgress;
 
       // 2. 가속도 중력 및 비행 추력 적용
       const isShipMode = trackOffset >= 3100 && trackOffset < 7500;
@@ -469,15 +574,23 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
         }
       }
 
-      // 네온 트레일 자취 수집 연산
-      p.trail.push({ x: p.x, y: p.y + 12 });
-      if (p.trail.length > 12) p.trail.shift();
+      // [최적화 ②] 네온 트레일 자취 수집 연산: 링 버퍼에 값 덮어쓰기
+      const idx = p.trailIndex;
+      p.trail[idx].x = p.x;
+      p.trail[idx].y = p.y + 12;
+      p.trail[idx].active = true;
+      p.trailIndex = (idx + 1) % MAX_TRAIL;
+      if (p.trailSize < MAX_TRAIL) {
+        p.trailSize++;
+      }
 
       // 5. 완주율 100% 최종 목적지 관문 골인 통과 체크
       if (trackOffset >= CONTINUOUS_TRACK_LENGTH) {
         setGameState('cleared');
         playSynthesizedSound('win');
-        acquireMutation.mutate();
+        if (!isPractice) {
+          acquireMutation.mutate();
+        }
         return;
       }
 
@@ -525,14 +638,27 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       ctx.fillStyle = '#050215';
       ctx.fillRect(0, 352, 400, 150);
 
-      // 플레이어 잔상 네온 꼬리선 드로잉
+      // [최적화 ②] 플레이어 잔상 네온 꼬리선 드로잉: 원형 큐 시간 정렬 순회
       ctx.strokeStyle = 'rgba(0, 255, 102, 0.45)';
       ctx.lineWidth = 6;
       ctx.beginPath();
-      p.trail.forEach((t, index) => {
-        if (index === 0) ctx.moveTo(t.x, t.y);
-        else ctx.lineTo(t.x, t.y);
-      });
+
+      let first = true;
+      if (p.trailSize > 0) {
+        const startOffset = p.trailSize < MAX_TRAIL ? 0 : p.trailIndex;
+        for (let i = 0; i < p.trailSize; i++) {
+          const currIdx = (startOffset + i) % MAX_TRAIL;
+          const t = p.trail[currIdx];
+          if (t.active) {
+            if (first) {
+              ctx.moveTo(t.x, t.y);
+              first = false;
+            } else {
+              ctx.lineTo(t.x, t.y);
+            }
+          }
+        }
+      }
       ctx.stroke();
 
       // 장애물 요소 물리 연동 렌더링
@@ -752,19 +878,25 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       }
       ctx.restore();
 
-      // 사방으로 튀는 찬란한 스파크 파티클 업데이트 연산
-      const activeParticles = particlesRef.current;
-      activeParticles.forEach((pt) => {
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.life--;
+      // [최적화 ①] 파티클 업데이트: 오브젝트 풀 기반 순회 (추가/삭제 연산 0회)
+      const pool = particlesRef.current;
+      for (let i = 0; i < pool.length; i++) {
+        const pt = pool[i];
+        if (pt.active) {
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.life--;
 
-        ctx.fillStyle = pt.color;
-        ctx.globalAlpha = pt.life / 25;
-        ctx.fillRect(pt.x, pt.y, 4, 4);
-      });
+          if (pt.life <= 0) {
+            pt.active = false;
+          } else {
+            ctx.fillStyle = pt.color;
+            ctx.globalAlpha = pt.life / 25;
+            ctx.fillRect(pt.x, pt.y, 4, 4);
+          }
+        }
+      }
       ctx.globalAlpha = 1.0;
-      particlesRef.current = activeParticles.filter((pt) => pt.life > 0);
 
       ctx.restore(); // 화면 쉐이크 보정 해제
 
@@ -776,6 +908,12 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   }, [gameState]);
 
   const startContinuousRun = () => {
+    if (windowId && maximizeWindow) {
+      maximizeWindow(windowId);
+    }
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
     initLevel();
     isHoldingJumpRef.current = false;
     setGameState('playing');
@@ -809,7 +947,14 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   }
 
   return (
-    <div className="h-full bg-[#040112] text-cyan-50 font-mono select-none flex flex-col overflow-hidden">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onClick={handleContainerClick}
+      className="h-full bg-[#040112] text-cyan-50 font-mono select-none flex flex-col overflow-hidden outline-none focus:ring-1 focus:ring-emerald-500/20"
+    >
       {/* 게임 상단 네비 바 */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-[#00ff66]/15 bg-[#08031d]">
         <div className="flex items-center gap-3">
@@ -822,7 +967,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
               TRACK: <span className="text-yellow-400 font-bold">60s CHIPTUNE RUN</span>
             </div>
             <div className="text-xs">
-              PROGRESS: <span className="text-[#00ff66] font-black">{progressPercent}%</span>
+              PROGRESS: <span className="text-[#00ff66] font-black">{progressPercentForDisplay.current}%</span>
             </div>
           </div>
         )}
@@ -857,7 +1002,7 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
           >
             <div className="text-5xl font-black text-red-500 mb-4 tracking-wider animate-pulse">FAILED</div>
             {/* 진행률 */}
-            <p className="text-base text-yellow-400 font-bold mb-6">PROGRESS: {progressPercent}%</p>
+            <p className="text-base text-yellow-400 font-bold mb-6">PROGRESS: {progressPercentForDisplay.current}%</p>
             {/* 스페이스바 재시작 가이드 */}
             <div className="text-red-400 text-sm font-black tracking-wider border border-red-500/20 py-3.5 rounded-lg bg-red-950/20 hover:bg-red-950/50 transition-all animate-pulse">
               PRESS SPACEBAR TO RESTART
@@ -866,22 +1011,36 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
           </div>
         )}
         {gameState === 'cleared' && (
-          <div className="max-w-md w-full text-center border border-green-500/30 bg-[#091e11] px-8 py-8 rounded-xl shadow-[0_0_40px_rgba(34,197,94,0.25)] animate-in fade-in zoom-in-95 duration-300">
-            <div className="text-5xl font-black text-green-400 mb-2 tracking-widest animate-pulse">TRANSMITTED!</div>
-            <div className="bg-[#0b2816] border border-green-400/20 px-4 py-3 rounded text-xs text-green-300 mb-6">
-              FRAGMENT 3 SYNCED TO MAIN DATABASE
+          <div className="max-w-md w-full text-center border border-green-500/30 bg-[#091e11] px-8 py-10 rounded-xl shadow-[0_0_40px_rgba(34,197,94,0.25)] animate-in fade-in zoom-in-95 duration-300">
+            <div className="text-5xl font-black text-green-400 mb-2 tracking-widest animate-pulse">
+              {isPractice ? 'ARCADE CLEAR!' : 'TRANSMITTED!'}
             </div>
-            <p className="text-[10px] text-gray-500">Master session synchronization complete.</p>
+            <div className="bg-[#0b2816] border border-green-400/20 px-4 py-3 rounded text-xs text-green-300 mb-6">
+              {isPractice 
+                ? 'Practice session complete. No data was synced.' 
+                : 'FRAGMENT 3 SYNCED TO MAIN DATABASE'}
+            </div>
+            {isPractice ? (
+              <button
+                onClick={() => navigate('/minigames')}
+                className="w-full py-3 rounded bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold text-sm tracking-widest shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                RETURN TO ARCADE LOBBY
+              </button>
+            ) : (
+              <p className="text-[10px] text-gray-500">Master session synchronization complete.</p>
+            )}
           </div>
         )}
 
         {gameState === 'playing' && (
           <div className="flex flex-col items-center">
-            {/* 상단 완주 전송률 프로그레스 바 */}
+            {/* 상단 완주 전송률 프로그레스 바 (ref로 직접 DOM 제어, React 리렌더링 우회) */}
             <div className="w-full max-w-[400px] bg-[#0c0926] h-3.5 rounded-full overflow-hidden border border-[#00ff66]/20 mb-4 shadow-[0_0_15px_rgba(0,0,0,0.6)] relative">
               <div
+                ref={progressBarRef}
                 className="h-full bg-gradient-to-r from-[#00ff66] to-[#05d9e8] transition-all duration-100 ease-out shadow-[0_0_15px_#00ff66]"
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: '0%' }}
               />
             </div>
 
