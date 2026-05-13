@@ -56,15 +56,16 @@ public class PathResolver {
     }
 
     String target;
+    String homePath = vfs != null && "root".equals(vfs.getPromptUser()) ? "/root" : rootPath;
     // /로 시작하는 입력은 절대 경로로 해석한다.
     if (input.startsWith("/")) {
       target = input;
     } else if (input.equals("~")) {
-      // 단독 ~ 입력은 VFS 루트 경로로 해석한다.
-      target = rootPath;
+      // 단독 ~ 입력은 현재 프롬프트 사용자의 홈 디렉터리로 해석한다.
+      target = homePath;
     } else if (input.startsWith("~/")) {
-      // ~/로 시작하는 입력은 VFS 루트 하위 상대 경로로 해석한다.
-      target = rootPath + input.substring(1);
+      // ~/로 시작하는 입력은 현재 프롬프트 사용자의 홈 하위 상대 경로로 해석한다.
+      target = homePath + input.substring(1);
     } else {
       // cwd가 비어 있으면 루트 경로를 기준으로 상대 경로를 해석한다.
       String safeCwd = cwd == null || cwd.isBlank() ? rootPath : cwd;

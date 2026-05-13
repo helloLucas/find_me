@@ -34,24 +34,28 @@ WITH transition_values AS (
 
         (
             'CH4_CORE_BLOCKED',
-            'CH4_UNIVERSE_WARNING',
-            'click',
-            'continue',
-            'exact',
+            'CH4_GATE_TRACE_VIEWED',
+            'command',
+            'cat_gate_04_trace',
+            'server_rule',
             $json${
-  "rule": "EXACT_VALUE",
-  "value": "continue"
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/home/guest/gate_04.trace",
+  "requiredReadable": true
 }$json$::jsonb,
             $json${
   "setFlags": {
     "chapter4_started": true,
     "laplace_pending_job_known": true,
-    "universe_warning_seen": true
+    "universe_warning_seen": true,
+    "gate_04_trace_viewed": true
   },
   "snapshotPatch": {
     "flags.chapter4_started": true,
     "flags.laplace_pending_job_known": true,
     "flags.universe_warning_seen": true,
+    "flags.gate_04_trace_viewed": true,
     "terminal.promptUser": "guest",
     "terminal.promptHost": "lucas-server",
     "terminal.cwd": "/home/guest"
@@ -62,6 +66,29 @@ WITH transition_values AS (
         ),
         (
             'CH4_UNIVERSE_WARNING',
+            'CH4_GATE_TRACE_VIEWED',
+            'command',
+            'cat_gate_04_trace',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/home/guest/gate_04.trace",
+  "requiredReadable": true
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "gate_04_trace_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.gate_04_trace_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_TERMINAL_RELOAD',
             'CH4_GATE_TRACE_VIEWED',
             'command',
             'cat_gate_04_trace',
@@ -122,8 +149,8 @@ WITH transition_values AS (
     { "command": "nmap", "argsAnyOrder": ["-sV", "-p", "22", "10.2.2.2"] },
     { "command": "nmap", "argsAnyOrder": ["-sV", "universe-core"] },
     { "command": "nmap", "argsAnyOrder": ["-sV", "-p", "22", "universe-core"] },
-    { "command": "nmap", "argsAnyOrder": ["--version-all", "10.2.2.2"] },
-    { "command": "nmap", "argsAnyOrder": ["--version-all", "universe-core"] }
+    { "command": "nmap", "argsAnyOrder": ["-sV", "--version-all", "10.2.2.2"] },
+    { "command": "nmap", "argsAnyOrder": ["-sV", "--version-all", "universe-core"] }
   ]
 }$json$::jsonb,
             $json${
@@ -153,11 +180,7 @@ WITH transition_values AS (
     { "command": "nmap", "argsAnyOrder": ["-sV", "10.2.2.2"] },
     { "command": "nmap", "argsAnyOrder": ["-sV", "-p", "22", "10.2.2.2"] },
     { "command": "nmap", "argsAnyOrder": ["-sV", "universe-core"] },
-    { "command": "nmap", "argsAnyOrder": ["-sV", "-p", "22", "universe-core"] },
-    { "command": "ssh", "argsAnyOrder": ["-V", "10.2.2.2"] },
-    { "command": "ssh", "argsAnyOrder": ["-V", "universe-core"] },
-    { "command": "fingerprint", "argsAnyOrder": ["10.2.2.2"] },
-    { "command": "fingerprint", "argsAnyOrder": ["universe-core"] }
+    { "command": "nmap", "argsAnyOrder": ["-sV", "-p", "22", "universe-core"] }
   ]
 }$json$::jsonb,
             $json${
@@ -178,13 +201,8 @@ WITH transition_values AS (
             'sshnuke_universe_core',
             'server_rule',
             $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "sshnuke", "argsAnyOrder": ["10.2.2.2", "-rootpw=Z10N0101"] },
-    { "command": "sshnuke", "argsAnyOrder": ["10.2.2.2", "-rootpw=\"Z10N0101\""] },
-    { "command": "sshnuke", "argsAnyOrder": ["universe-core", "-rootpw=Z10N0101"] },
-    { "command": "sshnuke", "argsAnyOrder": ["universe-core", "-rootpw=\"Z10N0101\""] }
-  ]
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^\\s*sshnuke(?=.*\\s(?:10\\.2\\.2\\.2|universe-core)(?:\\s|$))(?=.*\\s--?rootpw(?:=|\\s+)(?:\\\"[^\\\"]+\\\"|'[^']+'|\\S+)).*$"
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -201,17 +219,34 @@ WITH transition_values AS (
         ),
         (
             'CH4_SSHNUKE_EXECUTED',
-            'CH4_ROOT_LOGIN',
+            'CH4_SSH_PASSWORD_PROMPT',
             'command',
             'ssh_root_universe_core',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "ssh", "argsAnyOrder": ["root@10.2.2.2"] },
-    { "command": "ssh", "argsAnyOrder": ["root@universe-core"] },
-    { "command": "ssh", "argsAnyOrder": ["10.2.2.2", "-l", "root"] },
-    { "command": "ssh", "argsAnyOrder": ["universe-core", "-l", "root"] }
+    { "command": "ssh", "args": ["root@10.2.2.2"] },
+    { "command": "ssh", "args": ["root@universe-core"] },
+    { "command": "ssh", "args": ["-l", "root", "10.2.2.2"] },
+    { "command": "ssh", "args": ["-l", "root", "universe-core"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_SSH_PASSWORD_PROMPT',
+            'CH4_ROOT_LOGIN',
+            'command',
+            'input_root_password',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "__CH4_SSH_PASSWORD_OK__", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
@@ -227,6 +262,109 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             100
+        ),
+        (
+            'CH4_SSH_PASSWORD_PROMPT',
+            'CH4_SSH_PASSWORD_FAIL',
+            'command',
+            'input_root_password_fail',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^.*$"
+}$json$::jsonb,
+            $json${
+  "recentResult": "INVALID_COMMAND"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_SSH_PASSWORD_FAIL',
+            'CH4_ROOT_LOGIN',
+            'command',
+            'input_root_password_retry',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "__CH4_SSH_PASSWORD_OK__", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "universe_core_root": true
+  },
+  "snapshotPatch": {
+    "flags.universe_core_root": true,
+    "terminal.promptUser": "root",
+    "terminal.promptHost": "universe-core",
+    "terminal.cwd": "/root"
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_SSH_PASSWORD_FAIL',
+            'CH4_SSH_PASSWORD_FAIL',
+            'command',
+            'input_root_password_fail_retry',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^.*$"
+}$json$::jsonb,
+            $json${
+  "recentResult": "INVALID_COMMAND"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_ROOT_LOGIN',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
         ),
         (
             'CH4_ROOT_LOGIN',
@@ -264,10 +402,11 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "corectl", "argsAnyOrder": ["pending"] },
-    { "command": "jobs", "argsAnyOrder": ["--pending"] },
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
     { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
-  ]
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -312,6 +451,53 @@ WITH transition_values AS (
         ),
         (
             'CH4_UNIVERSE_CORE_HINT',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_UNIVERSE_CORE_HINT',
             'CH4_PENDING_JOB_VIEWED',
             'command',
             'view_pending_job',
@@ -319,10 +505,11 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "corectl", "argsAnyOrder": ["pending"] },
-    { "command": "jobs", "argsAnyOrder": ["--pending"] },
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
     { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
-  ]
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -366,7 +553,92 @@ WITH transition_values AS (
             80
         ),
 
-        -- 루카스 지시 루트: pending job 재개
+        (
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'execute_laplace_as_root',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'CH4_PENDING_JOB_VIEWED',
+            'command',
+            'view_pending_job',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
+    { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_pending_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_pending_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'CH4_INVESTIGATION_STARTED',
+            'command',
+            'list_root_workspace',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] },
+    { "command": "ls", "argsAnyOrder": ["-al"] },
+    { "command": "ls", "argsAnyOrder": ["-la"] },
+    { "command": "ls", "argsAnyOrder": ["-l"] },
+    { "command": "ls", "argsAnyOrder": ["-a"] },
+    { "command": "pwd", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
+        ),
+
+        -- 루카스 지시 루트: mounted laplace.qasm root 실행
         (
             'CH4_PENDING_JOB_VIEWED',
             'CH4_LAPLACE_CONFIRM_1',
@@ -376,12 +648,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -420,7 +693,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_CONFIRM_2',
-            'CH4_BAD_ENDING',
+            'CH4_LAPLACE_CONFIRM_3',
             'command',
             'confirm_yes',
             'server_rule',
@@ -433,15 +706,12 @@ WITH transition_values AS (
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "ending_bad_sandbox": true,
-    "chapter4_completed": true
+    "laplace_confirm_2": true
   },
-  "markCheckpoint": true,
   "snapshotPatch": {
-    "flags.ending_bad_sandbox": true,
-    "flags.chapter4_completed": true
+    "flags.laplace_confirm_2": true
   },
-  "recentResult": "SUCCESS_ENDING_BAD"
+  "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             100
         ),
@@ -537,6 +807,53 @@ WITH transition_values AS (
         ),
         (
             'CH4_INVESTIGATION_STARTED',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_INVESTIGATION_STARTED',
             'CH4_PENDING_JOB_VIEWED',
             'command',
             'view_pending_job',
@@ -544,10 +861,11 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "corectl", "argsAnyOrder": ["pending"] },
-    { "command": "jobs", "argsAnyOrder": ["--pending"] },
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
     { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
-  ]
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -746,7 +1064,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -757,7 +1082,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -767,7 +1092,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -778,7 +1103,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -806,7 +1131,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -817,7 +1149,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -827,7 +1159,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -838,7 +1170,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -866,7 +1198,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -877,7 +1216,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -887,7 +1226,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -898,7 +1237,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -926,7 +1265,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -937,7 +1283,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -947,7 +1293,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -958,7 +1304,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -986,7 +1332,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -997,7 +1350,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -1007,7 +1360,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -1018,7 +1371,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1046,7 +1399,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1057,7 +1417,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -1067,7 +1427,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -1078,7 +1438,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1106,7 +1466,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1128,7 +1495,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1150,7 +1524,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1172,7 +1553,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1194,7 +1582,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1216,7 +1611,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1238,7 +1640,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_PRESENT",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1249,7 +1658,7 @@ WITH transition_values AS (
   "vfsOverlay": {
     "createdNodes": [
       {
-        "path": "/home/guest/.route_cache",
+        "path": "/root/.route_cache",
         "type": "directory",
         "readable": true,
         "executable": true,
@@ -1259,7 +1668,7 @@ WITH transition_values AS (
         "createdBy": "lucas_route"
       },
       {
-        "path": "/home/guest/.route_cache/lucas_authority_patch.bin",
+        "path": "/root/.route_cache/lucas_authority_patch.bin",
         "type": "file",
         "readable": true,
         "executable": true,
@@ -1270,7 +1679,7 @@ WITH transition_values AS (
         "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
       },
       {
-        "path": "/home/guest/.route_cache/manifest.txt",
+        "path": "/root/.route_cache/manifest.txt",
         "type": "file",
         "readable": true,
         "executable": false,
@@ -1298,7 +1707,14 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "commandRegex": "(?is)^\\s*(?:sh\\s+(?:/root/)?lucas_route\\.sh|bash\\s+(?:/root/)?lucas_route\\.sh|(?:\\./)?lucas_route\\.sh)\\s*$",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ],
   "requiredFragmentGroups": [["4"]]
 }$json$::jsonb,
             $json${
@@ -1321,12 +1737,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1348,10 +1765,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1379,12 +1795,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1406,12 +1823,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1433,12 +1851,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1460,12 +1879,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1487,12 +1907,13 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "resume", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "execute", "argsAnyOrder": ["laplace.qasm"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/laplace.qasm"] },
-    { "command": "run", "argsAnyOrder": ["LAPLACE_PENDING_04"] },
-    { "command": "corectl", "argsAnyOrder": ["resume", "LAPLACE_PENDING_04"] }
-  ]
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -1566,10 +1987,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1595,10 +2015,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1624,10 +2043,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1653,10 +2071,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1682,10 +2099,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1711,10 +2127,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1740,10 +2155,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1769,10 +2183,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "systemctl", "argsAnyOrder": ["rollback", "--target", "global_connect.db"] },
-    { "command": "restore", "argsAnyOrder": ["--all"] },
-    { "command": "rollback", "argsAnyOrder": ["global_connect.db"] },
-    { "command": "corectl", "argsAnyOrder": ["rollback", "global_connect.db"] }
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
 }$json$::jsonb,
             $json${
@@ -1800,9 +2213,8 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "run", "argsAnyOrder": ["/home/guest/.route_cache/lucas_authority_patch.bin"] },
-    { "command": "execute", "argsAnyOrder": ["/home/guest/.route_cache/lucas_authority_patch.bin"] },
-    { "command": "/home/guest/.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] }
+    { "command": "/root/.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] },
+    { "command": "./.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
@@ -1820,7 +2232,6 @@ WITH transition_values AS (
             100
         ),
 
-        -- 히든 엔딩 4: 비밀 프로그램 삭제
         (
             'CH4_MINIGAME_COMPLETED',
             'CH4_CLEAN_ROLLBACK_ENDING',
@@ -1830,7 +2241,7 @@ WITH transition_values AS (
             $json${
   "rule": "VIRTUAL_FS_COMMAND",
   "command": "rm",
-  "resolvedPath": "/home/guest/.route_cache/lucas_authority_patch.bin",
+  "resolvedPath": "/root/.route_cache/lucas_authority_patch.bin",
   "allowRelativePath": true,
   "allowAbsolutePath": true,
   "alternateCommands": ["shred", "unlink"]
@@ -1844,7 +2255,7 @@ WITH transition_values AS (
   "markCheckpoint": true,
   "vfsOverlay": {
     "removedPaths": [
-      "/home/guest/.route_cache/lucas_authority_patch.bin"
+      "/root/.route_cache/lucas_authority_patch.bin"
     ]
   },
   "snapshotPatch": {
@@ -1855,6 +2266,188 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_ENDING_CLEAN_ROLLBACK"
 }$json$::jsonb,
             100
+        ),
+
+        -- Bad Ending Final Confirm
+        (
+            'CH4_LAPLACE_CONFIRM_3',
+            'CH4_BAD_ENDING',
+            'command',
+            'confirm_yes',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "y", "argsAnyOrder": [] },
+    { "command": "yes", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "ending_bad_sandbox": true,
+    "chapter4_completed": true
+  },
+  "markCheckpoint": true,
+  "snapshotPatch": {
+    "flags.ending_bad_sandbox": true,
+    "flags.chapter4_completed": true
+  },
+  "recentResult": "SUCCESS_ENDING_BAD"
+}$json$::jsonb,
+            100
+        ),
+
+        -- FAIL loops for Confirm 1
+        (
+            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_CONFIRM_FAIL_1',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_1',
+            'CH4_LAPLACE_CONFIRM_2',
+            'command',
+            'confirm_yes',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "y", "argsAnyOrder": [] },
+    { "command": "yes", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_confirm_1": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_confirm_1": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_1',
+            'CH4_LAPLACE_CONFIRM_FAIL_1',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
+        ),
+
+        -- FAIL loops for Confirm 2
+        (
+            'CH4_LAPLACE_CONFIRM_2',
+            'CH4_LAPLACE_CONFIRM_FAIL_2',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_2',
+            'CH4_LAPLACE_CONFIRM_3',
+            'command',
+            'confirm_yes',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "y", "argsAnyOrder": [] },
+    { "command": "yes", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_confirm_2": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_confirm_2": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_2',
+            'CH4_LAPLACE_CONFIRM_FAIL_2',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
+        ),
+
+        -- FAIL loops for Confirm 3
+        (
+            'CH4_LAPLACE_CONFIRM_3',
+            'CH4_LAPLACE_CONFIRM_FAIL_3',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_3',
+            'CH4_BAD_ENDING',
+            'command',
+            'confirm_yes',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "y", "argsAnyOrder": [] },
+    { "command": "yes", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "ending_bad_sandbox": true,
+    "chapter4_completed": true
+  },
+  "markCheckpoint": true,
+  "snapshotPatch": {
+    "flags.ending_bad_sandbox": true,
+    "flags.chapter4_completed": true
+  },
+  "recentResult": "SUCCESS_ENDING_BAD"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_3',
+            'CH4_LAPLACE_CONFIRM_FAIL_3',
+            'command',
+            '^.*$',
+            'regex',
+            $json${}$json$::jsonb,
+            $json${
+  "recentResult": "FAIL_INVALID_INPUT"
+}$json$::jsonb,
+            50
         )
     ) AS v(from_code, to_code, action_type, expected_input, validator_type, validator_config, effect_bundle, priority)
 )

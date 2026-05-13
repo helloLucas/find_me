@@ -25,10 +25,85 @@ interface TerminalSceneProps {
 
 const SSH_AUTH_PROMPT_NODE_CODE = "CH1_SSH_AUTH_PROMPT";
 const SSH_AUTH_QUESTION = "Are you sure you want to continue connecting (yes/no)?";
+const SSH_PASSWORD_PROMPT_NODE_CODES = new Set([
+  "CH4_SSH_PASSWORD_PROMPT",
+  "CH4_SSH_PASSWORD_FAIL",
+]);
+const CH4_CONFIRM_PROMPT_NODE_CODES = new Set([
+  "CH4_LAPLACE_CONFIRM_1",
+  "CH4_LAPLACE_CONFIRM_2",
+  "CH4_LAPLACE_CONFIRM_3",
+  "CH4_LAPLACE_CONFIRM_FAIL_1",
+  "CH4_LAPLACE_CONFIRM_FAIL_2",
+  "CH4_LAPLACE_CONFIRM_FAIL_3",
+]);
 const INLINE_PROMPT_INPUT_PREFIX = "__inline_prompt_input__:";
+const CH4_SSH_PASSWORD_OK_COMMAND = "__CH4_SSH_PASSWORD_OK__";
+const CH4_SSH_PASSWORD_BAD_COMMAND = "__CH4_SSH_PASSWORD_BAD__";
+type InlinePromptMode = "ssh-auth" | "password" | "confirm";
+
+let inMemoryChapter4RootPassword: string | null = null;
 
 function isSshAuthQuestion(text: string) {
   return text.trim() === SSH_AUTH_QUESTION;
+}
+
+function isSshPasswordQuestion(text: string) {
+  return /password:\s*$/i.test(text);
+}
+
+function isConfirmationQuestion(text: string) {
+  return /\[yes\/no\]:\s*$/i.test(text.trim());
+}
+
+function getInlinePromptMode(nodeCode: string | undefined, text: string | undefined): InlinePromptMode | undefined {
+  if (!nodeCode || !text) return undefined;
+  if (nodeCode === SSH_AUTH_PROMPT_NODE_CODE && isSshAuthQuestion(text)) {
+    return "ssh-auth";
+  }
+  if (SSH_PASSWORD_PROMPT_NODE_CODES.has(nodeCode) && isSshPasswordQuestion(text)) {
+    return "password";
+  }
+  if (CH4_CONFIRM_PROMPT_NODE_CODES.has(nodeCode) && isConfirmationQuestion(text)) {
+    return "confirm";
+  }
+  return undefined;
+}
+
+function getInlinePromptModeForLine(text: string): InlinePromptMode | undefined {
+  if (isSshAuthQuestion(text)) return "ssh-auth";
+  if (isSshPasswordQuestion(text)) return "password";
+  if (isConfirmationQuestion(text)) return "confirm";
+  return undefined;
+}
+
+function parseSshnukeRootPassword(command: string) {
+  const trimmedCommand = command.trim();
+  if (!/^sshnuke(?:\s|$)/i.test(trimmedCommand)) return undefined;
+  if (!/(?:^|\s)(?:10\.2\.2\.2|universe-core)(?:\s|$)/i.test(trimmedCommand)) {
+    return undefined;
+  }
+
+  const passwordMatch = trimmedCommand.match(
+    /(?:^|\s)--?rootpw(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/i
+  );
+  const password = passwordMatch?.[1] ?? passwordMatch?.[2] ?? passwordMatch?.[3];
+  return password?.trim() ? password : undefined;
+}
+
+function storeChapter4RootPassword(password: string) {
+  inMemoryChapter4RootPassword = password;
+}
+
+function getStoredChapter4RootPassword() {
+  return inMemoryChapter4RootPassword;
+}
+
+function isInternalStoryCommand(command: string) {
+  return (
+    command === CH4_SSH_PASSWORD_OK_COMMAND ||
+    command === CH4_SSH_PASSWORD_BAD_COMMAND
+  );
 }
 
 function toInlinePromptInput(command: string) {
@@ -42,7 +117,7 @@ function getInlinePromptInput(text: string) {
 }
 
 function splitPromptInput(text: string) {
-  const match = text.match(/^([^@\s]+@[^:\s]+:[^\r\n$]+\$)\s*(.*)$/);
+  const match = text.match(/^([^@\s]+@[^:\s]+:[^\r\n$#]+[$#])\s*(.*)$/);
   if (!match) return undefined;
 
   return {
@@ -108,7 +183,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
   useEffect(() => {
     storyApi.getRecentCommands()
       .then((commands) => {
-        setCommandHistory([...commands].reverse());
+        setCommandHistory([...commands].filter((command) => !isInternalStoryCommand(command)).reverse());
         setHistoryIndex(-1);
       })
       .catch((e) => {
@@ -116,12 +191,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       });
   }, []);
 
-  const promptString = `${terminalUser}@${terminalHost}:${terminalPath}$`;
+  const promptChar = terminalUser === "root" ? "#" : "$";
+  const promptString = `${terminalUser}@${terminalHost}:${terminalPath}${promptChar}`;
   const lastTerminalOutput = terminalOutput[terminalOutput.length - 1];
-  const isSshAuthPromptActive =
-    currentNode?.code === SSH_AUTH_PROMPT_NODE_CODE &&
-    lastTerminalOutput?.type === "system" &&
-    isSshAuthQuestion(lastTerminalOutput.text);
+  const inlinePromptMode =
+    lastTerminalOutput?.type === "system"
+      ? getInlinePromptMode(currentNode?.code, lastTerminalOutput.text)
+      : undefined;
+  const isInlinePromptActive = inlinePromptMode !== undefined;
   const endOfOutputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -188,10 +265,6 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
     const rawCommand = inputValue.trim();
 
-    // 명령어 히스토리에 추가 및 인덱스 초기화
-    setCommandHistory((prev) => [...prev, rawCommand]);
-    setHistoryIndex(-1);
-
     let activeNode = useStoryRuntimeStore.getState().currentNode ?? currentNode;
 
     if (canSubmitStoryAction(activeNode, "click", "open_terminal")) {
@@ -213,14 +286,39 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       return;
     }
 
+    const configuredRootPassword = parseSshnukeRootPassword(rawCommand);
+    if (configuredRootPassword) {
+      storeChapter4RootPassword(configuredRootPassword);
+    }
+
     const normalizedLowerCommand = normalizedWhitespaceCommand.toLowerCase();
     const isSshAuthNode = activeNode?.code === SSH_AUTH_PROMPT_NODE_CODE;
     const isSshAuthYes = isSshAuthNode && normalizedLowerCommand === "yes";
-    const command = isSshAuthYes ? "YES" : rawCommand;
+    let command = isSshAuthYes ? "YES" : rawCommand;
+    const submittedInlinePromptMode =
+      lastTerminalOutput?.type === "system"
+        ? getInlinePromptMode(activeNode?.code, lastTerminalOutput.text)
+        : undefined;
+
+    if (submittedInlinePromptMode === "password") {
+      const expectedPassword = getStoredChapter4RootPassword();
+      command =
+        expectedPassword && rawCommand === expectedPassword
+          ? CH4_SSH_PASSWORD_OK_COMMAND
+          : CH4_SSH_PASSWORD_BAD_COMMAND;
+    }
+
+    // SSH/확인 프롬프트 입력은 실제 터미널처럼 독립 커맨드 히스토리에 남기지 않는다.
+    if (!submittedInlinePromptMode) {
+      setCommandHistory((prev) => [...prev, rawCommand]);
+      setHistoryIndex(-1);
+    }
 
     appendTerminalOutput(
       "input",
-      isSshAuthPromptActive ? toInlinePromptInput(rawCommand) : `${promptString} ${rawCommand}`
+      submittedInlinePromptMode
+        ? toInlinePromptInput(submittedInlinePromptMode === "password" ? "" : rawCommand)
+        : `${promptString} ${rawCommand}`
     );
     setInputValue("");
 
@@ -426,16 +524,19 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           const inlineAnswer =
             nextOutput?.type === "input" ? getInlinePromptInput(nextOutput.text) : undefined;
 
-          if (output.type === "system" && isSshAuthQuestion(output.text)) {
+          const outputInlinePromptMode =
+            output.type === "system" ? getInlinePromptModeForLine(output.text) : undefined;
+          if (outputInlinePromptMode) {
             if (inlineAnswer !== undefined) {
               return (
                 <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
-                  {output.text} {inlineAnswer}
+                  {output.text}
+                  {outputInlinePromptMode === "password" ? "" : ` ${inlineAnswer}`}
                 </div>
               );
             }
 
-            if (isSshAuthPromptActive && index === terminalOutput.length - 1) {
+            if (isInlinePromptActive && index === terminalOutput.length - 1) {
               return (
                 <div key={output.id} className="mb-1 flex flex-wrap items-baseline text-gray-400">
                   <span className="whitespace-pre-wrap">{output.text}</span>
@@ -453,7 +554,11 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                       className="min-w-20 flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
                       autoComplete="off"
                       spellCheck="false"
-                      style={{ textShadow: "none" }}
+                      style={{
+                        textShadow: "none",
+                        color: outputInlinePromptMode === "password" ? "transparent" : undefined,
+                        caretColor: "rgb(156 163 175)",
+                      }}
                       onPaste={handlePaste}
                       onKeyDown={handleKeyDown}
                     />
@@ -487,7 +592,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           );
         })}
 
-        {!isSshAuthPromptActive && !isProcessing ? (
+        {!isInlinePromptActive && !isProcessing ? (
           <div className="flex flex-col mt-2">
             <div className="flex items-center">
               <span
@@ -525,7 +630,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
               </div>
             )}
           </div>
-        ) : !isSshAuthPromptActive ? (
+        ) : !isInlinePromptActive ? (
           <div className="flex items-center mt-2 text-gray-400">
             <span className="animate-pulse animate-duration-1000" style={{ textShadow: "none" }}>
               _

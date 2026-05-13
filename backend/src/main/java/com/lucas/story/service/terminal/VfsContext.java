@@ -104,6 +104,10 @@ public class VfsContext {
    * @return vfs.json의 prompt.user 값, 없으면 guest
    */
   public String getPromptUser() {
+    if (vfsOverlay != null && vfsOverlay.hasNonNull("promptUser")) {
+      return vfsOverlay.path("promptUser").asText("guest");
+    }
+
     // 정적 VFS가 없으면 기존 프롬프트 사용자명을 반환한다.
     if (staticVfs == null || staticVfs.isNull()) {
       return "guest";
@@ -119,6 +123,10 @@ public class VfsContext {
    * @return vfs.json의 prompt.host 값, 없으면 lucas-server
    */
   public String getPromptHost() {
+    if (vfsOverlay != null && vfsOverlay.hasNonNull("promptHost")) {
+      return vfsOverlay.path("promptHost").asText("lucas-server");
+    }
+
     // 정적 VFS가 없으면 기존 프롬프트 호스트명을 반환한다.
     if (staticVfs == null || staticVfs.isNull()) {
       return "lucas-server";
@@ -194,6 +202,10 @@ public class VfsContext {
       return null;
     }
 
+    if (isPathHiddenByServerNamespace(path)) {
+      return null;
+    }
+
     // 2. 배열형 overlay의 createdNodes/modifiedNodes에서 먼저 조회합니다.
     JsonNode arrayOverlayNode = findOverlayArrayNode(path);
     if (arrayOverlayNode != null) {
@@ -262,8 +274,22 @@ public class VfsContext {
     // 5. removedPaths에 있는 직계 하위 요소를 제거합니다.
     removeOverlayChildren(childrenMap, path);
 
+    childrenMap.entrySet().removeIf(entry -> isPathHiddenByServerNamespace(entry.getKey()));
+
     // 수집된 맵을 리스트로 변환하여 반환합니다.
     return new ArrayList<>(childrenMap.values());
+  }
+
+  private boolean isPathHiddenByServerNamespace(String path) {
+    if (!isUniverseCoreShell()) {
+      return false;
+    }
+
+    return "/home".equals(path) || path.startsWith("/home/");
+  }
+
+  private boolean isUniverseCoreShell() {
+    return "root".equals(getPromptUser()) && "universe-core".equals(getPromptHost());
   }
 
   /**
