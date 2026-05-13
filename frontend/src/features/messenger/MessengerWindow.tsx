@@ -108,8 +108,14 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
     const onMouseMove = (moveEvent: MouseEvent) => {
       if (!drag.current.isDragging) return;
 
-      drag.current.x = drag.current.startLeft + (moveEvent.clientX - drag.current.startX);
-      drag.current.y = drag.current.startTop + (moveEvent.clientY - drag.current.startY);
+      const nextX = drag.current.startLeft + (moveEvent.clientX - drag.current.startX);
+      const nextY = drag.current.startTop + (moveEvent.clientY - drag.current.startY);
+
+      const availableWidth = window.innerWidth;
+      const availableHeight = window.innerHeight - DESKTOP_TASKBAR_HEIGHT;
+
+      drag.current.x = Math.min(Math.max(nextX, 0), Math.max(0, availableWidth - WINDOW_W));
+      drag.current.y = Math.min(Math.max(nextY, 0), Math.max(0, availableHeight - WINDOW_H));
 
       if (windowRef.current) {
         windowRef.current.style.transform = `translate(${drag.current.x}px, ${drag.current.y}px)`;

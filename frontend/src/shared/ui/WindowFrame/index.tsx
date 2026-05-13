@@ -144,8 +144,15 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       const dx = moveEvent.clientX - geom.current.startX;
       const dy = moveEvent.clientY - geom.current.startY;
-      geom.current.x = geom.current.startLeft + dx;
-      geom.current.y = geom.current.startTop + dy;
+      
+      const nextX = geom.current.startLeft + dx;
+      const nextY = geom.current.startTop + dy;
+
+      const availableWidth = window.innerWidth;
+      const availableHeight = window.innerHeight - DESKTOP_TASKBAR_HEIGHT;
+
+      geom.current.x = clamp(nextX, 0, Math.max(0, availableWidth - geom.current.w));
+      geom.current.y = clamp(nextY, 0, Math.max(0, availableHeight - geom.current.h));
 
       if (windowRef.current) {
         windowRef.current.style.transform = `translate(${geom.current.x}px, ${geom.current.y}px)`;
