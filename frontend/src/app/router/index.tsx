@@ -9,6 +9,8 @@ import SetupNicknamePage from "../../pages/auth/setup-nickname";
 import NotFoundPage from "../../pages/not-found";
 import LucasSurvivalMinigamePage from "../../pages/minigames/lucas-survival";
 import AdminPage from "../../pages/admin";
+import MinigameSelectionPage from "../../pages/minigames/MinigameSelectionPage";
+import { PacmanArcadePage, StarforceArcadePage, PacketDashArcadePage, LucasSurvivalArcadePage, LucasRouteArcadePage } from "../../pages/minigames/ArcadeMinigamePages";
 import AppShell from "../../widgets/layout/app-shell";
 
 function withShell(element: ReactNode) {
@@ -42,8 +44,28 @@ export const router = createBrowserRouter([
     element: withShell(<SetupNicknamePage />),
   },
   {
+    path: "/minigames",
+    element: withShell(<MinigameSelectionPage />),
+  },
+  {
+    path: "/minigames/pacman",
+    element: <PacmanArcadePage />,
+  },
+  {
+    path: "/minigames/starforce",
+    element: <StarforceArcadePage />,
+  },
+  {
+    path: "/minigames/packet-dash",
+    element: <PacketDashArcadePage />,
+  },
+  {
     path: "/minigames/lucas-survival",
-    element: <LucasSurvivalMinigamePage />,
+    element: <LucasSurvivalArcadePage />,
+  },
+  {
+    path: "/minigames/lucas-route",
+    element: <LucasRouteArcadePage />,
   },
   {
     path: "/admin",
