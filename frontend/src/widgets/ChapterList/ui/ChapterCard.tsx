@@ -7,6 +7,7 @@ interface ChapterCardProps {
     code: string;
     title: string;
     status: ChapterStatusValue;
+    hasEndingBranchSignal?: boolean;
     onClick: () => void;
 }
 
@@ -102,6 +103,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     code,
     title,
     status,
+    hasEndingBranchSignal = false,
     onClick,
 }) => {
     const { t } = useTranslation();
@@ -110,6 +112,18 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     const statusConfig = getStatusConfig(t);
     // 안전장치: 매핑되지 않은 status가 들어올 경우 LOCKED 처리
     const config = statusConfig[status] || statusConfig[CHAPTER_STATUS.LOCKED];
+    const isEndingBranchSignal = status === CHAPTER_STATUS.COMPLETED && hasEndingBranchSignal;
+    const containerClass = isEndingBranchSignal
+        ? "border-[#67e8f9]/45 bg-[#061014] hover:border-[#67e8f9] hover:bg-[#071a20] cursor-pointer group shadow-[0_0_15px_rgba(103,232,249,0.14)]"
+        : config.containerClass;
+    const labelClass = isEndingBranchSignal ? "text-[#67e8f9]" : config.labelClass;
+    const titleClass = isEndingBranchSignal ? "text-[#dffbff]" : config.titleClass;
+    const watermarkClass = isEndingBranchSignal
+        ? "text-[#67e8f9]/10 group-hover:text-[#67e8f9]/20"
+        : config.watermarkClass;
+    const statusIcon = isEndingBranchSignal ? <PixelArrow /> : config.icon;
+    const statusLabel = isEndingBranchSignal ? "ENDING_BRANCH_SIGNAL" : config.label;
+    const clearedStampLabel = isEndingBranchSignal ? "BRANCH SIGNAL" : t('lobby.cleared');
     const chapterId = extractChapterNumber(code);
     const watermarkId = String(chapterId).padStart(2, '0');
 
@@ -123,29 +137,38 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
                 });
                 config.action(onClick, openModal);
             }}
-            className={`flex-1 border px-6 py-6 flex flex-col justify-center relative overflow-hidden rounded-sm transition-all duration-300 ${config.containerClass}`}
+            className={`flex-1 border px-6 py-6 flex flex-col justify-center relative overflow-hidden rounded-sm transition-all duration-300 ${containerClass}`}
         >
             <div className="z-10">
-                <span className={`text-[10px] md:text-sm tracking-widest flex items-center mb-1 font-lobby ${config.labelClass}`}>
-                    {config.icon}
-                    {config.label}
+                <span className={`text-[10px] md:text-sm tracking-widest flex items-center mb-1 font-lobby ${labelClass}`}>
+                    {statusIcon}
+                    {statusLabel}
                 </span>
-                <h2 className={`text-xl md:text-2xl tracking-widest font-lobby ${config.titleClass}`}>
+                <h2 className={`text-xl md:text-2xl tracking-widest font-lobby ${titleClass}`}>
                     {t('lobby.chapter')} {chapterId}
                 </h2>
-                <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-lobby opacity-70 ${config.titleClass}`}>
+                <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-lobby opacity-70 ${titleClass}`}>
                     {title}
                 </h3>
+                {isEndingBranchSignal && (
+                    <p className="mt-2 text-[10px] md:text-xs tracking-[0.12em] font-lobby text-[#67e8f9]/80">
+                        다른 결말의 신호가 남아 있습니다
+                    </p>
+                )}
             </div>
 
-            <div className={`absolute right-4 -bottom-4 text-6xl md:text-[90px] font-bold pointer-events-none leading-none font-lobby transition-colors ${config.watermarkClass}`}>
+            <div className={`absolute right-4 -bottom-4 text-6xl md:text-[90px] font-bold pointer-events-none leading-none font-lobby transition-colors ${watermarkClass}`}>
                 {watermarkId}
             </div>
 
             {/* Cleared Stamp (Visible only when COMPLETED) */}
             {status === CHAPTER_STATUS.COMPLETED && (
-                <div className="absolute top-4 right-6 z-20 border-2 border-[#a3e635] text-[#a3e635] text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 shadow-[0_0_10px_rgba(163,230,53,0.3)]">
-                    [ {t('lobby.cleared')} ]
+                <div className={`absolute top-4 right-6 z-20 border-2 text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 ${
+                    isEndingBranchSignal
+                        ? "border-[#67e8f9] text-[#67e8f9] shadow-[0_0_10px_rgba(103,232,249,0.25)]"
+                        : "border-[#a3e635] text-[#a3e635] shadow-[0_0_10px_rgba(163,230,53,0.3)]"
+                }`}>
+                    [ {clearedStampLabel} ]
                 </div>
             )}
         </div>

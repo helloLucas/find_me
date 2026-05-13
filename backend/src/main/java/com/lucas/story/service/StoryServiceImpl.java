@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
+import com.lucas.ending.service.EndingService;
 import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.global.exception.CustomException;
 import com.lucas.global.exception.ErrorCode;
@@ -108,10 +109,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
   private static final Map<String, String> CHAPTER_START_NODE_CODES =
       Map.of(
-          CHAPTER_03_CODE,
-          CHAPTER_03_START_NODE_CODE,
-          CHAPTER_04_CODE,
-          CHAPTER_04_START_NODE_CODE);
+          CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE, CHAPTER_04_CODE, CHAPTER_04_START_NODE_CODE);
 
   /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
   private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
@@ -170,6 +168,7 @@ public class StoryServiceImpl implements StoryService {
   private final StoryTransitionRepository storyTransitionRepository;
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final UserChapterProgressRepository userChapterProgressRepository;
+  private final EndingService endingService;
   private final RecentActionService recentActionService;
   private final TerminalCommandService terminalCommandService;
   private final StoryActionLogService storyActionLogService;
@@ -467,6 +466,7 @@ public class StoryServiceImpl implements StoryService {
       // 도착한 노드가 종단 노드(엔딩)인 경우, 현재 챕터를 완료 처리하고 다음 챕터를 해금한다.
       if (nextNode.isTerminal() || "ending".equals(nextNode.getNodeType())) {
         handleChapterCompletion(user, chapter);
+        unlockEndingIfPresent(user, nextNode);
       }
 
       logStoryAction(user, chapter, currentNode, nextNode, request, "SUCCESS");
@@ -576,6 +576,7 @@ public class StoryServiceImpl implements StoryService {
         new StorySessionState(user.getId(), chapterId, toNodeId, stateVersion),
         new StoryRecentEvent(
             timestamp,
+            chapterId,
             actionType,
             rawInput,
             normInput,
@@ -4354,6 +4355,20 @@ public class StoryServiceImpl implements StoryService {
    *
    * <p>터미널/VFS 기반 챕터는 공통 확장 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
    */
+  private void unlockEndingIfPresent(User user, StoryNode node) {
+    if (!"ending".equals(node.getNodeType())) {
+      return;
+    }
+
+    String endingType = node.getOutputBundle().path("effects").path("endingType").asText(null);
+    if (endingType == null || endingType.isBlank()) {
+      log.warn("Ending node has no endingType. nodeCode={}", node.getCode());
+      return;
+    }
+
+    endingService.unlockEnding(user.getId(), endingType);
+  }
+
   private JsonNode createEmptySnapshot(Chapter chapter, StoryNode node) {
     // 빈 JSON 객체 생성
     ObjectNode snapshot = objectMapper.createObjectNode();

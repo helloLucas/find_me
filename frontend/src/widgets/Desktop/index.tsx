@@ -272,7 +272,7 @@ export const Desktop: React.FC = () => {
                 id={windowState.id}
                 title={windowState.title}
                 icon="/pixel_trash_icon.svg"
-                defaultWidth={400}
+                defaultWidth={560}
                 defaultHeight={300}
               >
                 <TrashWindow />

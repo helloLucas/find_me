@@ -8,7 +8,7 @@
   width: 100%;
   background: radial-gradient(circle at 50% 30%, #15102a 0%, #080a10 100%);
   color: #38bdf8;
-  font-family: 'Courier New', Courier, monospace, 'Outfit', 'Inter', sans-serif;
+  font-family: var(--lucas-font-notepad);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;

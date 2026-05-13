@@ -4,7 +4,7 @@ import type { BaseResponse } from "../types/api";
 export type CurrentUserResponse = {
   id: number;
   nickname: string;
-  role: "GUEST" | "MEMBER";
+  role: "GUEST" | "MEMBER" | "ADMIN";
   lastLoginAt: string | null;
 };
 

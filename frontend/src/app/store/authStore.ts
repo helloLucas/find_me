@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { tokenManager } from "../../shared/utils/tokenManager";
 import { jwtDecode } from "jwt-decode";
 
-export type UserRole = 'GUEST' | 'MEMBER';
+export type UserRole = 'GUEST' | 'MEMBER' | 'ADMIN';
 
 type AuthUserProfile = {
   nickname?: string;
