@@ -286,13 +286,13 @@ const Home = () => {
 
             <div className="absolute top-32 left-16 md:top-40 md:left-24 flex flex-col">
                 <header className="flex flex-col mb-20 select-none glitch-group">
-                    <h1 
+                    <h1
                         className="glitch-text-pro font-landing-title text-7xl md:text-8xl tracking-tighter"
                         data-text={titleLinePrimary}
                     >
                         {titleLinePrimary}
                     </h1>
-                    <h2 
+                    <h2
                         className="glitch-text-pro font-landing-title text-4xl md:text-5xl tracking-widest self-end -mt-6 mr-4 opacity-80"
                         data-text={titleLineSecondary}
                     >
@@ -315,9 +315,9 @@ const Home = () => {
                 </p>
             </div>
 
-            <AuthSelectionModal 
-                isOpen={isAuthModalOpen} 
-                onClose={() => setIsAuthModalOpen(false)} 
+            <AuthSelectionModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
                 onSelect={handleSelectProvider}
             />
         </div>

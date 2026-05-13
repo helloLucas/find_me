@@ -108,7 +108,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 }) => {
     const { t } = useTranslation();
     const openModal = useModalStore((state) => state.openModal);
-    
+
     const statusConfig = getStatusConfig(t);
     // 안전장치: 매핑되지 않은 status가 들어올 경우 LOCKED 처리
     const config = statusConfig[status] || statusConfig[CHAPTER_STATUS.LOCKED];
@@ -163,11 +163,10 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
             {/* Cleared Stamp (Visible only when COMPLETED) */}
             {status === CHAPTER_STATUS.COMPLETED && (
-                <div className={`absolute top-4 right-6 z-20 border-2 text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 ${
-                    isEndingBranchSignal
+                <div className={`absolute top-4 right-6 z-20 border-2 text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 ${isEndingBranchSignal
                         ? "border-[#67e8f9] text-[#67e8f9] shadow-[0_0_10px_rgba(103,232,249,0.25)]"
                         : "border-[#a3e635] text-[#a3e635] shadow-[0_0_10px_rgba(163,230,53,0.3)]"
-                }`}>
+                    }`}>
                     [ {clearedStampLabel} ]
                 </div>
             )}

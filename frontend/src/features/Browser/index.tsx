@@ -163,7 +163,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         currentSearchQuery: null,
       }];
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 796a7ce0e0b2423631afc3afaeacac52a9e67c61
     return [{
       id: "tab1",
       title: "Search",
@@ -300,6 +303,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
+<<<<<<< HEAD
     const isCh1 = !currentNode?.code?.startsWith("CH2_") && !currentNode?.code?.startsWith("CH3_");
 
     const newTab: Tab = isCh1
@@ -341,6 +345,29 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         };
 
     setTabs((prev) => [...prev, newTab]);
+=======
+    setTabs((prev) => [
+      ...prev,
+      {
+        id: newId,
+        title: "Search",
+        url: "https://void-search.net",
+        component: "search",
+        history: [
+          {
+            url: "https://void-search.net",
+            component: "search",
+            title: "Search",
+          },
+        ],
+        historyIndex: 0,
+        currentView: "home",
+        selectedHint: null,
+        detailOrigin: null,
+        currentSearchQuery: null,
+      },
+    ]);
+>>>>>>> 796a7ce0e0b2423631afc3afaeacac52a9e67c61
     setActiveTabId(newId);
   };
 
