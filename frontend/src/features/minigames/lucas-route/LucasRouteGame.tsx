@@ -767,7 +767,7 @@ function drawGame(
   }
 }
 
-export default function LucasRouteGame() {
+export default function LucasRouteGame({ isPractice }: { isPractice?: boolean }) {
   const [initialGame] = useState(() => createInitialGame());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const gameRef = useRef<GameState>(initialGame);
@@ -1030,6 +1030,40 @@ export default function LucasRouteGame() {
           <p className="lucas-route-game__hint">
             Routers are rest lanes only. If a packet is collected, the run restarts from Yuseong.
           </p>
+          {hud.status === "complete" && isPractice && (
+            <div className="lucas-route-game__clear-overlay">
+              <div className="lucas-route-game__clear-content">
+                <h2 className="lucas-route-game__clear-title">ARCADE CLEAR!</h2>
+                <p className="lucas-route-game__clear-subtitle">
+                  Practice session complete. No data was synced.
+                </p>
+                <div className="lucas-route-game__clear-stats">
+                  <div>
+                    <span>Attempts</span>
+                    <strong>{hud.attempts + 1}</strong>
+                  </div>
+                  <div>
+                    <span>Time</span>
+                    <strong>{formatTime(hud.elapsedMs)}</strong>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.location.href = '/minigames'}
+                  className="lucas-route-game__clear-btn"
+                >
+                  RETURN TO ARCADE LOBBY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startNewRun()}
+                  className="lucas-route-game__retry-btn"
+                >
+                  RETRY
+                </button>
+              </div>
+            </div>
+          )}
         </aside>
       </main>
     </div>

@@ -7,6 +7,7 @@ import type { DesktopWindowId } from '../../../shared/config/desktopWindows';
 
 interface CyberPacketDashTabProps {
   windowId?: DesktopWindowId;
+  isPractice?: boolean;
 }
 
 interface Obstacle {
@@ -83,7 +84,7 @@ const TRACK_OBSTACLES: Obstacle[] = [
   { id: 38, type: 'block', x: 16900, y: 0, w: 70, h: 40 }
 ];
 
-export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId }) => {
+export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId, isPractice }) => {
   const queryClient = useQueryClient();
   const { currentNode } = useStoryRuntimeStore();
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
@@ -105,12 +106,13 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
   const [forceReplay, setForceReplay] = useState(false);
 
   // 챕터 3 활성화 노드 구역 검증
-  const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_")) || forceBypassAccess;
+  const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_")) || forceBypassAccess || isPractice;
 
   // 세션 조각 동기화 유무 조회
   const { data: isCleared, isLoading: isCheckLoading } = useQuery({
     queryKey: ['fragment', '3'],
     queryFn: () => fragmentApi.checkFragment('3'),
+    enabled: !isPractice, // Skip check in practice mode
     retry: 1,
     staleTime: 0,
     refetchOnMount: 'always'
@@ -584,7 +586,9 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       if (trackOffset >= CONTINUOUS_TRACK_LENGTH) {
         setGameState('cleared');
         playSynthesizedSound('win');
-        acquireMutation.mutate();
+        if (!isPractice) {
+          acquireMutation.mutate();
+        }
         return;
       }
 
@@ -1005,12 +1009,25 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
           </div>
         )}
         {gameState === 'cleared' && (
-          <div className="max-w-md w-full text-center border border-green-500/30 bg-[#091e11] px-8 py-8 rounded-xl shadow-[0_0_40px_rgba(34,197,94,0.25)] animate-in fade-in zoom-in-95 duration-300">
-            <div className="text-5xl font-black text-green-400 mb-2 tracking-widest animate-pulse">TRANSMITTED!</div>
-            <div className="bg-[#0b2816] border border-green-400/20 px-4 py-3 rounded text-xs text-green-300 mb-6">
-              FRAGMENT 3 SYNCED TO MAIN DATABASE
+          <div className="max-w-md w-full text-center border border-green-500/30 bg-[#091e11] px-8 py-10 rounded-xl shadow-[0_0_40px_rgba(34,197,94,0.25)] animate-in fade-in zoom-in-95 duration-300">
+            <div className="text-5xl font-black text-green-400 mb-2 tracking-widest animate-pulse">
+              {isPractice ? 'ARCADE CLEAR!' : 'TRANSMITTED!'}
             </div>
-            <p className="text-[10px] text-gray-500">Master session synchronization complete.</p>
+            <div className="bg-[#0b2816] border border-green-400/20 px-4 py-3 rounded text-xs text-green-300 mb-6">
+              {isPractice 
+                ? 'Practice session complete. No data was synced.' 
+                : 'FRAGMENT 3 SYNCED TO MAIN DATABASE'}
+            </div>
+            {isPractice ? (
+              <button
+                onClick={() => window.location.href = '/minigames'}
+                className="w-full py-3 rounded bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold text-sm tracking-widest shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                RETURN TO ARCADE LOBBY
+              </button>
+            ) : (
+              <p className="text-[10px] text-gray-500">Master session synchronization complete.</p>
+            )}
           </div>
         )}
 

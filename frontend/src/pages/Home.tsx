@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../app/store/authStore';
 import { useAuthActions } from '../features/Auth/useAuthActions';
 import MainMenu from '../widgets/MainMenu/MainMenu';
@@ -20,8 +21,11 @@ function getCachedAlternateTitleVideoUrl() {
     return alternateTitleSceneCache.videoUrl;
 }
 
+import { trackAnalyticsEvent } from '../shared/analytics';
+
 const Home = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const checkAuth = useAuthStore((state) => state.checkAuth);
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
     const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -308,9 +312,25 @@ const Home = () => {
                 />
             </div>
 
-            <div className="absolute bottom-10 left-16 md:left-24 opacity-30">
-                <p className="font-app-text text-[9px] text-white/40 uppercase tracking-[0.4em] flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse"></span>
+            <div className="absolute bottom-10 left-16 md:left-24 flex flex-col gap-4">
+                <div
+                    onClick={() => {
+                        trackAnalyticsEvent('home_minigames_clicked');
+                        navigate('/minigames');
+                    }}
+                    className="group cursor-pointer flex flex-col"
+                >
+                    <span className="text-sm text-cyan-500/60 tracking-[0.5em] font-app-text mb-1 group-hover:text-cyan-400 transition-colors uppercase">
+                        Access Arcade
+                    </span>
+                    <span className="text-4xl md:text-6xl text-white font-landing-title tracking-tighter group-hover:text-[#a3e635] group-hover:scale-105 origin-left transition-all duration-300 flex items-center gap-6">
+                        MINIGAMES
+                        <span className="text-xs border border-white/20 px-2 py-0.5 group-hover:border-[#a3e635] transition-colors">V.01</span>
+                    </span>
+                </div>
+
+                <p className="font-app-text text-[9px] text-white/20 uppercase tracking-[0.4em] flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 bg-cyan-500/30 rounded-full animate-pulse"></span>
                     Connection: Secure // Protocol: Lucas_v3
                 </p>
             </div>
