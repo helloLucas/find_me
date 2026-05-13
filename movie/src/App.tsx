@@ -6,6 +6,7 @@ import NexusObservationScene from './scenes/NexusObservationScene';
 import LucasDisintegrationScene from './scenes/LucasDisintegrationScene';
 import LucasExpansionScene from './scenes/LucasExpansionScene';
 import NullBootScene from './scenes/NullBootScene';
+import AuthorityPatchScene from './scenes/AuthorityPatchScene';
 import './index.css';
 
 function Home() {
@@ -20,6 +21,7 @@ function Home() {
       <Link to="/lucas" className="menu-button">LUCAS DISINTEGRATION</Link>
       <Link to="/nexus" className="menu-button">NEXUS OBSERVATION</Link>
       <h3 className="menu-subtitle">8-3</h3>
+      <Link to="/authority" className="menu-button">AUTHORITY PATCH</Link>
       <Link to="/lucas-expansion" className="menu-button">LUCAS INTEGRATION</Link>
       <Link to="/null-boot" className="menu-button">NULL BOOT</Link>
       <h3 className="menu-subtitle">8-4</h3>
@@ -43,6 +45,7 @@ function App() {
         <Route path="/lucas" element={<LucasDisintegrationScene />} />
         <Route path="/lucas-expansion" element={<LucasExpansionScene />} />
         <Route path="/null-boot" element={<NullBootScene />} />
+        <Route path="/authority" element={<AuthorityPatchScene />} />
       </Routes>
     </Router>
   );
