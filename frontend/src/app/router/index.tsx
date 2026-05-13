@@ -45,10 +45,6 @@ export const router = createBrowserRouter([
     element: withShell(<AdminPage />),
   },
   {
-    path: "/admin",
-    element: withShell(<AdminPage />),
-  },
-  {
     path: "*",
     element: withShell(<NotFoundPage />),
   },
