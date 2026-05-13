@@ -144,8 +144,15 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       const dx = moveEvent.clientX - geom.current.startX;
       const dy = moveEvent.clientY - geom.current.startY;
-      geom.current.x = geom.current.startLeft + dx;
-      geom.current.y = geom.current.startTop + dy;
+
+      const nextX = geom.current.startLeft + dx;
+      const nextY = geom.current.startTop + dy;
+
+      const availableWidth = window.innerWidth;
+      const availableHeight = window.innerHeight - DESKTOP_TASKBAR_HEIGHT;
+
+      geom.current.x = clamp(nextX, 0, Math.max(0, availableWidth - geom.current.w));
+      geom.current.y = clamp(nextY, 0, Math.max(0, availableHeight - geom.current.h));
 
       if (windowRef.current) {
         windowRef.current.style.transform = `translate(${geom.current.x}px, ${geom.current.y}px)`;
@@ -235,29 +242,29 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const themeClasses = theme === "cyan"
     ? "border-[#00D4FF] shadow-[0_0_20px_rgba(0,212,255,0.25)]"
     : theme === "magenta"
-    ? "border-[#FF00FF] shadow-[0_0_20px_rgba(255,0,255,0.15)]"
-    : "border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)]";
+      ? "border-[#FF00FF] shadow-[0_0_20px_rgba(255,0,255,0.15)]"
+      : "border-green-800 shadow-[0_0_20px_rgba(0,255,0,0.15)]";
 
   const headerClasses = theme === "cyan"
     ? "border-b-2 border-[#0099CC] bg-gray-900"
     : theme === "magenta"
-    ? "border-b-2 border-[#BC00BC] bg-gray-900"
-    : "border-b-2 border-green-900 bg-gray-900";
+      ? "border-b-2 border-[#BC00BC] bg-gray-900"
+      : "border-b-2 border-green-900 bg-gray-900";
   const titleClasses = theme === "cyan"
     ? "text-[#00D4FF] drop-shadow-[0_0_5px_rgba(0,212,255,0.6)]"
     : theme === "magenta"
-    ? "text-[#FF00FF] drop-shadow-[0_0_5px_rgba(255,0,255,0.5)]"
-    : "text-green-500";
+      ? "text-[#FF00FF] drop-shadow-[0_0_5px_rgba(255,0,255,0.5)]"
+      : "text-green-500";
   const iconClasses = theme === "cyan"
     ? "bg-[#00D4FF]"
     : theme === "magenta"
-    ? "bg-[#FF00FF]"
-    : "bg-green-500";
+      ? "bg-[#FF00FF]"
+      : "bg-green-500";
   const buttonClasses = theme === "cyan"
     ? "text-[#00D4FF] hover:bg-[#00D4FF]/10 hover:text-[#00D4FF] hover:border-[#00D4FF]/50"
     : theme === "magenta"
-    ? "text-[#FF00FF] hover:bg-[#2A002A] hover:text-[#FF00FF] hover:border-[#FF00FF]/50"
-    : "text-green-600 hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50";
+      ? "text-[#FF00FF] hover:bg-[#2A002A] hover:text-[#FF00FF] hover:border-[#FF00FF]/50"
+      : "text-green-600 hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50";
 
   const baseClasses =
     `absolute flex flex-col overflow-hidden bg-black border-2 ${themeClasses} ring-1 ring-black origin-bottom`;

@@ -18,7 +18,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다. */
+/**
+ * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을
+ * 수행합니다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,13 +33,18 @@ public class AuthService {
   /**
    * Grace Token Prefix: RTR 경쟁 조건 방지용 임시 키
    *
-   * <p>토큰 교체(Rotation) 직후, 동시 요청으로 인해 짧은 지연으로 들어오는 Old Token을 악의적 탈취로 오탐지하지 않도록 30초간 임시 보관합니다.
+   * <p>
+   * 토큰 교체(Rotation) 직후, 동시 요청으로 인해 짧은 지연으로 들어오는 Old Token을 악의적 탈취로 오탐지하지 않도록 30초간
+   * 임시 보관합니다.
    *
-   * <p>Key 형식: refresh_token:grace:{old_token_value}
+   * <p>
+   * Key 형식: refresh_token:grace:{old_token_value}
    *
-   * <p>Value 형식: userId (String)
+   * <p>
+   * Value 형식: userId (String)
    *
-   * <p>TTL: 30초
+   * <p>
+   * TTL: 30초
    */
   private static final String GRACE_TOKEN_PREFIX = "refresh_token:grace:";
 
@@ -56,7 +64,7 @@ public class AuthService {
   /**
    * Redis에 사용자의 Refresh Token을 저장하거나 기존 토큰을 갱신합니다.
    *
-   * @param userId 유저 식별값
+   * @param userId       유저 식별값
    * @param refreshToken 저장할 Refresh Token
    */
   public void replaceRefreshToken(Long userId, String refreshToken) {
@@ -71,9 +79,10 @@ public class AuthService {
   /**
    * 성공 로그인 처리를 완료합니다.
    *
-   * <p>lastLoginAt은 이 메서드를 통해서만 갱신하여 일반 API 액션, 토큰 재발급, 로그아웃과 분리합니다.
+   * <p>
+   * lastLoginAt은 이 메서드를 통해서만 갱신하여 일반 API 액션, 토큰 재발급, 로그아웃과 분리합니다.
    *
-   * @param userId 유저 식별값
+   * @param userId       유저 식별값
    * @param refreshToken 저장할 Refresh Token
    */
   @Transactional
@@ -145,23 +154,20 @@ public class AuthService {
         // 새 토큰을 재발급하지 않고(RTR 재수행 금지), 현재 최신 토큰 정보를 그대로 반환합니다.
         log.info("Grace Token 매칭. 동시 요청으로 판단하여 현재 유효 토큰 반환. userId: {}", userId);
 
-        User user =
-            userRepository
-                .findByIdWithSocialLogins(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+        User user = userRepository
+            .findByIdWithSocialLogins(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
-        AuthProvider provider =
-            user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
+        AuthProvider provider = user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
         // 새 Access Token만 재발급 (Refresh Token은 savedToken 그대로 유지)
-        String newAccessToken =
-            jwtUtil.createAccessToken(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                provider,
-                user.getRole().name(),
-                accessTokenExpiration);
+        String newAccessToken = jwtUtil.createAccessToken(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            provider,
+            user.getRole().name(),
+            accessTokenExpiration);
 
         return RefreshTokenResponse.builder()
             .accessToken(newAccessToken)
@@ -188,33 +194,31 @@ public class AuthService {
   /**
    * Refresh Token Rotation(RTR)을 수행합니다.
    *
-   * <p>1. 기존(Old) Refresh Token을 Grace Key로 30초간 임시 보관합니다. 2. 새로운 Access Token과 Refresh Token을
+   * <p>
+   * 1. 기존(Old) Refresh Token을 Grace Key로 30초간 임시 보관합니다. 2. 새로운 Access Token과
+   * Refresh Token을
    * 발급합니다. 3. Redis의 최신 토큰을 새 토큰으로 교체합니다.
    *
-   * @param userId 토큰 소유 유저의 식별값
+   * @param userId          토큰 소유 유저의 식별값
    * @param oldRefreshToken 교체 전 현재 유효한 Refresh Token
    * @return 새로 발급된 토큰 세트
    */
   private RefreshTokenResponse rotateTokens(Long userId, String oldRefreshToken) {
-    User user =
-        userRepository
-            .findByIdWithSocialLogins(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user = userRepository
+        .findByIdWithSocialLogins(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
-    AuthProvider provider =
-        user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
+    AuthProvider provider = user.getSocialLogins().isEmpty() ? null : user.getSocialLogins().get(0).getProvider();
 
-    String newAccessToken =
-        jwtUtil.createAccessToken(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            provider,
-            user.getRole().name(),
-            accessTokenExpiration);
+    String newAccessToken = jwtUtil.createAccessToken(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        provider,
+        user.getRole().name(),
+        accessTokenExpiration);
 
-    String newRefreshToken =
-        jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
+    String newRefreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), refreshTokenExpiration);
 
     // [Grace Period] 기존 토큰을 즉시 폐기하지 않고 30초간 임시 보관
     // → 동시 요청의 Old Token이 탈취 의심으로 오탐지되는 경쟁 조건을 방지합니다.

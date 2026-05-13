@@ -69,7 +69,7 @@ echo FRAGMENT | nc 127.0.0.1 9091 > laplace_fragment_02.sh
       type: "confirm",
       onConfirm: () => {
         addTab(chapterCode || "default", item.name.replace(".txt", ""), item.content);
-        
+
         openWindow("notepad");
         focusWindow("notepad");
       }

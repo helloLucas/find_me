@@ -603,7 +603,7 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
             "time_zone", zoneId.getId(),
             "min_doc_count", 0,
             "format", "yyyy-MM-dd",
-            "extended_bounds", Map.of("min", range.fromIso(), "max", range.toIso())));
+            "extended_bounds", Map.of("min", range.fromDate(), "max", range.toDate())));
     timelineAgg.put(
         "aggs",
         Map.of(
@@ -838,6 +838,8 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     return new TimeRange(
         fromTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
         toTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+        fromTime.format(DAY_FMT),
+        toTime.format(DAY_FMT),
         fromTime.format(TS_FMT),
         toTime.format(TS_FMT));
   }
@@ -896,5 +898,6 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     return value.substring(0, maxLen) + "...";
   }
 
-  private record TimeRange(String fromIso, String toIso, String fromText, String toText) {}
+  private record TimeRange(
+      String fromIso, String toIso, String fromDate, String toDate, String fromText, String toText) {}
 }

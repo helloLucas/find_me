@@ -1200,7 +1200,7 @@ function createRuntime(): RuntimeState {
   };
 }
 
-export function LucasSurvivalApp() {
+export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<RuntimeState>(createRuntime());
   const spriteStoreRef = useRef<SpriteStore>({});
@@ -1243,14 +1243,14 @@ export function LucasSurvivalApp() {
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
 
   useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current) return;
+    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
 
     hasRecordedClearRef.current = true;
     void fragmentApi.acquireFragment('4').catch((error) => {
       hasRecordedClearRef.current = false;
       console.error('Failed to record Lucas survival clear:', error);
     });
-  }, [hud.status]);
+  }, [hud.status, isPractice]);
 
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -1280,9 +1280,9 @@ export function LucasSurvivalApp() {
     const last = sfxThrottleRef.current[key] ?? -999;
     const minGap =
       kind === 'shoot' ? 0.06 :
-      kind === 'hit' ? 0.05 :
-      kind === 'pickup' ? 0.08 :
-      0.15;
+        kind === 'hit' ? 0.05 :
+          kind === 'pickup' ? 0.08 :
+            0.15;
     if (now - last < minGap) return;
     sfxThrottleRef.current[key] = now;
 
@@ -1290,22 +1290,22 @@ export function LucasSurvivalApp() {
     const g = ctx.createGain();
     o.type =
       kind === 'boss' ? 'sawtooth' :
-      kind === 'levelup' ? 'triangle' :
-      'square';
+        kind === 'levelup' ? 'triangle' :
+          'square';
     const base =
       kind === 'shoot' ? 560 :
-      kind === 'hit' ? 190 :
-      kind === 'levelup' ? 360 :
-      kind === 'select' ? 520 :
-      kind === 'boss' ? 140 :
-      300;
+        kind === 'hit' ? 190 :
+          kind === 'levelup' ? 360 :
+            kind === 'select' ? 520 :
+              kind === 'boss' ? 140 :
+                300;
     o.frequency.setValueAtTime(base, now);
     o.frequency.exponentialRampToValueAtTime(
       kind === 'shoot' ? 320 :
-      kind === 'levelup' ? 900 :
-      kind === 'select' ? 740 :
-      kind === 'boss' ? 90 :
-      kind === 'pickup' ? 520 : 120,
+        kind === 'levelup' ? 900 :
+          kind === 'select' ? 740 :
+            kind === 'boss' ? 90 :
+              kind === 'pickup' ? 520 : 120,
       now + (kind === 'boss' ? 0.22 : 0.1),
     );
     g.gain.setValueAtTime(kind === 'boss' ? 0.065 : 0.04, now);
@@ -1598,9 +1598,9 @@ export function LucasSurvivalApp() {
 
     const chance =
       enemy.kind === 'kernel_reaper' ? 0.4 :
-      enemy.kind === 'memory_golem' ? 0.09 :
-      enemy.kind === 'error_drone' ? 0.06 :
-      0.03;
+        enemy.kind === 'memory_golem' ? 0.09 :
+          enemy.kind === 'error_drone' ? 0.06 :
+            0.03;
     if (Math.random() > chance) return;
 
     const roll = Math.random();
@@ -2289,7 +2289,7 @@ export function LucasSurvivalApp() {
     const p = rt.player;
     const hasteMove =
       rt.elapsed <= p.emergencyEscapeUntil ? 1.6 :
-      rt.elapsed <= p.speedBoostUntil ? 1.35 : 1;
+        rt.elapsed <= p.speedBoostUntil ? 1.35 : 1;
     const hasteAtkBase = rt.elapsed <= p.attackBoostUntil ? 0.8 : 1;
     const hasteAtkPenalty = rt.elapsed > p.damageBoostUntil && rt.elapsed <= p.overheatPenaltyUntil ? 1.45 : 1;
     const hasteAtk = hasteAtkBase * hasteAtkPenalty;
@@ -2495,7 +2495,7 @@ export function LucasSurvivalApp() {
         tb.nextCastAt = rt.elapsed + tb.cooldown * p.attackCooldownMultiplier * hasteAtk;
         const baseAngle = getAimAngle();
         spawnEffect(rt, p.x, p.y, tb.range, '#8de9ff', 'slash', 0.32, 'trace_blade', baseAngle);
-        
+
         const sweep = Math.PI * 0.72;
         const halfCone = Math.PI * 0.22;
         for (let hit = 0; hit < tb.comboHits; hit += 1) {
@@ -3329,27 +3329,27 @@ export function LucasSurvivalApp() {
 
         const ok =
           skill === 'debug_shot' ? hasProjectile :
-          skill === 'signal_orb' ? hasDamage :
-          skill === 'firewall_ring' ? hasDamage :
-          skill === 'packet_storm' ? hasProjectile :
-          skill === 'memory_mine' ? hasMine :
-          skill === 'lucas_beam' ? hasBeam :
-          skill === 'trace_blade' ? hasDamage :
-          skill === 'null_grenade' ? hasHazard :
-          skill === 'proxy_turret' ? hasTurret :
-          skill === 'data_lightning' ? hasDamage :
-          skill === 'black_ice_field' ? hasHazard :
-          skill === 'recursive_drone' ? hasProjectile :
-          skill === 'quantum_spike' ? hasHazard :
-          skill === 'system_purge' ? hasPurge :
-          skill === 'ghost_fork' ? hasHazard :
-          skill === 'checksum_burst' ? hasDamage :
-          skill === 'port_snare' ? hasHazard :
-          skill === 'stack_overflow' ? hasDamage :
-          skill === 'mirror_packet' ? hasProjectile :
-          skill === 'thread_splitter' ? hasProjectile :
-          skill === 'latency_field' ? hasHazard :
-          hasPurge;
+            skill === 'signal_orb' ? hasDamage :
+              skill === 'firewall_ring' ? hasDamage :
+                skill === 'packet_storm' ? hasProjectile :
+                  skill === 'memory_mine' ? hasMine :
+                    skill === 'lucas_beam' ? hasBeam :
+                      skill === 'trace_blade' ? hasDamage :
+                        skill === 'null_grenade' ? hasHazard :
+                          skill === 'proxy_turret' ? hasTurret :
+                            skill === 'data_lightning' ? hasDamage :
+                              skill === 'black_ice_field' ? hasHazard :
+                                skill === 'recursive_drone' ? hasProjectile :
+                                  skill === 'quantum_spike' ? hasHazard :
+                                    skill === 'system_purge' ? hasPurge :
+                                      skill === 'ghost_fork' ? hasHazard :
+                                        skill === 'checksum_burst' ? hasDamage :
+                                          skill === 'port_snare' ? hasHazard :
+                                            skill === 'stack_overflow' ? hasDamage :
+                                              skill === 'mirror_packet' ? hasProjectile :
+                                                skill === 'thread_splitter' ? hasProjectile :
+                                                  skill === 'latency_field' ? hasHazard :
+                                                    hasPurge;
 
         scenarios.push({
           skill,
@@ -3489,9 +3489,9 @@ export function LucasSurvivalApp() {
       if (boss) {
         const name =
           kind === 'kernel_reaper' ? '커널 리퍼'
-          : kind === 'firewall_guardian' ? '파이어월 가디언'
-          : kind === 'broken_process' ? '브로큰 프로세스'
-          : '오염 캐시';
+            : kind === 'firewall_guardian' ? '파이어월 가디언'
+              : kind === 'broken_process' ? '브로큰 프로세스'
+                : '오염 캐시';
         bossHp = {
           name,
           percent: clamp((boss.hp / boss.maxHp) * 100, 0, 100),
@@ -3917,13 +3917,13 @@ export function LucasSurvivalApp() {
       const isPlayerHazard = h.source === 'player';
       const hue =
         h.sourceSkill === 'null_grenade' ? '#ff8ebd' :
-        h.sourceSkill === 'quantum_spike' ? '#c7a2ff' :
-        h.sourceSkill === 'black_ice_field' ? '#93e6ff' :
-        h.sourceSkill === 'memory_mine' ? '#ffc087' :
-        h.sourceSkill === 'ghost_fork' ? '#9cdfff' :
-        h.sourceSkill === 'port_snare' ? '#8fd0ff' :
-        h.sourceSkill === 'latency_field' ? '#92e5ff' :
-        '#6fd9ff';
+          h.sourceSkill === 'quantum_spike' ? '#c7a2ff' :
+            h.sourceSkill === 'black_ice_field' ? '#93e6ff' :
+              h.sourceSkill === 'memory_mine' ? '#ffc087' :
+                h.sourceSkill === 'ghost_fork' ? '#9cdfff' :
+                  h.sourceSkill === 'port_snare' ? '#8fd0ff' :
+                    h.sourceSkill === 'latency_field' ? '#92e5ff' :
+                      '#6fd9ff';
       if (h.telegraph > 0) {
         ctx.strokeStyle = isPlayerHazard ? `${hue}cc` : 'rgba(255,60,90,0.82)';
         ctx.lineWidth = 2;
@@ -4615,35 +4615,36 @@ export function LucasSurvivalApp() {
     }
 
     if (hud.status === 'clear' || hud.status === 'failed') {
+      const isClear = hud.status === 'clear';
       return (
         <div className={`ls-overlay result ${hud.status}`}>
           <div className="ls-result-burst" />
-          <h1 className={hud.status === 'clear' ? 'clear' : 'failed'}>
-            {hud.result?.title}
+          <h1 className={isClear ? 'clear' : 'failed'}>
+            {isPractice && isClear ? 'ARCADE CLEAR!' : hud.result?.title}
           </h1>
           <p className="ls-result-subtitle">
-            {hud.status === 'clear' ? '시스템 복구 완료' : '연결이 끊어짐'}
+            {isClear ? (isPractice ? '아케이드 세션 종료' : '시스템 복구 완료') : '연결이 끊어짐'}
           </p>
           <div className={`ls-rank-badge rank-${hud.result?.rank ?? 'D'}`}>랭크 {hud.result?.rank}</div>
-          <p>{hud.result?.desc}</p>
-                    <div className="ls-result-grid">
+          <p>{isPractice && isClear ? 'Practice session complete. No data was synced.' : hud.result?.desc}</p>
+          <div className="ls-result-grid">
             <section className="ls-result-block summary">
-              <h3>{'\uC804\uD22C \uC694\uC57D'}</h3>
-              <div>{'\uC0DD\uC874 \uC2DC\uAC04'}: {hud.result?.elapsedText}</div>
-              <div>{'\uCC98\uCE58 \uC218'}: {hud.result?.kills}</div>
-              <div>{'\uB3C4\uB2EC \uB808\uBCA8'}: {hud.result?.level}</div>
-              <div>{'\uBCF4\uC2A4 \uCC98\uCE58'}: {hud.result?.bossKills}</div>
+              <h3>전투 요약</h3>
+              <div>생존 시간: {hud.result?.elapsedText}</div>
+              <div>처치 수: {hud.result?.kills}</div>
+              <div>도달 레벨: {hud.result?.level}</div>
+              <div>보스 처치: {hud.result?.bossKills}</div>
             </section>
             <section className="ls-result-block upgrades">
-              <h3>{'\uC120\uD0DD \uC5C5\uADF8\uB808\uC774\uB4DC'}</h3>
+              <h3>선택 업그레이드</h3>
               <ul>
                 {(hud.result?.upgradeNames.length ?? 0) > 0
                   ? hud.result?.upgradeNames.slice(-6).map((name, idx) => <li key={`${name}-${idx}`}>{name}</li>)
-                  : <li>{'\uC5C6\uC74C'}</li>}
+                  : <li>없음</li>}
               </ul>
             </section>
             <section className="ls-result-block skills">
-              <h3>{'\uD68D\uB4DD \uC2A4\uD0AC'}</h3>
+              <h3>획득 스킬</h3>
               <ul className="ls-result-skill-list">
                 {(hud.result?.skillNames.length ?? 0) > 0
                   ? hud.result?.skillNames.slice(0, 8).map((name) => <li key={name}>{name}</li>)
@@ -4651,12 +4652,23 @@ export function LucasSurvivalApp() {
               </ul>
             </section>
             <section className="ls-result-block rank">
-              <h3>{'\uC804\uD22C \uD3C9\uAC00'}</h3>
+              <h3>전투 평가</h3>
               <div className="ls-result-rank-text">랭크 {hud.result?.rank}</div>
-              <p>{'\uC0DD\uC874 \uC2DC\uAC04, \uCC98\uCE58 \uC218, \uB808\uBCA8, \uBCF4\uC2A4 \uCC98\uCE58\uB97C \uAE30\uBC18\uC73C\uB85C \uB7AD\uD06C\uAC00 \uACB0\uC815\uB41C\uB2E4.'}</p>
+              <p>생존 시간, 처치 수, 레벨, 보스 처치를 기반으로 랭크가 결정된다.</p>
             </section>
           </div>
-          <button className="ls-btn result-btn" onClick={startGame}>RESTART</button>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <button className="ls-btn result-btn" onClick={startGame}>RESTART</button>
+            {isPractice && isClear && (
+              <button
+                className="ls-btn result-btn"
+                style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
+                onClick={() => window.location.href = '/minigames'}
+              >
+                RETURN TO LOBBY
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -4795,30 +4807,30 @@ export function LucasSurvivalApp() {
           <section className="ls-stage">
             <div className="ls-stage-viewport">
               <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="ls-canvas" />
-            <div className="ls-center-hud">
-              <div className="ls-center-row">
-                <span>체력 {hud.hpPercent.toFixed(0)}%</span>
-                <div className="ls-center-bar hp"><div className="fill" style={{ width: `${hud.hpPercent}%` }} /></div>
+              <div className="ls-center-hud">
+                <div className="ls-center-row">
+                  <span>체력 {hud.hpPercent.toFixed(0)}%</span>
+                  <div className="ls-center-bar hp"><div className="fill" style={{ width: `${hud.hpPercent}%` }} /></div>
+                </div>
+                <div className="ls-center-row">
+                  <span>경험치 {hud.expPercent.toFixed(0)}%</span>
+                  <div className="ls-center-bar exp"><div className="fill" style={{ width: `${hud.expPercent}%` }} /></div>
+                </div>
               </div>
-              <div className="ls-center-row">
-                <span>경험치 {hud.expPercent.toFixed(0)}%</span>
-                <div className="ls-center-bar exp"><div className="fill" style={{ width: `${hud.expPercent}%` }} /></div>
+              <div className="ls-combat-log-feed">
+                {hud.combatLogs
+                  .slice()
+                  .sort((a, b) => a.id - b.id)
+                  .slice(-4)
+                  .map((log) => (
+                    <div key={log.id} className={`ls-combat-log ${log.type}`}>
+                      <span className="ls-combat-log-icon">{logTypeLabel[log.type]}</span>
+                      {log.text}
+                    </div>
+                  ))}
               </div>
+              {overlay}
             </div>
-            <div className="ls-combat-log-feed">
-              {hud.combatLogs
-                .slice()
-                .sort((a, b) => a.id - b.id)
-                .slice(-4)
-                .map((log) => (
-                  <div key={log.id} className={`ls-combat-log ${log.type}`}>
-                    <span className="ls-combat-log-icon">{logTypeLabel[log.type]}</span>
-                    {log.text}
-                  </div>
-                ))}
-            </div>
-            {overlay}
-          </div>
           </section>
 
           <aside className="ls-outer right">

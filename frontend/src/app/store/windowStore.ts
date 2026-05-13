@@ -104,11 +104,11 @@ function bringWindowToFront(
   return preparedWindows.map((windowState) =>
     windowState.id === id
       ? {
-          ...windowState,
-          ...patch,
-          isMinimized: false,
-          zIndex: nextZIndex,
-        }
+        ...windowState,
+        ...patch,
+        isMinimized: false,
+        zIndex: nextZIndex,
+      }
       : windowState
   );
 }
