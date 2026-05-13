@@ -51,15 +51,25 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
   const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger } = useBrowserContentStore();
 
+  // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
+  const currentChapter = (() => {
+    if (!currentNode?.code) return 1;
+    const match = currentNode.code.match(/^CH(\d+)_/);
+    return match ? parseInt(match[1], 10) : 1;
+  })();
+
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
-    if (currentNode?.code?.startsWith("CH2_") && !isChapter2Mode) {
+    if (currentChapter === 2 && !isChapter2Mode) {
       setIsChapter2Mode(true);
     }
-  }, [currentNode, isChapter2Mode, setIsChapter2Mode]);
+  }, [currentChapter, isChapter2Mode, setIsChapter2Mode]);
 
   // 챕터 3 여부 감지 (현재 노드 기준 실시간 판단)
-  const isChapter3Mode = Boolean(currentNode?.code?.startsWith("CH3_"));
+  const isChapter3Mode = currentChapter === 3;
+
+  // 챕터 4 여부 감지 (현재 노드 기준 실시간 판단)
+  const isChapter4Mode = currentChapter === 4;
 
   // 챕터 3 전용 상태 및 더 보기 관리
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -299,7 +309,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
   const handleNewTab = () => {
     const newId = `tab_${Date.now()}`;
-    const isCh1 = !currentNode?.code?.startsWith("CH2_") && !currentNode?.code?.startsWith("CH3_");
+    const isCh1 = currentChapter === 1;
 
     const newTab: Tab = isCh1
       ? {
@@ -813,6 +823,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             <HomeTab
               onNavigate={(url, comp, title) => navigateTab(activeTabId, url, comp, title)}
               isChapter2Mode={isChapter2Mode}
+              isChapter3Mode={isChapter3Mode}
+              isChapter4Mode={isChapter4Mode}
             />
           )}
           {activeTab?.component === "search" && (
