@@ -5,21 +5,23 @@ interface HomeTabProps {
   onNavigate: (url: string, component: "news" | "home" | "pacman" | "history" | "doc", title: string) => void;
   isChapter2Mode?: boolean;
   isChapter3Mode?: boolean;
+  isChapter4Mode?: boolean;
 }
 
-export const HomeTab: React.FC<HomeTabProps> = ({ onNavigate, isChapter2Mode, isChapter3Mode }) => {
+export const HomeTab: React.FC<HomeTabProps> = ({ onNavigate, isChapter2Mode, isChapter3Mode, isChapter4Mode }) => {
   const { chapterCode } = useParams<{ chapterCode?: string }>();
 
   // URL 및 전역 상태를 모두 결합해 실시간 챕터 모드 0ms 즉시 계산
   const isCh2 = isChapter2Mode || chapterCode === "week02";
   const isCh3 = isChapter3Mode || chapterCode === "week03";
+  const isCh4 = isChapter4Mode || chapterCode === "week04";
 
   // Frequently visited dummy data
   const favorites = [
     { name: 'Minigame', icon: '/pixel_chrome_icon.svg', url: 'system://pacman', component: 'pacman' as const, title: 'Pac-Man' },
   ].filter(fav => {
-    // 챕터 2 모드이거나 챕터 3 모드일 때는 미니게임(pacman)을 숨김
-    if ((isCh2 || isCh3) && fav.component === 'pacman') return false;
+    // 챕터 2, 3, 4 모드일 때는 미니게임(pacman)을 숨김
+    if ((isCh2 || isCh3 || isCh4) && fav.component === 'pacman') return false;
     return true;
   });
 

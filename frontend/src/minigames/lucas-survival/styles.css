@@ -3,6 +3,11 @@
   src: url("/fonts/NeoDunggeunmoPro-Regular.ttf") format("truetype");
 }
 
+.ls-window-embed .ls-root,
+.ls-window-embed .ls-shell {
+  height: 100%;
+}
+
 .ls-root,
 .ls-root * {
   box-sizing: border-box;
@@ -27,13 +32,11 @@
   inset: 0;
   pointer-events: none;
   z-index: 10;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.015) 0,
-    rgba(255, 255, 255, 0.015) 1px,
-    transparent 2px,
-    transparent 4px
-  );
+  background: repeating-linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.015) 0,
+      rgba(255, 255, 255, 0.015) 1px,
+      transparent 2px,
+      transparent 4px);
 }
 
 .ls-shell {
@@ -51,11 +54,9 @@
   border: 2px solid #2a4f7d;
   background:
     linear-gradient(180deg, rgba(8, 18, 34, 0.92), rgba(8, 18, 34, 0.92)),
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(93, 154, 217, 0.12) 0 2px,
-      transparent 2px 8px
-    );
+      transparent 2px 8px);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -85,11 +86,9 @@
   border: 2px solid #29456a;
   background:
     linear-gradient(180deg, rgba(7, 17, 30, 0.88), rgba(7, 17, 30, 0.88)),
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       rgba(88, 139, 197, 0.1) 0 1px,
-      transparent 1px 3px
-    );
+      transparent 1px 3px);
   padding: 8px 10px;
 }
 
@@ -124,11 +123,9 @@
   overflow: hidden;
   background:
     linear-gradient(0deg, rgba(14, 26, 48, 0.72), rgba(14, 26, 48, 0.72)),
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       rgba(55, 98, 146, 0.14) 0 2px,
-      rgba(0, 0, 0, 0) 2px 4px
-    ),
+      rgba(0, 0, 0, 0) 2px 4px),
     #030914;
   display: flex;
   align-items: flex-end;
@@ -143,11 +140,9 @@
   pointer-events: none;
   z-index: 5;
   background:
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(73, 118, 173, 0.08) 0 1px,
-      transparent 1px 6px
-    );
+      transparent 1px 6px);
 }
 
 .ls-canvas {
@@ -246,11 +241,9 @@
   z-index: 40;
   background:
     linear-gradient(180deg, rgba(3, 8, 18, 0.96), rgba(3, 8, 18, 0.96)),
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(66, 119, 176, 0.08) 0 2px,
-      transparent 2px 8px
-    );
+      transparent 2px 8px);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -322,11 +315,9 @@
   border: 2px solid #2f4f7d;
   background:
     linear-gradient(180deg, #12213a, #0c1528),
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(110, 178, 255, 0.07) 0 2px,
-      transparent 2px 6px
-    );
+      transparent 2px 6px);
   color: #dce8ff;
   font: inherit;
   text-align: left;
@@ -345,7 +336,7 @@
   overflow: visible;
 }
 
-.ls-card > * {
+.ls-card>* {
   position: relative;
   z-index: 2;
 }
@@ -386,11 +377,9 @@
   border: 2px solid #3d5e89;
   background:
     linear-gradient(180deg, #1d2f52, #13233f),
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       rgba(144, 219, 255, 0.12) 0 1px,
-      transparent 1px 3px
-    );
+      transparent 1px 3px);
   color: #8ce9ff;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -444,23 +433,51 @@
 }
 
 @keyframes rarityCommon {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.05); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.05);
+  }
 }
 
 @keyframes rarityRare {
-  0%, 100% { box-shadow: inset 0 0 0 1px #2ea2c8, 0 0 12px rgba(46, 162, 200, 0.22); }
-  50% { box-shadow: inset 0 0 0 1px #47d7ff, 0 0 20px rgba(71, 215, 255, 0.35); }
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px #2ea2c8, 0 0 12px rgba(46, 162, 200, 0.22);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 1px #47d7ff, 0 0 20px rgba(71, 215, 255, 0.35);
+  }
 }
 
 @keyframes rarityEpic {
-  0%, 100% { box-shadow: inset 0 0 0 1px #b57aff, 0 0 14px rgba(181, 122, 255, 0.24); }
-  50% { box-shadow: inset 0 0 0 1px #d49cff, 0 0 24px rgba(212, 156, 255, 0.38); }
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px #b57aff, 0 0 14px rgba(181, 122, 255, 0.24);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 1px #d49cff, 0 0 24px rgba(212, 156, 255, 0.38);
+  }
 }
 
 @keyframes rarityLegendary {
-  0%, 100% { box-shadow: inset 0 0 0 1px #f3b042, 0 0 16px rgba(243, 176, 66, 0.25); }
-  50% { box-shadow: inset 0 0 0 1px #ffd06a, 0 0 30px rgba(255, 208, 106, 0.46); }
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px #f3b042, 0 0 16px rgba(243, 176, 66, 0.25);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 1px #ffd06a, 0 0 30px rgba(255, 208, 106, 0.46);
+  }
 }
 
 .ls-result {
@@ -523,11 +540,9 @@
   border: 2px solid #40618d;
   background:
     linear-gradient(180deg, rgba(8, 18, 34, 0.94), rgba(8, 18, 34, 0.94)),
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       rgba(118, 183, 255, 0.1) 0 1px,
-      transparent 1px 3px
-    );
+      transparent 1px 3px);
   padding: 10px;
   overflow: auto;
 }
@@ -690,11 +705,9 @@
   border: 2px solid #4c73a8;
   background:
     linear-gradient(180deg, #162746, #0f1c34),
-    repeating-linear-gradient(
-      90deg,
+    repeating-linear-gradient(90deg,
       rgba(132, 204, 255, 0.13) 0 1px,
-      transparent 1px 3px
-    );
+      transparent 1px 3px);
   box-shadow: 0 0 10px rgba(84, 164, 255, 0.2);
 }
 
@@ -1022,11 +1035,9 @@
   inset: 0;
   background:
     linear-gradient(180deg, rgba(4, 10, 20, 0.05), rgba(4, 10, 20, 0.48)),
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       rgba(180, 236, 255, 0.08) 0 1px,
-      transparent 1px 3px
-    );
+      transparent 1px 3px);
 }
 
 .ls-card-art-tag {
@@ -1063,8 +1074,17 @@
 }
 
 @keyframes newCardPulse {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.06); filter: brightness(1.08); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+    filter: brightness(1.08);
+  }
 }
 
 .ls-card p {
@@ -1132,11 +1152,25 @@
   gap: 8px;
 }
 
-.ls-combat-log-feed .ls-combat-log:nth-last-child(2) { opacity: 0.92; }
-.ls-combat-log-feed .ls-combat-log:nth-last-child(3) { opacity: 0.82; }
-.ls-combat-log-feed .ls-combat-log:nth-last-child(4) { opacity: 0.72; }
-.ls-combat-log-feed .ls-combat-log:nth-last-child(5) { opacity: 0.62; }
-.ls-combat-log-feed .ls-combat-log:nth-last-child(n + 6) { opacity: 0.52; }
+.ls-combat-log-feed .ls-combat-log:nth-last-child(2) {
+  opacity: 0.92;
+}
+
+.ls-combat-log-feed .ls-combat-log:nth-last-child(3) {
+  opacity: 0.82;
+}
+
+.ls-combat-log-feed .ls-combat-log:nth-last-child(4) {
+  opacity: 0.72;
+}
+
+.ls-combat-log-feed .ls-combat-log:nth-last-child(5) {
+  opacity: 0.62;
+}
+
+.ls-combat-log-feed .ls-combat-log:nth-last-child(n + 6) {
+  opacity: 0.52;
+}
 
 .ls-combat-log-icon {
   flex: 0 0 auto;
@@ -1172,8 +1206,15 @@
 }
 
 @keyframes logFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 980px) {
@@ -1233,10 +1274,24 @@
     repeating-linear-gradient(90deg, rgba(255, 226, 154, 0.22) 0 1px, transparent 1px 3px);
 }
 
-.ls-skill-slot.rarity-common .ls-skill-name { color: #c8dcff; }
-.ls-skill-slot.rarity-rare .ls-skill-name { color: #9de5ff; text-shadow: 0 0 8px rgba(120, 214, 255, 0.24); }
-.ls-skill-slot.rarity-epic .ls-skill-name { color: #d8b7ff; text-shadow: 0 0 8px rgba(191, 142, 255, 0.24); }
-.ls-skill-slot.rarity-legendary .ls-skill-name { color: #ffe4a3; text-shadow: 0 0 10px rgba(255, 212, 123, 0.3); }
+.ls-skill-slot.rarity-common .ls-skill-name {
+  color: #c8dcff;
+}
+
+.ls-skill-slot.rarity-rare .ls-skill-name {
+  color: #9de5ff;
+  text-shadow: 0 0 8px rgba(120, 214, 255, 0.24);
+}
+
+.ls-skill-slot.rarity-epic .ls-skill-name {
+  color: #d8b7ff;
+  text-shadow: 0 0 8px rgba(191, 142, 255, 0.24);
+}
+
+.ls-skill-slot.rarity-legendary .ls-skill-name {
+  color: #ffe4a3;
+  text-shadow: 0 0 10px rgba(255, 212, 123, 0.3);
+}
 
 .ls-card.rarity-common {
   border-color: #6f8eb7;
@@ -1512,8 +1567,13 @@
 }
 
 @keyframes resultBurstSpin {
-  from { transform: rotate(0deg) scale(1); }
-  to { transform: rotate(360deg) scale(1.08); }
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+
+  to {
+    transform: rotate(360deg) scale(1.08);
+  }
 }
 
 /* --- Final layout + guide modal + readability pass --- */
@@ -1749,6 +1809,7 @@
   .ls-guide-grid {
     grid-template-columns: 1fr;
   }
+
   .ls-guide-grid.exp {
     grid-template-columns: 1fr;
   }

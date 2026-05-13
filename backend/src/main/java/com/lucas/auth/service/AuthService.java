@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을 수행합니다.
+ * 인증 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. Refresh Token 관리, 토큰 갱신, 로그아웃, 게스트 초기화 등의 기능을
+ * 수행합니다.
  */
 @Slf4j
 @Service
@@ -32,13 +33,17 @@ public class AuthService {
   /**
    * Grace Token Prefix: RTR 경쟁 조건 방지용 임시 키
    *
+   * <p>
    * 토큰 교체(Rotation) 직후, 동시 요청으로 인해 짧은 지연으로 들어오는 Old Token을 악의적 탈취로 오탐지하지 않도록 30초간
    * 임시 보관합니다.
    *
+   * <p>
    * Key 형식: refresh_token:grace:{old_token_value}
    *
+   * <p>
    * Value 형식: userId (String)
    *
+   * <p>
    * TTL: 30초
    */
   private static final String GRACE_TOKEN_PREFIX = "refresh_token:grace:";
@@ -189,9 +194,10 @@ public class AuthService {
   /**
    * Refresh Token Rotation(RTR)을 수행합니다.
    *
-   * 1. 기존(Old) Refresh Token을 Grace Key로 30초간 임시 보관합니다.
-   * 2. 새로운 Access Token과 Refresh Token을 발급합니다.
-   * 3. Redis의 최신 토큰을 새 토큰으로 교체합니다.
+   * <p>
+   * 1. 기존(Old) Refresh Token을 Grace Key로 30초간 임시 보관합니다. 2. 새로운 Access Token과
+   * Refresh Token을
+   * 발급합니다. 3. Redis의 최신 토큰을 새 토큰으로 교체합니다.
    *
    * @param userId          토큰 소유 유저의 식별값
    * @param oldRefreshToken 교체 전 현재 유효한 Refresh Token

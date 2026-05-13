@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 /**
  * 가상 터미널 파일의 텍스트 내용을 관리하는 서비스 클래스입니다.
  *
- * <p>챕터별 {@code resources/story/chapterXX/contents.json} 파일을 로드하여 {@code cat} 명령어 실행 시 VFS 노드의
+ * <p>
+ * 챕터별 {@code resources/story/chapterXX/contents.json} 파일을 로드하여 {@code cat} 명령어
+ * 실행 시 VFS 노드의
  * {@code contentKey}에 맞는 파일 내용을 제공합니다.
  */
 @Slf4j
@@ -41,12 +43,15 @@ public class FileContentService {
 
     // 새 Chapter 3 VFS 파일 내용을 같은 캐시 구조로 로드한다.
     loadContentsJson("week03", "/story/chapter03/contents.json");
+
+    // Chapter 4 VFS 파일 내용을 로드한다.
+    loadContentsJson("week04", "/story/chapter04/contents.json");
   }
 
   /**
    * classpath의 contents.json 리소스를 읽어 챕터별 컨텐츠 캐시에 저장합니다.
    *
-   * @param chapterCode 컨텐츠를 소유한 챕터 코드
+   * @param chapterCode  컨텐츠를 소유한 챕터 코드
    * @param resourcePath classpath 기준 contents.json 리소스 경로
    */
   private void loadContentsJson(String chapterCode, String resourcePath) {
@@ -74,15 +79,16 @@ public class FileContentService {
   /**
    * contents.json 루트 JSON을 {@code contentKey -> line 목록} 형태로 변환합니다.
    *
-   * <p>기존 Chapter 2처럼 최상위 key가 바로 배열인 구조와, 확장 구조인 {@code contents.{key}.lines} 구조를 모두 지원합니다.
+   * <p>
+   * 기존 Chapter 2처럼 최상위 key가 바로 배열인 구조와, 확장 구조인 {@code contents.{key}.lines} 구조를
+   * 모두 지원합니다.
    *
    * @param root contents.json 루트 JSON
    * @return 컨텐츠 키별 텍스트 라인 목록
    */
   private Map<String, List<String>> parseContents(JsonNode root) {
     // 확장 포맷이면 contents 객체를 사용하고, 아니면 기존 최상위 객체를 그대로 사용한다.
-    JsonNode contentRoot =
-        root.has("contents") && root.path("contents").isObject() ? root.path("contents") : root;
+    JsonNode contentRoot = root.has("contents") && root.path("contents").isObject() ? root.path("contents") : root;
 
     // 변환 결과를 저장할 Map을 준비한다.
     Map<String, List<String>> parsed = new HashMap<>();
@@ -132,7 +138,7 @@ public class FileContentService {
    * 특정 챕터와 컨텐츠 키에 해당하는 파일 내용을 반환합니다.
    *
    * @param chapterCode 챕터 코드
-   * @param contentKey contents.json에 정의된 키값
+   * @param contentKey  contents.json에 정의된 키값
    * @return 파일의 텍스트 라인 리스트 (없을 경우 빈 리스트)
    */
   public List<String> getContent(String chapterCode, String contentKey) {
@@ -142,8 +148,8 @@ public class FileContentService {
     }
 
     // 요청 챕터의 캐시를 우선 사용하고, 없으면 기존 Chapter 2 캐시로 fallback한다.
-    Map<String, List<String>> chapterContents =
-        contentsCache.getOrDefault(chapterCode, contentsCache.get(DEFAULT_CHAPTER_CODE));
+    Map<String, List<String>> chapterContents = contentsCache.getOrDefault(chapterCode,
+        contentsCache.get(DEFAULT_CHAPTER_CODE));
 
     // 챕터 캐시나 키가 없으면 cat 결과를 빈 출력으로 유지한다.
     if (chapterContents == null || !chapterContents.containsKey(contentKey)) {

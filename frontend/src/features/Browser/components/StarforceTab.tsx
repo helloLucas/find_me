@@ -1,4 +1,5 @@
 import React, { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWindowStore } from "../../../app/store/windowStore";
 import type { DesktopWindowId } from "../../../shared/config/desktopWindows";
 import { fragmentApi } from "../../../shared/api/fragmentApi";
@@ -97,6 +98,7 @@ interface AttemptLog {
 
 interface StarforceTabProps {
   windowId?: DesktopWindowId;
+  isPractice?: boolean;
 }
 
 function getSuccessZone(roundIndex: number) {
@@ -196,7 +198,8 @@ function PerfectFireworks() {
   );
 }
 
-export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId }) => {
+export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice }) => {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("intro");
   const [roundIndex, setRoundIndex] = useState(0);
   const [hits, setHits] = useState(0);
@@ -318,14 +321,14 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId }) => {
   }, []);
 
   const recordClearIfNeeded = useCallback((finalHits: number) => {
-    if (finalHits < MIN_CLEAR_HITS || hasRecordedClearRef.current) return;
+    if (finalHits < MIN_CLEAR_HITS || hasRecordedClearRef.current || isPractice) return;
 
     hasRecordedClearRef.current = true;
     void fragmentApi.acquireFragment(CLEAR_FRAGMENT_CODE).catch((error) => {
       hasRecordedClearRef.current = false;
       console.error("Failed to record minigame 2 clear:", error);
     });
-  }, []);
+  }, [isPractice]);
 
   const startGame = useCallback(() => {
     if (windowId) {
@@ -682,7 +685,7 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId }) => {
                 ? "border-emerald-200/45 bg-emerald-300/10 text-emerald-100 shadow-[0_0_22px_rgba(52,211,153,0.16)]"
                 : "border-red-200/45 bg-red-300/10 text-red-100 shadow-[0_0_22px_rgba(248,113,113,0.16)]"
               }`}>
-              {resultCopy.detail}
+              {isPractice && isClear ? "아케이드 모드 클리어! 기록은 저장되지 않습니다." : resultCopy.detail}
             </div>
             {!isClear && (
               <div className="mx-auto mt-4 grid max-w-md grid-cols-3 gap-2 text-[10px] text-red-100/80">
@@ -700,13 +703,24 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId }) => {
                 </div>
               </div>
             )}
-            <button
-              type="button"
-              onClick={restartGame}
-              className="mt-6 h-11 w-44 border-2 border-cyan-200 bg-cyan-300 text-black transition hover:bg-cyan-100 active:translate-y-px"
-            >
-              RESTART / SPACE
-            </button>
+            <div className="mt-6 flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={restartGame}
+                className="h-11 w-44 border-2 border-cyan-200 bg-cyan-300 text-black transition hover:bg-cyan-100 active:translate-y-px"
+              >
+                RESTART / SPACE
+              </button>
+              {isPractice && isClear && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/minigames')}
+                  className="h-11 w-44 border-2 border-emerald-300 bg-emerald-400 text-black font-bold transition hover:bg-emerald-200 active:translate-y-px"
+                >
+                  RETURN TO LOBBY
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

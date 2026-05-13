@@ -8,7 +8,7 @@
   width: 100%;
   background: radial-gradient(circle at 50% 30%, #15102a 0%, #080a10 100%);
   color: #38bdf8;
-  font-family: 'Courier New', Courier, monospace, 'Outfit', 'Inter', sans-serif;
+  font-family: var(--lucas-font-notepad);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -23,10 +23,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.3) 50%
-  );
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.3) 50%);
   background-size: 100% 4px;
   z-index: 10;
   pointer-events: none;
@@ -35,8 +33,13 @@
 }
 
 @keyframes scanlineScroll {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100%; }
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 0 100%;
+  }
 }
 
 /* ────────────────────────────────────────────────────────
@@ -83,7 +86,8 @@
 
 /* 탭 바 가로 스크롤 가리기 및 스무스 터치 */
 .notepad-tabs-scroll-area::-webkit-scrollbar {
-  height: 7px; /* 조작 및 인지가 용이하도록 두께 스케일업 */
+  height: 7px;
+  /* 조작 및 인지가 용이하도록 두께 스케일업 */
 }
 
 .notepad-tabs-scroll-area::-webkit-scrollbar-track {
@@ -111,7 +115,8 @@
   border: 1px solid rgba(56, 189, 248, 0.15);
   border-bottom: none;
   border-top-left-radius: 6px;
-  border-top-right-radius: 12px; /* 사선 컷 대칭 */
+  border-top-right-radius: 12px;
+  /* 사선 컷 대칭 */
   padding: 0 14px;
   height: 30px;
   min-width: 100px;
@@ -137,11 +142,13 @@
   border-color: #0284c7;
   border-right-color: #0284c7;
   border-left-color: #0284c7;
-  border-bottom: 2px solid #111827; /* 탭 에디터 바디 영역과 구조적 융합 */
+  border-bottom: 2px solid #111827;
+  /* 탭 에디터 바디 영역과 구조적 융합 */
   color: #67e8f9;
   font-weight: 700;
   text-shadow: 0 0 8px rgba(103, 232, 249, 0.7);
-  height: 33px; /* 위로 영리하게 솟아올라 명확히 주도적임을 표현 */
+  height: 33px;
+  /* 위로 영리하게 솟아올라 명확히 주도적임을 표현 */
   z-index: 10;
   box-shadow: 0 -3px 10px rgba(103, 232, 249, 0.15);
 }
@@ -176,8 +183,15 @@
 }
 
 @keyframes pulseGoldBorder {
-  0% { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 4px rgba(245, 158, 11, 0.3); }
-  100% { border-color: rgba(245, 158, 11, 1); box-shadow: 0 0 10px rgba(245, 158, 11, 0.6); }
+  0% {
+    border-color: rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.3);
+  }
+
+  100% {
+    border-color: rgba(245, 158, 11, 1);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+  }
 }
 
 /* 탭 닫기 버튼 (미세 오차 조율 및 에러 방지용 호버 레드 글로우) */
@@ -268,7 +282,8 @@
   font-family: inherit;
   z-index: 5;
   box-sizing: border-box;
-  caret-color: #f59e0b; /* 오렌지 골드 네온 포인터 */
+  caret-color: #f59e0b;
+  /* 오렌지 골드 네온 포인터 */
   text-shadow: 0 0 5px rgba(103, 232, 249, 0.35);
 }
 
@@ -354,7 +369,13 @@
 }
 
 @keyframes blinkLed {
-  0% { opacity: 0.4; box-shadow: 0 0 2px #10b981; }
-  100% { opacity: 1; box-shadow: 0 0 12px #10b981, 0 0 6px #10b981; }
-}
+  0% {
+    opacity: 0.4;
+    box-shadow: 0 0 2px #10b981;
+  }
 
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 12px #10b981, 0 0 6px #10b981;
+  }
+}
