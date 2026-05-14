@@ -121,9 +121,9 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     const watermarkClass = isEndingBranchSignal
         ? "text-[#67e8f9]/10 group-hover:text-[#67e8f9]/20"
         : config.watermarkClass;
-    const statusIcon = isEndingBranchSignal ? <PixelArrow /> : config.icon;
-    const statusLabel = isEndingBranchSignal ? "ENDING_BRANCH_SIGNAL" : config.label;
-    const clearedStampLabel = isEndingBranchSignal ? "BRANCH SIGNAL" : t('lobby.cleared');
+    const statusIcon = isEndingBranchSignal ? <PixelCheck /> : config.icon;
+    const statusLabel = isEndingBranchSignal ? "RECORD_SAVED" : config.label;
+    const clearedStampLabel = isEndingBranchSignal ? "RECORD SAVED" : t('lobby.cleared');
     const chapterId = extractChapterNumber(code);
     const watermarkId = String(chapterId).padStart(2, '0');
 
@@ -150,11 +150,6 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
                 <h3 className={`text-xs md:text-sm mt-1 uppercase tracking-wider font-lobby opacity-70 ${titleClass}`}>
                     {title}
                 </h3>
-                {isEndingBranchSignal && (
-                    <p className="mt-2 text-[10px] md:text-xs tracking-[0.12em] font-lobby text-[#67e8f9]/80">
-                        다른 결말의 신호가 남아 있습니다
-                    </p>
-                )}
             </div>
 
             <div className={`absolute right-4 -bottom-4 text-6xl md:text-[90px] font-bold pointer-events-none leading-none font-lobby transition-colors ${watermarkClass}`}>
@@ -163,10 +158,13 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
             {/* Cleared Stamp (Visible only when COMPLETED) */}
             {status === CHAPTER_STATUS.COMPLETED && (
-                <div className={`absolute top-4 right-6 z-20 border-2 text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 ${isEndingBranchSignal
+                <div
+                    data-text={`[ ${clearedStampLabel} ]`}
+                    className={`absolute top-4 right-6 z-20 border-2 text-[10px] md:text-xs px-2 py-1 font-lobby rotate-12 bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300 ${isEndingBranchSignal
                         ? "border-[#67e8f9] text-[#67e8f9] shadow-[0_0_10px_rgba(103,232,249,0.25)]"
                         : "border-[#a3e635] text-[#a3e635] shadow-[0_0_10px_rgba(163,230,53,0.3)]"
-                    }`}>
+                    } ${isEndingBranchSignal ? "chapter-record-saved-stamp" : ""}`}
+                >
                     [ {clearedStampLabel} ]
                 </div>
             )}
