@@ -5,7 +5,7 @@ import type { DesktopWindowId } from "../../../shared/config/desktopWindows";
 import { fragmentApi } from "../../../shared/api/fragmentApi";
 import { audioManager } from "../../story-runtime/audioManager";
 
-const BGM_URL = "https://djbod0nv85jx9.cloudfront.net/audios/hanroro.mp3";
+const BGM_URL = "https://djbod0nv85jx9.cloudfront.net/audios/minigame_2_v1.mp3";
 const INITIAL_NEEDLE_POSITION = 8;
 
 const ROUNDS = [
