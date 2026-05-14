@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
+import com.lucas.chapter.service.ChapterService;
 import com.lucas.ending.service.EndingService;
 import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.global.exception.CustomException;
@@ -171,6 +172,7 @@ public class StoryServiceImpl implements StoryService {
   private final StoryTransitionRepository storyTransitionRepository;
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final UserChapterProgressRepository userChapterProgressRepository;
+  private final ChapterService chapterService;
   private final EndingService endingService;
   private final RecentActionService recentActionService;
   private final TerminalCommandService terminalCommandService;
@@ -242,14 +244,31 @@ public class StoryServiceImpl implements StoryService {
   @Override
   @Transactional
   public StoryNodeResponseDto startStory(Long userId, StartStoryRequestDto request) {
+    String uriHash = request.getUriHash();
+    String chapterCode = null;
+
+    // 모든 챕터를 조회해서 해시값이 일치하는 것을 찾음
+    List<Chapter> allChapters = chapterRepository.findAll();
+    for (Chapter c : allChapters) {
+      if (chapterService.generateUriHash(c.getCode()).equals(uriHash)) {
+        chapterCode = c.getCode();
+        break;
+      }
+    }
+
+    if (chapterCode == null) {
+      throw new CustomException(ErrorCode.E3001);
+    }
+
     // 요청된 챕터 코드로 챕터 조회
+    final String finalChapterCode = chapterCode;
     Chapter chapter =
         chapterRepository
-            .findByCode(request.getChapterCode())
+            .findByCode(finalChapterCode)
             .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode = findStartNode(request.getChapterCode());
+    StoryNode firstNode = findStartNode(finalChapterCode);
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);

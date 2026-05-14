@@ -15,6 +15,9 @@ public class ChapterProgressResponse {
   /** 챕터 식별 코드 (예: "week01") */
   private String code;
 
+  /** 브라우저 URL 노출용 해시값 */
+  private String uriHash;
+
   /** 화면에 노출될 챕터 제목 */
   private String title;
 
@@ -30,7 +33,12 @@ public class ChapterProgressResponse {
    */
   private String status;
 
-  public static ChapterProgressResponse of(String code, String title, String status) {
-    return ChapterProgressResponse.builder().code(code).title(title).status(status).build();
+  public static ChapterProgressResponse of(String code, String uriHash, String title, String status) {
+    return ChapterProgressResponse.builder()
+        .code(code)
+        .uriHash(uriHash)
+        .title(title)
+        .status(status)
+        .build();
   }
 }
