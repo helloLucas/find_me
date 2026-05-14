@@ -28,7 +28,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AdminDashboardServiceImpl implements AdminDashboardService {
 
-  private static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private static final DateTimeFormatter TS_FMT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
   private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
   private static final int MAX_USER_LIMIT = 500;
   private static final int MAX_RECENT_LIMIT = 200;
@@ -314,7 +315,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 rs.getDouble("completion_rate_percent")));
   }
 
-  private List<AdminInsightsResponse.DailyActivity> loadDailyActivities(List<Long> userIds, int days) {
+  private List<AdminInsightsResponse.DailyActivity> loadDailyActivities(
+      List<Long> userIds, int days) {
     LocalDate today = LocalDate.now();
     LocalDate start = today.minusDays(days - 1L);
 
@@ -636,10 +638,12 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     List<AdminInsightsResponse.UserInsight> enriched = new ArrayList<>();
     for (AdminInsightsResponse.UserInsight row : rows) {
-      RevisitMetric revisit = revisitMetricMap.getOrDefault(row.userId(), new RevisitMetric(1, 1, 0));
+      RevisitMetric revisit =
+          revisitMetricMap.getOrDefault(row.userId(), new RevisitMetric(1, 1, 0));
       List<AdminInsightsResponse.ChapterClearTime> clearTimes =
           loadChapterClearTimes(row.userId(), chapterCode);
-      UserRecentStats recentStats = loadUserRecentStats(row.userId(), chapterCode, nodeCode, recentLimit);
+      UserRecentStats recentStats =
+          loadUserRecentStats(row.userId(), chapterCode, nodeCode, recentLimit);
 
       enriched.add(
           new AdminInsightsResponse.UserInsight(
@@ -703,7 +707,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
   private UserRecentStats loadUserRecentStats(
       Long userId, String chapterCode, String nodeCode, int recentLimit) {
     String sessionId = "sess_user_" + userId;
-    List<StoryRecentEvent> events = storySessionRedisService.getRecentEvents(sessionId, recentLimit);
+    List<StoryRecentEvent> events =
+        storySessionRedisService.getRecentEvents(sessionId, recentLimit);
     Map<Object, Object> state = storySessionRedisService.getSessionState(sessionId);
     String sessionChapter = stringOrNull(state.get("chapter_id"));
 
@@ -1047,4 +1052,3 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
       List<AdminInsightsResponse.CommandActionStat> commandStats,
       int failCount) {}
 }
-
