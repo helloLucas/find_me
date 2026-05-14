@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenManager } from '../utils/tokenManager';
 import { env } from '../config/env';
 import type { BaseResponse } from '../types/api';
-import type { AxiosRequestConfig } from 'axios';
+import { isConnectionError } from './apiError';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -84,26 +84,17 @@ axiosInstance.interceptors.response.use(
     const status = error.response?.status;
 
     // 네트워크 에러 또는 500번대 서버 에러 글로벌 핸들링
-    const isNetworkError = !error.response;
-    const isServerError = status && status >= 500 && status < 600;
+    const isNetworkOrServerError = isConnectionError(error);
 
-    // AppShell의 Silent Refresh가 진행 중이거나, skipGlobalError 옵션인 경우
-    // 전역 에러 모달 표시와 강제 로그아웃을 건너뜁니다.
+    // AppShell의 Silent Refresh가 진행 중인 경우 전역 에러 모달 표시를 건너뜁니다.
+    // skipGlobalError 요청도 네트워크/5xx 연결 실패는 사용자가 알아야 하므로 팝업을 표시합니다.
     const isSilentRefreshing = sessionStorage.getItem('is_silent_refreshing') === 'true';
 
-    if ((isNetworkError || isServerError) && !isSilentRefreshing && !originalRequest?.skipGlobalError) {
+    if (isNetworkOrServerError && !isSilentRefreshing) {
       console.error('Network or Server error occurred:', error);
       try {
-        const { useModalStore } = await import('../../app/store/modalStore');
-        useModalStore.getState().openModal({
-          title: 'CONNECTION_FAILED',
-          message: '서버와 연결할 수 없습니다. \n네트워크 상태를 확인해 주세요.',
-          type: 'alert',
-          onConfirm: () => {
-            // 사용자가 모달을 닫고 다시 시도하거나 현재 페이지에 머무를 수 있게 함.
-            return true;
-          }
-        });
+        const { openConnectionFailedModal } = await import('../../app/store/modalStore');
+        openConnectionFailedModal();
       } catch (modalError) {
         console.error('Failed to open global connection error modal:', modalError);
       }
@@ -175,6 +166,20 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
 
       } catch (refreshError) {
+        if (isConnectionError(refreshError)) {
+          console.error('Token refresh failed due to network/server error.', refreshError);
+          processQueue(refreshError, null);
+
+          try {
+            const { openConnectionFailedModal } = await import('../../app/store/modalStore');
+            openConnectionFailedModal();
+          } catch (modalError) {
+            console.error('Failed to open global connection error modal:', modalError);
+          }
+
+          return Promise.reject(refreshError);
+        }
+
         // 리프레시 토큰도 만료 → 대기열 전체를 에러로 처리 후 세션 종료
         console.error('Token refresh failed in interceptor. Clearing session.', refreshError);
 
@@ -189,7 +194,7 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(refreshError);
 
       } finally {
-        // ✅ 갱신 성공/실패와 상관없이 isRefreshing 플래그를 반드시 해제합니다.
+        // 갱신 성공/실패와 상관없이 isRefreshing 플래그를 반드시 해제합니다.
         isRefreshing = false;
       }
     }

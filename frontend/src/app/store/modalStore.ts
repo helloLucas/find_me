@@ -52,3 +52,25 @@ export const useModalStore = create<ModalStore>((set) => ({
     onCancel: null,
   }),
 }));
+
+const CONNECTION_FAILED_MODAL_COOLDOWN_MS = 2000;
+let lastConnectionFailedModalOpenedAt = 0;
+
+type ConnectionFailedModalOptions = {
+  force?: boolean;
+};
+
+export function openConnectionFailedModal(options: ConnectionFailedModalOptions = {}) {
+  const state = useModalStore.getState();
+  const now = Date.now();
+
+  if (state.isOpen && state.title === 'CONNECTION_FAILED') return;
+  if (!options.force && now - lastConnectionFailedModalOpenedAt < CONNECTION_FAILED_MODAL_COOLDOWN_MS) return;
+
+  lastConnectionFailedModalOpenedAt = now;
+  useModalStore.getState().openModal({
+    title: 'CONNECTION_FAILED',
+    message: '서버와 연결할 수 없습니다. \n네트워크 상태를 확인해 주세요.',
+    type: 'alert',
+  });
+}

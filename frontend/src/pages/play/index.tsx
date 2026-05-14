@@ -32,7 +32,7 @@ function getEndingType(node: StoryNode | null): string | null {
 
 export default function PlayPage() {
   const { chapterCode } = useParams();
-  const { initializeStory, currentNode } = useStoryRuntimeStore();
+  const { initializeStory, currentNode, isLoading, error } = useStoryRuntimeStore();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -124,12 +124,23 @@ export default function PlayPage() {
 
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
-      {isPlayingVideo && currentPreVideoUrl ? (
+      {!currentNode ? (
+        <div className="h-full w-full bg-black text-white flex flex-col items-center justify-center gap-4 px-6 text-center font-system-overlay">
+          <div className="text-[#a3e635] text-sm tracking-[0.35em] animate-pulse">
+            {isLoading ? "CONNECTING_TO_STORY_SERVER" : "STORY_SERVER_UNAVAILABLE"}
+          </div>
+          {!isLoading && (
+            <p className="text-white/70 text-xs md:text-sm leading-relaxed whitespace-pre-wrap">
+              {error ?? "챕터를 시작할 수 없습니다.\n네트워크 상태를 확인해 주세요."}
+            </p>
+          )}
+        </div>
+      ) : isPlayingVideo && currentPreVideoUrl ? (
         <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
       ) : (
         <Desktop />
       )}
-      {!isFullscreen && <FullscreenEnforcer />}
+      {currentNode && !isFullscreen && <FullscreenEnforcer />}
 
 
 
