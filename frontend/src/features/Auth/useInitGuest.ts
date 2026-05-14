@@ -1,9 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
-import { useModalStore } from '../../app/store/modalStore';
+import { openConnectionFailedModal, useModalStore } from '../../app/store/modalStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { env } from '../../shared/config/env';
 import type { BaseResponse } from '../../shared/types/api';
+import { isConnectionError } from '../../shared/api/apiError';
 
 /**
  * TokenResponse 인터페이스
@@ -57,6 +57,11 @@ export const useInitGuest = () => {
     },
     onError: (error: any) => {
       console.error('Guest initialization failed:', error);
+
+      if (isConnectionError(error)) {
+        openConnectionFailedModal();
+        return;
+      }
 
       useModalStore.getState().openModal({
         title: 'CRITICAL_SYSTEM_ERROR',
