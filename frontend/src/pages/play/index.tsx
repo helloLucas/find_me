@@ -116,7 +116,9 @@ export default function PlayPage() {
     }
   };
 
-  const shouldShowEndingOverlay = !isPlayingVideo && currentNode?.nodeType === "ending";
+  const currentEndingType = getEndingType(currentNode);
+  const shouldShowEndingOverlay =
+    !isPlayingVideo && currentNode?.nodeType === "ending" && Boolean(currentEndingType);
   const shouldShowCompletionModal =
     !isPlayingVideo && !shouldShowEndingOverlay && isChapterCompletionNode(currentNode);
 
@@ -133,7 +135,7 @@ export default function PlayPage() {
 
       {shouldShowCompletionModal && <ChapterCompletionModal />}
 
-      {shouldShowEndingOverlay && <EndingResultOverlay endingType={getEndingType(currentNode)} />}
+      {shouldShowEndingOverlay && <EndingResultOverlay endingType={currentEndingType} />}
 
       {/* Hidden info for development/debugging */}
       {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
