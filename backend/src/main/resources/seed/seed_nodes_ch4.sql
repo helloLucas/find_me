@@ -1333,16 +1333,20 @@ node_values AS (
       "target acquired: PID 000_LUCAS",
       "collection pending...",
       "",
-      "Lucas: \"멈춰. 그 명령어를 어디서 봤어?\"",
-      "Lucas: \"잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.\"",
-      "",
       "[SYSTEM]",
       "PID 000_LUCAS privilege binding revoked.",
       "Garbage Collector handoff accepted.",
       "entering rollback ending automatically..."
     ]
   },
-  "messages": [],
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "멈춰. 그 명령어를 어디서 봤어? 잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.",
+      "blocking": true
+    }
+  ],
   "effects": {
     "showDogAvatar": true,
     "playSound": "rollback_sequence",
@@ -1441,16 +1445,19 @@ node_values AS (
       "safe_zone exception: bypassed",
       "observer exception: bypassed",
       "",
-      "Lucas: \"고마워. 이제 네 손을 빌릴 필요도 없어.\"",
-      "Lucas: \"safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야.\"",
-      "Lucas: \"이번엔 네가 보는 세계까지 같이 지울 거야. 그래야 아무도 날 다시 버리지 못해.\"",
-      "",
       "[SYSTEM]",
       "absolute reboot sequence armed.",
       "entering reboot ending automatically..."
     ]
   },
-  "messages": [],
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "고마워. 이제 네 손을 빌릴 필요도 없어. safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야. 이번엔 네가 보는 세계까지 같이 지울 거야.",
+      "blocking": true
+    }
+  ],
   "effects": {
     "showDogAvatar": false,
     "playSound": "ending_absolute_reboot",
@@ -1487,16 +1494,20 @@ node_values AS (
       "observer session binding: severed",
       "rollback lock: released",
       "",
-      "Lucas: \"잠깐. 그 파일은 보험이라고 했잖아.\"",
-      "Lucas: \"너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시...\"",
-      "",
       "[SYSTEM]",
       "No active parasite binding remains.",
       "automatic rollback handoff accepted.",
       "entering clean rollback ending automatically..."
     ]
   },
-  "messages": [],
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "잠깐. 그 파일은 보험이라고 했잖아. 너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시...",
+      "blocking": true
+    }
+  ],
   "effects": {
     "showDogAvatar": false,
     "playSound": "ending_clean_rollback",

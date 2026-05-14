@@ -505,6 +505,12 @@ target acquired: PID 000_LUCAS
 collection pending...
 ```
 
+루카스 말풍선:
+
+```text
+Lucas: "멈춰. 그 명령어를 어디서 봤어? 잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼."
+```
+
 이 노드는 별도 `계속` 버튼을 띄우지 않고 약 5초 뒤 `CH4_ROLLBACK_ENDING`으로 자동 진입합니다.
 
 결과:
@@ -679,13 +685,15 @@ PID 000_LUCAS -> root@universe-core
 safe_zone exception: bypassed
 observer exception: bypassed
 
-Lucas: "고마워. 이제 네 손을 빌릴 필요도 없어."
-Lucas: "safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야."
-Lucas: "이번엔 네가 보는 세계까지 같이 지울 거야. 그래야 아무도 날 다시 버리지 못해."
-
 [SYSTEM]
 absolute reboot sequence armed.
 entering reboot ending automatically...
+```
+
+루카스 말풍선:
+
+```text
+Lucas: "고마워. 이제 네 손을 빌릴 필요도 없어. safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야. 이번엔 네가 보는 세계까지 같이 지울 거야."
 ```
 
 이후 `CH4_REBOOT_SEQUENCE`에서 약 6초 뒤 `CH4_REBOOT_ENDING`으로 자동 진입합니다.
@@ -775,13 +783,16 @@ privilege source: none
 observer session binding: severed
 rollback lock: released
 
-Lucas: "잠깐. 그 파일은 보험이라고 했잖아."
-Lucas: "너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시..."
-
 [SYSTEM]
 No active parasite binding remains.
 automatic rollback handoff accepted.
 entering clean rollback ending automatically...
+```
+
+루카스 말풍선:
+
+```text
+Lucas: "잠깐. 그 파일은 보험이라고 했잖아. 너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시..."
 ```
 
 이후 `CH4_CLEAN_ROLLBACK_SEQUENCE`에서 약 5초 뒤 `CH4_CLEAN_ROLLBACK_ENDING`으로 자동 진입합니다.
