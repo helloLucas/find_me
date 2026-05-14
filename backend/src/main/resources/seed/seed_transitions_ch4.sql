@@ -816,7 +816,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROOT_DIR_LISTED',
-            'CH4_ROLLBACK_ENDING',
+            'CH4_ROLLBACK_SEQUENCE',
             'command',
             'execute_rollback_from_short',
             'server_rule',
@@ -830,15 +830,12 @@ WITH transition_values AS (
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
+    "rollback_sequence_started": true
   },
-  "markCheckpoint": true,
   "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
+    "flags.rollback_sequence_started": true
   },
-  "recentResult": "SUCCESS_ENDING_TRUE"
+  "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             80
         ),
@@ -2626,7 +2623,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_MINIGAME_NOT_CLEARED',
-            'CH4_ROLLBACK_ENDING',
+            'CH4_ROLLBACK_SEQUENCE',
             'command',
             'execute_rollback',
             'server_rule',
@@ -2640,15 +2637,12 @@ WITH transition_values AS (
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
+    "rollback_sequence_started": true
   },
-  "markCheckpoint": true,
   "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
+    "flags.rollback_sequence_started": true
   },
-  "recentResult": "SUCCESS_ENDING_TRUE"
+  "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             80
         ),
@@ -2838,7 +2832,7 @@ WITH transition_values AS (
 -- 진 엔딩: rollback
 (
             'CH4_PENDING_JOB_VIEWED',
-            'CH4_ROLLBACK_ENDING',
+            'CH4_ROLLBACK_SEQUENCE',
             'command',
             'execute_rollback',
             'server_rule',
@@ -2852,21 +2846,18 @@ WITH transition_values AS (
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
+    "rollback_sequence_started": true
   },
-  "markCheckpoint": true,
   "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
+    "flags.rollback_sequence_started": true
   },
-  "recentResult": "SUCCESS_ENDING_TRUE"
+  "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             60
         ),
         (
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
-            'CH4_ROLLBACK_ENDING',
+            'CH4_ROLLBACK_SEQUENCE',
             'command',
             'execute_rollback',
             'server_rule',
@@ -2877,6 +2868,176 @@ WITH transition_values AS (
     { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
     { "command": "systemctl", "args": ["isolate", "rollback.target"] }
   ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_2',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_INVESTIGATION_STARTED',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_ORIGIN_TRACE_VIEWED',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_PROCESS_LIST_VIEWED',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_MINIGAME_COMPLETED',
+            'CH4_ROLLBACK_SEQUENCE',
+            'command',
+            'execute_rollback',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_ROLLBACK_SEQUENCE',
+            'CH4_ROLLBACK_ENDING',
+            'click',
+            'continue',
+            'exact',
+            $json${
+  "acceptedValues": ["continue"]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2891,174 +3052,6 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_ENDING_TRUE"
 }$json$::jsonb,
             100
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_1',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_2',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_INVESTIGATION_STARTED',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_ORIGIN_TRACE_VIEWED',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_MINIGAME_COMPLETED',
-            'CH4_ROLLBACK_ENDING',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "ending_global_rollback": true,
-    "chapter4_completed": true
-  },
-  "markCheckpoint": true,
-  "snapshotPatch": {
-    "flags.ending_global_rollback": true,
-    "flags.chapter4_completed": true
-  },
-  "recentResult": "SUCCESS_ENDING_TRUE"
-}$json$::jsonb,
-            80
         ),
 
 -- 히든 엔딩 3: 비밀 프로그램 실행

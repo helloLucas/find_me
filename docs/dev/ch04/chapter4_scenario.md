@@ -230,9 +230,10 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 | 15 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
 | 16 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
 | 17 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
-| 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
-| 19 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
-| 20 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
+| 18 | `CH4_ROLLBACK_SEQUENCE` | `console` | `click` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
+| 19 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
+| 20 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
+| 21 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
 
 ---
 
@@ -481,6 +482,29 @@ final commit [yes/no]:
 ```
 
 1차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job과 무결성 검증 상태가 유지되므로 `execute /mnt/lucas-server/laplace.qasm`으로 바로 확인 플로우에 재진입할 수 있습니다. 의심하는 플레이어를 위해 `sha256sum /mnt/lucas-server/laplace.qasm` 재검증도 허용합니다. 최종 확인은 기존 3차 확인 정책을 유지해 `yes`만 유효하게 처리합니다.
+
+rollback 명령 직후에는 바로 엔딩 오버레이로 넘어가지 않고 `CH4_ROLLBACK_SEQUENCE`에서 루카스의 root 세션 결속이 끊기는 과정을 먼저 보여줍니다.
+
+중간 연출:
+
+```bash
+[ROLLBACK PREPARE]
+freezing pending job: LAPLACE_PENDING_04
+revoking observer-proxy privilege binding...
+detaching PID 000_LUCAS from root session...
+
+[PID 000_LUCAS]
+privilege binding: revoked
+safe_zone claim: invalid
+rollback resistance: detected
+
+[GC]
+collector route opened.
+target acquired: PID 000_LUCAS
+collection pending...
+```
+
+이후 `계속`을 누르면 `CH4_ROLLBACK_ENDING`으로 진입합니다.
 
 결과:
 

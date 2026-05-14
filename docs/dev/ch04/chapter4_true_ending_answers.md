@@ -72,7 +72,7 @@ systemctl start rollback@global_connect.service
 systemctl isolate rollback.target
 ```
 
-결과: 루카스가 GC에 회수되고 세계가 복구된다. 단, NEXUS가 모든 선택을 관찰하고 있었다는 로그가 남는다.
+결과: `CH4_ROLLBACK_SEQUENCE`에서 루카스의 root 세션 결속이 끊기고 GC 회수 전조가 출력된다. `계속`을 누르면 `CH4_ROLLBACK_ENDING`으로 이동해 세계 복구 영상과 엔딩 오버레이가 재생된다. 단, NEXUS가 모든 선택을 관찰하고 있었다는 로그가 남는다.
 
 ## 엔딩 3: Absolute Reboot
 

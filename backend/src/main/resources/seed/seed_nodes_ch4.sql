@@ -1487,6 +1487,78 @@ node_values AS (
             TRUE
         ),
         (
+            'CH4_ROLLBACK_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_ROLLBACK_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "ch04_global_rollback.mp3",
+    "glitchLevel": 4,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SYSTEM]",
+      "Root command received.",
+      "Starting global-rollback.service...",
+      "",
+      "[ROLLBACK PREPARE]",
+      "freezing pending job: LAPLACE_PENDING_04",
+      "revoking observer-proxy privilege binding...",
+      "detaching PID 000_LUCAS from root session...",
+      "",
+      "[PID 000_LUCAS]",
+      "privilege binding: revoked",
+      "safe_zone claim: invalid",
+      "rollback resistance: detected",
+      "",
+      "[GC]",
+      "collector route opened.",
+      "target acquired: PID 000_LUCAS",
+      "collection pending..."
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "멈춰. 그 명령어를 어디서 봤어?",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.",
+      "blocking": true
+    },
+    {
+      "speaker": "SYSTEM",
+      "channel": "terminal_notice",
+      "text": "PID 000_LUCAS privilege binding revoked. Garbage Collector handoff accepted.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "rollback_sequence",
+    "glitchLevel": 4
+  }
+}$json$::jsonb,
+            'click',
+            $json${
+  "allowedActions": ["click"],
+  "buttons": [
+    {
+      "label": "계속",
+      "value": "continue"
+    }
+  ]
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
             'CH4_ROLLBACK_ENDING',
             'ending',
             $json${
