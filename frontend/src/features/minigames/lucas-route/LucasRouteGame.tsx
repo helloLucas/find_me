@@ -782,6 +782,7 @@ export default function LucasRouteGame({ isPractice = false, storyLinked = false
   const navigate = useNavigate();
   const activeWindowId = useWindowStore((state) => state.activeWindowId);
   const [initialGame] = useState(() => createInitialGame());
+  const gameRootRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const gameRef = useRef<GameState>(initialGame);
   const storyClearReportedRef = useRef(false);
@@ -986,6 +987,16 @@ export default function LucasRouteGame({ isPractice = false, storyLinked = false
   }, []);
 
   useEffect(() => {
+    if (windowId && activeWindowId !== windowId) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      gameRootRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeWindowId, windowId]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (windowId && activeWindowId !== windowId) return;
       const target = event.target as HTMLElement | null;
@@ -1071,7 +1082,12 @@ export default function LucasRouteGame({ isPractice = false, storyLinked = false
   const progress = Math.round((hud.currentRow / END_ROW) * 100);
 
   return (
-    <div className="lucas-route-game" data-status={hud.status}>
+    <div
+      ref={gameRootRef}
+      className="lucas-route-game"
+      data-status={hud.status}
+      tabIndex={-1}
+    >
       <header className="lucas-route-game__header">
         <div>
           <p className="lucas-route-game__eyebrow">standalone process</p>
