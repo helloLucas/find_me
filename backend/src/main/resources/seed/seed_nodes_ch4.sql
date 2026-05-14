@@ -44,8 +44,6 @@ node_values AS (
   },
   "content": {
     "terminalOutput": [
-      "guest@lucas-server:~$ execute laplace.qasm",
-      "",
       "[LAPLACE JOB QUEUED]",
       "source: /home/guest/laplace.qasm",
       "job   : LAPLACE_PENDING_04",
