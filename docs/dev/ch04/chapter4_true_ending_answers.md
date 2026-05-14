@@ -41,6 +41,20 @@ yes
 
 결과: 주변 사람만 safe zone에 남고, 전 세계 대부분의 노드가 삭제된다.
 
+1차/2차 확인에서 취소했다가 다시 진입하는 흐름:
+
+```bash
+sha256sum /mnt/lucas-server/laplace.qasm
+no
+ls
+sha256sum /mnt/lucas-server/laplace.qasm
+yes
+yes
+yes
+```
+
+`no`는 1차/2차 확인에서만 취소로 처리된다. 3차 확인은 `yes` 외 입력을 잘못된 입력으로 유지한다.
+
 ## 엔딩 2: Global Rollback
 
 복구 프로토콜을 확인한 뒤 rollback을 실행한다.

@@ -221,15 +221,18 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 | 6 | `CH4_ROOT_LOGIN` | `console` | `command` | true | false | `root@universe-core` 접속 |
 | 7 | `CH4_LUCAS_SERVER_MOUNTED` | `console` | `command` | true | false | `lucas-server` 산출물을 `/mnt/lucas-server`에 마운트 |
 | 8 | `CH4_PENDING_JOB_VIEWED` | `console` | `command` | true | false | systemd에 보류된 `laplace-pending-04.service` 확인 |
-| 9 | `CH4_INVESTIGATION_STARTED` | `console` | `command` | false | false | 플레이어가 로그/프로세스 조사 |
-| 10 | `CH4_MINIGAME_DISCOVERED` | `console` | `command` | false | false | `lucas_route.sh` 발견 |
-| 11 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
-| 12 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | Laplace 실행 1차 확인 |
-| 13 | `CH4_LAPLACE_CONFIRM_2` | `console` | `command` | false | false | Laplace 실행 2차 확인 |
-| 14 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
-| 15 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
-| 16 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
-| 17 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
+| 9 | `CH4_ROOT_DIR_LISTED` | `console` | `command` | false | false | `ls` 짧은 목록 출력 및 조사 반응 |
+| 10 | `CH4_INVESTIGATION_STARTED` | `console` | `command` | false | false | `ls -al` 상세 목록 출력 및 조사 반응 |
+| 11 | `CH4_MINIGAME_DISCOVERED` | `console` | `command` | false | false | `lucas_route.sh` 발견 |
+| 12 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
+| 13 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | Laplace 실행 1차 확인 |
+| 14 | `CH4_LAPLACE_CONFIRM_2` | `console` | `command` | false | false | Laplace 실행 2차 확인 |
+| 15 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
+| 16 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차/2차 확인 취소 후 셸 복귀 |
+| 17 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
+| 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
+| 19 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
+| 20 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
 
 ---
 
@@ -357,6 +360,8 @@ mount /mnt/lucas-server
 mount -a
 ```
 
+`origin_trace.log` 또는 `rollback_protocol.md`를 먼저 확인한 뒤에도 같은 `mount` 입력으로 `CH4_LUCAS_SERVER_MOUNTED`에 진입할 수 있습니다.
+
 출력:
 
 ```bash
@@ -370,10 +375,47 @@ laplace.qasm
 core_group.dat.gpg
 ```
 
-### 7-6. 라플라스 재실행
+### 7-5-1. 루트 디렉터리 조사
+
+짧은 목록:
 
 ```bash
-execute /mnt/lucas-server/laplace.qasm
+ls
+```
+
+출력:
+
+```bash
+gate_04.trace
+lucas_route.sh
+origin_trace.log
+rollback_protocol.md
+```
+
+상세 목록:
+
+```bash
+ls -al
+```
+
+출력:
+
+```bash
+total 24
+drwx------  3 root root 4096 .
+drwxr-xr-x 18 root root 4096 ..
+-rw-r--r--  1 root root  612 gate_04.trace
+-rwxr-xr-x  1 root root  268 lucas_route.sh
+-rw-r--r--  1 root root  512 origin_trace.log
+-rw-r--r--  1 root root  486 rollback_protocol.md
+```
+
+`ls`와 `ls -al`은 같은 루카스 조사 반응을 사용하되, 터미널 출력만 각각의 명령어 형태에 맞게 다르게 보여줍니다.
+
+### 7-6. 라플라스 무결성 확인
+
+```bash
+sha256sum /mnt/lucas-server/laplace.qasm
 ```
 
 출력:
@@ -404,10 +446,10 @@ Normal / Bad Ending
 
 ### 조건
 
-루카스가 하라는 대로 `laplace.qasm`을 root 권한으로 재실행하고 모든 확인에 동의합니다.
+루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인해 실행 확인 플로우에 들어가고, 모든 확인에 동의합니다.
 
 ```bash
-execute /mnt/lucas-server/laplace.qasm
+sha256sum /mnt/lucas-server/laplace.qasm
 yes
 yes
 yes
@@ -437,6 +479,8 @@ Global drop cannot be undone after sandbox reboot.
 
 final commit [yes/no]:
 ```
+
+1차/2차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job이 유지되며, `sha256sum /mnt/lucas-server/laplace.qasm`으로 다시 확인 플로우에 진입할 수 있습니다. 3차 확인은 현재 의도대로 `yes`만 유효하게 처리합니다.
 
 결과:
 

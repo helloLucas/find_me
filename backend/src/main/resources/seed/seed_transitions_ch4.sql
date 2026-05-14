@@ -428,6 +428,424 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROOT_LOGIN',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            82
+        ),
+        (
+            'CH4_UNIVERSE_CORE_HINT',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            82
+        ),
+        (
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            92
+        ),
+        (
+            'CH4_PENDING_JOB_VIEWED',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            97
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            92
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_ROOT_DIR_LISTED',
+            'command',
+            'list_root_dir_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_INVESTIGATION_STARTED',
+            'command',
+            'list_root_workspace_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": ["-al"] },
+    { "command": "ls", "argsAnyOrder": ["-la"] },
+    { "command": "ls", "argsAnyOrder": ["-l"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session_from_short',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_PENDING_JOB_VIEWED',
+            'command',
+            'view_pending_job_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
+    { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_pending_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_pending_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_ORIGIN_TRACE_VIEWED',
+            'command',
+            'cat_origin_trace_from_short',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/root/origin_trace.log",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredReadable": true
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "origin_trace_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.origin_trace_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_PROCESS_LIST_VIEWED',
+            'command',
+            'inspect_ps_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ps", "argsAnyOrder": [] },
+    { "command": "ps", "argsAnyOrder": ["-ef"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "process_list_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.process_list_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_ROLLBACK_PROTOCOL_VIEWED',
+            'command',
+            'cat_rollback_protocol_from_short',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/root/rollback_protocol.md",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredReadable": true
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_protocol_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_protocol_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_MINIGAME_DISCOVERED',
+            'command',
+            'inspect_lucas_route_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "file", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "head", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "ls", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "ls", "argsAnyOrder": ["-al", "lucas_route.sh"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_route_discovered": true
+  },
+  "snapshotPatch": {
+    "flags.lucas_route_discovered": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'resume_laplace_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            70
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_ROLLBACK_ENDING',
+            'command',
+            'execute_rollback_from_short',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
+    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
+    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "ending_global_rollback": true,
+    "chapter4_completed": true
+  },
+  "markCheckpoint": true,
+  "snapshotPatch": {
+    "flags.ending_global_rollback": true,
+    "flags.chapter4_completed": true
+  },
+  "recentResult": "SUCCESS_ENDING_TRUE"
+}$json$::jsonb,
+            80
+        ),
+        (
+            'CH4_ROOT_LOGIN',
             'CH4_INVESTIGATION_STARTED',
             'command',
             'list_root_workspace',
@@ -435,12 +853,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] },
     { "command": "ls", "argsAnyOrder": ["-al"] },
     { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] },
-    { "command": "ls", "argsAnyOrder": ["-a"] },
-    { "command": "pwd", "argsAnyOrder": [] }
+    { "command": "ls", "argsAnyOrder": ["-l"] }
   ]
 }$json$::jsonb,
             $json${
@@ -538,12 +953,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] },
     { "command": "ls", "argsAnyOrder": ["-al"] },
     { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] },
-    { "command": "ls", "argsAnyOrder": ["-a"] },
-    { "command": "pwd", "argsAnyOrder": [] }
+    { "command": "ls", "argsAnyOrder": ["-l"] }
   ]
 }$json$::jsonb,
             $json${
@@ -623,12 +1035,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] },
     { "command": "ls", "argsAnyOrder": ["-al"] },
     { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] },
-    { "command": "ls", "argsAnyOrder": ["-a"] },
-    { "command": "pwd", "argsAnyOrder": [] }
+    { "command": "ls", "argsAnyOrder": ["-l"] }
   ]
 }$json$::jsonb,
             $json${
@@ -733,12 +1142,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] },
     { "command": "ls", "argsAnyOrder": ["-al"] },
     { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] },
-    { "command": "ls", "argsAnyOrder": ["-a"] },
-    { "command": "pwd", "argsAnyOrder": [] }
+    { "command": "ls", "argsAnyOrder": ["-l"] }
   ]
 }$json$::jsonb,
             $json${
@@ -756,9 +1162,9 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_CONFIRM_1',
-            'CH4_INVESTIGATION_STARTED',
+            'CH4_LAPLACE_ABORTED',
             'command',
-            'confirm_no_investigate',
+            'confirm_no_abort',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
@@ -766,18 +1172,17 @@ WITH transition_values AS (
     { "command": "n", "argsAnyOrder": [] },
     { "command": "no", "argsAnyOrder": [] },
     { "command": "cancel", "argsAnyOrder": [] },
-    { "command": "abort", "argsAnyOrder": [] },
-    { "command": "ls", "argsAnyOrder": [] }
+    { "command": "abort", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
   "setFlags": {
     "laplace_confirmation_interrupted": true,
-    "chapter4_investigation_started": true
+    "laplace_confirmation_aborted": true
   },
   "snapshotPatch": {
     "flags.laplace_confirmation_interrupted": true,
-    "flags.chapter4_investigation_started": true
+    "flags.laplace_confirmation_aborted": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -785,9 +1190,9 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_CONFIRM_2',
-            'CH4_INVESTIGATION_STARTED',
+            'CH4_LAPLACE_ABORTED',
             'command',
-            'confirm_no_investigate',
+            'confirm_no_abort',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
@@ -795,22 +1200,102 @@ WITH transition_values AS (
     { "command": "n", "argsAnyOrder": [] },
     { "command": "no", "argsAnyOrder": [] },
     { "command": "cancel", "argsAnyOrder": [] },
-    { "command": "abort", "argsAnyOrder": [] },
-    { "command": "ls", "argsAnyOrder": [] }
+    { "command": "abort", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
   "setFlags": {
     "laplace_final_confirmation_rejected": true,
-    "chapter4_investigation_started": true
+    "laplace_confirmation_aborted": true
   },
   "snapshotPatch": {
     "flags.laplace_final_confirmation_rejected": true,
-    "flags.chapter4_investigation_started": true
+    "flags.laplace_confirmation_aborted": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             80
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'resume_laplace_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
+    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_INVESTIGATION_STARTED',
+            'command',
+            'list_root_workspace_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": ["-al"] },
+    { "command": "ls", "argsAnyOrder": ["-la"] },
+    { "command": "ls", "argsAnyOrder": ["-l"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_PENDING_JOB_VIEWED',
+            'command',
+            'view_pending_job_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "systemctl", "args": ["status", "laplace-pending-04.service"] },
+    { "command": "systemctl", "args": ["list-jobs"] },
+    { "command": "cat", "argsAnyOrder": ["/var/spool/core/pending/LAPLACE_PENDING_04.job"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_pending_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_pending_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            90
         ),
         (
             'CH4_INVESTIGATION_STARTED',
@@ -858,6 +1343,100 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             110
+        ),
+        (
+            'CH4_ORIGIN_TRACE_VIEWED',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session_from_origin_trace',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_ROLLBACK_PROTOCOL_VIEWED',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session_from_rollback_protocol',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
         ),
         (
             'CH4_INVESTIGATION_STARTED',
@@ -938,6 +1517,31 @@ WITH transition_values AS (
             100
         ),
         (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_ORIGIN_TRACE_VIEWED',
+            'command',
+            'cat_origin_trace_after_abort',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/root/origin_trace.log",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredReadable": true
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "origin_trace_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.origin_trace_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
+        ),
+        (
             'CH4_PENDING_JOB_VIEWED',
             'CH4_PROCESS_LIST_VIEWED',
             'command',
@@ -984,6 +1588,30 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_PROCESS_LIST_VIEWED',
+            'command',
+            'inspect_ps_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ps", "argsAnyOrder": [] },
+    { "command": "ps", "argsAnyOrder": ["-ef"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "process_list_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.process_list_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
         ),
         (
             'CH4_PENDING_JOB_VIEWED',
@@ -1034,6 +1662,31 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'CH4_ROLLBACK_PROTOCOL_VIEWED',
+            'command',
+            'cat_rollback_protocol_after_abort',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "cat",
+  "resolvedPath": "/root/rollback_protocol.md",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "requiredReadable": true
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "rollback_protocol_viewed": true
+  },
+  "snapshotPatch": {
+    "flags.rollback_protocol_viewed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            95
         ),
 
 -- 미니게임 발견/완료

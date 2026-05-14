@@ -452,7 +452,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "마운트된 디렉터리 안의 파일을 root 권한으로 다시 실행해. execute /mnt/lucas-server/laplace.qasm.",
+      "text": "마운트된 디렉터리 안의 파일을 root 권한으로 다시 확인해. sha256sum /mnt/lucas-server/laplace.qasm.",
       "blocking": true
     }
   ],
@@ -465,7 +465,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "placeholder": "sha256sum /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -553,7 +553,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "이제 root로 다시 실행하면 돼. execute /mnt/lucas-server/laplace.qasm.",
+      "text": "이제 root로 무결성을 다시 확인하면 돼. sha256sum /mnt/lucas-server/laplace.qasm.",
       "blocking": true
     },
     {
@@ -572,11 +572,59 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "placeholder": "sha256sum /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
             TRUE,
+            FALSE
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_ROOT_DIR_LISTED",
+    "mode": "terminal",
+    "bgm": "ch04_investigation.mp3",
+    "glitchLevel": 2,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "gate_04.trace",
+      "lucas_route.sh",
+      "origin_trace.log",
+      "rollback_protocol.md"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "여기 /root에는 로그랑 보조 파일만 있어. laplace.qasm은 lucas-server:/home/guest 쪽이야.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "계속 진행하려면 mount lucas-server:/home/guest /mnt/lucas-server를 입력해. 의심되면 origin_trace.log나 rollback_protocol.md를 먼저 봐.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "glitchLevel": 2
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "cat rollback_protocol.md",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
             FALSE
         ),
         (
@@ -1069,6 +1117,56 @@ node_values AS (
             $json${
   "allowedActions": ["command"],
   "placeholder": "yes",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED",
+    "mode": "terminal",
+    "bgm": "ch04_investigation.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[ABORTED]",
+      "Laplace pending job remains paused.",
+      "No commit was applied.",
+      "",
+      "root@universe-core:/root#"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "지금 멈추면 아무것도 해결 안 돼.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "확인하고 싶으면 ls -al로 뒤져봐. 다 보고 나면 sha256sum /mnt/lucas-server/laplace.qasm 다시 입력해.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "final_confirm_abort",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "ls -al",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
