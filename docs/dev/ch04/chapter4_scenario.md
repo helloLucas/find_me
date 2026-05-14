@@ -225,10 +225,10 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 | 10 | `CH4_INVESTIGATION_STARTED` | `console` | `command` | false | false | `ls -al` 상세 목록 출력 및 조사 반응 |
 | 11 | `CH4_MINIGAME_DISCOVERED` | `console` | `command` | false | false | `lucas_route.sh` 발견 |
 | 12 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
-| 13 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | Laplace 실행 1차 확인 |
-| 14 | `CH4_LAPLACE_CONFIRM_2` | `console` | `command` | false | false | Laplace 실행 2차 확인 |
+| 13 | `CH4_LAPLACE_VERIFIED` | `console` | `command` | true | false | `laplace.qasm` 무결성 검증 성공 및 execute 대기 |
+| 14 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | execute 후 Laplace 실행 1차 확인 |
 | 15 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
-| 16 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차/2차 확인 취소 후 셸 복귀 |
+| 16 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
 | 17 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
 | 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
 | 19 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
@@ -421,17 +421,25 @@ sha256sum /mnt/lucas-server/laplace.qasm
 출력:
 
 ```bash
-[CONFIRMATION REQUIRED]
-This operation will execute /mnt/lucas-server/laplace.qasm as root.
-Nodes outside the registered safe zone may be dropped.
+9f4c0d7e91b7a16c4a4f2f0c5b8791d9e8d01a13f7f6b2c0e9fb4a1c7d0091bf  /mnt/lucas-server/laplace.qasm
 
-continue [yes/no]:
+[INTEGRITY VERIFIED]
+laplace.qasm unchanged.
+root execution gate unlocked.
+
+Next: execute /mnt/lucas-server/laplace.qasm
 ```
 
 루카스:
 
 ```text
-Lucas: "망설이지 마. 네 주변 사람들은 안전해. 그거면 됐잖아."
+Lucas: "좋아. 검증은 끝났어. 파일은 그대로야. 이제 execute /mnt/lucas-server/laplace.qasm."
+```
+
+무결성 검증은 파일 내용을 확인하는 작업이므로 `laplace.qasm`의 확장자는 바뀌지 않습니다.
+
+```bash
+execute /mnt/lucas-server/laplace.qasm
 ```
 
 ---
@@ -446,11 +454,11 @@ Normal / Bad Ending
 
 ### 조건
 
-루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인해 실행 확인 플로우에 들어가고, 모든 확인에 동의합니다.
+루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인한 뒤 execute를 실행하고, 두 번의 확인에 동의합니다.
 
 ```bash
 sha256sum /mnt/lucas-server/laplace.qasm
-yes
+execute /mnt/lucas-server/laplace.qasm
 yes
 yes
 ```
@@ -466,21 +474,13 @@ continue [yes/no]:
 ```
 
 ```bash
-[SECOND CONFIRMATION]
-7,904,212,859 nodes are outside safe_zone.
-They will be marked as inactive render targets.
-
-commit drop_unobserved_nodes [yes/no]:
-```
-
-```bash
 [FINAL CONFIRMATION]
 Global drop cannot be undone after sandbox reboot.
 
 final commit [yes/no]:
 ```
 
-1차/2차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job이 유지되며, `sha256sum /mnt/lucas-server/laplace.qasm`으로 다시 확인 플로우에 진입할 수 있습니다. 3차 확인은 현재 의도대로 `yes`만 유효하게 처리합니다.
+1차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job이 유지되며, `sha256sum /mnt/lucas-server/laplace.qasm`으로 다시 검증 플로우에 진입할 수 있습니다. 최종 확인은 기존 3차 확인 정책을 유지해 `yes`만 유효하게 처리합니다.
 
 결과:
 

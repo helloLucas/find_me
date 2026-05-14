@@ -993,6 +993,52 @@ node_values AS (
             FALSE
         ),
         (
+            'CH4_LAPLACE_VERIFIED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_VERIFIED",
+    "mode": "terminal",
+    "bgm": "ch04_final_choice.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "9f4c0d7e91b7a16c4a4f2f0c5b8791d9e8d01a13f7f6b2c0e9fb4a1c7d0091bf  /mnt/lucas-server/laplace.qasm",
+      "",
+      "[INTEGRITY VERIFIED]",
+      "laplace.qasm unchanged.",
+      "root execution gate unlocked.",
+      "",
+      "Next: execute /mnt/lucas-server/laplace.qasm"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "좋아. 검증은 끝났어. 파일은 그대로야. 이제 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "integrity_verified",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
             'CH4_LAPLACE_CONFIRM_1',
             'console',
             $json${

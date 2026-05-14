@@ -790,27 +790,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROOT_DIR_LISTED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace_from_short',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -974,27 +972,25 @@ WITH transition_values AS (
 
         (
             'CH4_LUCAS_SERVER_MOUNTED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'execute_laplace_as_root',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -1057,35 +1053,61 @@ WITH transition_values AS (
 -- 루카스 지시 루트: mounted laplace.qasm root 실행
 (
             'CH4_PENDING_JOB_VIEWED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             100
         ),
         (
+            'CH4_LAPLACE_VERIFIED',
             'CH4_LAPLACE_CONFIRM_1',
-            'CH4_LAPLACE_CONFIRM_2',
+            'command',
+            'execute_verified_laplace',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted", "laplace_integrity_verified"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true,
+    "laplace_execute_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true,
+    "flags.laplace_execute_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_CONFIRM_3',
             'command',
             'confirm_yes',
             'server_rule',
@@ -1218,27 +1240,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_ABORTED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace_after_abort',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2390,27 +2410,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_MINIGAME_NOT_CLEARED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2448,27 +2466,25 @@ WITH transition_values AS (
 -- 모든 조사 노드에서 핵심 선택으로 복귀 가능
 (
             'CH4_INVESTIGATION_STARTED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2476,27 +2492,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_ORIGIN_TRACE_VIEWED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2504,27 +2518,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_PROCESS_LIST_VIEWED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2532,27 +2544,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2560,27 +2570,25 @@ WITH transition_values AS (
         ),
         (
             'CH4_MINIGAME_COMPLETED',
-            'CH4_LAPLACE_CONFIRM_1',
+            'CH4_LAPLACE_VERIFIED',
             'command',
-            'resume_laplace',
+            'verify_laplace_integrity',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
     { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] },
-    { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
-    { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
   ],
   "requiredFlags": ["lucas_server_mounted"]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_resume_requested": true
+    "laplace_integrity_verified": true
   },
   "snapshotPatch": {
-    "flags.laplace_resume_requested": true
+    "flags.laplace_integrity_verified": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -2972,7 +2980,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_CONFIRM_FAIL_1',
-            'CH4_LAPLACE_CONFIRM_2',
+            'CH4_LAPLACE_CONFIRM_3',
             'command',
             'confirm_yes',
             'server_rule',

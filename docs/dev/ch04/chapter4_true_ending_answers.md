@@ -2,7 +2,7 @@
 
 기준 문서: `docs/dev/ch04/chapter4_scenario.md`
 
-Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `universe-core`에 보류된 상태에서 시작한다. 플레이어 진행은 `systemctl status` 확인을 강제하지 않고, `lucas-server`를 마운트한 뒤 `sha256sum`으로 `laplace.qasm` 무결성을 root 권한에서 다시 확인하며 실행 확인 플로우로 진입하는 흐름이다.
+Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `universe-core`에 보류된 상태에서 시작한다. 플레이어 진행은 `systemctl status` 확인을 강제하지 않고, `lucas-server`를 마운트한 뒤 `sha256sum`으로 `laplace.qasm` 무결성을 root 권한에서 다시 확인하고 `execute`로 실행 확인 플로우에 진입하는 흐름이다.
 
 ## 공통 진입 루트
 
@@ -30,30 +30,31 @@ mount -a
 
 ## 엔딩 1: Sandbox Cage
 
-루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인해 실행 확인 플로우에 들어간다.
+루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인한 뒤, 파일 이름은 그대로 둔 채 execute를 실행한다.
 
 ```bash
 sha256sum /mnt/lucas-server/laplace.qasm
-yes
+execute /mnt/lucas-server/laplace.qasm
 yes
 yes
 ```
 
 결과: 주변 사람만 safe zone에 남고, 전 세계 대부분의 노드가 삭제된다.
 
-1차/2차 확인에서 취소했다가 다시 진입하는 흐름:
+1차 확인에서 취소했다가 다시 진입하는 흐름:
 
 ```bash
 sha256sum /mnt/lucas-server/laplace.qasm
+execute /mnt/lucas-server/laplace.qasm
 no
 ls
 sha256sum /mnt/lucas-server/laplace.qasm
-yes
+execute /mnt/lucas-server/laplace.qasm
 yes
 yes
 ```
 
-`no`는 1차/2차 확인에서만 취소로 처리된다. 3차 확인은 `yes` 외 입력을 잘못된 입력으로 유지한다.
+`no`는 execute 이후 1차 확인에서만 취소로 처리된다. 최종 확인은 기존 3차 확인처럼 `yes` 외 입력을 잘못된 입력으로 유지한다.
 
 ## 엔딩 2: Global Rollback
 
