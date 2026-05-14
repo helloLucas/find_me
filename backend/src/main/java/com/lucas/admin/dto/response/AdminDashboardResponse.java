@@ -3,9 +3,7 @@ package com.lucas.admin.dto.response;
 import java.util.List;
 
 public record AdminDashboardResponse(
-    Summary summary,
-    List<ChapterStat> chapterStats,
-    List<UserProgress> users) {
+    Summary summary, List<ChapterStat> chapterStats, List<UserProgress> users) {
 
   public record Summary(
       long totalUsers,

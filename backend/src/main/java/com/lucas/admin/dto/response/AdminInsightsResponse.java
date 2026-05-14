@@ -13,7 +13,12 @@ public record AdminInsightsResponse(
     UserComparison comparison) {
 
   public record Filter(
-      List<Long> userIds, String chapterCode, String nodeCode, int userLimit, int recentLimit, int days) {}
+      List<Long> userIds,
+      String chapterCode,
+      String nodeCode,
+      int userLimit,
+      int recentLimit,
+      int days) {}
 
   public record Summary(
       long totalUsers,
@@ -128,4 +133,3 @@ public record AdminInsightsResponse(
       int rightFail,
       int rightError) {}
 }
-

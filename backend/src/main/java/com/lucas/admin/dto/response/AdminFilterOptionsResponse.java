@@ -8,4 +8,3 @@ public record AdminFilterOptionsResponse(List<ChapterOption> chapters, List<Node
 
   public record NodeOption(String nodeCode, String chapterCode) {}
 }
-

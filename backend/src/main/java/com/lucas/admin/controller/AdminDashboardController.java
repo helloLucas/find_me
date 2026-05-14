@@ -19,13 +19,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -45,7 +45,9 @@ public class AdminDashboardController {
   private long adminPinTokenExpiredMs;
 
   public record AdminMeResponse(Long userId, String role, boolean admin) {}
+
   public record AdminPinVerifyRequest(String pin) {}
+
   public record AdminPinVerifyResponse(boolean verified, String pinToken) {}
 
   @PostMapping("/pin/verify")
@@ -57,7 +59,8 @@ public class AdminDashboardController {
     String inputPin = sanitize(request != null ? request.pin() : null);
 
     if (configuredPin == null) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
     }
     if (inputPin == null || !configuredPin.equals(inputPin)) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid admin PIN");
@@ -169,7 +172,8 @@ public class AdminDashboardController {
         userRepository
             .findById(principal.getUserId())
             .map(u -> u.getRole())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
     if (role != UserRole.ADMIN) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
     }
@@ -179,7 +183,8 @@ public class AdminDashboardController {
   private void assertAdminPin(CustomUserPrincipal principal, String pinToken) {
     String configuredPin = sanitize(adminPinCode);
     if (configuredPin == null) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "Admin PIN is not configured");
     }
     if (pinToken == null || pinToken.isBlank()) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin PIN verification required");
