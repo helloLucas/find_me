@@ -61,7 +61,9 @@ export default function PlayPage() {
 
   useEffect(() => {
     audioManager.enableGlobalClickSfx("mouse_click_v1.mp3");
-    initializeStory(chapterCode ?? "week01");
+    if (chapterCode) {
+      initializeStory(chapterCode);
+    }
     processedNodeIdRef.current = null;
 
     // 플레이 진입(마운트/종료 후 재시작) 시 해당 챕터 메모장 로컬 데이터 초기화

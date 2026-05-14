@@ -624,9 +624,8 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
     await syncAuthenticatedUserProfile();
 
     try {
-      const node = normalizeStoryNodeResponse(
-        await storyApi.startStory(resolveChapterCode(chapterCode))
-      );
+      const nodeResponse = await storyApi.startStory(chapterCode);
+      const node = normalizeStoryNodeResponse(nodeResponse.data);
 
       // 세션이 유효한지 확인
       if (get().initializationId !== currentId) return;
