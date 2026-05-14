@@ -28,8 +28,7 @@ public class UserFragmentController {
   public BaseResponse<MinigameStartResponse> startMinigame(
       @AuthenticationPrincipal CustomUserPrincipal principal, @PathVariable String code) {
     String sessionId = minigameSessionService.createSession(principal.getUserId(), code);
-    return BaseResponse.success(
-        "Minigame session started", new MinigameStartResponse(sessionId));
+    return BaseResponse.success("Minigame session started", new MinigameStartResponse(sessionId));
   }
 
   @PostMapping("/acquire/{code}")

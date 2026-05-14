@@ -32,8 +32,13 @@ public class UserFragmentService {
     // Cyber Packet Dash (code=3) 같은 경우 60초가 소요되지만, 테스트 편의를 위해 1초로 유지합니다.
 
     if (!minigameSessionService.verifySession(userId, fragmentCode, sessionId, minDurationMs)) {
-      log.warn("Minigame session verification failed for user: {}, fragment: {}, session: {}", userId, fragmentCode, sessionId);
-      throw new com.lucas.global.exception.CustomException(com.lucas.global.exception.ErrorCode.A1001);
+      log.warn(
+          "Minigame session verification failed for user: {}, fragment: {}, session: {}",
+          userId,
+          fragmentCode,
+          sessionId);
+      throw new com.lucas.global.exception.CustomException(
+          com.lucas.global.exception.ErrorCode.A1001);
     }
 
     try {

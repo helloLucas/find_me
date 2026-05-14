@@ -33,7 +33,8 @@ public class ChapterProgressResponse {
    */
   private String status;
 
-  public static ChapterProgressResponse of(String code, String uriHash, String title, String status) {
+  public static ChapterProgressResponse of(
+      String code, String uriHash, String title, String status) {
     return ChapterProgressResponse.builder()
         .code(code)
         .uriHash(uriHash)
