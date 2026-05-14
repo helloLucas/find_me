@@ -569,9 +569,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -655,9 +655,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1744,9 +1744,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1802,9 +1802,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1830,9 +1830,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1858,9 +1858,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1886,9 +1886,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],
@@ -1914,9 +1914,9 @@ WITH transition_values AS (
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "execute", "args": ["laplace.qasm"] },
-    { "command": "execute", "args": ["./laplace.qasm"] },
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] },
     { "command": "systemctl", "args": ["start", "laplace-pending-04.service"] },
     { "command": "systemctl", "args": ["restart", "laplace-pending-04.service"] }
   ],

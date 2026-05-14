@@ -2,7 +2,7 @@
 
 기준 문서: `docs/dev/ch04/chapter4_scenario.md`
 
-Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `universe-core`에 보류된 상태에서 시작한다. 플레이어 진행은 `systemctl status` 확인을 강제하지 않고, `lucas-server`를 마운트한 뒤 `laplace.qasm`을 root 권한으로 다시 실행하는 흐름이다.
+Chapter 3에서 이미 `execute laplace.qasm`을 시도했고, Chapter 4는 그 요청이 `universe-core`에 보류된 상태에서 시작한다. 플레이어 진행은 `systemctl status` 확인을 강제하지 않고, `lucas-server`를 마운트한 뒤 `sha256sum`으로 `laplace.qasm` 무결성을 root 권한에서 다시 확인하며 실행 확인 플로우로 진입하는 흐름이다.
 
 ## 공통 진입 루트
 
@@ -30,10 +30,10 @@ mount -a
 
 ## 엔딩 1: Sandbox Cage
 
-루카스가 하라는 대로 `laplace.qasm`을 root 권한으로 실행한다.
+루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인해 실행 확인 플로우에 들어간다.
 
 ```bash
-execute /mnt/lucas-server/laplace.qasm
+sha256sum /mnt/lucas-server/laplace.qasm
 yes
 yes
 yes
