@@ -120,13 +120,27 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     refetchOnMount: 'always'
   });
 
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+
   const acquireMutation = useMutation({
-    mutationFn: () => fragmentApi.acquireFragment('3'),
+    mutationFn: () => {
+      if (!gameSessionId) throw new Error("No game session");
+      return fragmentApi.acquireFragment('3', gameSessionId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fragment', '3'] });
     }
   });
   const [gameState, setGameState] = useState<'intro' | 'playing' | 'crashed' | 'cleared'>('intro');
+  const hasRecordedClearRef = useRef(false);
+
+  // Record Clear
+  useEffect(() => {
+    if (gameState === 'cleared' && !isPractice && !hasRecordedClearRef.current && gameSessionId) {
+      hasRecordedClearRef.current = true;
+      acquireMutation.mutate();
+    }
+  }, [gameState, isPractice, gameSessionId, acquireMutation]);
 
   // [최적화 ①] progressPercent를 useState → useRef + DOM 직접 제어로 전환
   // 기존: setProgressPercent()가 tick()마다 호출 → 60fps × React 리렌더링 폭탄 유발
@@ -907,14 +921,31 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
     return () => cancelAnimationFrame(animationId);
   }, [gameState]);
 
-  const startContinuousRun = () => {
+  const startContinuousRun = async () => {
+    if (isPractice) {
+      initLevel();
+      setGameState('playing');
+      return;
+    }
+
+    try {
+      // 백엔드로부터 게임 세션 ID 발급 (플레이 시간 검증용)
+      const res = await fragmentApi.startMinigame('3');
+      setGameSessionId(res);
+      
+      initLevel();
+      setGameState('playing');
+    } catch (error) {
+      console.error("Failed to start minigame session:", error);
+      // 세션 발급 실패 시 게임 시작 방지 (보안)
+    }
+
     if (windowId && maximizeWindow) {
       maximizeWindow(windowId);
     }
     if (containerRef.current) {
       containerRef.current.focus();
     }
-    initLevel();
     isHoldingJumpRef.current = false;
     setGameState('playing');
   };
