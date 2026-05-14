@@ -131,7 +131,6 @@ node_values AS (
             TRUE,
             FALSE
         ),
-
         (
             'CH4_GATE_TRACE_VIEWED',
             'console',

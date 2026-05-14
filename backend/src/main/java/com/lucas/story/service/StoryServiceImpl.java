@@ -1071,7 +1071,7 @@ public class StoryServiceImpl implements StoryService {
       case RULE_USER_FRAGMENTS_PRESENT ->
         matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, true);
       case RULE_USER_FRAGMENTS_INCOMPLETE ->
-          matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
+        matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
       case RULE_REGEX_FALLBACK -> matchesRegexFallbackRule(config, request, latestSnapshot);
       default -> false;
     };
@@ -1080,7 +1080,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 현재 노드에서 명시적으로 처리해야 하는 오답 입력을 잡기 위한 fallback 정규식 룰입니다.
    *
-   * <p>예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고 password retry 노드로
+   * <p>
+   * 예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고
+   * password retry 노드로
    * 이동시킵니다.
    */
   private boolean matchesRegexFallbackRule(
@@ -1367,8 +1369,7 @@ public class StoryServiceImpl implements StoryService {
     String expectedCommand = getTextField(config, "command");
 
     List<String> alternateCommands = getTextArrayField(config, "alternateCommands");
-    boolean commandMatches =
-        command.command().equals(expectedCommand) || alternateCommands.contains(command.command());
+    boolean commandMatches = command.command().equals(expectedCommand) || alternateCommands.contains(command.command());
 
     // 명령어 이름이 다르면 해당 VFS transition은 대상이 아니다.
     if (!commandMatches) {
@@ -3787,10 +3788,9 @@ public class StoryServiceImpl implements StoryService {
    */
   private VfsContext createVfsContext(JsonNode latestSnapshot) {
     // snapshot에 vfsOverlay가 있으면 해당 값을 사용한다.
-    JsonNode overlay =
-        latestSnapshot == null
-            ? objectMapper.createObjectNode()
-            : latestSnapshot.path("vfsOverlay").deepCopy();
+    JsonNode overlay = latestSnapshot == null
+        ? objectMapper.createObjectNode()
+        : latestSnapshot.path("vfsOverlay").deepCopy();
 
     if (overlay == null || !overlay.isObject()) {
       overlay = objectMapper.createObjectNode();
@@ -5459,6 +5459,7 @@ public class StoryServiceImpl implements StoryService {
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
                 }))
         .build();
+
   }
 
   /**
