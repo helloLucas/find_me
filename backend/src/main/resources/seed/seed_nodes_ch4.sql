@@ -1199,7 +1199,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "확인하고 싶으면 ls -al로 뒤져봐. 다 보고 나면 sha256sum /mnt/lucas-server/laplace.qasm 다시 입력해.",
+      "text": "확인하고 싶으면 ls -al로 뒤져봐. 계속하려면 execute /mnt/lucas-server/laplace.qasm 다시 입력해.",
       "blocking": true
     }
   ],
@@ -1212,7 +1212,94 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "ls -al",
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED_DIR_LISTED",
+    "mode": "terminal",
+    "bgm": "ch04_investigation.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "gate_04.trace",
+      "lucas_route.sh",
+      "origin_trace.log",
+      "rollback_protocol.md"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "볼 건 다 봤지? 마운트와 검증은 이미 끝났어. 다시 진행하려면 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED_DIR_DETAIL",
+    "mode": "terminal",
+    "bgm": "ch04_investigation.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "total 24",
+      "drwx------  3 root root 4096 .",
+      "drwxr-xr-x 18 root root 4096 ..",
+      "-rw-r--r--  1 root root  612 gate_04.trace",
+      "-rwxr-xr-x  1 root root  268 lucas_route.sh",
+      "-rw-r--r--  1 root root  512 origin_trace.log",
+      "-rw-r--r--  1 root root  486 rollback_protocol.md"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "여긴 universe-core의 /root야. 필요한 건 이미 /mnt/lucas-server에 붙어 있어. 다시 진행하려면 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,

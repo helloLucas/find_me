@@ -536,7 +536,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_ABORTED',
-            'CH4_ROOT_DIR_LISTED',
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
             'command',
             'list_root_dir_short_after_abort',
             'server_rule',
@@ -1240,6 +1240,34 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_ABORTED',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'execute_verified_laplace_after_abort',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted", "laplace_integrity_verified"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true,
+    "laplace_execute_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true,
+    "flags.laplace_execute_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
             'CH4_LAPLACE_VERIFIED',
             'command',
             'verify_laplace_integrity',
@@ -1266,7 +1294,7 @@ WITH transition_values AS (
         ),
         (
             'CH4_LAPLACE_ABORTED',
-            'CH4_INVESTIGATION_STARTED',
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
             'command',
             'list_root_workspace_after_abort',
             'server_rule',
@@ -1316,6 +1344,168 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             90
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'command',
+            'list_root_workspace_after_abort_list',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": ["-al"] },
+    { "command": "ls", "argsAnyOrder": ["-la"] },
+    { "command": "ls", "argsAnyOrder": ["-l"] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'command',
+            'list_root_dir_short_after_abort_detail',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "ls", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "chapter4_investigation_started": true,
+    "root_workspace_listed": true,
+    "root_dir_listed_short": true
+  },
+  "snapshotPatch": {
+    "flags.chapter4_investigation_started": true,
+    "flags.root_workspace_listed": true,
+    "flags.root_dir_listed_short": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'execute_verified_laplace_after_abort_list',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted", "laplace_integrity_verified"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true,
+    "laplace_execute_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true,
+    "flags.laplace_execute_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'CH4_LAPLACE_CONFIRM_1',
+            'command',
+            'execute_verified_laplace_after_abort_detail',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "execute", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "execute", "args": ["laplace.qasm"] },
+    { "command": "execute", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted", "laplace_integrity_verified"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_resume_requested": true,
+    "laplace_execute_requested": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_resume_requested": true,
+    "flags.laplace_execute_requested": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            110
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'CH4_LAPLACE_VERIFIED',
+            'command',
+            'verify_laplace_integrity_after_abort_list',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_integrity_verified": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_integrity_verified": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'CH4_LAPLACE_VERIFIED',
+            'command',
+            'verify_laplace_integrity_after_abort_detail',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
+    { "command": "sha256sum", "args": ["laplace.qasm"] },
+    { "command": "sha256sum", "args": ["./laplace.qasm"] }
+  ],
+  "requiredFlags": ["lucas_server_mounted"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "laplace_integrity_verified": true
+  },
+  "snapshotPatch": {
+    "flags.laplace_integrity_verified": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
         ),
         (
             'CH4_INVESTIGATION_STARTED',

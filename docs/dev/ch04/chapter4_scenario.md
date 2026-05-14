@@ -480,7 +480,7 @@ Global drop cannot be undone after sandbox reboot.
 final commit [yes/no]:
 ```
 
-1차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job이 유지되며, `sha256sum /mnt/lucas-server/laplace.qasm`으로 다시 검증 플로우에 진입할 수 있습니다. 최종 확인은 기존 3차 확인 정책을 유지해 `yes`만 유효하게 처리합니다.
+1차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job과 무결성 검증 상태가 유지되므로 `execute /mnt/lucas-server/laplace.qasm`으로 바로 확인 플로우에 재진입할 수 있습니다. 의심하는 플레이어를 위해 `sha256sum /mnt/lucas-server/laplace.qasm` 재검증도 허용합니다. 최종 확인은 기존 3차 확인 정책을 유지해 `yes`만 유효하게 처리합니다.
 
 결과:
 

@@ -48,13 +48,12 @@ sha256sum /mnt/lucas-server/laplace.qasm
 execute /mnt/lucas-server/laplace.qasm
 no
 ls
-sha256sum /mnt/lucas-server/laplace.qasm
 execute /mnt/lucas-server/laplace.qasm
 yes
 yes
 ```
 
-`no`는 execute 이후 1차 확인에서만 취소로 처리된다. 최종 확인은 기존 3차 확인처럼 `yes` 외 입력을 잘못된 입력으로 유지한다.
+`no`는 execute 이후 1차 확인에서만 취소로 처리된다. 취소 후에는 검증 상태가 유지되므로 `execute /mnt/lucas-server/laplace.qasm`으로 바로 재진입할 수 있고, 원하면 `sha256sum /mnt/lucas-server/laplace.qasm` 재검증도 가능하다. 최종 확인은 기존 3차 확인처럼 `yes` 외 입력을 잘못된 입력으로 유지한다.
 
 ## 엔딩 2: Global Rollback
 
