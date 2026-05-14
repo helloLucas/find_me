@@ -165,7 +165,6 @@ export default function PlayPage() {
         <Desktop />
       )}
       {currentNode && !isFullscreen && <FullscreenEnforcer />}
-
       <PlayConnectionBanner />
 
       {shouldShowCompletionModal && <ChapterCompletionModal />}
