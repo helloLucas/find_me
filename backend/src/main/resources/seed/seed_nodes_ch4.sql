@@ -38,7 +38,7 @@ node_values AS (
   "scene": {
     "id": "CH4_CORE_BLOCKED",
     "mode": "terminal",
-    "bgm": "ch04_core_blocked.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -101,7 +101,7 @@ node_values AS (
   "scene": {
     "id": "CH4_GATE_TRACE_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_dark_terminal.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -161,7 +161,7 @@ node_values AS (
   "scene": {
     "id": "CH4_TARGET_SCAN",
     "mode": "terminal",
-    "bgm": "ch04_scan.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -215,7 +215,7 @@ node_values AS (
   "scene": {
     "id": "CH4_SSH_FINGERPRINTED",
     "mode": "terminal",
-    "bgm": "ch04_scan.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -270,7 +270,7 @@ node_values AS (
   "scene": {
     "id": "CH4_SSHNUKE_EXECUTED",
     "mode": "terminal",
-    "bgm": "ch04_hack_pulse.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 4,
     "resetTerminal": false
   },
@@ -371,7 +371,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ROOT_LOGIN",
     "mode": "terminal",
-    "bgm": "ch04_root_shell.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -426,7 +426,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LUCAS_SERVER_MOUNTED",
     "mode": "terminal",
-    "bgm": "ch04_root_shell.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -479,7 +479,7 @@ node_values AS (
   "scene": {
     "id": "CH4_UNIVERSE_CORE_HINT",
     "mode": "terminal",
-    "bgm": "ch04_root_shell.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -532,7 +532,7 @@ node_values AS (
   "scene": {
     "id": "CH4_PENDING_JOB_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_pending.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -586,7 +586,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ROOT_DIR_LISTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -634,7 +634,7 @@ node_values AS (
   "scene": {
     "id": "CH4_INVESTIGATION_STARTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -685,7 +685,6 @@ node_values AS (
   "scene": {
     "id": "CH4_MINIGAME_NOT_CLEARED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -732,7 +731,7 @@ node_values AS (
   "scene": {
     "id": "CH4_MINIGAME_COMPLETED",
     "mode": "terminal",
-    "bgm": "ch04_route_clear.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -794,7 +793,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ORIGIN_TRACE_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_origin_trace.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -845,7 +844,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ROLLBACK_PROTOCOL_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_rollback_hint.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -899,7 +898,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_VERIFIED",
     "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -945,7 +944,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_CONFIRM_1",
     "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 4,
     "resetTerminal": false
   },
@@ -989,7 +988,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_CONFIRM_3",
     "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 6,
     "resetTerminal": false
   },
@@ -1032,7 +1031,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_ABORTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -1082,7 +1081,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_ABORTED_DIR_LISTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -1124,7 +1123,7 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_ABORTED_DIR_DETAIL",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -1249,7 +1248,7 @@ node_values AS (
   "scene": {
     "id": "CH4_BAD_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_bad_sandbox.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "preVideo": "ch04_bad_sandbox_cage.m3u8",
     "glitchLevel": 6,
     "resetTerminal": false
@@ -1309,7 +1308,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ROLLBACK_SEQUENCE",
     "mode": "terminal",
-    "bgm": "ch04_global_rollback.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 4,
     "resetTerminal": false
   },
@@ -1332,44 +1331,28 @@ node_values AS (
       "[GC]",
       "collector route opened.",
       "target acquired: PID 000_LUCAS",
-      "collection pending..."
+      "collection pending...",
+      "",
+      "Lucas: \"멈춰. 그 명령어를 어디서 봤어?\"",
+      "Lucas: \"잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.\"",
+      "",
+      "[SYSTEM]",
+      "PID 000_LUCAS privilege binding revoked.",
+      "Garbage Collector handoff accepted.",
+      "entering rollback ending automatically..."
     ]
   },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "멈춰. 그 명령어를 어디서 봤어?",
-      "blocking": true
-    },
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.",
-      "blocking": true
-    },
-    {
-      "speaker": "SYSTEM",
-      "channel": "terminal_notice",
-      "text": "PID 000_LUCAS privilege binding revoked. Garbage Collector handoff accepted.",
-      "blocking": true
-    }
-  ],
+  "messages": [],
   "effects": {
     "showDogAvatar": true,
     "playSound": "rollback_sequence",
     "glitchLevel": 4
   }
 }$json$::jsonb,
-            'click',
+            'none',
             $json${
-  "allowedActions": ["click"],
-  "buttons": [
-    {
-      "label": "계속",
-      "value": "continue"
-    }
-  ]
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 5200
 }$json$::jsonb,
             TRUE,
             FALSE
@@ -1381,7 +1364,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ROLLBACK_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_global_rollback.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "preVideo": "ch04_global_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false
@@ -1436,13 +1419,106 @@ node_values AS (
             TRUE
         ),
         (
+            'CH4_REBOOT_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_REBOOT_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 7,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[LUCAS AUTHORITY PATCH]",
+      "executing /root/.route_cache/lucas_authority_patch.bin...",
+      "external packet route verified.",
+      "authority seed accepted by universe-core.",
+      "",
+      "[BINDING]",
+      "PID 000_LUCAS -> root@universe-core",
+      "safe_zone exception: bypassed",
+      "observer exception: bypassed",
+      "",
+      "Lucas: \"고마워. 이제 네 손을 빌릴 필요도 없어.\"",
+      "Lucas: \"safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야.\"",
+      "Lucas: \"이번엔 네가 보는 세계까지 같이 지울 거야. 그래야 아무도 날 다시 버리지 못해.\"",
+      "",
+      "[SYSTEM]",
+      "absolute reboot sequence armed.",
+      "entering reboot ending automatically..."
+    ]
+  },
+  "messages": [],
+  "effects": {
+    "showDogAvatar": false,
+    "playSound": "ending_absolute_reboot",
+    "glitchLevel": 7
+  }
+}$json$::jsonb,
+            'none',
+            $json${
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 6200
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
+            'CH4_CLEAN_ROLLBACK_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_CLEAN_ROLLBACK_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SECRET PATCH REMOVED]",
+      "lucas authority cache missing.",
+      "NY route binding revoked.",
+      "",
+      "[PID 000_LUCAS]",
+      "privilege source: none",
+      "observer session binding: severed",
+      "rollback lock: released",
+      "",
+      "Lucas: \"잠깐. 그 파일은 보험이라고 했잖아.\"",
+      "Lucas: \"너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시...\"",
+      "",
+      "[SYSTEM]",
+      "No active parasite binding remains.",
+      "automatic rollback handoff accepted.",
+      "entering clean rollback ending automatically..."
+    ]
+  },
+  "messages": [],
+  "effects": {
+    "showDogAvatar": false,
+    "playSound": "ending_clean_rollback",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'none',
+            $json${
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 5600
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
             'CH4_REBOOT_ENDING',
             'ending',
             $json${
   "scene": {
     "id": "CH4_REBOOT_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_absolute_reboot.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "preVideo": "ch04_absolute_reboot.m3u8",
     "glitchLevel": 7,
     "resetTerminal": false
@@ -1511,7 +1587,7 @@ node_values AS (
   "scene": {
     "id": "CH4_CLEAN_ROLLBACK_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_clean_rollback.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "preVideo": "ch04_clean_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false

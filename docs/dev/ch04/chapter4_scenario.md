@@ -229,10 +229,12 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 | 14 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
 | 15 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
 | 16 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
-| 17 | `CH4_ROLLBACK_SEQUENCE` | `console` | `click` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
+| 17 | `CH4_ROLLBACK_SEQUENCE` | `console` | `none` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
 | 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
-| 19 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
-| 20 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
+| 19 | `CH4_REBOOT_SEQUENCE` | `console` | `none` | true | false | 권한 패치 실행 직후 absolute reboot 전조 |
+| 20 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
+| 21 | `CH4_CLEAN_ROLLBACK_SEQUENCE` | `console` | `none` | true | false | 권한 패치 삭제 직후 clean rollback 전조 |
+| 22 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
 
 ---
 
@@ -503,7 +505,7 @@ target acquired: PID 000_LUCAS
 collection pending...
 ```
 
-이후 `계속`을 누르면 `CH4_ROLLBACK_ENDING`으로 진입합니다.
+이 노드는 별도 `계속` 버튼을 띄우지 않고 약 5초 뒤 `CH4_ROLLBACK_ENDING`으로 자동 진입합니다.
 
 결과:
 
@@ -668,26 +670,25 @@ sh lucas_route.sh
 
 ```bash
 [LUCAS AUTHORITY PATCH]
-External packet route verified.
-NY Lucas Server accepted authority seed.
+executing /root/.route_cache/lucas_authority_patch.bin...
+external packet route verified.
+authority seed accepted by universe-core.
 
 [BINDING]
 PID 000_LUCAS -> root@universe-core
 safe_zone exception: bypassed
 observer exception: bypassed
 
-[WARNING]
-This patch grants PID 000_LUCAS authority above rollback layer.
+Lucas: "고마워. 이제 네 손을 빌릴 필요도 없어."
+Lucas: "safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야."
+Lucas: "이번엔 네가 보는 세계까지 같이 지울 거야. 그래야 아무도 날 다시 버리지 못해."
+
+[SYSTEM]
+absolute reboot sequence armed.
+entering reboot ending automatically...
 ```
 
-루카스 반응:
-
-```text
-Lucas: "좋아."
-Lucas: "이제 나도 네 타이핑 뒤에 숨을 필요 없어."
-Lucas: "safe_zone? rollback? 그런 건 겁쟁이들이 쓰는 난간이야."
-Lucas: "이번엔 아주 깨끗하게 시작하자."
-```
+이후 `CH4_REBOOT_SEQUENCE`에서 약 6초 뒤 `CH4_REBOOT_ENDING`으로 자동 진입합니다.
 
 최종 결과:
 
@@ -773,33 +774,17 @@ NY route binding revoked.
 privilege source: none
 observer session binding: severed
 rollback lock: released
-```
 
-루카스 반응:
+Lucas: "잠깐. 그 파일은 보험이라고 했잖아."
+Lucas: "너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시..."
 
-```text
-Lucas: "잠깐."
-Lucas: "그 파일은 보험이라고 했잖아."
-Lucas: "너 지금 내 마지막 경로를 지운 거야?"
-Lucas: "안 돼. 그러면 난 다시..."
-```
-
-자동 복구 시작:
-
-```bash
 [SYSTEM]
-Lucas authority patch removed.
 No active parasite binding remains.
-
-[AUTO RECOVERY]
-systemctl start global-rollback.service
-
-Restoring dropped nodes...
-12%... 47%... 81%... 100%
-
-[PID 000_LUCAS] collected by GC.
-[ALL NODES RESTORED. SYSTEM STABILIZED.]
+automatic rollback handoff accepted.
+entering clean rollback ending automatically...
 ```
+
+이후 `CH4_CLEAN_ROLLBACK_SEQUENCE`에서 약 5초 뒤 `CH4_CLEAN_ROLLBACK_ENDING`으로 자동 진입합니다.
 
 NEXUS 흑막 반전:
 

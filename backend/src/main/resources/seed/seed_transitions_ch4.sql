@@ -517,60 +517,6 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROOT_DIR_LISTED',
-            'CH4_ROOT_DIR_LISTED',
-            'command',
-            'list_root_dir_short',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true,
-    "root_dir_listed_short": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true,
-    "flags.root_dir_listed_short": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_ROOT_DIR_LISTED',
-            'CH4_INVESTIGATION_STARTED',
-            'command',
-            'list_root_workspace_from_short',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": ["-al"] },
-    { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
-            'CH4_ROOT_DIR_LISTED',
             'CH4_LUCAS_SERVER_MOUNTED',
             'command',
             'mount_lucas_server_session_from_short',
@@ -2664,11 +2610,11 @@ WITH transition_values AS (
         (
             'CH4_ROLLBACK_SEQUENCE',
             'CH4_ROLLBACK_ENDING',
-            'click',
-            'continue',
-            'exact',
+            'system',
+            'auto',
+            'server_rule',
             $json${
-  "acceptedValues": ["continue"]
+  "rule": "AUTO_SYSTEM"
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2686,9 +2632,9 @@ WITH transition_values AS (
         ),
 
 -- 히든 엔딩 3: 비밀 프로그램 실행
-(
+        (
             'CH4_MINIGAME_COMPLETED',
-            'CH4_REBOOT_ENDING',
+            'CH4_REBOOT_SEQUENCE',
             'command',
             'execute_authority_patch',
             'server_rule',
@@ -2698,6 +2644,59 @@ WITH transition_values AS (
     { "command": "/root/.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] },
     { "command": "./.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] }
   ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "absolute_reboot_sequence_started": true
+  },
+  "snapshotPatch": {
+    "flags.absolute_reboot_sequence_started": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+
+        (
+            'CH4_MINIGAME_COMPLETED',
+            'CH4_CLEAN_ROLLBACK_SEQUENCE',
+            'command',
+            'delete_authority_patch',
+            'server_rule',
+            $json${
+  "rule": "VIRTUAL_FS_COMMAND",
+  "command": "rm",
+  "resolvedPath": "/root/.route_cache/lucas_authority_patch.bin",
+  "allowRelativePath": true,
+  "allowAbsolutePath": true,
+  "alternateCommands": ["shred", "unlink"]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "clean_rollback_sequence_started": true,
+    "lucas_authority_patch_created": false
+  },
+  "vfsOverlay": {
+    "removedPaths": [
+      "/root/.route_cache/lucas_authority_patch.bin"
+    ]
+  },
+  "snapshotPatch": {
+    "flags.clean_rollback_sequence_started": true,
+    "flags.lucas_authority_patch_created": false
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            100
+        ),
+        (
+            'CH4_REBOOT_SEQUENCE',
+            'CH4_REBOOT_ENDING',
+            'system',
+            'auto',
+            'server_rule',
+            $json${
+  "rule": "AUTO_SYSTEM"
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2713,37 +2712,24 @@ WITH transition_values AS (
 }$json$::jsonb,
             100
         ),
-
         (
-            'CH4_MINIGAME_COMPLETED',
+            'CH4_CLEAN_ROLLBACK_SEQUENCE',
             'CH4_CLEAN_ROLLBACK_ENDING',
-            'command',
-            'delete_authority_patch',
+            'system',
+            'auto',
             'server_rule',
             $json${
-  "rule": "VIRTUAL_FS_COMMAND",
-  "command": "rm",
-  "resolvedPath": "/root/.route_cache/lucas_authority_patch.bin",
-  "allowRelativePath": true,
-  "allowAbsolutePath": true,
-  "alternateCommands": ["shred", "unlink"]
+  "rule": "AUTO_SYSTEM"
 }$json$::jsonb,
             $json${
   "setFlags": {
     "ending_clean_rollback": true,
-    "chapter4_completed": true,
-    "lucas_authority_patch_created": false
+    "chapter4_completed": true
   },
   "markCheckpoint": true,
-  "vfsOverlay": {
-    "removedPaths": [
-      "/root/.route_cache/lucas_authority_patch.bin"
-    ]
-  },
   "snapshotPatch": {
     "flags.ending_clean_rollback": true,
-    "flags.chapter4_completed": true,
-    "flags.lucas_authority_patch_created": false
+    "flags.chapter4_completed": true
   },
   "recentResult": "SUCCESS_ENDING_CLEAN_ROLLBACK"
 }$json$::jsonb,

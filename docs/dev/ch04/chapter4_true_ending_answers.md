@@ -72,7 +72,7 @@ systemctl start rollback@global_connect.service
 systemctl isolate rollback.target
 ```
 
-결과: `CH4_ROLLBACK_SEQUENCE`에서 루카스의 root 세션 결속이 끊기고 GC 회수 전조가 출력된다. `계속`을 누르면 `CH4_ROLLBACK_ENDING`으로 이동해 세계 복구 영상과 엔딩 오버레이가 재생된다. 단, NEXUS가 모든 선택을 관찰하고 있었다는 로그가 남는다.
+결과: `CH4_ROLLBACK_SEQUENCE`에서 루카스의 root 세션 결속이 끊기고 GC 회수 전조가 출력된다. 별도 `계속` 버튼 없이 약 5초 뒤 `CH4_ROLLBACK_ENDING`으로 자동 이동해 세계 복구 영상과 엔딩 오버레이가 재생된다. 단, NEXUS가 모든 선택을 관찰하고 있었다는 로그가 남는다.
 
 ## 엔딩 3: Absolute Reboot
 
@@ -91,7 +91,7 @@ sh lucas_route.sh
 ./.route_cache/lucas_authority_patch.bin
 ```
 
-결과: 루카스 권한이 강화되고 safe zone과 observer 예외까지 무시한 전체 초기화가 시작된다.
+결과: `CH4_REBOOT_SEQUENCE`에서 루카스 권한 강화와 observer 예외 무시 로그가 출력된 뒤, 약 6초 뒤 전체 초기화 엔딩으로 자동 진입한다.
 
 ## 엔딩 4: Clean Rollback
 
@@ -111,4 +111,4 @@ shred /root/.route_cache/lucas_authority_patch.bin
 unlink /root/.route_cache/lucas_authority_patch.bin
 ```
 
-결과: 루카스의 마지막 권한 경로가 제거되고 자동 rollback이 시작된다. 엔딩 2보다 NEXUS 흑막 로그가 더 명확하게 노출된다.
+결과: `CH4_CLEAN_ROLLBACK_SEQUENCE`에서 루카스의 마지막 권한 경로가 제거되는 로그가 출력된 뒤, 약 5초 뒤 clean rollback 엔딩으로 자동 진입한다. 엔딩 2보다 NEXUS 흑막 로그가 더 명확하게 노출된다.
