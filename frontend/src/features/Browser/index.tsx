@@ -51,14 +51,7 @@ type KeyboardLockNavigator = Navigator & {
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
-
-  // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
-  const currentChapter = (() => {
-    if (!currentNode?.code) return 1;
-    const match = currentNode.code.match(/^CH(\d+)_/);
-    return match ? parseInt(match[1], 10) : 1;
-  })();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasRouteStoryLinked, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
 
   // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
   const currentChapter = (() => {
@@ -918,7 +911,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           )}
           {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
           {activeTab?.component === 'lucassurvival' && <LucasSurvivalTab />}
-          {activeTab?.component === 'lucasroute' && <LucasRouteTab />}
+          {activeTab?.component === 'lucasroute' && <LucasRouteTab storyLinked={lucasRouteStoryLinked} windowId={windowId} />}
         </div>
 
         {showDevTools && (

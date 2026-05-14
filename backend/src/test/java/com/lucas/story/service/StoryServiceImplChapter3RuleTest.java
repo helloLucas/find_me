@@ -634,6 +634,49 @@ class StoryServiceImplChapter3RuleTest {
         .isTrue();
   }
 
+  @Test
+  void userFragmentsPresentRuleCanGateNonCommandStoryCallback() throws Exception {
+    UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
+    storyService.init();
+
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "2")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "3")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "4")).thenReturn(true);
+
+    String config =
+        """
+        {
+          "rule": "USER_FRAGMENTS_PRESENT",
+          "acceptedValues": ["lucas_route_clear"],
+          "requiredFragmentGroups": [["1"], ["2"], ["3"], ["4"]]
+        }
+        """;
+
+    assertThat(
+            matchesWithUser(
+                "USER_FRAGMENTS_PRESENT", config, "lucas_route_clear", baseSnapshot(), 42L))
+        .isTrue();
+    assertThat(
+            matchesWithUser("USER_FRAGMENTS_PRESENT", config, "anything_else", baseSnapshot(), 42L))
+        .isFalse();
+  }
+
   private boolean matches(String rule, String configJson, String input, JsonNode snapshot)
       throws Exception {
     StoryTransition transition =

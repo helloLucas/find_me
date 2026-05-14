@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fragmentApi } from '../../shared/api/fragmentApi';
 import {
   BASE_PLAYER_STATS,
   CANVAS_HEIGHT,
@@ -1214,7 +1213,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const lastMsRef = useRef<number>(0);
   const keysRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
-  const hasRecordedClearRef = useRef(false);
   const timelineRef = useRef({
     mid1: false,
     mid2: false,
@@ -1243,16 +1241,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const [selectedCardIndex, setSelectedCardIndex] = useState(1);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
-
-  useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
-
-    hasRecordedClearRef.current = true;
-    void fragmentApi.acquireFragment('4').catch((error) => {
-      hasRecordedClearRef.current = false;
-      console.error('Failed to record Lucas survival clear:', error);
-    });
-  }, [hud.status, isPractice]);
 
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -4865,7 +4853,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     </div>
   );
 }
-
 
 
 

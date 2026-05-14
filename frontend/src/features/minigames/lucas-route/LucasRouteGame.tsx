@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWindowStore } from "../../../app/store/windowStore";
+import type { DesktopWindowId } from "../../../shared/config/desktopWindows";
 import {
   LUCAS_ROUTE_ASSETS,
   LUCAS_ROUTE_GAME_CONFIG,
@@ -768,11 +770,20 @@ function drawGame(
   }
 }
 
-export default function LucasRouteGame({ isPractice }: { isPractice?: boolean }) {
+interface LucasRouteGameProps {
+  isPractice?: boolean;
+  storyLinked?: boolean;
+  windowId?: DesktopWindowId;
+  onStoryClear?: () => void | Promise<void>;
+}
+
+export default function LucasRouteGame({ isPractice = false, storyLinked = false, windowId, onStoryClear }: LucasRouteGameProps) {
   const navigate = useNavigate();
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
   const [initialGame] = useState(() => createInitialGame());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const gameRef = useRef<GameState>(initialGame);
+  const storyClearReportedRef = useRef(false);
   const renderRef = useRef<RenderState>({
     visualPacket: { ...initialGame.packet },
     cameraRow: initialGame.packet.row,
@@ -786,6 +797,27 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
   const syncHud = useCallback(() => {
     setHud(createHud(gameRef.current));
   }, []);
+
+  const reportStoryClear = useCallback(() => {
+    if (isPractice || !storyLinked || storyClearReportedRef.current) return;
+
+    storyClearReportedRef.current = true;
+    void Promise.resolve(onStoryClear?.()).catch((error) => {
+      storyClearReportedRef.current = false;
+      console.error("Failed to report Lucas Route clear:", error);
+    });
+  }, [isPractice, onStoryClear, storyLinked]);
+
+  useEffect(() => {
+    if (!storyLinked) {
+      storyClearReportedRef.current = false;
+      return;
+    }
+
+    if (hud.status === "complete") {
+      reportStoryClear();
+    }
+  }, [hud.status, reportStoryClear, storyLinked]);
 
   const startNewRun = useCallback(
     (message = "Packet resent from Yuseong meteor.") => {
@@ -823,11 +855,14 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
   const completeRun = useCallback(() => {
     const game = gameRef.current;
+    if (game.status === "complete") return;
+
     game.status = "complete";
     game.bestRow = END_ROW;
     game.message = "NY Lucas Server accepted the packet.";
     syncHud();
-  }, [syncHud]);
+    reportStoryClear();
+  }, [reportStoryClear, syncHud]);
 
   const movePacket = useCallback(
     (dc: number, dr: number) => {
@@ -887,6 +922,12 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (windowId && activeWindowId !== windowId) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.isContentEditable || target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") {
+        return;
+      }
+
       const key = event.key.toLowerCase();
       const movement: Record<string, [number, number] | undefined> = {
         arrowup: [0, 1],
@@ -913,7 +954,7 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [movePacket, startNewRun]);
+  }, [activeWindowId, movePacket, startNewRun, windowId]);
 
   useEffect(() => {
     const tick = (now: number) => {

@@ -72,52 +72,6 @@ WITH transition_values AS (
             100
         ),
         (
-            'CH4_UNIVERSE_WARNING',
-            'CH4_GATE_TRACE_VIEWED',
-            'command',
-            'cat_gate_04_trace',
-            'server_rule',
-            $json${
-  "rule": "VIRTUAL_FS_COMMAND",
-  "command": "cat",
-  "resolvedPath": "/home/guest/gate_04.trace",
-  "requiredReadable": true
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "gate_04_trace_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.gate_04_trace_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
-            'CH4_TERMINAL_RELOAD',
-            'CH4_GATE_TRACE_VIEWED',
-            'command',
-            'cat_gate_04_trace',
-            'server_rule',
-            $json${
-  "rule": "VIRTUAL_FS_COMMAND",
-  "command": "cat",
-  "resolvedPath": "/home/guest/gate_04.trace",
-  "requiredReadable": true
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "gate_04_trace_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.gate_04_trace_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
             'CH4_GATE_TRACE_VIEWED',
             'CH4_TARGET_SCAN',
             'command',
@@ -715,30 +669,6 @@ WITH transition_values AS (
         ),
         (
             'CH4_ROOT_DIR_LISTED',
-            'CH4_PROCESS_LIST_VIEWED',
-            'command',
-            'inspect_ps_from_short',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ps", "argsAnyOrder": [] },
-    { "command": "ps", "argsAnyOrder": ["-ef"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "process_list_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.process_list_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
-            'CH4_ROOT_DIR_LISTED',
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'command',
             'cat_rollback_protocol_from_short',
@@ -757,32 +687,6 @@ WITH transition_values AS (
   },
   "snapshotPatch": {
     "flags.rollback_protocol_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
-            'CH4_ROOT_DIR_LISTED',
-            'CH4_MINIGAME_DISCOVERED',
-            'command',
-            'inspect_lucas_route_from_short',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "file", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "head", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "ls", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "ls", "argsAnyOrder": ["-al", "lucas_route.sh"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_discovered": true
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_discovered": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
@@ -1126,30 +1030,6 @@ WITH transition_values AS (
 }$json$::jsonb,
             100
         ),
-        (
-            'CH4_LAPLACE_CONFIRM_2',
-            'CH4_LAPLACE_CONFIRM_3',
-            'command',
-            'confirm_yes',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "y", "argsAnyOrder": [] },
-    { "command": "yes", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "laplace_confirm_2": true
-  },
-  "snapshotPatch": {
-    "flags.laplace_confirm_2": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
 
 -- 조사 루트 진입
 (
@@ -1201,34 +1081,6 @@ WITH transition_values AS (
   },
   "snapshotPatch": {
     "flags.laplace_confirmation_interrupted": true,
-    "flags.laplace_confirmation_aborted": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_2',
-            'CH4_LAPLACE_ABORTED',
-            'command',
-            'confirm_no_abort',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "n", "argsAnyOrder": [] },
-    { "command": "no", "argsAnyOrder": [] },
-    { "command": "cancel", "argsAnyOrder": [] },
-    { "command": "abort", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "laplace_final_confirmation_rejected": true,
-    "laplace_confirmation_aborted": true
-  },
-  "snapshotPatch": {
-    "flags.laplace_final_confirmation_rejected": true,
     "flags.laplace_confirmation_aborted": true
   },
   "recentResult": "SUCCESS_MOVE"
@@ -1750,78 +1602,6 @@ WITH transition_values AS (
         ),
         (
             'CH4_PENDING_JOB_VIEWED',
-            'CH4_PROCESS_LIST_VIEWED',
-            'command',
-            'inspect_ps',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ps", "argsAnyOrder": [] },
-    { "command": "ps", "argsAnyOrder": ["-ef"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "process_list_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.process_list_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_INVESTIGATION_STARTED',
-            'CH4_PROCESS_LIST_VIEWED',
-            'command',
-            'inspect_ps',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ps", "argsAnyOrder": [] },
-    { "command": "ps", "argsAnyOrder": ["-ef"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "process_list_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.process_list_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
-            'CH4_LAPLACE_ABORTED',
-            'CH4_PROCESS_LIST_VIEWED',
-            'command',
-            'inspect_ps_after_abort',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ps", "argsAnyOrder": [] },
-    { "command": "ps", "argsAnyOrder": ["-ef"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "process_list_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.process_list_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
-            'CH4_PENDING_JOB_VIEWED',
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'command',
             'cat_rollback_protocol',
@@ -1896,443 +1676,43 @@ WITH transition_values AS (
             95
         ),
 
--- 미니게임 발견/완료
-(
-            'CH4_INVESTIGATION_STARTED',
-            'CH4_MINIGAME_DISCOVERED',
+-- 미니게임 실행/완료
+        (
+            'CH4_PENDING_JOB_VIEWED',
+            'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'inspect_lucas_route',
+            'open_lucas_route_process',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
-    { "command": "file", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "head", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "ls", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "ls", "argsAnyOrder": ["-al", "lucas_route.sh"] }
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "lucas_route_discovered": true
+    "lucas_route_clear_required": true
   },
   "snapshotPatch": {
-    "flags.lucas_route_discovered": true
+    "flags.lucas_route_clear_required": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            100
+            140
         ),
         (
-            'CH4_PENDING_JOB_VIEWED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_MINIGAME_DISCOVERED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
-            'CH4_INVESTIGATION_STARTED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
-            'CH4_ORIGIN_TRACE_VIEWED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_ROLLBACK_PROTOCOL_VIEWED',
-            'CH4_MINIGAME_COMPLETED',
-            'command',
-            'run_lucas_route',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_completed": true,
-    "lucas_authority_patch_created": true
-  },
-  "vfsOverlay": {
-    "createdNodes": [
-      {
-        "path": "/root/.route_cache",
-        "type": "directory",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": true,
-        "virtual": true,
-        "createdBy": "lucas_route"
-      },
-      {
-        "path": "/root/.route_cache/lucas_authority_patch.bin",
-        "type": "file",
-        "readable": true,
-        "executable": true,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_LUCAS_AUTHORITY_PATCH"
-      },
-      {
-        "path": "/root/.route_cache/manifest.txt",
-        "type": "file",
-        "readable": true,
-        "executable": false,
-        "protected": false,
-        "hidden": false,
-        "virtual": true,
-        "createdBy": "lucas_route",
-        "contentKey": "CH4_ROUTE_CACHE_MANIFEST"
-      }
-    ]
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_completed": true,
-    "flags.lucas_authority_patch_created": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_PENDING_JOB_VIEWED',
+            'CH4_ROOT_LOGIN',
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_without_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2340,8 +1720,7 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2352,16 +1731,16 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            95
+            140
         ),
         (
-            'CH4_MINIGAME_DISCOVERED',
+            'CH4_LUCAS_SERVER_MOUNTED',
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_without_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2369,8 +1748,7 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2381,16 +1759,44 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            105
+            140
+        ),
+        (
+            'CH4_ROOT_DIR_LISTED',
+            'CH4_MINIGAME_NOT_CLEARED',
+            'command',
+            'open_lucas_route_process',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_route_clear_required": true
+  },
+  "snapshotPatch": {
+    "flags.lucas_route_clear_required": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            140
         ),
         (
             'CH4_INVESTIGATION_STARTED',
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_without_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2398,8 +1804,7 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2410,16 +1815,16 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            100
+            140
         ),
         (
             'CH4_ORIGIN_TRACE_VIEWED',
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_without_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2427,8 +1832,7 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2439,45 +1843,16 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
-            'CH4_MINIGAME_NOT_CLEARED',
-            'command',
-            'run_lucas_route_without_clear',
-            'server_rule',
-            $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "lucas_route_clear_required": true
-  },
-  "snapshotPatch": {
-    "flags.lucas_route_clear_required": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
+            140
         ),
         (
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_without_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_INCOMPLETE",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2485,8 +1860,7 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2497,16 +1871,16 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            90
+            140
         ),
         (
             'CH4_MINIGAME_NOT_CLEARED',
-            'CH4_MINIGAME_COMPLETED',
+            'CH4_MINIGAME_NOT_CLEARED',
             'command',
-            'run_lucas_route_after_clear',
+            'open_lucas_route_process',
             'server_rule',
             $json${
-  "rule": "USER_FRAGMENTS_PRESENT",
+  "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
     { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
@@ -2514,8 +1888,76 @@ WITH transition_values AS (
     { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
     { "command": "./lucas_route.sh", "argsAnyOrder": [] },
     { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_route_clear_required": true
+  },
+  "snapshotPatch": {
+    "flags.lucas_route_clear_required": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            140
+        ),
+        (
+            'CH4_MINIGAME_NOT_CLEARED',
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'command',
+            'mount_lucas_server_session_from_route_wait',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
+  },
+  "snapshotPatch": {
+    "flags.lucas_server_mounted": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            120
+        ),
+        (
+            'CH4_MINIGAME_NOT_CLEARED',
+            'CH4_MINIGAME_COMPLETED',
+            'click',
+            'lucas_route_clear',
+            'server_rule',
+            $json${
+  "rule": "USER_FRAGMENTS_PRESENT",
+  "acceptedValues": ["lucas_route_clear"],
+  "requiredFragmentGroups": [["1"], ["2"], ["3"], ["4"]]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2564,25 +2006,18 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            110
+            120
         ),
         (
             'CH4_MINIGAME_NOT_CLEARED',
             'CH4_MINIGAME_NOT_CLEARED',
-            'command',
-            'run_lucas_route_without_clear',
+            'click',
+            'lucas_route_clear_pending',
             'server_rule',
             $json${
   "rule": "USER_FRAGMENTS_INCOMPLETE",
-  "acceptedForms": [
-    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
-    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
-    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
-    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
-  ],
-  "requiredFragmentGroups": [["4"]]
+  "acceptedValues": ["lucas_route_clear"],
+  "requiredFragmentGroups": [["1"], ["2"], ["3"], ["4"]]
 }$json$::jsonb,
             $json${
   "setFlags": {
@@ -2593,7 +2028,7 @@ WITH transition_values AS (
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            100
+            115
         ),
         (
             'CH4_MINIGAME_NOT_CLEARED',
@@ -2701,7 +2136,7 @@ WITH transition_values AS (
             70
         ),
         (
-            'CH4_PROCESS_LIST_VIEWED',
+            'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'CH4_LAPLACE_VERIFIED',
             'command',
             'verify_laplace_integrity',
@@ -2727,30 +2162,51 @@ WITH transition_values AS (
             70
         ),
         (
-            'CH4_ROLLBACK_PROTOCOL_VIEWED',
-            'CH4_LAPLACE_VERIFIED',
+            'CH4_MINIGAME_COMPLETED',
+            'CH4_LUCAS_SERVER_MOUNTED',
             'command',
-            'verify_laplace_integrity',
+            'mount_lucas_server_session_from_route_complete',
             'server_rule',
             $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "sha256sum", "args": ["/mnt/lucas-server/laplace.qasm"] },
-    { "command": "sha256sum", "args": ["laplace.qasm"] },
-    { "command": "sha256sum", "args": ["./laplace.qasm"] }
-  ],
-  "requiredFlags": ["lucas_server_mounted"]
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^mount\\s+(?:(?:-t\\s+\\S+|-o\\s+\\S+)\\s+)*(?:(?:guest@)?lucas-server:(?:/home/guest/?|~/?)\\s+/mnt/lucas-server/?|/mnt/lucas-server/?|-a)\\s*$"
 }$json$::jsonb,
             $json${
   "setFlags": {
-    "laplace_integrity_verified": true
+    "lucas_server_mounted": true
+  },
+  "vfsOverlay": {
+    "createdNodes": [
+      {
+        "path": "/mnt/lucas-server/laplace.qasm",
+        "type": "file",
+        "name": "laplace.qasm",
+        "readable": true,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH4_LAPLACE_QASM_PENDING",
+        "storyKey": "MOUNTED_LAPLACE_QASM"
+      },
+      {
+        "path": "/mnt/lucas-server/core_group.dat.gpg",
+        "type": "file",
+        "name": "core_group.dat.gpg",
+        "readable": false,
+        "executable": false,
+        "protected": true,
+        "hidden": false,
+        "contentKey": "CH3_CORE_GROUP_GPG",
+        "storyKey": "MOUNTED_SAFE_ZONE_SOURCE"
+      }
+    ]
   },
   "snapshotPatch": {
-    "flags.laplace_integrity_verified": true
+    "flags.lucas_server_mounted": true
   },
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
-            70
+            90
         ),
         (
             'CH4_MINIGAME_COMPLETED',
@@ -2780,31 +2236,6 @@ WITH transition_values AS (
         ),
         (
             'CH4_ORIGIN_TRACE_VIEWED',
-            'CH4_ROLLBACK_PROTOCOL_VIEWED',
-            'command',
-            'cat_rollback_protocol',
-            'server_rule',
-            $json${
-  "rule": "VIRTUAL_FS_COMMAND",
-  "command": "cat",
-  "resolvedPath": "/root/rollback_protocol.md",
-  "allowRelativePath": true,
-  "allowAbsolutePath": true,
-  "requiredReadable": true
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "rollback_protocol_viewed": true
-  },
-  "snapshotPatch": {
-    "flags.rollback_protocol_viewed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'command',
             'cat_rollback_protocol',
@@ -3056,31 +2487,6 @@ WITH transition_values AS (
             95
         ),
         (
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
-            'CH4_ROLLBACK_SEQUENCE',
-            'command',
-            'execute_rollback_from_confirm_fail_2',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "rollback_sequence_started": true
-  },
-  "snapshotPatch": {
-    "flags.rollback_sequence_started": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            95
-        ),
-        (
             'CH4_LAPLACE_CONFIRM_FAIL_3',
             'CH4_ROLLBACK_SEQUENCE',
             'command',
@@ -3181,31 +2587,6 @@ WITH transition_values AS (
             90
         ),
         (
-            'CH4_LAPLACE_CONFIRM_2',
-            'CH4_ROLLBACK_SEQUENCE',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "rollback_sequence_started": true
-  },
-  "snapshotPatch": {
-    "flags.rollback_sequence_started": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
-        ),
-        (
             'CH4_INVESTIGATION_STARTED',
             'CH4_ROLLBACK_SEQUENCE',
             'command',
@@ -3232,31 +2613,6 @@ WITH transition_values AS (
         ),
         (
             'CH4_ORIGIN_TRACE_VIEWED',
-            'CH4_ROLLBACK_SEQUENCE',
-            'command',
-            'execute_rollback',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "systemctl", "args": ["start", "global-rollback.service"] },
-    { "command": "systemctl", "args": ["start", "rollback@global_connect.service"] },
-    { "command": "systemctl", "args": ["isolate", "rollback.target"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "rollback_sequence_started": true
-  },
-  "snapshotPatch": {
-    "flags.rollback_sequence_started": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            80
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
             'CH4_ROLLBACK_SEQUENCE',
             'command',
             'execute_rollback',
@@ -3463,56 +2819,6 @@ WITH transition_values AS (
         (
             'CH4_LAPLACE_CONFIRM_FAIL_1',
             'CH4_LAPLACE_CONFIRM_FAIL_1',
-            'command',
-            '^.*$',
-            'regex',
-            $json${}$json$::jsonb,
-            $json${
-  "recentResult": "FAIL_INVALID_INPUT"
-}$json$::jsonb,
-            50
-        ),
-
--- FAIL loops for Confirm 2
-(
-            'CH4_LAPLACE_CONFIRM_2',
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
-            'command',
-            '^.*$',
-            'regex',
-            $json${}$json$::jsonb,
-            $json${
-  "recentResult": "FAIL_INVALID_INPUT"
-}$json$::jsonb,
-            50
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
-            'CH4_LAPLACE_CONFIRM_3',
-            'command',
-            'confirm_yes',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "y", "argsAnyOrder": [] },
-    { "command": "yes", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "laplace_confirm_2": true
-  },
-  "snapshotPatch": {
-    "flags.laplace_confirm_2": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
             'command',
             '^.*$',
             'regex',

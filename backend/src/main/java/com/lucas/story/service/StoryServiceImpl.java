@@ -2471,7 +2471,17 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    if (config.has("acceptedForms") || config.has("command")) {
+    List<String> acceptedValues = getTextArrayField(config, "acceptedValues");
+    if (!acceptedValues.isEmpty() && !acceptedValues.contains(request.getInputValue().trim())) {
+      return false;
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      if (!request.getInputValue().matches(commandRegex)) {
+        return false;
+      }
+    } else if (config.has("acceptedForms") || config.has("command")) {
       if (!matchesNormalizedCommandRule(config, request, latestSnapshot)) {
         return false;
       }

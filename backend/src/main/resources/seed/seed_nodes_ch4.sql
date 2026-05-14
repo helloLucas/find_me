@@ -679,57 +679,6 @@ node_values AS (
             FALSE
         ),
         (
-            'CH4_MINIGAME_DISCOVERED',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_MINIGAME_DISCOVERED",
-    "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
-    "glitchLevel": 1,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "lucas_route.sh: POSIX shell script, ASCII text executable",
-      "",
-      "==> head -n 8 lucas_route.sh <==",
-      "#!/bin/sh",
-      "# route packet: YUSEONG_METEOR -> NY_LUCAS_SERVER",
-      "# detached minigame process",
-      "# reward: /home/guest/.route_cache/lucas_authority_patch.bin"
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "그건 그냥 백업 경로야. 지금 할 필요 없어.",
-      "blocking": true
-    },
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "정 궁금하면 sh lucas_route.sh로 열어. 하지만 시간 낭비야.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "glitchLevel": 1
-  }
-}$json$::jsonb,
-            'command',
-            $json${
-  "allowedActions": ["command"],
-  "placeholder": "sh lucas_route.sh",
-  "commandMode": "virtual_terminal",
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            FALSE,
-            FALSE
-        ),
-        (
             'CH4_MINIGAME_NOT_CLEARED',
             'console',
             $json${
@@ -743,23 +692,20 @@ node_values AS (
   "content": {
     "terminalOutput": [
       "[LUCAS ROUTE PROCESS]",
-      "Detached minigame route is not complete.",
+      "Launching detached route runner...",
       "",
-      "[REQUIRED]",
-      "Clear Lucas route minigame first.",
-      "Expected fragment: 4",
-      "",
-      "[NEXT]",
       "terminal://lucas-route",
-      "Complete the route delivery.",
-      "Return here and run: sh lucas_route.sh"
+      "",
+      "[STATUS]",
+      "route process detached",
+      "cache sync pending"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "아직 패킷이 뉴욕까지 도착하지 않았어. 먼저 루트를 끝까지 통과해.",
+      "text": "브라우저 탭에서 패킷을 끝까지 보내. 터미널은 여기서 대기 상태로 둘게.",
       "blocking": true
     }
   ],
@@ -800,8 +746,8 @@ node_values AS (
       "NY Lucas Server accepted the packet.",
       "",
       "[NEW FILE]",
-      "/home/guest/.route_cache/lucas_authority_patch.bin",
-      "/home/guest/.route_cache/manifest.txt",
+      "/root/.route_cache/lucas_authority_patch.bin",
+      "/root/.route_cache/manifest.txt",
       "",
       "[LUCAS ROUTE CACHE]",
       "delivered_from: YUSEONG_METEOR",
@@ -834,7 +780,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "/home/guest/.route_cache/lucas_authority_patch.bin",
+  "placeholder": "/root/.route_cache/lucas_authority_patch.bin",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -890,52 +836,6 @@ node_values AS (
   "terminalProfile": "chapter4"
 }$json$::jsonb,
             TRUE,
-            FALSE
-        ),
-        (
-            'CH4_PROCESS_LIST_VIEWED',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_PROCESS_LIST_VIEWED",
-    "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
-    "glitchLevel": 2,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "UID        PID  CMD",
-      "root       001  universe-kernel",
-      "nexus      044  observation-layer --passive --record observer_choice",
-      "gc         404  garbage-collector --watch PID=000_LUCAS",
-      "lucas      000  observer-proxy --attach root-session --await commit",
-      "",
-      "[NOTE]",
-      "NEXUS is observing both PID 000_LUCAS and external observer decisions."
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "프로세스 목록은 원래 지저분해. 지금 중요한 건 pending job이야.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "glitchLevel": 2
-  }
-}$json$::jsonb,
-            'command',
-            $json${
-  "allowedActions": ["command"],
-  "placeholder": "cat rollback_protocol.md",
-  "commandMode": "virtual_terminal",
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            FALSE,
             FALSE
         ),
         (
@@ -1080,50 +980,6 @@ node_values AS (
   "terminalProfile": "chapter4"
 }$json$::jsonb,
             TRUE,
-            FALSE
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_2',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_LAPLACE_CONFIRM_2",
-    "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
-    "glitchLevel": 5,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "[SECOND CONFIRMATION]",
-      "7,904,212,859 nodes are outside safe_zone.",
-      "They will be marked as inactive render targets.",
-      "",
-      "commit drop_unobserved_nodes [yes/no]:"
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "검사하지 말고 실행해.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "playSound": "final_confirm_2",
-    "glitchLevel": 5
-  }
-}$json$::jsonb,
-            'command',
-            $json${
-  "allowedActions": ["command"],
-  "placeholder": "yes",
-  "commandMode": "virtual_terminal",
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            FALSE,
             FALSE
         ),
         (
@@ -1334,46 +1190,6 @@ node_values AS (
     "showDogAvatar": true,
     "playSound": "error_beep",
     "glitchLevel": 4
-  }
-}$json$::jsonb,
-            'command',
-            $json${
-  "allowedActions": ["command"],
-  "placeholder": "yes",
-  "commandMode": "virtual_terminal",
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            FALSE,
-            FALSE
-        ),
-        (
-            'CH4_LAPLACE_CONFIRM_FAIL_2',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_LAPLACE_CONFIRM_FAIL_2",
-    "mode": "terminal",
-    "glitchLevel": 5,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "[SYSTEM] Invalid input.",
-      "commit drop_unobserved_nodes [yes/no]:"
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "그냥 yes만 쳐.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "playSound": "error_beep",
-    "glitchLevel": 5
   }
 }$json$::jsonb,
             'command',

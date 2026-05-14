@@ -426,6 +426,9 @@ function applyStoryNodeOutputBundle(
         clientStore.removeLastTerminalOutput();
         return false;
       }
+      if (handleTerminalControlLine(String(line), clientStore)) {
+        return false;
+      }
       if (!line.startsWith("terminal://")) return true;
       return !existingSystemLines.has(line);
     });
@@ -547,6 +550,34 @@ function getActionSource(meta: Record<string, unknown> | undefined): "terminal" 
   return meta?.source === "terminal" || meta?.source === "browser" ? meta.source : undefined;
 }
 
+function handleTerminalControlLine(line: string, clientStore = useClientStore.getState()) {
+  if (line === CLEAR_TERMINAL_SIGNAL) {
+    clientStore.clearTerminalOutput();
+    return true;
+  }
+
+  if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
+    useWindowStore.getState().openWindow("terminal2");
+    return true;
+  }
+
+  if (line === "terminal://lucas-route") {
+    const windowStore = useWindowStore.getState();
+    windowStore.openWindow("browser");
+    windowStore.maximizeWindow("chrome");
+    useBrowserContentStore.getState().triggerLucasRouteTabClick({ storyLinked: true });
+    return true;
+  }
+
+  if (line === "terminal://lucas-survival") {
+    useWindowStore.getState().openWindow("browser");
+    useBrowserContentStore.getState().triggerLucasSurvivalTabClick();
+    return true;
+  }
+
+  return false;
+}
+
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
 
@@ -566,25 +597,7 @@ function applyTerminalResult(terminalResult: TerminalResult | undefined, source?
   }
 
   for (const line of terminalResult.stdout ?? []) {
-    if (line === CLEAR_TERMINAL_SIGNAL) {
-      clientStore.clearTerminalOutput();
-      continue;
-    }
-
-    if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
-      useWindowStore.getState().openWindow("terminal2");
-      continue;
-    }
-
-    if (line === "terminal://lucas-route") {
-      useWindowStore.getState().openWindow("browser");
-      useBrowserContentStore.getState().triggerLucasRouteTabClick();
-      continue;
-    }
-
-    if (line === "terminal://lucas-survival") {
-      useWindowStore.getState().openWindow("browser");
-      useBrowserContentStore.getState().triggerLucasSurvivalTabClick();
+    if (handleTerminalControlLine(String(line), clientStore)) {
       continue;
     }
 
