@@ -189,7 +189,9 @@ export const useLucasStore = create<LucasState>()(
     isDialogueActive: false,
     glitchLevel: 0,
     isHintMode: false,
-    chatHistory: get().chatHistory,
+    chatHistory: [],
+    chatScopeKey: 'global',
+    chatHistoryByScope: {},
   }),
     })
 );
