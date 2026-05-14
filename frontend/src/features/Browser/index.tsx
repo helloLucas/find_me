@@ -60,13 +60,6 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     return match ? parseInt(match[1], 10) : 1;
   })();
 
-  // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
-  const currentChapter = (() => {
-    if (!currentNode?.code) return 1;
-    const match = currentNode.code.match(/^CH(\d+)_/);
-    return match ? parseInt(match[1], 10) : 1;
-  })();
-
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
     if (currentChapter === 2 && !isChapter2Mode) {
