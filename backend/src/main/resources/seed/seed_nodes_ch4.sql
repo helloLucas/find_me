@@ -3,62 +3,27 @@
 
 BEGIN;
 
-ALTER TABLE chapters ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE chapters
+ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE;
 
-INSERT INTO chapters (code, title, sort_order, is_published)
-VALUES ('week04', 'Chapter 4 - The Great Drop', 4, true)
-ON CONFLICT (code) DO UPDATE
-SET title = EXCLUDED.title,
+INSERT INTO
+    chapters (
+        code,
+        title,
+        sort_order,
+        is_published
+    )
+VALUES (
+        'week04',
+        'Chapter 4 - The Great Drop',
+        4,
+        true
+    ) ON CONFLICT (code) DO
+UPDATE
+SET
+    title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order,
     is_published = EXCLUDED.is_published;
-
-WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'week04'
-),
-chapter_nodes AS (
-    SELECT n.id
-    FROM story_nodes n
-    JOIN chapter_row c ON c.id = n.chapter_id
-)
-DELETE FROM story_transitions t
-USING chapter_nodes n
-WHERE t.from_node_id = n.id
-   OR t.to_node_id = n.id;
-
-WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'week04'
-)
-DELETE FROM story_nodes n
-USING chapter_row c
-WHERE n.chapter_id = c.id
-  AND n.code NOT IN (
-    'CH4_CORE_BLOCKED',
-    'CH4_TERMINAL_RELOAD',
-    'CH4_UNIVERSE_WARNING',
-    'CH4_GATE_TRACE_VIEWED',
-    'CH4_TARGET_SCAN',
-    'CH4_SSH_FINGERPRINTED',
-    'CH4_SSHNUKE_EXECUTED',
-    'CH4_SSH_PASSWORD_PROMPT',
-    'CH4_SSH_PASSWORD_FAIL',
-    'CH4_ROOT_LOGIN',
-    'CH4_LUCAS_SERVER_MOUNTED',
-    'CH4_UNIVERSE_CORE_HINT',
-    'CH4_PENDING_JOB_VIEWED',
-    'CH4_INVESTIGATION_STARTED',
-    'CH4_MINIGAME_DISCOVERED',
-    'CH4_MINIGAME_NOT_CLEARED',
-    'CH4_MINIGAME_COMPLETED',
-    'CH4_ORIGIN_TRACE_VIEWED',
-    'CH4_PROCESS_LIST_VIEWED',
-    'CH4_ROLLBACK_PROTOCOL_VIEWED',
-    'CH4_LAPLACE_CONFIRM_1',
-    'CH4_LAPLACE_CONFIRM_2',
-    'CH4_BAD_ENDING',
-    'CH4_ROLLBACK_ENDING',
-    'CH4_REBOOT_ENDING',
-    'CH4_CLEAN_ROLLBACK_ENDING'
-  );
 
 WITH chapter_row AS (
     SELECT id FROM chapters WHERE code = 'week04'
@@ -94,7 +59,7 @@ node_values AS (
       "",
       "[UNIVERSE_CORE_BROADCAST]",
       "Observer에게 경고합니다.",
-      "Chapter 3에서 제출한 laplace.qasm은 복구 프로그램이 아닙니다.",
+      "lucas-server에서 실행한 laplace.qasm은 복구 프로그램이 아닙니다.",
       "해당 요청은 sandbox isolate, social_graph_exception, drop_unobserved_nodes를 포함합니다.",
       "",
       "Pending job: LAPLACE_PENDING_04",
@@ -111,7 +76,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "gate_04.trace를 봐. Chapter 3에서 열어둔 길이 아직 살아 있어.",
+      "text": "gate_04.trace를 봐. 아까 열어둔 길이 아직 살아 있어.",
       "blocking": true
     }
   ],
@@ -430,7 +395,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "Chapter 3 산출물은 lucas-server:/home/guest에 남아 있어. 그걸 /mnt/lucas-server에 붙여. mount lucas-server:/home/guest /mnt/lucas-server.",
+      "text": "우리가 생성했던 파일들은 내 서버, lucas-server:/home/guest에 남아 있어. 그걸 /mnt/lucas-server에 붙여. mount lucas-server:/home/guest /mnt/lucas-server.",
       "blocking": true
     },
     {

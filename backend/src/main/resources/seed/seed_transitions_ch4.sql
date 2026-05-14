@@ -20,13 +20,20 @@ BEGIN
     END IF;
 END $$;
 
-DELETE FROM story_transitions t
-USING story_nodes from_node, story_nodes to_node, chapters c_from, chapters c_to
-WHERE t.from_node_id = from_node.id
-  AND t.to_node_id = to_node.id
-  AND from_node.chapter_id = c_from.id
-  AND to_node.chapter_id = c_to.id
-  AND (c_from.code = 'week04' OR c_to.code = 'week04');
+DELETE FROM story_transitions t USING story_nodes from_node,
+story_nodes to_node,
+chapters c_from,
+chapters c_to
+WHERE
+    t.from_node_id = from_node.id
+    AND t.to_node_id = to_node.id
+    AND from_node.chapter_id = c_from.id
+    AND to_node.chapter_id = c_to.id
+    AND (
+        c_from.code = 'week04'
+        OR c_to.code = 'week04'
+    );
+
 
 WITH transition_values AS (
     SELECT *
@@ -638,8 +645,8 @@ WITH transition_values AS (
             90
         ),
 
-        -- 루카스 지시 루트: mounted laplace.qasm root 실행
-        (
+-- 루카스 지시 루트: mounted laplace.qasm root 실행
+(
             'CH4_PENDING_JOB_VIEWED',
             'CH4_LAPLACE_CONFIRM_1',
             'command',
@@ -716,8 +723,8 @@ WITH transition_values AS (
             100
         ),
 
-        -- 조사 루트 진입
-        (
+-- 조사 루트 진입
+(
             'CH4_PENDING_JOB_VIEWED',
             'CH4_INVESTIGATION_STARTED',
             'command',
@@ -879,8 +886,8 @@ WITH transition_values AS (
             90
         ),
 
-        -- 조사 중 파일 확인
-        (
+-- 조사 중 파일 확인
+(
             'CH4_PENDING_JOB_VIEWED',
             'CH4_ORIGIN_TRACE_VIEWED',
             'command',
@@ -1029,8 +1036,8 @@ WITH transition_values AS (
             100
         ),
 
-        -- 미니게임 발견/완료
-        (
+-- 미니게임 발견/완료
+(
             'CH4_INVESTIGATION_STARTED',
             'CH4_MINIGAME_DISCOVERED',
             'command',
@@ -1785,8 +1792,8 @@ WITH transition_values AS (
             80
         ),
 
-        -- 모든 조사 노드에서 핵심 선택으로 복귀 가능
-        (
+-- 모든 조사 노드에서 핵심 선택으로 복귀 가능
+(
             'CH4_INVESTIGATION_STARTED',
             'CH4_LAPLACE_CONFIRM_1',
             'command',
@@ -1977,8 +1984,8 @@ WITH transition_values AS (
             90
         ),
 
-        -- 진 엔딩: rollback
-        (
+-- 진 엔딩: rollback
+(
             'CH4_PENDING_JOB_VIEWED',
             'CH4_ROLLBACK_ENDING',
             'command',
@@ -2203,8 +2210,8 @@ WITH transition_values AS (
             80
         ),
 
-        -- 히든 엔딩 3: 비밀 프로그램 실행
-        (
+-- 히든 엔딩 3: 비밀 프로그램 실행
+(
             'CH4_MINIGAME_COMPLETED',
             'CH4_REBOOT_ENDING',
             'command',
@@ -2268,8 +2275,8 @@ WITH transition_values AS (
             100
         ),
 
-        -- Bad Ending Final Confirm
-        (
+-- Bad Ending Final Confirm
+(
             'CH4_LAPLACE_CONFIRM_3',
             'CH4_BAD_ENDING',
             'command',
@@ -2297,8 +2304,8 @@ WITH transition_values AS (
             100
         ),
 
-        -- FAIL loops for Confirm 1
-        (
+-- FAIL loops for Confirm 1
+(
             'CH4_LAPLACE_CONFIRM_1',
             'CH4_LAPLACE_CONFIRM_FAIL_1',
             'command',
@@ -2347,8 +2354,8 @@ WITH transition_values AS (
             50
         ),
 
-        -- FAIL loops for Confirm 2
-        (
+-- FAIL loops for Confirm 2
+(
             'CH4_LAPLACE_CONFIRM_2',
             'CH4_LAPLACE_CONFIRM_FAIL_2',
             'command',
@@ -2397,8 +2404,8 @@ WITH transition_values AS (
             50
         ),
 
-        -- FAIL loops for Confirm 3
-        (
+-- FAIL loops for Confirm 3
+(
             'CH4_LAPLACE_CONFIRM_3',
             'CH4_LAPLACE_CONFIRM_FAIL_3',
             'command',
