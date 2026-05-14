@@ -131,7 +131,7 @@ lucas-server 산출물 마운트
 
 `lucas_route.sh`는 본편 필수 퍼즐이 아니라 이스터에그성 별도 프로세스입니다.
 
-Chapter 1의 새 탭 팩맨, Chapter 2의 `maple_story.sh`처럼 스토리 전환과 직접 연결되지 않는 독립 미니게임입니다. 다만 Ver.2에서는 클리어 시 히든 엔딩 2개를 여는 비밀 프로그램이 생성됩니다.
+Chapter 1의 새 탭 팩맨, Chapter 2의 `maple_story.sh`처럼 스토리 전환과 직접 연결되지 않는 독립 미니게임입니다. 다만 Ver.2에서는 본편 안에서 실행한 Lucas Route 클리어와 기존 미니게임 fragment 1~3이 모두 갖춰졌을 때 히든 엔딩 2개를 여는 비밀 프로그램이 생성됩니다.
 
 ### 실행 조건
 
@@ -173,20 +173,20 @@ sh lucas_route.sh
 
 ### 클리어 보상
 
-미니게임을 끝까지 완료하면 아래 비밀 프로그램이 생성됩니다.
+미니게임을 끝까지 완료하면 fragment 4가 저장되고, fragment 1~4가 모두 존재할 때 아래 비밀 프로그램이 생성됩니다. 조건이 부족하면 터미널은 단순히 cache sync pending 상태로 남고, 부족한 조건을 직접 설명하지 않습니다.
 
 ```bash
 [PACKET DELIVERED]
 NY Lucas Server accepted the packet.
 
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 파일 설명:
 
 ```bash
-cat /home/guest/.route_cache/manifest.txt
+cat /root/.route_cache/manifest.txt
 
 [LUCAS ROUTE CACHE]
 delivered_from: YUSEONG_METEOR
@@ -223,17 +223,16 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 | 8 | `CH4_PENDING_JOB_VIEWED` | `console` | `command` | true | false | systemd에 보류된 `laplace-pending-04.service` 확인 |
 | 9 | `CH4_ROOT_DIR_LISTED` | `console` | `command` | false | false | `ls` 짧은 목록 출력 및 조사 반응 |
 | 10 | `CH4_INVESTIGATION_STARTED` | `console` | `command` | false | false | `ls -al` 상세 목록 출력 및 조사 반응 |
-| 11 | `CH4_MINIGAME_DISCOVERED` | `console` | `command` | false | false | `lucas_route.sh` 발견 |
-| 12 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
-| 13 | `CH4_LAPLACE_VERIFIED` | `console` | `command` | true | false | `laplace.qasm` 무결성 검증 성공 및 execute 대기 |
-| 14 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | execute 후 Laplace 실행 1차 확인 |
-| 15 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
-| 16 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
-| 17 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
-| 18 | `CH4_ROLLBACK_SEQUENCE` | `console` | `click` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
-| 19 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
-| 20 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
-| 21 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
+| 11 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
+| 12 | `CH4_LAPLACE_VERIFIED` | `console` | `command` | true | false | `laplace.qasm` 무결성 검증 성공 및 execute 대기 |
+| 13 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | execute 후 Laplace 실행 1차 확인 |
+| 14 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
+| 15 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
+| 16 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
+| 17 | `CH4_ROLLBACK_SEQUENCE` | `console` | `click` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
+| 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
+| 19 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
+| 20 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
 
 ---
 
@@ -643,20 +642,20 @@ Hidden / Worst Ending
 
 ### 조건
 
-`lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 해당 프로그램을 실행합니다.
+fragment 1~4를 모두 가진 상태에서 `lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 해당 프로그램을 실행합니다.
 
 ```bash
 sh lucas_route.sh
 
 [PACKET DELIVERED]
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 플레이어 입력:
 
 ```bash
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
@@ -740,27 +739,27 @@ Hidden / True+ Ending, 단 NEXUS 흑막 암시
 
 ### 조건
 
-`lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 실행하지 않고 삭제합니다.
+fragment 1~4를 모두 가진 상태에서 `lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 실행하지 않고 삭제합니다.
 
 ```bash
 sh lucas_route.sh
 
 [PACKET DELIVERED]
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 플레이어 입력:
 
 ```bash
-rm /home/guest/.route_cache/lucas_authority_patch.bin
+rm /root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
 
 ```bash
-shred /home/guest/.route_cache/lucas_authority_patch.bin
-unlink /home/guest/.route_cache/lucas_authority_patch.bin
+shred /root/.route_cache/lucas_authority_patch.bin
+unlink /root/.route_cache/lucas_authority_patch.bin
 ```
 
 삭제 출력:

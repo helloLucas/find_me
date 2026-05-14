@@ -76,14 +76,13 @@ systemctl isolate rollback.target
 
 ## 엔딩 3: Absolute Reboot
 
-먼저 `/minigames/lucas-survival`을 클리어해 fragment `4`를 저장해야 한다.
-그 뒤 조사 루트에서 `lucas_route.sh`를 실행해 비밀 프로그램을 만든 뒤, 그 프로그램을 실행한다.
+히든 조건은 Chapter 1~4의 미니게임 fragment `1`, `2`, `3`, `4`가 모두 저장된 상태다.
+Chapter 4에서는 조사 루트에서 `lucas_route.sh`를 실행해 Lucas Route를 클리어하면 비밀 프로그램이 생성된다.
 
 ```bash
 ls -al
-file lucas_route.sh
 sh lucas_route.sh
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
@@ -96,21 +95,20 @@ sh lucas_route.sh
 
 ## 엔딩 4: Clean Rollback
 
-먼저 `/minigames/lucas-survival`을 클리어해 fragment `4`를 저장해야 한다.
-그 뒤 `lucas_route.sh` 보상 파일을 실행하지 않고 삭제한다.
+히든 조건은 Chapter 1~4의 미니게임 fragment `1`, `2`, `3`, `4`가 모두 저장된 상태다.
+Chapter 4에서는 `lucas_route.sh` 보상 파일을 실행하지 않고 삭제한다.
 
 ```bash
 ls -al
-file lucas_route.sh
 sh lucas_route.sh
-rm /home/guest/.route_cache/lucas_authority_patch.bin
+rm /root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
 
 ```bash
-shred /home/guest/.route_cache/lucas_authority_patch.bin
-unlink /home/guest/.route_cache/lucas_authority_patch.bin
+shred /root/.route_cache/lucas_authority_patch.bin
+unlink /root/.route_cache/lucas_authority_patch.bin
 ```
 
 결과: 루카스의 마지막 권한 경로가 제거되고 자동 rollback이 시작된다. 엔딩 2보다 NEXUS 흑막 로그가 더 명확하게 노출된다.
