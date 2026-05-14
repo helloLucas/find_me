@@ -4381,6 +4381,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         if (e.repeat) return;
@@ -4408,6 +4415,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   useEffect(() => {
     if (hud.status !== 'levelup' || cards.length === 0) return;
     const onCardKey = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'ArrowLeft') {
         e.preventDefault();
         setSelectedCardIndex((prev) => Math.max(0, prev - 1));
@@ -4427,6 +4441,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   useEffect(() => {
     if (!isGuideOpen) return;
     const onEsc = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'Escape') {
         e.preventDefault();
         setIsGuideOpen(false);
