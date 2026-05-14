@@ -288,7 +288,7 @@ export const Desktop: React.FC = () => {
                 title={windowState.title}
                 icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
                 defaultWidth={1200}
-                defaultHeight={760}
+                defaultHeight={860}
                 minWidth={960}
                 minHeight={620}
               >

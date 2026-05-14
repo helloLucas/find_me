@@ -39,9 +39,9 @@ const DeletedText = ({ isPart2 }: { isPart2?: boolean }) => {
   }, []);
 
   if (done) {
-    return <span className="text-red-500 font-bold">[Deleted]</span>;
+    return <span className="terminal-crt-text terminal-crt-text-red text-red-500 font-bold">[Deleted]</span>;
   }
-  return <span className="text-gray-500">{text}</span>;
+  return <span className="terminal-crt-text text-white">{text}</span>;
 };
 
 const BoundaryStabilityText = ({ prefix, targetValue, suffix, isPart2 }: { prefix: string, targetValue: number, suffix: string, isPart2?: boolean }) => {
@@ -75,14 +75,14 @@ const BoundaryStabilityText = ({ prefix, targetValue, suffix, isPart2 }: { prefi
   return (
     <>
       <span>
-        {prefix}
-        <span className={value === targetValue ? "text-red-400 font-bold" : "text-gray-400"}>
+        <span className="terminal-crt-text text-white">{prefix}</span>
+        <span className={value === targetValue ? "terminal-crt-text terminal-crt-text-red text-red-400 font-bold" : "terminal-crt-text text-white"}>
           {value}
         </span>
-        {suffix}
+        <span className="terminal-crt-text text-white">{suffix}</span>
       </span>
       {value >= 30 && (
-        <div className="text-red-500 font-bold mt-1">
+        <div className="terminal-crt-text terminal-crt-text-red text-red-500 font-bold mt-1">
           sh: process terminated by signal SIGSEGV (core dumped)
         </div>
       )}
@@ -111,11 +111,11 @@ export const AnimatedTerminalLine = ({ text, isPart2 }: { text: string; isPart2?
           if (part === "[Deleted]") {
             return <DeletedText key={i} isPart2={isPart2} />;
           }
-          return <span key={i}>{part}</span>;
+          return <span key={i} className="terminal-crt-text text-white">{part}</span>;
         })}
       </>
     );
   }
 
-  return <span>{text}</span>;
+  return <span className="terminal-crt-text text-white">{text}</span>;
 };
