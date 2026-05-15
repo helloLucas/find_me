@@ -602,9 +602,6 @@ export const CyberPacketDashTab: React.FC<CyberPacketDashTabProps> = ({ windowId
       if (trackOffset >= CONTINUOUS_TRACK_LENGTH) {
         setGameState('cleared');
         playSynthesizedSound('win');
-        if (!isPractice) {
-          acquireMutation.mutate();
-        }
         return;
       }
 
