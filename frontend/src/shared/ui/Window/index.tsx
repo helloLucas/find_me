@@ -54,7 +54,7 @@ export const Window: React.FC<WindowProps> = ({
   minHeight = 300,
 }) => {
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === id));
-  const { closeWindow, minimizeWindow, maximizeWindow, restoreWindow, focusWindow } = useWindowStore();
+  const { closeWindow, markWindowClosing, minimizeWindow, maximizeWindow, restoreWindow, focusWindow } = useWindowStore();
   const [size, setSize] = useState<{ width: string | number; height: string | number }>({
     width: defaultWidth,
     height: defaultHeight,
@@ -82,6 +82,7 @@ export const Window: React.FC<WindowProps> = ({
     if (isClosing) return;
 
     setIsClosing(true);
+    markWindowClosing(windowState.id);
     window.setTimeout(() => {
       closeWindow(windowState.id);
     }, WINDOW_CLOSE_ANIMATION_MS);
