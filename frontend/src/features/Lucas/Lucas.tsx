@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
@@ -52,6 +52,8 @@ export const Lucas: React.FC = () => {
   const [pendingFrame, setPendingFrame] = useState(0);
   const [isInterferenceFxActive, setIsInterferenceFxActive] = useState(false);
   const [isHintPanelRendered, setIsHintPanelRendered] = useState(false);
+  const [isEntranceActive, setIsEntranceActive] = useState(true);
+  const [entranceKey, setEntranceKey] = useState(0);
   const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const lastReadIndicesRef = useRef<Record<string, number>>({});
@@ -60,6 +62,7 @@ export const Lucas: React.FC = () => {
   const isRestoringScrollRef = useRef(false);
   const interferenceTimerRef = useRef<number | null>(null);
   const baseGlitchLevelRef = useRef(0);
+  const hasEnteredRef = useRef(false);
   const isHintPanelVisible = isHintMode && !isDialogueActive;
   const shouldRenderHintPanel = isHintPanelVisible || isHintPanelRendered;
   const isHintPanelClosing = !isHintPanelVisible && isHintPanelRendered;
@@ -217,6 +220,24 @@ export const Lucas: React.FC = () => {
     };
   }, []);
 
+  // Glitch entrance animation on every hidden→visible transition
+  const wasVisibleRef = useRef(false);
+  useLayoutEffect(() => {
+    const shouldShow = isVisible || isDialogueActive || isHintMode || shouldRenderHintPanel || hasPromptButtons;
+    if (shouldShow && !wasVisibleRef.current) {
+      wasVisibleRef.current = true;
+      setIsEntranceActive(true);
+      setEntranceKey((k) => k + 1);
+      const timer = window.setTimeout(() => {
+        setIsEntranceActive(false);
+      }, 1200);
+      return () => window.clearTimeout(timer);
+    }
+    if (!shouldShow) {
+      wasVisibleRef.current = false;
+    }
+  }, [isVisible, isDialogueActive, isHintMode, shouldRenderHintPanel, hasPromptButtons]);
+
   const handleBubbleClick = () => {
     if (isTyping) {
       setDisplayText(currentMessage?.text ?? '');
@@ -288,7 +309,7 @@ export const Lucas: React.FC = () => {
 
   return (
     <div
-      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${shouldRenderHintPanel ? 'hint-mode' : ''}`}
+      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${shouldRenderHintPanel ? 'hint-mode' : ''} ${isEntranceActive ? 'lucas-entrance' : ''}`}
       style={{ zIndex: DESKTOP_LAYER.assistant }}
     >
       {isDialogueActive && currentMessage && (
@@ -401,7 +422,7 @@ export const Lucas: React.FC = () => {
         }}
         style={{ cursor: isDialogueActive ? 'default' : 'pointer' }}
       >
-        <img src="/lucas.svg" alt="Lucas" className="lucas-avatar" />
+        <img key={entranceKey} src="/lucas.svg" alt="Lucas" className="lucas-avatar" />
         {glitchLevel > 0 && (
           <div className={`glitch-avatar-layer intensity-${Math.min(10, Math.max(0, glitchLevel))}`}>
             <img src="/lucas.svg" alt="" className="glitch-copy" />
