@@ -398,7 +398,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden pointer-events-auto bg-black relative">{children}</div>
+        <div className={`flex-1 overflow-hidden bg-black relative ${isMinimized ? "pointer-events-none" : "pointer-events-auto"}`}>{children}</div>
 
         {allowResize && !isMaximized && !isMinimized && (
           <>

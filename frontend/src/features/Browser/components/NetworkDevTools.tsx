@@ -295,7 +295,7 @@ export const NetworkDevTools: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-devtools-ui text-[12px] text-[#cccccc] pointer-events-auto shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
+    <div className="flex flex-col w-full h-full bg-[#242424] border-l border-[#444] font-devtools-ui text-[12px] text-[#cccccc] shadow-[-5px_0_15px_rgba(0,0,0,0.5)] z-[1000] relative overflow-hidden">
       <div className="flex items-center bg-[#1e1e1e] border-b border-[#333] px-2 h-7 flex-shrink-0">
         <button
           className={`px-3 py-1 ${activeTab === "elements" ? "border-b-2 border-[#5394fb] text-white" : "text-[#888] hover:text-[#ccc]"}`}
