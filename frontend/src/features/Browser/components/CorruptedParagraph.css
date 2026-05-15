@@ -31,6 +31,7 @@ button.story-corrupted-paragraph {
   position: relative;
   display: block;
   overflow: hidden;
+  contain: paint;
 }
 
 .story-corrupted-paragraph__layout,
@@ -51,7 +52,7 @@ button.story-corrupted-paragraph {
   z-index: 3;
   color: #0ff;
   text-shadow: 0 0 2px #00ffff;
-  will-change: transform, filter, opacity;
+  will-change: transform, opacity;
 }
 
 .story-corrupted-paragraph__ghost {
@@ -59,9 +60,8 @@ button.story-corrupted-paragraph {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.45;
-  mix-blend-mode: screen;
-  will-change: transform, clip-path, filter, opacity;
+  opacity: 0.38;
+  will-change: transform, clip-path, opacity;
 }
 
 .story-corrupted-paragraph__line {
@@ -93,7 +93,7 @@ button.story-corrupted-paragraph {
       rgba(12, 8, 24, 0.22) 3px,
       rgba(12, 8, 24, 0.22) 4px
     );
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
 }
 
 .story-corrupted-paragraph--subtle .story-corrupted-paragraph__content {
@@ -154,7 +154,7 @@ button.story-corrupted-paragraph {
     opacity: 0.92;
   }
   89% {
-    filter: blur(0.2px);
+    filter: none;
   }
   91% {
     opacity: 0.94;
@@ -221,19 +221,19 @@ button.story-corrupted-paragraph {
     opacity: 0.9;
   }
   73% {
-    filter: blur(0.5px);
+    filter: none;
   }
   75% {
     opacity: 0.84;
   }
   77% {
-    filter: blur(1px);
+    filter: none;
   }
   79% {
     opacity: 0.76;
   }
   81% {
-    filter: blur(1.2px);
+    filter: none;
   }
   83% {
     opacity: 0.9;
@@ -256,14 +256,14 @@ button.story-corrupted-paragraph {
   }
   71% {
     opacity: 0.72;
-    filter: blur(0.8px);
+    filter: none;
   }
   74% {
     opacity: 0.64;
   }
   77% {
     opacity: 0.86;
-    filter: blur(0.35px);
+    filter: none;
   }
   80% {
     opacity: 0.58;
@@ -292,7 +292,7 @@ button.story-corrupted-paragraph {
   75% {
     opacity: 0.76;
     clip-path: inset(58% 0 8% 0);
-    filter: blur(1.2px);
+    filter: none;
   }
   79% {
     opacity: 0.84;
@@ -322,7 +322,7 @@ button.story-corrupted-paragraph {
   74% {
     opacity: 0.8;
     clip-path: inset(70% 0 2% 0);
-    filter: blur(1.35px);
+    filter: none;
   }
   78% {
     opacity: 0.86;
