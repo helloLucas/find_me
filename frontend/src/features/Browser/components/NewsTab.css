@@ -1,7 +1,7 @@
 .story-article-paragraph--flicker {
   position: relative;
   isolation: isolate;
-  will-change: opacity, filter, text-shadow;
+  will-change: opacity, text-shadow;
   animation: story-article-paragraph-flicker 5.4s infinite steps(2, end);
 }
 
@@ -12,8 +12,8 @@
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  mix-blend-mode: screen;
-  will-change: opacity, transform, clip-path, filter;
+  mix-blend-mode: normal;
+  will-change: opacity, transform, clip-path;
 }
 
 .story-article-paragraph--flicker::before {
@@ -83,12 +83,12 @@
   }
   86% {
     opacity: 0.92;
-    filter: blur(0.2px);
+    filter: none;
     text-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
   }
   88% {
     opacity: 0.78;
-    filter: blur(0.45px);
+    filter: none;
     text-shadow:
       -2px 0 6px rgba(84, 255, 245, 0.45),
       2px 0 6px rgba(255, 82, 204, 0.4);
@@ -99,7 +99,7 @@
   }
   92% {
     opacity: 0.84;
-    filter: blur(0.25px);
+    filter: none;
   }
   94% {
     opacity: 1;
@@ -131,7 +131,7 @@
     opacity: 0.18;
     transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
-    filter: blur(0.4px);
+    filter: none;
   }
   92% {
     opacity: 0.42;
@@ -169,7 +169,7 @@
     opacity: 0.16;
     transform: translate3d(0, 0, 0);
     clip-path: inset(0 0 0 0);
-    filter: blur(0.3px);
+    filter: none;
   }
   91% {
     opacity: 0.34;

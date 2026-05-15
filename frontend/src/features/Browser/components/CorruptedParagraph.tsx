@@ -9,6 +9,11 @@ type CorruptedParagraphProps = {
   onInspect?: () => void;
 };
 
+const SCRAMBLE_INTERVAL_MS: Record<ArticleCorruptionIntensity, number> = {
+  active: 340,
+  subtle: 1700,
+};
+
 const GLITCH_GLYPHS = [
   "뷁",
   "궹",
@@ -48,14 +53,14 @@ function getReplacementChance(
   variant: ScrambleVariant
 ) {
   if (intensity === "active") {
-    if (variant === "base") return 0.14;
-    if (variant === "cyan") return 0.24;
-    return 0.22;
+    if (variant === "base") return 0.1;
+    if (variant === "cyan") return 0.17;
+    return 0.16;
   }
 
-  if (variant === "base") return 0.03;
-  if (variant === "cyan") return 0.08;
-  return 0.1;
+  if (variant === "base") return 0.02;
+  if (variant === "cyan") return 0.05;
+  return 0.06;
 }
 
 function buildScrambledFrame(
@@ -156,21 +161,60 @@ function useRenderedLines(text: string) {
   return { lines, measureRef };
 }
 
-function useScrambledFrame(lines: string[], intensity: ArticleCorruptionIntensity) {
+function useElementVisibility<T extends Element>() {
+  const targetRef = useRef<T | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const element = targetRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(Boolean(entry?.isIntersecting));
+      },
+      {
+        root: null,
+        rootMargin: "120px 0px",
+        threshold: 0,
+      }
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return { targetRef, isVisible };
+}
+
+function useScrambledFrame(
+  lines: string[],
+  intensity: ArticleCorruptionIntensity,
+  isVisible: boolean
+) {
   const [scrambledFrame, setScrambledFrame] = useState(() =>
     buildScrambledFrame(lines, intensity)
   );
 
   useEffect(() => {
-    setScrambledFrame(buildScrambledFrame(lines, intensity));
+    if (!isVisible) return;
 
-    const intervalMs = intensity === "active" ? 160 : 1100;
+    const syncFrameId = window.setTimeout(() => {
+      setScrambledFrame(buildScrambledFrame(lines, intensity));
+    }, 0);
+
+    const intervalMs = SCRAMBLE_INTERVAL_MS[intensity];
     const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       setScrambledFrame(buildScrambledFrame(lines, intensity));
     }, intervalMs);
 
-    return () => window.clearInterval(intervalId);
-  }, [lines, intensity]);
+    return () => {
+      window.clearTimeout(syncFrameId);
+      window.clearInterval(intervalId);
+    };
+  }, [lines, intensity, isVisible]);
 
   return scrambledFrame;
 }
@@ -191,7 +235,8 @@ function CorruptionLayers({
   intensity: ArticleCorruptionIntensity;
 }) {
   const { lines, measureRef } = useRenderedLines(text);
-  const scrambledFrame = useScrambledFrame(lines, intensity);
+  const { targetRef, isVisible } = useElementVisibility<HTMLSpanElement>();
+  const scrambledFrame = useScrambledFrame(lines, intensity, isVisible);
   const baseLines = useMemo(() => renderLines(scrambledFrame.baseLines), [scrambledFrame.baseLines]);
   const cyanLines = useMemo(() => renderLines(scrambledFrame.cyanLines), [scrambledFrame.cyanLines]);
   const magentaLines = useMemo(
@@ -200,7 +245,7 @@ function CorruptionLayers({
   );
 
   return (
-    <span className="story-corrupted-paragraph__content">
+    <span ref={targetRef} className="story-corrupted-paragraph__content">
       <span aria-hidden="true" ref={measureRef} className="story-corrupted-paragraph__layout">
         {text}
       </span>
@@ -223,7 +268,7 @@ function CorruptionLayers({
   );
 }
 
-export const CorruptedParagraph: React.FC<CorruptedParagraphProps> = ({
+const CorruptedParagraphComponent: React.FC<CorruptedParagraphProps> = ({
   text,
   intensity,
   inspectable = false,
@@ -251,3 +296,5 @@ export const CorruptedParagraph: React.FC<CorruptedParagraphProps> = ({
     </p>
   );
 };
+
+export const CorruptedParagraph = React.memo(CorruptedParagraphComponent);

@@ -155,14 +155,14 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
     state.windows.find((window) => window.id === windowId)
   );
   const activeWindowId = useWindowStore((state) => state.activeWindowId);
-  const { closeWindow, minimizeWindow, focusWindow, toggleMaximizeWindow } =
+  const { closeWindow, markWindowClosing, minimizeWindow, focusWindow, toggleMaximizeWindow } =
     useWindowStore();
   const { currentNode, submitStoryCommand } = useStoryRuntimeStore();
   const showToast = useToastStore((state) => state.showToast);
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [, setHistoryIndex] = useState<number>(-1);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
   
   const isMapAnimationPlayed = useClientStore((state) => state.hasMapAnimationPlayed);
@@ -483,6 +483,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       title={promptString}
       zIndex={windowState.zIndex}
       onClose={() => closeWindow(windowState.id)}
+      onCloseStart={() => markWindowClosing(windowState.id)}
       onMinimize={() => minimizeWindow(windowState.id)}
       onFocus={() => focusWindow(windowState.id)}
       onToggleMaximize={() => toggleMaximizeWindow(windowState.id)}
