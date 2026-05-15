@@ -1249,7 +1249,7 @@ node_values AS (
     "id": "CH4_BAD_ENDING",
     "mode": "terminal",
     "bgm": "rain-and-little-storm-v1.mp3",
-    "preVideo": "ch04_bad_sandbox_cage.m3u8",
+    "preVideo": "ch04_bad_sandbox_cage/ch04_bad_sandbox_cage.m3u8",
     "glitchLevel": 6,
     "resetTerminal": false
   },
@@ -1369,7 +1369,7 @@ node_values AS (
     "id": "CH4_ROLLBACK_ENDING",
     "mode": "terminal",
     "bgm": "rain-and-little-storm-v1.mp3",
-    "preVideo": "ch04_global_rollback.m3u8",
+    "preVideo": "ch04_global_rollback/ch04_global_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -1530,7 +1530,7 @@ node_values AS (
     "id": "CH4_REBOOT_ENDING",
     "mode": "terminal",
     "bgm": "rain-and-little-storm-v1.mp3",
-    "preVideo": "ch04_absolute_reboot.m3u8",
+    "preVideo": "ch04_absolute_reboot/ch04_absolute_reboot.m3u8",
     "glitchLevel": 7,
     "resetTerminal": false
   },
@@ -1599,7 +1599,7 @@ node_values AS (
     "id": "CH4_CLEAN_ROLLBACK_ENDING",
     "mode": "terminal",
     "bgm": "rain-and-little-storm-v1.mp3",
-    "preVideo": "ch04_clean_rollback.m3u8",
+    "preVideo": "ch04_clean_rollback/ch04_clean_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false
   },
