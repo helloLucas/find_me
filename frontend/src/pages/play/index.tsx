@@ -9,6 +9,7 @@ import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { EndingResultOverlay } from "../../widgets/EndingResultOverlay";
 import { EndingCredits } from "../../widgets/EndingCredits";
+import { PlayConnectionBanner } from "../../widgets/PlayConnectionBanner";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import type { StoryNode } from "../../shared/types/story";
@@ -163,6 +164,8 @@ export default function PlayPage() {
         <Desktop />
       )}
       {currentNode && !isFullscreen && <FullscreenEnforcer />}
+
+      <PlayConnectionBanner />
 
       {shouldShowCompletionModal && <ChapterCompletionModal />}
 
