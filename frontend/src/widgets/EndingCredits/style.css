@@ -50,9 +50,9 @@
 .ending-credits-overlay .credit-block-orbit {
   position: absolute;
   left: 50%;
-  top: 102%; 
+  top: 140%; 
   width: 300px;
-  --radius: 72vh;
+  --radius: 110vh;
   transform: 
     translate(-50%, -50%) 
     rotate(var(--angle)) 

@@ -19,14 +19,12 @@ const CREDITS_DATA = {
         { role: 'DIRECTOR', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'PLANNING & NARRATIVE DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'FRONTEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'UI/UX & VISUAL DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SOUND DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
+        { role: 'SOUND & VISUAL DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
     ],
     right: [
         { role: 'BACKEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'INFRASTRUCTURE & DEVOPS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'VIDEO & MOTION GRAPHICS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'QA & PLAYTESTING', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers, And You' }
     ]
 };
@@ -121,7 +119,7 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
                         className="credits-logo-group" 
                         primarySizeClass="logo-primary" 
                         secondarySizeClass="logo-secondary" 
-                        secondaryMarginClass="mt-2"
+                        secondaryMarginClass="-mt-2"
                     />
                     
                     <div className="header-credits" style={{ 
@@ -136,7 +134,7 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
 
                 <div className="credits-left" style={{ opacity: phase === 'initial' ? 0 : 1 }}>
                     {CREDITS_DATA.left.map((item, i) => {
-                        const angle = -110 + (i * 12);
+                        const angle = -15 - (i * 8) - (i > 0 ? 2 : 0);
                         return (
                             <div key={i} className="credit-block-orbit" style={{ 
                                 '--angle': `${angle}deg`, 
@@ -152,7 +150,7 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
 
                 <div className="credits-right" style={{ opacity: phase === 'initial' ? 0 : 1 }}>
                     {CREDITS_DATA.right.map((item, i) => {
-                        const angle = 62 + (i * 12);
+                        const angle = 15 + (i * 8) + (i > 0 ? 2 : 0);
                         return (
                             <div key={i} className="credit-block-orbit" style={{ 
                                 '--angle': `${angle}deg`, 
