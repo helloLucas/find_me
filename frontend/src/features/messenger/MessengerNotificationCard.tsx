@@ -7,7 +7,7 @@ import { DESKTOP_LAYER } from "../../shared/config/desktopWindows";
 import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 import type { MessengerConversation } from "./messenger.types";
 
-const NOTIFICATION_EXIT_ANIMATION_MS = 180;
+const NOTIFICATION_EXIT_ANIMATION_MS = 275;
 
 export const MessengerNotificationCard: React.FC = () => {
   const { conversations, activeRoomId, isNotificationVisible, isUnread, markMessengerSeen } =
@@ -75,7 +75,7 @@ export const MessengerNotificationCard: React.FC = () => {
         opacity: isExiting ? 0 : 1,
         transform: isExiting ? "translate3d(18px, 14px, 0) scale(0.96)" : "translate3d(0, 0, 0) scale(1)",
         transition: `opacity ${NOTIFICATION_EXIT_ANIMATION_MS}ms ease, transform ${NOTIFICATION_EXIT_ANIMATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
-        animation: isExiting ? undefined : "messenger-notification-enter 180ms cubic-bezier(0.16, 1, 0.3, 1)",
+        animation: isExiting ? undefined : "messenger-notification-enter 275ms cubic-bezier(0.16, 1, 0.3, 1)",
         pointerEvents: isExiting ? "none" : "auto",
       }}
       onClick={handleOpenNotification}

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { WindowControlButton } from "../WindowControls";
 import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
 
-const WINDOW_CLOSE_ANIMATION_MS = 180;
+const WINDOW_CLOSE_ANIMATION_MS = 320;
 
 interface WindowFrameProps {
   title: string;
@@ -15,6 +15,7 @@ interface WindowFrameProps {
   onToggleMaximize?: () => void;
   isMinimized?: boolean;
   isMaximized?: boolean;
+  taskbarTarget?: { x: number; y: number };
   defaultPosition?: { x: number; y: number };
   defaultSize?: { w: number; h: number };
   minSize?: { w: number; h: number };
@@ -28,6 +29,23 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function getMinimizeVars(
+  target: { x: number; y: number } | undefined,
+  geometry: { x: number; y: number; w: number; h: number },
+  isMaximized: boolean
+): React.CSSProperties {
+  if (!target) return {};
+
+  const center = isMaximized
+    ? { x: window.innerWidth / 2, y: Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT) / 2 }
+    : { x: geometry.x + geometry.w / 2, y: geometry.y + geometry.h / 2 };
+
+  return {
+    "--desktop-window-minimize-x": `${target.x - center.x}px`,
+    "--desktop-window-minimize-y": `${target.y - center.y}px`,
+  } as React.CSSProperties;
+}
+
 export const WindowFrame: React.FC<WindowFrameProps> = ({
   title,
   children,
@@ -39,6 +57,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   onToggleMaximize,
   isMinimized = false,
   isMaximized = false,
+  taskbarTarget,
   defaultPosition = { x: 100, y: 100 },
   defaultSize = { w: 600, h: 400 },
   minSize = { w: 300, h: 200 },
@@ -49,6 +68,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 }) => {
   const windowRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [renderGeometry, setRenderGeometry] = useState({
+    x: defaultPosition.x,
+    y: defaultPosition.y,
+    w: defaultSize.w,
+    h: defaultSize.h,
+  });
   const geom = useRef({
     x: defaultPosition.x,
     y: defaultPosition.y,
@@ -128,6 +153,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       const handleMouseUp = () => {
         geom.current.isDragging = false;
+        setRenderGeometry({
+          x: geom.current.x,
+          y: geom.current.y,
+          w: geom.current.w,
+          h: geom.current.h,
+        });
         if (windowRef.current) windowRef.current.style.transition = "";
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
@@ -166,6 +197,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
     const onMouseUp = () => {
       geom.current.isDragging = false;
+      setRenderGeometry({
+        x: geom.current.x,
+        y: geom.current.y,
+        w: geom.current.w,
+        h: geom.current.h,
+      });
       if (windowRef.current) windowRef.current.style.transition = "";
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -234,6 +271,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
     const onMouseUp = () => {
       geom.current.isResizing = false;
+      setRenderGeometry({
+        x: geom.current.x,
+        y: geom.current.y,
+        w: geom.current.w,
+        h: geom.current.h,
+      });
       if (windowRef.current) windowRef.current.style.transition = "";
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -289,15 +332,25 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const frameStateClasses = `${isMinimized ? "desktop-window-shell--minimized" : ""} ${
     isMaximized ? "rounded-none border-0" : "rounded-sm"
   } ${isClosing ? "desktop-window-shell--closing" : ""}`;
+  const minimizeVars = getMinimizeVars(
+    taskbarTarget,
+    renderGeometry,
+    isMaximized
+  );
 
   return (
     <div
       ref={windowRef}
-      className={`absolute ${outerStateClasses} ${isClosing ? "pointer-events-none" : ""}`}
-      style={{ zIndex }}
+      className={`desktop-window-geometry absolute ${outerStateClasses} ${isClosing ? "pointer-events-none" : ""}`}
+      style={{
+        zIndex,
+        width: defaultSize.w,
+        height: defaultSize.h,
+        transform: `translate(${defaultPosition.x}px, ${defaultPosition.y}px)`,
+      }}
       onMouseDownCapture={onFocus}
     >
-      <div className={`${frameClasses} ${frameStateClasses}`}>
+      <div className={`${frameClasses} ${frameStateClasses}`} style={minimizeVars}>
         <div
           className={`flex h-8 cursor-default items-center justify-between select-none px-1 ${headerClasses}`}
           onMouseDown={handleHeaderMouseDown}

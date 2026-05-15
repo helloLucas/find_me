@@ -10,7 +10,7 @@ import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 const WINDOW_W = 430;
 const WINDOW_H = 500;
-const WINDOW_CLOSE_ANIMATION_MS = 180;
+const WINDOW_CLOSE_ANIMATION_MS = 320;
 const MESSAGE_ROW_WIDTH = 248;
 const MESSAGE_BUBBLE_WIDTH = 198;
 const MESSAGE_TIME_SLOT_WIDTH = MESSAGE_ROW_WIDTH - MESSAGE_BUBBLE_WIDTH;
@@ -59,6 +59,18 @@ function getLinkThumbnailStyle(preview: LinkPreview): React.CSSProperties {
   };
 }
 
+function getMinimizeVars(
+  target: { x: number; y: number } | undefined,
+  center: { x: number; y: number }
+): React.CSSProperties {
+  if (!target) return {};
+
+  return {
+    "--desktop-window-minimize-x": `${target.x - center.x}px`,
+    "--desktop-window-minimize-y": `${target.y - center.y}px`,
+  } as React.CSSProperties;
+}
+
 const LINK_PREVIEW_BY_ACTION: Record<string, LinkPreview> = {
   friend_message_link: {
     title: "사라지는 사람들, 같은 장소의 다른 목격담",
@@ -86,6 +98,13 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   const messageEndRef = useRef<HTMLDivElement>(null);
   const wasVisibleRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [windowPosition, setWindowPosition] = useState(() => ({
+    x: typeof window !== "undefined" ? Math.round(window.innerWidth / 2 - WINDOW_W / 2) : 0,
+    y:
+      typeof window !== "undefined"
+        ? Math.round((window.innerHeight - DESKTOP_TASKBAR_HEIGHT) / 2 - WINDOW_H / 2)
+        : 0,
+  }));
 
   const conversation = activeRoomId ? conversations[activeRoomId] : null;
   const allRooms = Object.values(conversations);
@@ -93,11 +112,8 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
     isDragging: false,
     startX: 0,
     startY: 0,
-    x: typeof window !== "undefined" ? Math.round(window.innerWidth / 2 - WINDOW_W / 2) : 0,
-    y:
-      typeof window !== "undefined"
-        ? Math.round((window.innerHeight - DESKTOP_TASKBAR_HEIGHT) / 2 - WINDOW_H / 2)
-        : 0,
+    x: windowPosition.x,
+    y: windowPosition.y,
     startLeft: 0,
     startTop: 0,
   });
@@ -185,6 +201,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
     drag.current.startY = event.clientY;
     drag.current.startLeft = drag.current.x;
     drag.current.startTop = drag.current.y;
+    if (windowRef.current) windowRef.current.style.transition = "none";
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       if (!drag.current.isDragging) return;
@@ -205,6 +222,8 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
 
     const onMouseUp = () => {
       drag.current.isDragging = false;
+      setWindowPosition({ x: drag.current.x, y: drag.current.y });
+      if (windowRef.current) windowRef.current.style.transition = "";
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
@@ -215,10 +234,15 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
 
   if (!windowState || !conversation) return null;
 
+  const minimizeVars = getMinimizeVars(windowState.taskbarTarget, {
+    x: windowPosition.x + WINDOW_W / 2,
+    y: windowPosition.y + WINDOW_H / 2,
+  });
+
   return (
     <div
       ref={windowRef}
-      className="absolute top-0 left-0 font-messenger"
+      className="desktop-window-geometry absolute top-0 left-0 font-messenger"
       style={{
         width: WINDOW_W,
         height: WINDOW_H,
@@ -236,6 +260,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
           padding: "1px",
           background: "linear-gradient(180deg, #ff3ecf 0%, #0ff 30%, #0ff 70%, #ff3ecf 100%)",
           boxShadow: "0 0 16px rgba(255,62,207,0.34), 0 0 32px rgba(0,255,255,0.12)",
+          ...minimizeVars,
         }}
       >
         <div className="w-[84px] rounded-l-[7px] bg-[#110a18] flex flex-col items-center py-2 gap-2 border-r border-[#3a2040]">
