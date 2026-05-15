@@ -11,6 +11,7 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useNotepadStore } from "../../app/store/notepadStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
+import { isConnectionError } from "../../shared/api/apiError";
 import type {
   EffectBundle,
   StoryNode,
@@ -671,6 +672,11 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       }
     } catch (startError) {
       if (get().initializationId !== currentId) return;
+
+      if (isConnectionError(startError)) {
+        set({ error: i18n.t("story.error.initFailed") });
+        return;
+      }
 
       try {
         const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
