@@ -206,6 +206,7 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice
   const [attempts, setAttempts] = useState(0);
   const [lastLog, setLastLog] = useState<AttemptLog | null>(null);
   const [logs, setLogs] = useState<AttemptLog[]>([]);
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -303,6 +304,17 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice
     };
   }, []);
 
+  // Record Clear
+  useEffect(() => {
+    if (phase === "finished" && isClear && !isPractice && !hasRecordedClearRef.current && gameSessionId) {
+      hasRecordedClearRef.current = true;
+      void fragmentApi.acquireFragment(CLEAR_FRAGMENT_CODE, gameSessionId).catch(err => {
+        console.error("Failed to record starforce clear:", err);
+        hasRecordedClearRef.current = false;
+      });
+    }
+  }, [phase, isClear, isPractice, gameSessionId]);
+
   const playBgm = useCallback(() => {
     if (!hasSuspendedStoryBgmRef.current) {
       previousBgmNameRef.current = audioManager.getCurrentBgmName();
@@ -321,18 +333,28 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice
   }, []);
 
   const recordClearIfNeeded = useCallback((finalHits: number) => {
-    if (finalHits < MIN_CLEAR_HITS || hasRecordedClearRef.current || isPractice) return;
+    if (finalHits < MIN_CLEAR_HITS || hasRecordedClearRef.current || isPractice || !gameSessionId) return;
 
     hasRecordedClearRef.current = true;
-    void fragmentApi.acquireFragment(CLEAR_FRAGMENT_CODE).catch((error) => {
+    void fragmentApi.acquireFragment(CLEAR_FRAGMENT_CODE, gameSessionId).catch((error) => {
       hasRecordedClearRef.current = false;
       console.error("Failed to record minigame 2 clear:", error);
     });
-  }, [isPractice]);
+  }, [isPractice, gameSessionId]);
 
-  const startGame = useCallback(() => {
+  const startGame = useCallback(async () => {
     if (windowId) {
       maximizeWindow(windowId);
+    }
+
+    if (!isPractice) {
+      try {
+        const res = await fragmentApi.startMinigame(CLEAR_FRAGMENT_CODE);
+        setGameSessionId(res);
+      } catch (error) {
+        console.error("Failed to start minigame session:", error);
+        return;
+      }
     }
 
     setPhase("playing");
@@ -347,7 +369,7 @@ export const StarforceTab: React.FC<StarforceTabProps> = ({ windowId, isPractice
     hasRecordedClearRef.current = false;
     resetNeedle();
     playBgm();
-  }, [maximizeWindow, playBgm, resetNeedle, windowId]);
+  }, [maximizeWindow, playBgm, resetNeedle, windowId, isPractice]);
 
   const restartGame = () => {
     startGame();

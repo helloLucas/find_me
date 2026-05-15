@@ -87,7 +87,7 @@ public class ChapterServiceImpl implements ChapterService {
       // 미배포 챕터: DB에 챕터 정보가 없거나 isPublished가 false인 경우
       if (chapter == null || !Boolean.TRUE.equals(chapter.getIsPublished())) {
         // 아직 열 수 없는 챕터 슬롯은 DISABLED로 내려 프론트엔드가 비활성 상태로 표시하게 합니다.
-        result.add(ChapterProgressResponse.of(code, "Unknown", "DISABLED"));
+        result.add(ChapterProgressResponse.of(code, generateUriHash(code), "Unknown", "DISABLED"));
         continue;
       }
 
@@ -100,7 +100,11 @@ public class ChapterServiceImpl implements ChapterService {
 
       // 계산된 상태를 DTO로 변환해 응답 목록에 추가합니다.
       result.add(
-          ChapterProgressResponse.of(chapter.getCode(), chapter.getTitle(), currentStatus.name()));
+          ChapterProgressResponse.of(
+              chapter.getCode(),
+              generateUriHash(chapter.getCode()),
+              chapter.getTitle(),
+              currentStatus.name()));
     }
 
     return result;
@@ -181,5 +185,31 @@ public class ChapterServiceImpl implements ChapterService {
 
     // 이전 챕터 progress가 존재하고 COMPLETED일 때만 현재 챕터를 해금할 수 있습니다.
     return previousProgress != null && previousProgress.getStatus() == ChapterStatus.COMPLETED;
+  }
+
+  /**
+   * 평문 챕터 코드를 노출하지 않기 위해 결정론적 해시값을 생성합니다.
+   *
+   * @param code 챕터 코드 (예: "week01")
+   * @return 고정된 길이의 해시 문자열
+   */
+  @Override
+  public String generateUriHash(String code) {
+    if (code == null) return "";
+    try {
+      java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      // 보안을 위해 솔트 추가 (실제 운영 시 별도 환경변수 관리 권장)
+      String salt = "LUCAS_CHAPTER_SALT_2024";
+      byte[] hash = digest.digest((code + salt).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder hexString = new StringBuilder();
+      for (byte b : hash) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) hexString.append('0');
+        hexString.append(hex);
+      }
+      return hexString.substring(0, 12); // URL이 너무 길지 않게 12자만 사용
+    } catch (java.security.NoSuchAlgorithmException e) {
+      return String.valueOf(code.hashCode());
+    }
   }
 }

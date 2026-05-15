@@ -1222,6 +1222,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     final: false,
     startTextUntil: 0,
   });
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
   const [hud, setHud] = useState<HudState>({
     timerText: '05:00',
@@ -1245,14 +1246,14 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
 
   useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
+    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice || !gameSessionId) return;
 
     hasRecordedClearRef.current = true;
-    void fragmentApi.acquireFragment('4').catch((error) => {
+    void fragmentApi.acquireFragment('4', gameSessionId).catch((error) => {
       hasRecordedClearRef.current = false;
       console.error('Failed to record Lucas survival clear:', error);
     });
-  }, [hud.status, isPractice]);
+  }, [hud.status, isPractice, gameSessionId]);
 
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -1375,7 +1376,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     lastMsRef.current = performance.now();
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(loop);
-  }, [appendCombatLog, ensureAudio, playSfx]);
+
+    if (!isPractice) {
+      void fragmentApi.startMinigame('4').then((res) => {
+        setGameSessionId(res);
+      });
+    }
+  }, [appendCombatLog, ensureAudio, playSfx, isPractice]);
 
   const stopGame = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
