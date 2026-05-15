@@ -371,7 +371,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     });
   }, [lucasSurvivalTabClickTrigger]);
 
-  const handleNewTab = () => {
+  const handleNewTab = React.useCallback(() => {
     const newId = `tab_${Date.now()}`;
     const isCh1 = currentChapter === 1;
 
@@ -415,7 +415,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newId);
-  };
+  }, [currentChapter]);
 
   const navigateTab = (id: string, url: string, component: Tab["component"], title: string) => {
     setTabs((prev) =>
@@ -477,7 +477,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     );
   };
 
-  const openDevTools = () => {
+  const openDevTools = React.useCallback(() => {
     setShowDevTools(true);
 
     // DevTools 너비가 브라우저 전체 너비의 70%를 넘지 않도록 제한
@@ -492,18 +492,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if (inspectTarget && canSubmitStoryAction(currentNode, "inspect", inspectTarget)) {
       void submitStoryInspect(inspectTarget);
     }
-  };
+  }, [currentNode, devToolsWidth, submitStoryInspect]);
 
-  const toggleDevTools = () => {
+  const toggleDevTools = React.useCallback(() => {
     if (showDevTools) {
       setShowDevTools(false);
       return;
     }
 
     openDevTools();
-  };
+  }, [showDevTools, openDevTools]);
 
-  const handleCloseTab = (id: string) => {
+  const handleCloseTab = React.useCallback((id: string) => {
     setTabs((prev) => {
       const filtered = prev.filter((tab) => tab.id !== id);
       if (filtered.length === 0) {
@@ -515,7 +515,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       }
       return filtered;
     });
-  };
+  }, [activeTabId, closeWindow, windowId]);
 
   useEffect(() => {
     const keyboard = (navigator as KeyboardLockNavigator).keyboard;
@@ -717,11 +717,23 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     });
   };
 
+  const handleCloseContextMenu = React.useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     focusWindow(windowId);
-    setContextMenu({ x: event.clientX, y: event.clientY });
+    
+    // 기존 컨텍스트 메뉴가 열려있다면 즉시 닫아서 레이스 컨디션 방지
+    setContextMenu(null);
+    
+    // 다음 프레임에서 새로운 위치로 메뉴 열기
+    const { clientX, clientY } = event;
+    requestAnimationFrame(() => {
+      setContextMenu({ x: clientX, y: clientY });
+    });
   };
 
   return (
@@ -956,7 +968,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={handleCloseContextMenu}
           items={[
             { label: "New Tab", onClick: handleNewTab },
             { label: showDevTools ? "Close DevTools" : "Open DevTools", onClick: toggleDevTools },
