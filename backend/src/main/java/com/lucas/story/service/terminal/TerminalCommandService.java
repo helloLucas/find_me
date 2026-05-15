@@ -831,6 +831,16 @@ public class TerminalCommandService {
         "mount: /mnt/lucas-server: not mounted yet; use the current root session prompt to attach lucas-server");
   }
 
+  private boolean isUnmountedLucasServerPath(String targetPath, VfsContext vfs) {
+    if (targetPath == null) {
+      return false;
+    }
+
+    boolean targetsLucasMount =
+        "/mnt/lucas-server".equals(targetPath) || targetPath.startsWith("/mnt/lucas-server/");
+    return targetsLucasMount && vfs.resolve("/mnt/lucas-server/laplace.qasm") == null;
+  }
+
   private boolean isLucasServerMountCommand(List<String> args) {
     if (args.equals(Collections.singletonList("-a"))) {
       return true;
@@ -920,6 +930,9 @@ public class TerminalCommandService {
     }
 
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, rawTarget + ": cannot open `" + rawTarget + "'");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, rawTarget + ": cannot open `" + rawTarget + "'");
@@ -953,6 +966,9 @@ public class TerminalCommandService {
 
     String rawTarget = command.args().get(command.args().size() - 1);
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, "head: cannot open '" + rawTarget + "' for reading");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, "head: cannot open '" + rawTarget + "' for reading");
@@ -986,6 +1002,12 @@ public class TerminalCommandService {
     }
 
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd,
+          vfs,
+          command.command() + ": cannot remove '" + rawTarget + "': No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(
@@ -1002,6 +1024,9 @@ public class TerminalCommandService {
 
   private TerminalResult handleExecutablePath(ParsedCommand command, String cwd, VfsContext vfs) {
     String targetPath = pathResolver.resolve(cwd, command.command(), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, command.command() + ": No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, command.command() + ": No such file or directory");
@@ -1053,13 +1078,16 @@ public class TerminalCommandService {
     // 인자가 없으면 현재 디렉토리, 있으면 해당 경로를 대상으로 결정합니다.
     String targetPath =
         command.args().isEmpty() ? cwd : pathResolver.resolve(cwd, command.args().get(0), vfs);
+    String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
+    }
     // 대상 경로의 VFS 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
     // 노드가 존재하지 않으면 에러를 반환합니다.
     if (node == null) {
-      return buildErrorResult(
-          cwd, vfs, "ls: " + command.args().get(0) + ": No such file or directory");
+      return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
     }
 
     // 대상이 파일이면 파일 이름만 출력합니다.
@@ -1074,7 +1102,6 @@ public class TerminalCommandService {
 
     // 대상이 디렉토리면 하위 노드 목록을 가져옵니다.
     if (!canReadNode(node, vfs)) {
-      String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
       return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
     }
 
@@ -1163,6 +1190,9 @@ public class TerminalCommandService {
     for (String rawTarget : rawTargets) {
       // 상대 경로, 홈 별칭 등을 현재 cwd 기준 절대 경로로 정규화합니다.
       String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+      if (isUnmountedLucasServerPath(targetPath, vfs)) {
+        return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
+      }
       // 정규화된 경로가 VFS에 존재하는지 확인합니다.
       VfsNode node = vfs.resolve(targetPath);
       // 존재하지 않는 경로이면 실제 ls와 유사한 에러를 반환합니다.
@@ -1471,6 +1501,9 @@ public class TerminalCommandService {
 
     for (String rawRoot : query.roots()) {
       String targetPath = pathResolver.resolve(cwd, rawRoot, vfs);
+      if (isUnmountedLucasServerPath(targetPath, vfs)) {
+        return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
+      }
       VfsNode node = vfs.resolve(targetPath);
       if (node == null) {
         return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
@@ -1540,6 +1573,10 @@ public class TerminalCommandService {
       boolean typeFileOnly,
       Pattern namePattern,
       Set<String> matches) {
+    if (isUnmountedLucasServerPath(node.path(), vfs)) {
+      return;
+    }
+
     if (node.hidden()) {
       return;
     }
@@ -1603,6 +1640,10 @@ public class TerminalCommandService {
 
     // 이동할 대상 경로를 계산합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "cd: " + command.args().get(0) + ": No such file or directory");
+    }
     // 대상 경로의 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -1650,6 +1691,10 @@ public class TerminalCommandService {
 
     // 파일의 경로를 해석합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "cat: " + command.args().get(0) + ": No such file or directory");
+    }
     // 노드를 확인합니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -1695,6 +1740,10 @@ public class TerminalCommandService {
 
     // 경로를 해석합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "sh: " + command.args().get(0) + ": No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
 
     // 파일이 없으면 에러를 반환합니다.
