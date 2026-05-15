@@ -18,6 +18,18 @@ function toMessengerDisplayName(value: unknown, fallback = "FRIEND") {
   return SPEAKER_DISPLAY_NAMES[raw.trim().toUpperCase()] ?? raw;
 }
 
+function formatMessengerTimestamp(date = new Date()) {
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const period = hours < 12 ? "\uC624\uC804" : "\uC624\uD6C4";
+  const displayHour = hours % 12 || 12;
+  return `${period} ${displayHour}:${minutes}`;
+}
+
+function resolveTimestampLabel(record: Record<string, unknown>, fallbackTimestamp: string) {
+  return stringValue(record.timestamp) ?? stringValue(record.timestampLabel) ?? fallbackTimestamp;
+}
+
 /**
  * 백엔드 outputBundle을 메신저 UI가 바로 렌더링할 수 있는 대화 모델로 변환한다.
  * 원본 outputBundle 구조를 직접 만지는 위치는 이 adapter로 제한한다.
@@ -29,6 +41,7 @@ export function normalizeMessengerBundle(
 ): MessengerConversation | null {
   if (!outputBundle || typeof outputBundle !== "object") return null;
 
+  const fallbackTimestamp = formatMessengerTimestamp();
   const bundle = normalizeStoryOutputBundle(outputBundle);
   const raw = objectRecord(bundle.raw.messenger);
 
@@ -54,10 +67,10 @@ export function normalizeMessengerBundle(
     senderName: toMessengerDisplayName(m.senderName),
     senderAvatar: stringValue(m.senderAvatar) ?? stringValue(raw.senderAvatar),
     text: resolveStoryText(m.text, textContext),
-    timestampLabel: stringValue(m.timestamp) ?? stringValue(m.timestampLabel),
+    timestampLabel: resolveTimestampLabel(m, fallbackTimestamp),
   }));
 
-  const actions = normalizeMessengerActions(recordArray(raw.actions));
+  const actions = normalizeMessengerActions(recordArray(raw.actions), fallbackTimestamp);
 
   return {
     conversationId: String(raw.conversationId ?? `conv-${Date.now()}`),
@@ -83,16 +96,17 @@ function normalizeTopLevelStoryMessages(
   const friendMessage = objectRecord(bundle.content.friendMessage);
   const nodeCode = node?.code ?? String(bundle.scene.id ?? `story-${Date.now()}`);
   const speaker = String(chatMessages[0]?.speaker ?? "FRIEND").toUpperCase();
+  const fallbackTimestamp = formatMessengerTimestamp();
 
   const messages: MessengerMessage[] = chatMessages.map((message, idx) => ({
     id: `${nodeCode}-msg-${idx}`,
     senderId: String(message.speaker ?? "friend").toLowerCase(),
     senderName: toMessengerDisplayName(message.speaker ?? speaker),
     text: resolveStoryText(message.text, textContext),
-    timestampLabel: String(message.timestamp ?? "오후 10:17"),
+    timestampLabel: resolveTimestampLabel(message, fallbackTimestamp),
   }));
 
-  const actions = normalizeMessengerActions(bundle.actions) ?? createStoryActions(nodeCode, friendMessage);
+  const actions = normalizeMessengerActions(bundle.actions, fallbackTimestamp) ?? createStoryActions(nodeCode, friendMessage, fallbackTimestamp);
 
   return {
     conversationId: `conv-${speaker}`,
@@ -106,7 +120,8 @@ function normalizeTopLevelStoryMessages(
 }
 
 function normalizeMessengerActions(
-  rawActions: Record<string, unknown>[]
+  rawActions: Record<string, unknown>[],
+  fallbackTimestamp: string
 ): MessengerAction[] | undefined {
   if (rawActions.length === 0) return undefined;
 
@@ -118,16 +133,18 @@ function normalizeMessengerActions(
       stringValue(action.actionType) ??
       stringValue(action.type) ??
       "noop",
+    timestampLabel: resolveTimestampLabel(action, fallbackTimestamp),
     payload: action.payload ?? action.meta ?? action,
   }));
 }
 
 function createStoryActions(
   nodeCode: string,
-  friendMessage?: Record<string, unknown>
+  friendMessage: Record<string, unknown> | undefined,
+  fallbackTimestamp: string
 ): MessengerAction[] | undefined {
   if (nodeCode === "CH1_FRIEND_CHAT_PUSH") {
-    return [{ label: "채팅 열기", actionType: "open_friend_chat" }];
+    return [{ label: "채팅 열기", actionType: "open_friend_chat", timestampLabel: fallbackTimestamp }];
   }
 
   if (nodeCode === "CH1_FRIEND_CHAT_OPEN") {
@@ -135,6 +152,10 @@ function createStoryActions(
       {
         label: String(friendMessage?.linkLabel ?? "링크 열기"),
         actionType: "friend_message_link",
+        timestampLabel:
+          stringValue(friendMessage?.linkTimestamp) ??
+          stringValue(friendMessage?.linkTimestampLabel) ??
+          fallbackTimestamp,
       },
     ];
   }
