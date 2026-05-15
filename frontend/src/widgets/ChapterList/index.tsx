@@ -39,7 +39,7 @@ export const ChapterList = () => {
                         && Boolean(endingProgress?.hasUnlockedEnding)
                         && !endingProgress?.allUnlocked
                     }
-                    onClick={() => selectChapter(chapter.code)}
+                    onClick={() => selectChapter(chapter.uriHash)}
                 />
             ))}
         </div>

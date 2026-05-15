@@ -613,20 +613,12 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       error: null
     });
 
-    useBrowserContentStore.getState().resetContent();
-    useClientStore.getState().resetClientStore();
-    useMessengerStore.getState().resetMessenger();
-    useLucasStore.getState().resetLucas();
-    useCallOverlayStore.getState().resetCallOverlay();
-    useWindowStore.getState().resetWindows();
-
     useAuthStore.getState().checkAuth();
     await syncAuthenticatedUserProfile();
 
     try {
-      const node = normalizeStoryNodeResponse(
-        await storyApi.startStory(resolveChapterCode(chapterCode))
-      );
+      const nodeResponse = await storyApi.startStory(chapterCode);
+      const node = normalizeStoryNodeResponse(nodeResponse.data);
 
       // 세션이 유효한지 확인
       if (get().initializationId !== currentId) return;
@@ -860,10 +852,13 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   },
 
   resetStoryRuntime: () => {
-    useCallOverlayStore.getState().resetCallOverlay();
-    useNotepadStore.getState().resetNotepad();
-    // 벨소리나 대화 등의 진행 중인 시각적 효과가 있으면 여기서 명시적으로 닫아줌
+    useBrowserContentStore.getState().resetContent();
+    useClientStore.getState().resetClientStore();
+    useMessengerStore.getState().resetMessenger();
     useLucasStore.getState().resetLucas();
+    useCallOverlayStore.getState().resetCallOverlay();
+    useWindowStore.getState().resetWindows();
+    useNotepadStore.getState().resetNotepad();
 
     set((state) => ({
       currentNode: null,

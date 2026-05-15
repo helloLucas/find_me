@@ -71,9 +71,14 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) =>
     }
   }, [windowId, isMusicReady, isCleared, maximizeWindow]);
 
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+
   // 2. Fragment Acquisition
   const acquireMutation = useMutation({
-    mutationFn: () => fragmentApi.acquireFragment('1'),
+    mutationFn: () => {
+      if (!gameSessionId) throw new Error("No game session");
+      return fragmentApi.acquireFragment('1', gameSessionId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fragment', '1'] });
     }
@@ -81,6 +86,16 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) =>
 
   // 3. BGM Setup
   const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const hasRecordedClearRef = useRef(false);
+
+  // 4. Record Clear
+  useEffect(() => {
+    if (won && !isPractice && !hasRecordedClearRef.current && gameSessionId) {
+      hasRecordedClearRef.current = true;
+      acquireMutation.mutate();
+    }
+  }, [won, isPractice, gameSessionId, acquireMutation]);
+
   useEffect(() => {
     const audio = new Audio('https://djbod0nv85jx9.cloudfront.net/audios/minigame_1_v1.mp3');
     audio.loop = true;
@@ -120,7 +135,22 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) =>
     }
   }, [isMusicReady, gameOver, won, isCleared]);
 
-  const handleRetry = () => {
+  useEffect(() => {
+    if (!isPractice) {
+      void fragmentApi.startMinigame('1').then(res => setGameSessionId(res));
+    }
+  }, [isPractice]);
+
+  const handleRetry = async () => {
+    if (!isPractice) {
+      try {
+        const res = await fragmentApi.startMinigame('1');
+        setGameSessionId(res);
+      } catch (e) {
+        console.error("Failed to start minigame session:", e);
+        return;
+      }
+    }
     setGrid(INITIAL_GRID.map(row => [...row]));
     setPacman({ x: 7, y: 10 });
     setGhosts([
@@ -133,6 +163,13 @@ export const PacmanTab: React.FC<PacmanTabProps> = ({ windowId, isPractice }) =>
     directionRef.current = null;
     keysPressed.current.clear();
   };
+
+  // Initial session request for the first play
+  useEffect(() => {
+    if (!isPractice && !isCleared) {
+      fragmentApi.startMinigame('1').then(setGameSessionId).catch(console.error);
+    }
+  }, [isPractice, isCleared]);
 
   const directionRef = useRef<Direction>(null);
   const keysPressed = useRef<Set<string>>(new Set());
