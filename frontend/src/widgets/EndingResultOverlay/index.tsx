@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { endingApi } from "../../shared/api/endingApi";
 import type { EndingResultScene, EndingResultTone } from "../../shared/types/ending";
+import "./style.css";
 
 interface EndingResultOverlayProps {
   endingType: string | null;
@@ -31,22 +32,40 @@ const TONE_CLASSES: Record<EndingResultTone, { accent: string; border: string; g
 };
 
 const DEFAULT_TONE = TONE_CLASSES.cyan;
+const OBSERVER_LOG_START_DELAY_MS = 760;
+const OBSERVER_LOG_TYPE_INTERVAL_MS = 42;
+const OBSERVER_LOG_LINE_PAUSE_MS = 320;
+const OBSERVER_LOG_LABEL = "NX-OBS // SIGNAL RESIDUE // DETECTED";
 
 export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ endingType }) => {
   const navigate = useNavigate();
   const [scene, setScene] = useState<EndingResultScene | null>(null);
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [renderedTerminalLines, setRenderedTerminalLines] = useState<string[]>([]);
+  const [isObserverLogComplete, setIsObserverLogComplete] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
     let ignore = false;
+    const timers: number[] = [];
 
-    setScene(null);
-    setHasLoadError(false);
+    const schedule = (callback: () => void, delay = 0) => {
+      timers.push(window.setTimeout(callback, delay));
+    };
+
+    schedule(() => {
+      if (ignore) {
+        return;
+      }
+
+      setScene(null);
+      setHasLoadError(!endingType);
+    });
 
     if (!endingType) {
-      setHasLoadError(true);
       return () => {
         ignore = true;
+        timers.forEach((timer) => window.clearTimeout(timer));
       };
     }
 
@@ -66,8 +85,96 @@ export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ ending
 
     return () => {
       ignore = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [endingType]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    syncPreference();
+    mediaQuery.addEventListener("change", syncPreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncPreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!scene) {
+      return;
+    }
+
+    const lines = scene.terminalLines ?? [];
+    const timers: number[] = [];
+
+    const schedule = (callback: () => void, delay: number) => {
+      timers.push(window.setTimeout(callback, delay));
+    };
+
+    if (prefersReducedMotion) {
+      schedule(() => {
+        setRenderedTerminalLines(lines);
+        setIsObserverLogComplete(true);
+      }, 0);
+
+      return () => {
+        timers.forEach((timer) => window.clearTimeout(timer));
+      };
+    }
+
+    const lineCharacters = lines.map((line) => Array.from(line));
+    let lineIndex = 0;
+    let characterIndex = 0;
+
+    schedule(() => {
+      setRenderedTerminalLines(lines.map(() => ""));
+      setIsObserverLogComplete(false);
+    }, 0);
+
+    const typeNextCharacter = () => {
+      const currentLine = lineCharacters[lineIndex];
+
+      if (!currentLine) {
+        setIsObserverLogComplete(true);
+        return;
+      }
+
+      characterIndex += 1;
+
+      setRenderedTerminalLines((previousLines) => {
+        const nextLines = [...previousLines];
+        nextLines[lineIndex] = currentLine.slice(0, characterIndex).join("");
+        return nextLines;
+      });
+
+      if (characterIndex < currentLine.length) {
+        schedule(typeNextCharacter, OBSERVER_LOG_TYPE_INTERVAL_MS);
+        return;
+      }
+
+      lineIndex += 1;
+      characterIndex = 0;
+
+      if (lineIndex < lineCharacters.length) {
+        schedule(typeNextCharacter, OBSERVER_LOG_LINE_PAUSE_MS);
+        return;
+      }
+
+      schedule(() => setIsObserverLogComplete(true), OBSERVER_LOG_LINE_PAUSE_MS);
+    };
+
+    schedule(typeNextCharacter, OBSERVER_LOG_START_DELAY_MS);
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [prefersReducedMotion, scene]);
 
   const tone = scene ? TONE_CLASSES[scene.tone] ?? DEFAULT_TONE : DEFAULT_TONE;
 
@@ -102,7 +209,7 @@ export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ ending
       <div className="absolute left-0 top-0 h-full w-full bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.08),transparent_30%)]" />
 
       <section
-        className={`hud-fade-in relative mx-6 flex w-full max-w-2xl flex-col gap-10 border bg-black/58 px-8 py-10 backdrop-blur-md ${tone.border} ${tone.glow}`}
+        className={`hud-fade-in relative mx-6 flex w-full max-w-2xl flex-col gap-8 border bg-black/58 px-7 py-8 backdrop-blur-md md:px-8 md:py-10 ${tone.border} ${tone.glow}`}
       >
         <div className="flex items-center justify-between font-system-overlay text-[10px] tracking-[0.3em] text-white/34">
           <span>{scene.headerLeft}</span>
@@ -123,10 +230,26 @@ export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ ending
           </p>
         </div>
 
-        <div className="border border-white/10 bg-white/[0.025] px-5 py-4 font-terminal text-xs leading-6 text-slate-300">
-          {scene.terminalLines.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+        <div className="ending-observer-log terminal-retro-surface font-terminal" aria-label="observation log">
+          <div className="ending-observer-log__header">
+            <span className="ending-observer-log__label" data-text={OBSERVER_LOG_LABEL}>
+              {OBSERVER_LOG_LABEL}
+            </span>
+            <span className="ending-observer-log__status">LOCKED TRACE</span>
+          </div>
+
+          <div className="ending-observer-log__body">
+            {scene.terminalLines.map((line, index) => (
+              <p className="ending-observer-log__line" key={`${line}-${index}`}>
+                {renderedTerminalLines[index] ?? ""}
+              </p>
+            ))}
+            <span
+              className={`ending-observer-log__cursor ${
+                isObserverLogComplete ? "ending-observer-log__cursor--settled" : ""
+              }`}
+            />
+          </div>
         </div>
 
         <div className="flex justify-center">
