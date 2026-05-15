@@ -79,12 +79,16 @@ export default function AppShell({ children }: PropsWithChildren) {
 
         tokenManager.setAccessToken(newAccessToken);
         checkAuth(); // authStore 동기화
+        const { useConnectionStatusStore } = await import("../../app/store/connectionStatusStore");
+        useConnectionStatusStore.getState().markOnline();
 
       } catch (error: any) {
         isNetworkOrServerError = isConnectionError(error);
 
         if (isNetworkOrServerError) {
           console.warn('Silent refresh failed due to network/server error.');
+          const { useConnectionStatusStore } = await import("../../app/store/connectionStatusStore");
+          useConnectionStatusStore.getState().markOffline();
           openConnectionFailedModal();
         } else {
           // 4xx 에러: 리프레시 토큰 자체 만료 → 세션 완전 종료

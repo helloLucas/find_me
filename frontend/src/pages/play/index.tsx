@@ -167,6 +167,8 @@ export default function PlayPage() {
       {currentNode && !isFullscreen && <FullscreenEnforcer />}
       <PlayConnectionBanner />
 
+      <PlayConnectionBanner />
+
       {shouldShowCompletionModal && <ChapterCompletionModal />}
 
       {shouldShowEndingOverlay && (
