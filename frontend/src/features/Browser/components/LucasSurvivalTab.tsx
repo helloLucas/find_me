@@ -5,7 +5,7 @@ import '../../../minigames/lucas-survival/styles.css';
 export const LucasSurvivalTab: React.FC = () => {
   return (
     <div className="w-full h-full bg-black">
-      <LucasSurvivalApp />
+      <LucasSurvivalApp isPractice={true} />
     </div>
   );
 };
