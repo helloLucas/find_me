@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
@@ -49,16 +50,19 @@ type KeyboardLockNavigator = Navigator & {
 };
 
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
+  const { chapterCode } = useParams<{ chapterCode?: string }>();
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasRouteStoryLinked, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
+  const currentChapter = useMemo(() => {
+    const nodeMatch = currentNode?.code.match(/^CH(\d+)_/);
+    if (nodeMatch) return Number(nodeMatch[1]);
 
-  // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
-  const currentChapter = (() => {
-    if (!currentNode?.code) return 1;
-    const match = currentNode.code.match(/^CH(\d+)_/);
-    return match ? parseInt(match[1], 10) : 1;
-  })();
+    const routeMatch = chapterCode?.match(/(?:week|ch)(\d+)/i);
+    if (routeMatch) return Number(routeMatch[1]);
+
+    return 1;
+  }, [chapterCode, currentNode?.code]);
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -911,7 +915,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           )}
           {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
           {activeTab?.component === 'lucassurvival' && <LucasSurvivalTab />}
-          {activeTab?.component === 'lucasroute' && <LucasRouteTab />}
+          {activeTab?.component === 'lucasroute' && <LucasRouteTab storyLinked={lucasRouteStoryLinked} windowId={windowId} />}
         </div>
 
         {showDevTools && (
