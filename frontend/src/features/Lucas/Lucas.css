@@ -55,8 +55,7 @@
 /* Dialogue Bubble Styling */
 .lucas-bubble-container {
   margin-bottom: 12px;
-  width: 198px;
-  max-width: 198px;
+  max-width: 320px;
   cursor: pointer;
   animation: bubble-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
@@ -202,16 +201,20 @@
     0 20px 50px rgba(0, 0, 0, 0.9),
     0 0 20px rgba(84, 58, 183, 0.3);
   overflow: hidden;
+}
+
+.lucas-hint-ui.hint-enter {
   animation: slide-up 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 /* Interference effects for individual components */
-.lucas-bubble.interference-fx,
-.lucas-hint-ui.interference-fx {
+.lucas-bubble.interference-fx {
   filter: saturate(1.35) contrast(1.25) brightness(1.08);
-  animation:
-    bubble-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    hint-jitter 0.08s steps(2, end) 16;
+  animation: hint-jitter 0.08s steps(2, end) 16;
+}
+
+.lucas-hint-ui.interference-fx {
+  filter: saturate(1.25) contrast(1.14) brightness(1.04);
 }
 
 .lucas-bubble.interference-fx::before,
@@ -293,8 +296,7 @@
 .chat-msg {
   display: flex;
   flex-direction: column;
-  width: 198px;
-  max-width: 198px;
+  max-width: 85%;
   min-width: 0;
 }
 
@@ -344,7 +346,6 @@
   background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.05));
   border: 1px solid rgba(0, 255, 255, 0.4);
   color: #b3ffff;
-  border-bottom-left-radius: 2px;
 }
 
 .chat-msg.lucas.pending .chat-text {
@@ -577,15 +578,15 @@
   }
 
   25% {
-    transform: translate(-4px, 2px);
+    transform: translate(-1.5px, 0.75px);
   }
 
   50% {
-    transform: translate(4px, -2px);
+    transform: translate(1.5px, -0.75px);
   }
 
   75% {
-    transform: translate(-3px, -2px);
+    transform: translate(-1px, -0.75px);
   }
 
   100% {
@@ -626,15 +627,15 @@
   }
 
   25% {
-    transform: translate(-5px, 2px);
+    transform: translate(-2px, 0.75px);
   }
 
   50% {
-    transform: translate(5px, -2px);
+    transform: translate(2px, -0.75px);
   }
 
   75% {
-    transform: translate(-3px, -2px);
+    transform: translate(-1.25px, -0.75px);
   }
 
   100% {

@@ -302,18 +302,23 @@ export const Lucas: React.FC = () => {
       )}
 
       {isHintMode && !isDialogueActive && (
-        <div className={`lucas-hint-ui ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
+        <div className={`lucas-hint-ui hint-enter ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
           <div className="hint-messages" ref={hintMessagesRef} onScroll={persistHintScrollTop}>
-            {chatHistory.map((chat) => (
-              <div id={`lucas-msg-${chat.id}`} key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
-                <span className="chat-speaker">{chat.speaker}</span>
-                <div className="chat-text">{chat.text}</div>
-              </div>
-            ))}
+            {chatHistory.map((chat, index) => {
+              const previousChat = chatHistory[index - 1];
+              const isFirstInGroup = !previousChat || previousChat.speaker !== chat.speaker;
+
+              return (
+                <div id={`lucas-msg-${chat.id}`} key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
+                  {isFirstInGroup && <span className="chat-speaker">{chat.speaker}</span>}
+                  <div className="chat-text">{chat.text}</div>
+                </div>
+              );
+            })}
             {isHintRequesting && (
               <div className="chat-msg lucas pending">
-                <span className="chat-speaker">LUCAS</span>
+                {chatHistory.at(-1)?.speaker !== 'LUCAS' && <span className="chat-speaker">LUCAS</span>}
                 <div className="chat-text pending-typing">{PENDING_FRAMES[pendingFrame]}</div>
               </div>
             )}
