@@ -14,6 +14,7 @@ export type MessengerMessage = {
 export type MessengerAction = {
   label: string;
   actionType: string;
+  timestampLabel?: string;
   payload?: unknown;
 };
 
