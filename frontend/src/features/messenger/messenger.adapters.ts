@@ -9,6 +9,15 @@ import {
   type StoryTextResolveContext,
 } from "../story-runtime/outputBundle.adapters";
 
+const SPEAKER_DISPLAY_NAMES: Record<string, string> = {
+  FRIEND: "\uCE5C\uAD6C",
+};
+
+function toMessengerDisplayName(value: unknown, fallback = "FRIEND") {
+  const raw = String(value ?? fallback);
+  return SPEAKER_DISPLAY_NAMES[raw.trim().toUpperCase()] ?? raw;
+}
+
 /**
  * 백엔드 outputBundle을 메신저 UI가 바로 렌더링할 수 있는 대화 모델로 변환한다.
  * 원본 outputBundle 구조를 직접 만지는 위치는 이 adapter로 제한한다.
@@ -42,7 +51,7 @@ export function normalizeMessengerBundle(
   const messages: MessengerMessage[] = messageArray.map((m, idx) => ({
     id: String(m.id ?? `msg-${Date.now()}-${idx}`),
     senderId: String(m.senderId ?? "unknown"),
-    senderName: String(m.senderName ?? "FRIEND"),
+    senderName: toMessengerDisplayName(m.senderName),
     senderAvatar: stringValue(m.senderAvatar) ?? stringValue(raw.senderAvatar),
     text: resolveStoryText(m.text, textContext),
     timestampLabel: stringValue(m.timestamp) ?? stringValue(m.timestampLabel),
@@ -52,7 +61,7 @@ export function normalizeMessengerBundle(
 
   return {
     conversationId: String(raw.conversationId ?? `conv-${Date.now()}`),
-    title: String(raw.title ?? "FRIEND"),
+    title: toMessengerDisplayName(raw.title),
     subtitle: raw.subtitle != null ? String(raw.subtitle) : undefined,
     online: raw.online === true,
     unread: true,
@@ -78,7 +87,7 @@ function normalizeTopLevelStoryMessages(
   const messages: MessengerMessage[] = chatMessages.map((message, idx) => ({
     id: `${nodeCode}-msg-${idx}`,
     senderId: String(message.speaker ?? "friend").toLowerCase(),
-    senderName: String(message.speaker ?? speaker),
+    senderName: toMessengerDisplayName(message.speaker ?? speaker),
     text: resolveStoryText(message.text, textContext),
     timestampLabel: String(message.timestamp ?? "오후 10:17"),
   }));
@@ -87,7 +96,7 @@ function normalizeTopLevelStoryMessages(
 
   return {
     conversationId: `conv-${speaker}`,
-    title: String(chatNotification?.title ?? speaker),
+    title: chatNotification?.title != null ? String(chatNotification.title) : toMessengerDisplayName(speaker),
     subtitle: chatNotification?.body != null ? String(chatNotification.body) : undefined,
     online: true,
     unread: true,
