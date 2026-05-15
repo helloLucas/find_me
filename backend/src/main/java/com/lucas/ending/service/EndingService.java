@@ -34,7 +34,7 @@ public class EndingService {
 
   /** 전체 엔딩 달성 후 타이틀 화면에서만 사용할 루프 영상 URL입니다. */
   private static final String COMPLETE_ARCHIVE_VIDEO_URL =
-      "https://cdn.midjourney.com/video/a3cdbbd6-fa74-4315-b0d8-d1b4f3238232/0.mp4";
+      "https://djbod0nv85jx9.cloudfront.net/videos/ending/ending.mp4";
 
   /** 엔딩 결과 화면 종류입니다. 결과 팝업은 항상 개별 엔딩만 표시합니다. */
   private static final String RESULT_VARIANT_ENDING = "ENDING";
