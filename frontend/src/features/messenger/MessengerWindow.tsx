@@ -233,12 +233,12 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
         } ${isClosing ? "desktop-window-shell--closing" : ""
         }`}
         style={{
-          padding: "3px",
+          padding: "1px",
           background: "linear-gradient(180deg, #ff3ecf 0%, #0ff 30%, #0ff 70%, #ff3ecf 100%)",
-          boxShadow: "0 0 25px rgba(255,62,207,0.4), 0 0 50px rgba(0,255,255,0.15)",
+          boxShadow: "0 0 16px rgba(255,62,207,0.34), 0 0 32px rgba(0,255,255,0.12)",
         }}
       >
-        <div className="w-[84px] rounded-l-[5px] bg-[#110a18] flex flex-col items-center py-2 gap-2 border-r border-[#3a2040]">
+        <div className="w-[84px] rounded-l-[7px] bg-[#110a18] flex flex-col items-center py-2 gap-2 border-r border-[#3a2040]">
           {allRooms.map((room) => (
             <button
               key={room.conversationId}
@@ -271,7 +271,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden rounded-r-[5px] bg-[#1a1028]">
+        <div className="flex-1 flex flex-col overflow-hidden rounded-r-[7px] bg-[#1a1028]">
           <div
             className="flex h-9 cursor-default select-none items-center justify-between bg-[#1a1028] px-3 flex-shrink-0"
             onMouseDown={handleHeaderMouseDown}
