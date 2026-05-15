@@ -248,6 +248,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
         height: WINDOW_H,
         zIndex: windowState.zIndex,
         pointerEvents: windowState.isMinimized || isClosing ? "none" : "auto",
+        transform: `translate(${windowPosition.x}px, ${windowPosition.y}px)`,
       }}
       onMouseDown={() => focusWindow(windowId)}
     >
