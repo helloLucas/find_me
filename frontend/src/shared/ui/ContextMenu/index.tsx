@@ -27,14 +27,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     };
     
     // Slight delay to prevent immediate close on the same right-click if events bubble strangely
-    setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('contextmenu', handleClickOutside); // Close on another right click
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, { capture: true });
+      document.addEventListener('contextmenu', handleClickOutside, { capture: true }); // Close on another right click
     }, 10);
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('contextmenu', handleClickOutside);
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, { capture: true });
+      document.removeEventListener('contextmenu', handleClickOutside, { capture: true });
     };
   }, [onClose]);
 
