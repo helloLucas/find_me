@@ -135,7 +135,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "10.2.2.2. universe-core 브리지야. 포트부터 확인해.",
+      "text": "10.2.2.2. universe-core 브리지야. 옵션을 추가해서 취약한 포트 확인해 봐.",
       "blocking": true
     }
   ],
@@ -225,11 +225,14 @@ node_values AS (
       "22/tcp open  ssh     SSH-1.2 universe bridge",
       "",
       "Service Info: Access Level <guest>",
+      "Protocol marker: SSH-1.2 legacy compatibility",
       "Legacy CRC32 reset path detected",
       "Vulnerability fingerprint: CVE-2001-0144",
       "",
       "[HINT]",
       "fictional helper available: /usr/bin/sshnuke",
+      "sshnuke profile: Lucas-built reset tool for SSH-1.2 universe bridge",
+      "effect: overwrite root password seed without interactive login",
       "root seed can be supplied by external observer keystroke"
     ]
   },
@@ -237,13 +240,13 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "좋아. sshnuke로 root 패스워드를 재설정해.",
+      "text": "저 버전이야. SSH-1 호환 계층에 CRC32 검증 버그가 남아 있어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "명령어는 길지 않아. sshnuke 10.2.2.2 -rootpw=\"네가 기억할 값\".",
+      "text": "내가 만든 sshnuke는 그 틈만 찌르도록 맞춰둔 도구야. root 패스워드를 네 입력값으로 덮어써. sshnuke 10.2.2.2 -rootpw=\"네가 기억할 값\".",
       "blocking": true
     }
   ],
@@ -284,14 +287,17 @@ node_values AS (
       "",
       "[UNIVERSE_CORE_BROADCAST]",
       "Root credential reset accepted by external observer keystroke.",
-      "PID: 000_LUCAS is requesting attachment to privileged session."
+      "PID: 000_LUCAS is requesting attachment to privileged session.",
+      "",
+      "[NEXT]",
+      "ssh root@10.2.2.2"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "멈추지 마. 지금 끊기면 방금 연 문이 닫혀.",
+      "text": "root의 패스워드는 네가 방금 넣은 값으로 바뀌었어. 이제 SSH로 들어가. ssh root@10.2.2.2",
       "blocking": true
     }
   ],
@@ -438,8 +444,20 @@ node_values AS (
       "lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)",
       "",
       "[ARTIFACTS: /mnt/lucas-server]",
+      "gate_04.trace",
+      "observer_status.log",
+      "world_map.map",
+      "lucas_fragment_01.sh",
+      "laplace_fragment_01.sh",
+      "laplace_fragment_02.sh",
+      "laplace_fragment_03.sh",
       "laplace.qasm",
-      "core_group.dat.gpg"
+      "sever_external_nodes.sh",
+      "my_people.list",
+      "nexus_monitor.log",
+      "core_group.dat",
+      "core_group.dat.gpg",
+      "trash/"
     ]
   },
   "messages": [
@@ -506,7 +524,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "lucas-server:/home/guest를 /mnt/lucas-server로 마운트해. mount lucas-server:/home/guest /mnt/lucas-server.",
+      "text": "lucas-server:/home/guest를 /mnt/lucas-server로 마운트했어? 명령어는 이거야. mount lucas-server:/home/guest /mnt/lucas-server.",
       "blocking": true
     }
   ],
