@@ -14,6 +14,7 @@ import { LucasSurvivalTab } from "./components/LucasSurvivalTab";
 import { LucasRouteTab } from "./components/LucasRouteTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
+import { WindowControlButton } from "../../shared/ui/WindowControls";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { type Chapter3Hint } from "./data/chapter3Hints";
 import type { DesktopWindowId } from "../../shared/config/desktopWindows";
@@ -170,10 +171,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if (currentNode?.code?.startsWith("CH2_")) {
       return [{
         id: "tab1",
-        title: "History",
+        title: "방문 기록",
         url: "system://history",
         component: "history",
-        history: [{ url: "system://history", component: "history", title: "History" }],
+        history: [{ url: "system://history", component: "history", title: "방문 기록" }],
         historyIndex: 0,
         currentView: "home",
         selectedHint: null,
@@ -764,7 +765,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           <div
             key={tab.id}
             className={`
-              flex items-center gap-2 px-3 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
+              flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
               ${activeTabId === tab.id
                 ? "bg-[#0a0514] border-[#543ab7] text-[#0ff] z-10 translate-y-[2px]"
                 : "bg-[#1a1130] border-transparent text-[#a48cff] hover:bg-[#241a4a] cursor-pointer"}
@@ -772,15 +773,15 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             onClick={() => setActiveTabId(tab.id)}
           >
             <span className="truncate flex-1">{tab.title}</span>
-            <button
-              className="w-4 h-4 flex items-center justify-center hover:bg-white/10 rounded-full"
+            <WindowControlButton
+              variant="close"
+              label="Close tab"
+              className="!h-4 !w-4 !p-0 border-transparent bg-transparent text-[#a48cff]/70 hover:border-transparent hover:bg-transparent hover:text-[#0ff] focus-visible:ring-[#0ff]/60 [&>svg]:!h-3.5 [&>svg]:!w-3.5"
               onClick={(event) => {
                 event.stopPropagation();
                 handleCloseTab(tab.id);
               }}
-            >
-              x
-            </button>
+            />
           </div>
         ))}
         <button
@@ -875,10 +876,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  검색 기록 (History)
+                  검색 기록
                 </button>
               </div>
             )}

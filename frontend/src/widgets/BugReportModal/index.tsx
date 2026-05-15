@@ -175,8 +175,8 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
       });
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || t("common.errorOccurred"));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("common.errorOccurred"));
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +207,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose,
     >
       <div
         data-clarity-mask="true"
-        className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-mono overflow-y-auto terminal-scrollbar relative"
+        className="flex flex-col h-full bg-black text-[#00D4FF] p-4 font-desktop-ui overflow-y-auto terminal-scrollbar relative"
       >
         {/* Compression Overlay */}
         {isCompressing && (

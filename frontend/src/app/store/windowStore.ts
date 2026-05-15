@@ -15,6 +15,7 @@ export interface WindowState {
   isClosing: boolean;
   zIndex: number;
   content?: string;
+  taskbarTarget?: { x: number; y: number };
 }
 
 interface WindowStore {
@@ -29,6 +30,7 @@ interface WindowStore {
   closeWindow: (id: DesktopWindowId) => void;
   markWindowClosing: (id: DesktopWindowId) => void;
   minimizeWindow: (id: DesktopWindowId) => void;
+  setWindowTaskbarTarget: (id: DesktopWindowId, target: { x: number; y: number }) => void;
   maximizeWindow: (id: DesktopWindowId) => void;
   toggleMaximizeWindow: (id: DesktopWindowId) => void;
   focusWindow: (id: DesktopWindowId) => void;
@@ -199,6 +201,26 @@ export const useWindowStore = create<WindowStore>((set) => ({
         windows,
         activeWindowId,
       };
+    }),
+
+  setWindowTaskbarTarget: (id, target) =>
+    set((state) => {
+      let hasChanged = false;
+      const windows = state.windows.map((windowState) => {
+        if (windowState.id !== id) return windowState;
+        if (
+          windowState.taskbarTarget &&
+          Math.abs(windowState.taskbarTarget.x - target.x) < 0.5 &&
+          Math.abs(windowState.taskbarTarget.y - target.y) < 0.5
+        ) {
+          return windowState;
+        }
+
+        hasChanged = true;
+        return { ...windowState, taskbarTarget: target };
+      });
+
+      return hasChanged ? { windows } : state;
     }),
 
   maximizeWindow: (id) =>

@@ -322,25 +322,40 @@ img {
 .desktop-window-shell {
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
-  transform-origin: bottom center;
+  transform-origin: center center;
   transition:
-    opacity 180ms ease,
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    filter 180ms ease;
-  animation: desktop-window-open 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 320ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 320ms ease;
+  animation: desktop-window-open 320ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform, filter;
+}
+
+.desktop-window-geometry {
+  transition:
+    width 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    inset 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width, height, transform;
 }
 
 .desktop-window-shell--minimized {
   opacity: 0;
-  transform: translate3d(0, 68px, 0) scale(0.94);
+  transform: translate3d(var(--desktop-window-minimize-x, 0), var(--desktop-window-minimize-y, 48vh), 0) scale(0.18);
+  transform-origin: bottom center;
+  transition:
+    opacity 400ms ease,
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 400ms ease;
   filter: brightness(0.82) saturate(0.78);
   pointer-events: none;
 }
 
 .desktop-window-shell--closing {
   opacity: 0;
-  transform: translate3d(0, 18px, 0) scale(0.96);
+  transform: translate3d(0, 0, 0) scale(0.82);
+  transform-origin: center center;
   filter: brightness(1.18) saturate(0.85);
   pointer-events: none;
 }
@@ -362,6 +377,10 @@ img {
 @media (prefers-reduced-motion: reduce) {
   .desktop-window-shell {
     animation: none;
+    transition: none;
+  }
+
+  .desktop-window-geometry {
     transition: none;
   }
 }

@@ -11,6 +11,7 @@ import './Lucas.css';
 const PENDING_FRAMES = ['.', '..', '...'];
 const ENABLE_INTERFERENCE_FX = true;
 const INTERFERENCE_DURATION_MS = 1700;
+const HINT_PANEL_EXIT_ANIMATION_MS = 275;
 const INTERFERENCE_TEXT_PATTERN =
   /(시스템\s*간섭|신호가\s*불안정|연결\s*상태|채널|노이즈|잠깐\s*뒤에\s*다시|재시도)/i;
 const HINT_ERROR_MESSAGES = [
@@ -50,6 +51,7 @@ export const Lucas: React.FC = () => {
   const [isHintRequesting, setIsHintRequesting] = useState(false);
   const [pendingFrame, setPendingFrame] = useState(0);
   const [isInterferenceFxActive, setIsInterferenceFxActive] = useState(false);
+  const [isHintPanelRendered, setIsHintPanelRendered] = useState(false);
   const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const lastReadIndicesRef = useRef<Record<string, number>>({});
@@ -59,6 +61,8 @@ export const Lucas: React.FC = () => {
   const interferenceTimerRef = useRef<number | null>(null);
   const baseGlitchLevelRef = useRef(0);
   const isHintPanelVisible = isHintMode && !isDialogueActive;
+  const shouldRenderHintPanel = isHintPanelVisible || isHintPanelRendered;
+  const isHintPanelClosing = !isHintPanelVisible && isHintPanelRendered;
 
   const isLastMessage = currentScene
     ? currentMessageIndex >= currentScene.messages.length - 1
@@ -178,6 +182,23 @@ export const Lucas: React.FC = () => {
   }, [chatHistory, isHintPanelVisible, isHintRequesting, chatScopeKey]);
 
   useEffect(() => {
+    if (isHintPanelVisible) {
+      const timer = window.setTimeout(() => {
+        setIsHintPanelRendered(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (!isHintPanelRendered) return;
+
+    const timer = window.setTimeout(() => {
+      setIsHintPanelRendered(false);
+    }, HINT_PANEL_EXIT_ANIMATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isHintPanelRendered, isHintPanelVisible]);
+
+  useEffect(() => {
     if (!isHintRequesting) {
       setPendingFrame(0);
       return;
@@ -263,11 +284,11 @@ export const Lucas: React.FC = () => {
     void submitStoryClick(inputValue);
   };
 
-  if (!isVisible && !isDialogueActive && !isHintMode && !hasPromptButtons) return null;
+  if (!isVisible && !isDialogueActive && !isHintMode && !shouldRenderHintPanel && !hasPromptButtons) return null;
 
   return (
     <div
-      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${isHintMode ? 'hint-mode' : ''}`}
+      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${shouldRenderHintPanel ? 'hint-mode' : ''}`}
       style={{ zIndex: DESKTOP_LAYER.assistant }}
     >
       {isDialogueActive && currentMessage && (
@@ -301,8 +322,12 @@ export const Lucas: React.FC = () => {
         </div>
       )}
 
-      {isHintMode && !isDialogueActive && (
-        <div className={`lucas-hint-ui hint-enter ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
+      {shouldRenderHintPanel && !isDialogueActive && (
+        <div
+          className={`lucas-hint-ui ${isHintPanelClosing ? 'hint-exit' : 'hint-enter'} ${
+            isInterferenceFxActive ? 'interference-fx' : ''
+          }`}
+        >
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
           <div className="hint-messages" ref={hintMessagesRef} onScroll={persistHintScrollTop}>
             {chatHistory.map((chat, index) => {
