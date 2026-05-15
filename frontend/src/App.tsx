@@ -10,7 +10,11 @@ import { AnalyticsConsentBanner } from "./widgets/AnalyticsConsentBanner";
 import { GlobalModal } from "./widgets/GlobalModal";
 import { GlobalToast } from "./widgets/GlobalToast";
 
+import { useSessionTimer } from "./hooks/useSessionTimer";
+
 function App() {
+  useSessionTimer();
+
   useEffect(() => {
     initializeAnalyticsFromStoredConsent();
 
