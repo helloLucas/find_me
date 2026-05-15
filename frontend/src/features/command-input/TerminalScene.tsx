@@ -489,6 +489,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
       onToggleMaximize={() => toggleMaximizeWindow(windowState.id)}
       isMinimized={windowState.isMinimized}
       isMaximized={windowState.isMaximized}
+      taskbarTarget={windowState.taskbarTarget}
       defaultSize={defaultTerminalSize}
       defaultPosition={{
         x: window.innerWidth / 2 - defaultTerminalSize.w / 2,

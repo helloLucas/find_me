@@ -126,7 +126,7 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 16px;
-  animation: slide-up 0.3s ease-out;
+  animation: slide-up 0.275s ease-out;
 }
 
 .lucas-action-button {
@@ -172,7 +172,7 @@
   box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.5),
     inset 0 0 12px rgba(0, 255, 204, 0.08);
-  animation: slide-up 0.25s ease-out;
+  animation: slide-up 0.275s ease-out;
 }
 
 .lucas-hint-actions {
@@ -204,7 +204,12 @@
 }
 
 .lucas-hint-ui.hint-enter {
-  animation: slide-up 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  animation: slide-up 0.275s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lucas-hint-ui.hint-exit {
+  pointer-events: none;
+  animation: lucas-hint-close 0.275s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* Interference effects for individual components */
@@ -574,6 +579,20 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes lucas-hint-close {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1) saturate(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+    filter: brightness(0.88) saturate(0.85);
   }
 }
 
