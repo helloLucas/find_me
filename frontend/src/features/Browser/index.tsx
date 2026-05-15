@@ -14,6 +14,7 @@ import { LucasSurvivalTab } from "./components/LucasSurvivalTab";
 import { LucasRouteTab } from "./components/LucasRouteTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
+import { WindowControlButton } from "../../shared/ui/WindowControls";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { type Chapter3Hint } from "./data/chapter3Hints";
 import type { DesktopWindowId } from "../../shared/config/desktopWindows";
@@ -764,7 +765,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           <div
             key={tab.id}
             className={`
-              flex items-center gap-2 px-3 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
+              flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
               ${activeTabId === tab.id
                 ? "bg-[#0a0514] border-[#543ab7] text-[#0ff] z-10 translate-y-[2px]"
                 : "bg-[#1a1130] border-transparent text-[#a48cff] hover:bg-[#241a4a] cursor-pointer"}
@@ -772,15 +773,15 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             onClick={() => setActiveTabId(tab.id)}
           >
             <span className="truncate flex-1">{tab.title}</span>
-            <button
-              className="w-4 h-4 flex items-center justify-center hover:bg-white/10 rounded-full"
+            <WindowControlButton
+              variant="close"
+              label="Close tab"
+              className="!h-4 !w-4 !p-0 border-transparent bg-transparent text-[#a48cff]/70 hover:border-transparent hover:bg-transparent hover:text-[#0ff] focus-visible:ring-[#0ff]/60 [&>svg]:!h-3.5 [&>svg]:!w-3.5"
               onClick={(event) => {
                 event.stopPropagation();
                 handleCloseTab(tab.id);
               }}
-            >
-              x
-            </button>
+            />
           </div>
         ))}
         <button
