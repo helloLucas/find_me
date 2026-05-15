@@ -76,6 +76,9 @@ axiosInstance.interceptors.request.use(
 // Response Interceptor: 401 Unauthorized 감지 시 토큰 갱신 로직 (대기열 패턴 포함)
 axiosInstance.interceptors.response.use(
   (response) => {
+    void import('../../app/store/connectionStatusStore').then(({ useConnectionStatusStore }) => {
+      useConnectionStatusStore.getState().markOnline();
+    });
     return response;
   },
   async (error) => {
@@ -93,7 +96,9 @@ axiosInstance.interceptors.response.use(
     if (isNetworkOrServerError && !isSilentRefreshing) {
       console.error('Network or Server error occurred:', error);
       try {
+        const { useConnectionStatusStore } = await import('../../app/store/connectionStatusStore');
         const { openConnectionFailedModal } = await import('../../app/store/modalStore');
+        useConnectionStatusStore.getState().markOffline();
         openConnectionFailedModal();
       } catch (modalError) {
         console.error('Failed to open global connection error modal:', modalError);
@@ -171,7 +176,9 @@ axiosInstance.interceptors.response.use(
           processQueue(refreshError, null);
 
           try {
+            const { useConnectionStatusStore } = await import('../../app/store/connectionStatusStore');
             const { openConnectionFailedModal } = await import('../../app/store/modalStore');
+            useConnectionStatusStore.getState().markOffline();
             openConnectionFailedModal();
           } catch (modalError) {
             console.error('Failed to open global connection error modal:', modalError);

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import type { BaseResponse } from '../../shared/types/api';
 import { isConnectionError } from '../../shared/api/apiError';
+import { useConnectionStatusStore } from '../../app/store/connectionStatusStore';
 
 /**
  * TokenResponse 인터페이스
@@ -48,6 +49,8 @@ export const useInitGuest = () => {
       return response.data.data;
     },
     onSuccess: (data) => {
+      useConnectionStatusStore.getState().markOnline();
+
       // [리팩토링] 이제 게스트도 즉시 토큰을 받지 않고, 닉네임 입력 전까지 tempKey만 보유함
       // 닉네임 설정 페이지로 이동할 때 tempKey를 state로 전달
       navigate('/setup-nickname', {
@@ -59,6 +62,7 @@ export const useInitGuest = () => {
       console.error('Guest initialization failed:', error);
 
       if (isConnectionError(error)) {
+        useConnectionStatusStore.getState().markOffline();
         openConnectionFailedModal();
         return;
       }
