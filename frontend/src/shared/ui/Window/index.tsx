@@ -4,6 +4,8 @@ import { useWindowStore } from "../../../app/store/windowStore";
 import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
 import { WindowControlButton } from "../WindowControls";
 
+const WINDOW_CLOSE_ANIMATION_MS = 180;
+
 interface WindowProps {
   id: string;
   title: string;
@@ -58,6 +60,7 @@ export const Window: React.FC<WindowProps> = ({
     height: defaultHeight,
   });
   const [position, setPosition] = useState(() => getInitialWindowPosition(defaultWidth, defaultHeight));
+  const [isClosing, setIsClosing] = useState(false);
 
   if (!windowState) {
     return null;
@@ -73,6 +76,15 @@ export const Window: React.FC<WindowProps> = ({
     }
 
     maximizeWindow(windowState.id);
+  };
+
+  const handleClose = () => {
+    if (isClosing) return;
+
+    setIsClosing(true);
+    window.setTimeout(() => {
+      closeWindow(windowState.id);
+    }, WINDOW_CLOSE_ANIMATION_MS);
   };
 
   const handleHeaderMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -155,15 +167,14 @@ export const Window: React.FC<WindowProps> = ({
       bounds="parent"
       style={{
         zIndex: windowState.zIndex,
-        pointerEvents: isMinimized ? "none" : "auto",
+        pointerEvents: isMinimized || isClosing ? "none" : "auto",
       }}
     >
       <div
-        className="w-full h-full flex flex-col bg-[#0f0c29] border-2 border-[#543ab7] rounded shadow-[0_0_15px_rgba(84,58,183,0.7)] overflow-hidden transition-all duration-300 ease-in-out origin-bottom"
-        style={{
-          opacity: isMinimized ? 0 : 1,
-          transform: isMinimized ? "scale(0.8) translateY(100px)" : "scale(1) translateY(0)",
-        }}
+        className={`desktop-window-shell w-full h-full flex flex-col bg-[#0f0c29] border-2 border-[#543ab7] rounded shadow-[0_0_15px_rgba(84,58,183,0.7)] overflow-hidden ${
+          isMinimized ? "desktop-window-shell--minimized" : ""
+        } ${isClosing ? "desktop-window-shell--closing" : ""
+        }`}
       >
         <div
           className="window-drag-handle flex cursor-default items-center justify-between px-2 py-1 bg-gradient-to-r from-[#240b36] to-[#0f0c29] border-b-2 border-[#543ab7] select-none"
@@ -211,7 +222,7 @@ export const Window: React.FC<WindowProps> = ({
               className="border-transparent text-[#ff3366] hover:border-[#ff3366] hover:bg-[#ff3366]/20"
               onClick={(event) => {
                 event.stopPropagation();
-                closeWindow(windowState.id);
+                handleClose();
               }}
             />
           </div>

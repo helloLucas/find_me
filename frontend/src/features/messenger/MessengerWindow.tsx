@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useMessengerStore } from "../../app/store/messengerStore";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
@@ -10,6 +10,7 @@ import { resolveMessengerFallbackAvatar } from "./avatarFallback";
 
 const WINDOW_W = 430;
 const WINDOW_H = 500;
+const WINDOW_CLOSE_ANIMATION_MS = 180;
 const MESSAGE_ROW_WIDTH = 248;
 const MESSAGE_BUBBLE_WIDTH = 198;
 const MESSAGE_TIME_SLOT_WIDTH = MESSAGE_ROW_WIDTH - MESSAGE_BUBBLE_WIDTH;
@@ -84,6 +85,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const wasVisibleRef = useRef(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const conversation = activeRoomId ? conversations[activeRoomId] : null;
   const allRooms = Object.values(conversations);
@@ -100,6 +102,15 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
     startTop: 0,
   });
   const lastReadIndices = useRef<Record<string, number>>({});
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+
+    setIsClosing(true);
+    window.setTimeout(() => {
+      closeWindow(windowId);
+    }, WINDOW_CLOSE_ANIMATION_MS);
+  }, [closeWindow, isClosing, windowId]);
 
   const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
   const visibleMessages = conversation?.messages.filter((msg) => {
@@ -157,13 +168,13 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
 
     const handler = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeWindow(windowId);
+        handleClose();
       }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [windowState, closeWindow, windowId]);
+  }, [windowState, handleClose]);
 
   const handleHeaderMouseDown = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -211,15 +222,16 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
         width: WINDOW_W,
         height: WINDOW_H,
         zIndex: windowState.zIndex,
-        pointerEvents: windowState.isMinimized ? "none" : "auto",
+        pointerEvents: windowState.isMinimized || isClosing ? "none" : "auto",
       }}
       onMouseDown={() => focusWindow(windowId)}
     >
       <div
-        className="w-full h-full rounded-lg overflow-hidden flex transition-all duration-300 ease-in-out origin-bottom"
+        className={`desktop-window-shell w-full h-full rounded-lg overflow-hidden flex ${
+          windowState.isMinimized ? "desktop-window-shell--minimized" : ""
+        } ${isClosing ? "desktop-window-shell--closing" : ""
+        }`}
         style={{
-          opacity: windowState.isMinimized ? 0 : 1,
-          transform: windowState.isMinimized ? "scale(0.8) translateY(100px)" : "scale(1) translateY(0)",
           padding: "3px",
           background: "linear-gradient(180deg, #ff3ecf 0%, #0ff 30%, #0ff 70%, #ff3ecf 100%)",
           boxShadow: "0 0 25px rgba(255,62,207,0.4), 0 0 50px rgba(0,255,255,0.15)",
@@ -277,7 +289,7 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
               className="border-pink-500/30 text-pink-400/70 hover:border-pink-400/70 hover:bg-pink-500/10 hover:text-pink-300"
               onClick={(event) => {
                 event.stopPropagation();
-                closeWindow(windowId);
+                handleClose();
               }}
             />
           </div>
