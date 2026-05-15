@@ -9,6 +9,11 @@ type CorruptedParagraphProps = {
   onInspect?: () => void;
 };
 
+const SCRAMBLE_INTERVAL_MS: Record<ArticleCorruptionIntensity, number> = {
+  active: 340,
+  subtle: 1700,
+};
+
 const GLITCH_GLYPHS = [
   "뷁",
   "궹",
@@ -48,14 +53,14 @@ function getReplacementChance(
   variant: ScrambleVariant
 ) {
   if (intensity === "active") {
-    if (variant === "base") return 0.14;
-    if (variant === "cyan") return 0.24;
-    return 0.22;
+    if (variant === "base") return 0.1;
+    if (variant === "cyan") return 0.17;
+    return 0.16;
   }
 
-  if (variant === "base") return 0.03;
-  if (variant === "cyan") return 0.08;
-  return 0.1;
+  if (variant === "base") return 0.02;
+  if (variant === "cyan") return 0.05;
+  return 0.06;
 }
 
 function buildScrambledFrame(
@@ -162,14 +167,20 @@ function useScrambledFrame(lines: string[], intensity: ArticleCorruptionIntensit
   );
 
   useEffect(() => {
-    setScrambledFrame(buildScrambledFrame(lines, intensity));
+    const syncFrameId = window.setTimeout(() => {
+      setScrambledFrame(buildScrambledFrame(lines, intensity));
+    }, 0);
 
-    const intervalMs = intensity === "active" ? 160 : 1100;
+    const intervalMs = SCRAMBLE_INTERVAL_MS[intensity];
     const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       setScrambledFrame(buildScrambledFrame(lines, intensity));
     }, intervalMs);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearTimeout(syncFrameId);
+      window.clearInterval(intervalId);
+    };
   }, [lines, intensity]);
 
   return scrambledFrame;
@@ -223,7 +234,7 @@ function CorruptionLayers({
   );
 }
 
-export const CorruptedParagraph: React.FC<CorruptedParagraphProps> = ({
+const CorruptedParagraphComponent: React.FC<CorruptedParagraphProps> = ({
   text,
   intensity,
   inspectable = false,
@@ -251,3 +262,5 @@ export const CorruptedParagraph: React.FC<CorruptedParagraphProps> = ({
     </p>
   );
 };
+
+export const CorruptedParagraph = React.memo(CorruptedParagraphComponent);
