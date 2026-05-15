@@ -19,13 +19,13 @@ const CREDITS_DATA = {
         { role: 'DIRECTOR', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'PLANNING & NARRATIVE DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'FRONTEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SOUND & VISUAL DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
+        { role: 'SOUND & VISUAL DESIGN', names: 'Arin Kim, Woongki Min,\nSeohyun Park, Donghun Yoo,\nYujin Lee, Jaeyong Lee' },
     ],
     right: [
         { role: 'BACKEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'INFRASTRUCTURE & DEVOPS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'VIDEO & MOTION GRAPHICS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers, And You' }
+        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers,\nAnd You' }
     ]
 };
 
@@ -46,9 +46,9 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
     }), []);
 
     const exitDelays = useMemo(() => ({
-        top: CREDITS_DATA.top.map(() => Math.random() * 1.5),
-        left: CREDITS_DATA.left.map(() => Math.random() * 1.5),
-        right: CREDITS_DATA.right.map(() => Math.random() * 1.5),
+        top: CREDITS_DATA.top.map(() => 2.0 + Math.random() * 0.5), // 2.0s - 2.5s
+        left: CREDITS_DATA.left.map(() => Math.random() * 1.2),     // < 1.2s
+        right: CREDITS_DATA.right.map(() => Math.random() * 1.2),   // < 1.2s
     }), []);
 
     const onCompleteRef = useRef(onComplete);
@@ -90,7 +90,10 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
             return () => clearTimeout(t);
         }
         if (phase === 'shutdown') {
-            const t = setTimeout(() => onCompleteRef.current(), 700);
+            const t = setTimeout(() => {
+                PERSISTED_PHASE = null;
+                onCompleteRef.current();
+            }, 700);
             return () => clearTimeout(t);
         }
     }, [phase]);
@@ -104,7 +107,6 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
                 muted
                 playsInline
                 crossOrigin="anonymous"
-                poster="/void_city_ending_bg.png"
                 src="https://djbod0nv85jx9.cloudfront.net/videos/ending/ending_credits.mp4"
                 onEnded={startFinale}
             />
@@ -123,7 +125,7 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
                     />
                     
                     <div className="header-credits" style={{ 
-                        opacity: (phase === 'credits' || phase === 'initial') ? (phase === 'initial' ? 0 : 1) : 0,
+                        opacity: (phase === 'credits' || phase === 'fadeOut') ? 1 : 0,
                         transition: 'opacity 1.2s ease',
                         transitionDelay: phase === 'credits' ? `${entryDelays.top[0]}s` : `${exitDelays.top[0]}s`
                     } as React.CSSProperties}>

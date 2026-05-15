@@ -106,8 +106,8 @@
 }
 
 /* Sequence Phases */
-.ending-credits-overlay:not(.phase-credits) .credit-block-orbit,
-.ending-credits-overlay:not(.phase-credits) .header-credits {
+.ending-credits-overlay:not(.phase-credits):not(.phase-fadeOut) .credit-block-orbit,
+.ending-credits-overlay:not(.phase-credits):not(.phase-fadeOut) .header-credits {
   opacity: 0 !important;
   filter: blur(10px);
   pointer-events: none;
