@@ -667,6 +667,7 @@ class StoryServiceImplChapter3RuleTest {
             null,
             null,
             null,
+            null,
             fragmentRepository,
             objectMapper);
     storyService.init();

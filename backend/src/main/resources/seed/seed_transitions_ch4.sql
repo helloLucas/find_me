@@ -435,33 +435,6 @@ WITH transition_values AS (
             82
         ),
         (
-            'CH4_LUCAS_SERVER_MOUNTED',
-            'CH4_ROOT_DIR_LISTED',
-            'command',
-            'list_root_dir_short',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true,
-    "root_dir_listed_short": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true,
-    "flags.root_dir_listed_short": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            92
-        ),
-        (
             'CH4_PENDING_JOB_VIEWED',
             'CH4_ROOT_DIR_LISTED',
             'command',
@@ -869,34 +842,6 @@ WITH transition_values AS (
 }$json$::jsonb,
             100
         ),
-        (
-            'CH4_LUCAS_SERVER_MOUNTED',
-            'CH4_INVESTIGATION_STARTED',
-            'command',
-            'list_root_workspace',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": ["-al"] },
-    { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            90
-        ),
-
 -- 루카스 지시 루트: mounted laplace.qasm root 실행
 (
             'CH4_PENDING_JOB_VIEWED',
@@ -1139,60 +1084,6 @@ WITH transition_values AS (
   "recentResult": "SUCCESS_MOVE"
 }$json$::jsonb,
             90
-        ),
-        (
-            'CH4_LAPLACE_ABORTED_DIR_LISTED',
-            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
-            'command',
-            'list_root_workspace_after_abort_list',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": ["-al"] },
-    { "command": "ls", "argsAnyOrder": ["-la"] },
-    { "command": "ls", "argsAnyOrder": ["-l"] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
-        ),
-        (
-            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
-            'CH4_LAPLACE_ABORTED_DIR_LISTED',
-            'command',
-            'list_root_dir_short_after_abort_detail',
-            'server_rule',
-            $json${
-  "rule": "NORMALIZED_COMMAND",
-  "acceptedForms": [
-    { "command": "ls", "argsAnyOrder": [] }
-  ]
-}$json$::jsonb,
-            $json${
-  "setFlags": {
-    "chapter4_investigation_started": true,
-    "root_workspace_listed": true,
-    "root_dir_listed_short": true
-  },
-  "snapshotPatch": {
-    "flags.chapter4_investigation_started": true,
-    "flags.root_workspace_listed": true,
-    "flags.root_dir_listed_short": true
-  },
-  "recentResult": "SUCCESS_MOVE"
-}$json$::jsonb,
-            100
         ),
         (
             'CH4_LAPLACE_ABORTED_DIR_LISTED',
@@ -1824,6 +1715,34 @@ WITH transition_values AS (
             'CH4_MINIGAME_NOT_CLEARED',
             'command',
             'open_lucas_route_process',
+            'server_rule',
+            $json${
+  "rule": "NORMALIZED_COMMAND",
+  "acceptedForms": [
+    { "command": "sh", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["lucas_route.sh"] },
+    { "command": "sh", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "bash", "argsAnyOrder": ["/root/lucas_route.sh"] },
+    { "command": "./lucas_route.sh", "argsAnyOrder": [] },
+    { "command": "/root/lucas_route.sh", "argsAnyOrder": [] }
+  ]
+}$json$::jsonb,
+            $json${
+  "setFlags": {
+    "lucas_route_clear_required": true
+  },
+  "snapshotPatch": {
+    "flags.lucas_route_clear_required": true
+  },
+  "recentResult": "SUCCESS_MOVE"
+}$json$::jsonb,
+            140
+        ),
+        (
+            'CH4_LAPLACE_VERIFIED',
+            'CH4_MINIGAME_NOT_CLEARED',
+            'command',
+            'open_lucas_route_process_from_verified',
             'server_rule',
             $json${
   "rule": "NORMALIZED_COMMAND",
@@ -2642,7 +2561,9 @@ WITH transition_values AS (
   "rule": "NORMALIZED_COMMAND",
   "acceptedForms": [
     { "command": "/root/.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] },
-    { "command": "./.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] }
+    { "command": "./.route_cache/lucas_authority_patch.bin", "argsAnyOrder": [] },
+    { "command": "./lucas_authority_patch.bin", "argsAnyOrder": [] },
+    { "command": "lucas_authority_patch.bin", "argsAnyOrder": [] }
   ]
 }$json$::jsonb,
             $json${
