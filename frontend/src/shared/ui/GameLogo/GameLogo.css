@@ -1,0 +1,72 @@
+.glitch-group {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.15));
+}
+
+.glitch-text-pro {
+    position: relative;
+    color: white;
+    line-height: 0.9;
+    text-transform: uppercase;
+}
+
+.glitch-text-pro::before,
+.glitch-text-pro::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    opacity: 0.8;
+}
+
+.glitch-text-pro::before {
+    animation: game-logo-glitch-pixel-1 3s infinite linear alternate-reverse;
+    text-shadow: -2px 0 #00ffff;
+    clip-path: inset(45% 0 44% 0);
+    opacity: 0;
+}
+
+.glitch-text-pro::after {
+    animation: game-logo-glitch-pixel-2 2.5s infinite linear alternate-reverse;
+    text-shadow: 2px 0 #ff00ff;
+    clip-path: inset(80% 0 5% 0);
+    opacity: 0;
+}
+
+@keyframes game-logo-glitch-pixel-1 {
+    0%, 100% { opacity: 0; clip-path: inset(0 0 0 0); transform: translate(0); }
+    20%, 25% { opacity: 1; clip-path: inset(10% 0 85% 0); transform: translate(-8px, -2px); }
+    26%, 30% { opacity: 0.4; clip-path: inset(44% 0 43% 0); transform: translate(12px, 2px); }
+    31%, 35% { opacity: 0; }
+}
+
+@keyframes game-logo-glitch-pixel-2 {
+    0%, 70% { opacity: 0; clip-path: inset(80% 0 5% 0); transform: translate(0); }
+    71%, 75% { opacity: 1; clip-path: inset(44% 0 43% 0); transform: translate(8px, 1px); }
+    76%, 80% { opacity: 0.4; clip-path: inset(10% 0 85% 0); transform: translate(-12px, -1px); }
+    81%, 100% { opacity: 0; }
+}
+
+.pixel-slice {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    pointer-events: none;
+    animation: game-logo-pixel-slice-anim 5s infinite step-end;
+}
+
+@keyframes game-logo-pixel-slice-anim {
+    0%, 90% { clip-path: inset(0 0 100% 0); }
+    91% { clip-path: inset(20% 0 78% 0); transform: translateX(-10px); }
+    92% { clip-path: inset(50% 0 48% 0); transform: translateX(10px); }
+    93% { clip-path: inset(80% 0 18% 0); transform: translateX(-5px); }
+    94%, 100% { clip-path: inset(0 0 100% 0); }
+}

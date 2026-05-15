@@ -6,6 +6,7 @@ import "./style.css";
 
 interface EndingResultOverlayProps {
   endingType: string | null;
+  onPrimaryAction?: () => void;
 }
 
 const TONE_CLASSES: Record<EndingResultTone, { accent: string; border: string; glow: string }> = {
@@ -37,7 +38,7 @@ const OBSERVER_LOG_TYPE_INTERVAL_MS = 42;
 const OBSERVER_LOG_LINE_PAUSE_MS = 320;
 const OBSERVER_LOG_LABEL = "NX-OBS // SIGNAL RESIDUE // DETECTED";
 
-export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ endingType }) => {
+export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ endingType, onPrimaryAction }) => {
   const navigate = useNavigate();
   const [scene, setScene] = useState<EndingResultScene | null>(null);
   const [hasLoadError, setHasLoadError] = useState(false);
@@ -179,7 +180,11 @@ export const EndingResultOverlay: React.FC<EndingResultOverlayProps> = ({ ending
   const tone = scene ? TONE_CLASSES[scene.tone] ?? DEFAULT_TONE : DEFAULT_TONE;
 
   const handlePrimaryAction = () => {
-    navigate("/");
+    if (onPrimaryAction) {
+      onPrimaryAction();
+    } else {
+      navigate("/");
+    }
   };
 
   if (!scene) {

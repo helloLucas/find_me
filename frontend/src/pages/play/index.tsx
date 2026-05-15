@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Desktop } from "../../widgets/Desktop";
 import FullscreenEnforcer from "../../shared/ui/FullscreenEnforcer/FullscreenEnforcer";
@@ -8,6 +8,7 @@ import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { EndingResultOverlay } from "../../widgets/EndingResultOverlay";
+import { EndingCredits } from "../../widgets/EndingCredits";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import type { StoryNode } from "../../shared/types/story";
@@ -32,11 +33,16 @@ function getEndingType(node: StoryNode | null): string | null {
 
 export default function PlayPage() {
   const { chapterCode } = useParams();
-  const { initializeStory, currentNode } = useStoryRuntimeStore();
+  const navigate = useNavigate();
+  const initializeStory = useStoryRuntimeStore((state) => state.initializeStory);
+  const currentNode = useStoryRuntimeStore((state) => state.currentNode);
+  
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [currentPreVideoUrl, setCurrentPreVideoUrl] = useState<string | null>(null);
+  const [showCredits, setShowCredits] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const processedNodeIdRef = useRef<number | string | null>(null);
+  const lastChapterRef = useRef<string | null>(null);
   const playViewRef = useTrackVisible<HTMLElement>({
     eventName: "play_screen_visible_10s",
     params: { chapter_code: chapterCode ?? "unknown" },
@@ -61,12 +67,18 @@ export default function PlayPage() {
 
   useEffect(() => {
     audioManager.enableGlobalClickSfx("mouse_click_v1.mp3");
-    if (chapterCode) {
-      initializeStory(chapterCode);
+    
+    // Only reset state if the chapterCode has changed
+    if (chapterCode !== lastChapterRef.current) {
+      lastChapterRef.current = chapterCode ?? null;
+      if (chapterCode) {
+        initializeStory(chapterCode);
+      }
+      processedNodeIdRef.current = null;
+      setIsPlayingVideo(false);
+      setCurrentPreVideoUrl(null);
+      setShowCredits(false);
     }
-    processedNodeIdRef.current = null;
-    setIsPlayingVideo(false);
-    setCurrentPreVideoUrl(null);
 
     // 플레이 진입(마운트/종료 후 재시작) 시 해당 챕터 메모장 로컬 데이터 초기화
     /*
@@ -116,6 +128,7 @@ export default function PlayPage() {
     audioManager.setStoryVideoPlaying(false);
     setIsPlayingVideo(false);
     setCurrentPreVideoUrl(null);
+
     if (currentNode) {
       const output = normalizeStoryOutputBundle(currentNode.outputBundle);
       audioManager.playBgm(output.scene.bgm);
@@ -124,14 +137,16 @@ export default function PlayPage() {
 
   const currentEndingType = getEndingType(currentNode);
   const shouldShowEndingOverlay =
-    !isPlayingVideo && currentNode?.nodeType === "ending" && Boolean(currentEndingType);
+    !isPlayingVideo && !showCredits && currentNode?.nodeType === "ending" && Boolean(currentEndingType);
   const shouldShowCompletionModal =
-    !isPlayingVideo && !shouldShowEndingOverlay && isChapterCompletionNode(currentNode);
+    !isPlayingVideo && !showCredits && !shouldShowEndingOverlay && isChapterCompletionNode(currentNode);
 
   return (
     <main ref={playViewRef} className="h-screen w-screen overflow-hidden">
       {isPlayingVideo && currentPreVideoUrl ? (
         <PreVideoPlayer videoUrl={currentPreVideoUrl} onFinish={handleVideoFinish} />
+      ) : showCredits ? (
+        <EndingCredits onComplete={() => navigate("/")} />
       ) : (
         <Desktop />
       )}
@@ -141,7 +156,12 @@ export default function PlayPage() {
 
       {shouldShowCompletionModal && <ChapterCompletionModal />}
 
-      {shouldShowEndingOverlay && <EndingResultOverlay endingType={currentEndingType} />}
+      {shouldShowEndingOverlay && (
+        <EndingResultOverlay
+          endingType={currentEndingType}
+          onPrimaryAction={() => setShowCredits(true)}
+        />
+      )}
 
       {/* Hidden info for development/debugging */}
       {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">
