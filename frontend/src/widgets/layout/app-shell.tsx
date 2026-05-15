@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
+import axios from "axios";
 import { useAuthStore } from "../../app/store/authStore";
 import { useClientStore } from "../../app/store/clientStore";
 import { tokenManager } from "../../shared/utils/tokenManager";

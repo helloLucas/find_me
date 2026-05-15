@@ -19,15 +19,13 @@ const CREDITS_DATA = {
         { role: 'DIRECTOR', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'PLANNING & NARRATIVE DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'FRONTEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'UI/UX & VISUAL DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SOUND DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
+        { role: 'SOUND & VISUAL DESIGN', names: 'Arin Kim, Woongki Min,\nSeohyun Park, Donghun Yoo,\nYujin Lee, Jaeyong Lee' },
     ],
     right: [
         { role: 'BACKEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'INFRASTRUCTURE & DEVOPS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'VIDEO & MOTION GRAPHICS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'QA & PLAYTESTING', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers, And You' }
+        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers,\nAnd You' }
     ]
 };
 
