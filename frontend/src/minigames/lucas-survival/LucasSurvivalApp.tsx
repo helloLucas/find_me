@@ -4734,7 +4734,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
                 style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
                 onClick={() => navigate('/minigames')}
               >
-                RETURN TO LOBBY
+                BACK TO LOBBY
               </button>
             )}
           </div>
@@ -4743,7 +4743,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     }
 
     return null;
-  }, [applyCard, cards, hud, selectedCardIndex, startGame]);
+  }, [applyCard, cards, hud, selectedCardIndex, startGame, isPractice, navigate]);
 
   return (
     <div className="ls-root">
