@@ -156,6 +156,60 @@ WITH transition_values AS (
             100
         ),
         (
+            'CH4_CORE_BLOCKED',
+            'CH4_CORE_BLOCKED',
+            'command',
+            'premature_sshnuke_nudge',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^\\s*sshnuke(?!\\s+(?:-h|--help)\\s*$)(?:\\s|$).*$",
+  "requiredFlags": ["ssh_fingerprinted"],
+  "nudgeOnly": true,
+  "nudgeOnFlagMiss": "아직 아니야. 포트랑 SSH 지문부터 확인해. 취약점이 열린 걸 증명하기 전엔 저 도구는 그냥 소음이야."
+}$json$::jsonb,
+            $json${
+  "recentResult": "NUDGE_PREMATURE_COMMAND"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_GATE_TRACE_VIEWED',
+            'CH4_GATE_TRACE_VIEWED',
+            'command',
+            'premature_sshnuke_nudge',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^\\s*sshnuke(?!\\s+(?:-h|--help)\\s*$)(?:\\s|$).*$",
+  "requiredFlags": ["ssh_fingerprinted"],
+  "nudgeOnly": true,
+  "nudgeOnFlagMiss": "아직 아니야. 포트랑 SSH 지문부터 확인해. 취약점이 열린 걸 증명하기 전엔 저 도구는 그냥 소음이야."
+}$json$::jsonb,
+            $json${
+  "recentResult": "NUDGE_PREMATURE_COMMAND"
+}$json$::jsonb,
+            95
+        ),
+        (
+            'CH4_TARGET_SCAN',
+            'CH4_TARGET_SCAN',
+            'command',
+            'premature_sshnuke_nudge',
+            'server_rule',
+            $json${
+  "rule": "REGEX_FALLBACK",
+  "commandRegex": "^\\s*sshnuke(?!\\s+(?:-h|--help)\\s*$)(?:\\s|$).*$",
+  "requiredFlags": ["ssh_fingerprinted"],
+  "nudgeOnly": true,
+  "nudgeOnFlagMiss": "아직 아니야. 포트랑 SSH 지문부터 확인해. 취약점이 열린 걸 증명하기 전엔 저 도구는 그냥 소음이야."
+}$json$::jsonb,
+            $json${
+  "recentResult": "NUDGE_PREMATURE_COMMAND"
+}$json$::jsonb,
+            95
+        ),
+        (
             'CH4_SSH_FINGERPRINTED',
             'CH4_SSHNUKE_EXECUTED',
             'command',
@@ -163,7 +217,7 @@ WITH transition_values AS (
             'server_rule',
             $json${
   "rule": "REGEX_FALLBACK",
-  "commandRegex": "^\\s*sshnuke(?=.*\\s(?:10\\.2\\.2\\.2|universe-core)(?:\\s|$))(?=.*\\s--?rootpw(?:=|\\s+)(?:\\\"[^\\\"]+\\\"|'[^']+'|\\S+)).*$"
+  "commandRegex": "^\\s*sshnuke(?=.*\\s(?:10\\.2\\.2\\.2|universe-core)(?:\\s|$))(?=.*\\s--?rootpw(?:=(?:\\\"[^\\\"]+\\\"|'[^']+'|[^\\s=]+)|\\s+(?![\\\"']?=)(?:\\\"[^\\\"]+\\\"|'[^']+'|[^\\s=]+))).*$"
 }$json$::jsonb,
             $json${
   "setFlags": {
