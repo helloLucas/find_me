@@ -3,6 +3,7 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useModalStore } from "../../app/store/modalStore";
 import { useNotepadStore } from "../../app/store/notepadStore";
 import { useParams } from "react-router-dom";
+import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 
 interface TrashItem {
   id: string;
@@ -14,6 +15,7 @@ export const TrashWindow: React.FC = () => {
   const { chapterCode } = useParams();
   const { addTab } = useNotepadStore();
   const { openWindow, focusWindow } = useWindowStore.getState();
+  const { currentNode } = useStoryRuntimeStore();
 
   const trashItems: TrashItem[] = [
     {
@@ -68,7 +70,7 @@ echo FRAGMENT | nc 127.0.0.1 9091 > laplace_fragment_02.sh
       message: `'${item.name}' 파일을 메모장으로 복원하시겠습니까?`,
       type: "confirm",
       onConfirm: () => {
-        addTab(chapterCode || "default", item.name.replace(".txt", ""), item.content);
+        addTab(normalizedChapterCode, item.name.replace(".txt", ""), item.content);
 
         openWindow("notepad");
         focusWindow("notepad");
@@ -76,39 +78,39 @@ echo FRAGMENT | nc 127.0.0.1 9091 > laplace_fragment_02.sh
     });
   };
 
-  const isChapter3 = chapterCode === "week03";
+  const currentChapter = (() => {
+    if (chapterCode === "week03" || chapterCode === "ch3" || chapterCode === "week3") return 3;
+    if (!currentNode?.code) return 0;
+    const match = currentNode.code.match(/^CH(\d+)_/i);
+    return match ? parseInt(match[1], 10) : 0;
+  })();
+  const isChapter3 = currentChapter === 3;
+  const normalizedChapterCode = isChapter3 ? "week03" : (chapterCode || "default");
 
   return (
     <div className="p-6 h-full bg-[#1e1e1e] select-none text-white font-trash overflow-y-auto">
-      {isChapter3 ? (
-        <div className="grid grid-cols-3 gap-6">
-          {trashItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col items-center gap-2 cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/20 group"
-              onDoubleClick={() => handleRestore(item)}
-            >
-              <div className="relative">
-                <img src="/pixel_notepad_icon.svg" alt="Text file" className="w-12 h-12 opacity-80 group-hover:opacity-100" />
-                <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-[#1e1e1e]">
-                  !
-                </div>
+      <div className="grid grid-cols-3 gap-6">
+        {trashItems.map((item) => (
+          <div
+            key={item.id}
+            className="flex flex-col items-center gap-2 cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/20 group"
+            onDoubleClick={() => handleRestore(item)}
+          >
+            <div className="relative">
+              <img src="/pixel_notepad_icon.svg" alt="Text file" className="w-12 h-12 opacity-80 group-hover:opacity-100" />
+              <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-[#1e1e1e]">
+                !
               </div>
-              <span
-                className="w-full max-w-[150px] truncate text-center text-xs font-medium leading-tight"
-                title={item.name}
-              >
-                {item.name}
-              </span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center h-full opacity-30 grayscale">
-          <img src="/pixel_trash_icon.svg" alt="Empty trash" className="w-16 h-16 mb-2" />
-          <p className="text-xs uppercase tracking-widest">Trash is empty</p>
-        </div>
-      )}
+            <span
+              className="w-full max-w-[150px] truncate text-center text-xs font-medium leading-tight"
+              title={item.name}
+            >
+              {item.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
