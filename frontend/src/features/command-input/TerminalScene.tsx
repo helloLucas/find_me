@@ -85,9 +85,15 @@ function parseSshnukeRootPassword(command: string) {
   }
 
   const passwordMatch = trimmedCommand.match(
-    /(?:^|\s)--?rootpw(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/i
+    /(?:^|\s)--?rootpw(?:=(?:"([^"]+)"|'([^']+)'|([^\s=]+))|\s+(?!["']?=)(?:"([^"]+)"|'([^']+)'|([^\s=]+)))/i
   );
-  const password = passwordMatch?.[1] ?? passwordMatch?.[2] ?? passwordMatch?.[3];
+  const password =
+    passwordMatch?.[1] ??
+    passwordMatch?.[2] ??
+    passwordMatch?.[3] ??
+    passwordMatch?.[4] ??
+    passwordMatch?.[5] ??
+    passwordMatch?.[6];
   return password?.trim() ? password : undefined;
 }
 

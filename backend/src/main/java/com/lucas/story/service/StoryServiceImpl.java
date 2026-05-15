@@ -1062,6 +1062,10 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
+    if (config.path("nudgeOnly").asBoolean(false)) {
+      return false;
+    }
+
     // Chapter 2 MVP에서 현재 코드 구조만으로 안전하게 처리 가능한 룰만 분기한다.
     return switch (rule) {
       case RULE_AUTO_SYSTEM -> matchesAutoSystemRule(request);
@@ -5355,6 +5359,7 @@ public class StoryServiceImpl implements StoryService {
     String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
     if (nudgeMessage != null) {
       String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+      String prompt = buildPromptFromSnapshot(latestSnapshot, profile, cwd);
 
       // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
       // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
@@ -5411,7 +5416,7 @@ public class StoryServiceImpl implements StoryService {
                   .stdout(List.of())
                   .stderr(List.of())
                   .cwd(cwd)
-                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .prompt(prompt)
                   .resultCode("NUDGE")
                   .build())
           .build();
@@ -5534,18 +5539,9 @@ public class StoryServiceImpl implements StoryService {
       String nudge = getTextField(config, "nudgeOnFlagMiss");
       if (nudge == null || nudge.isBlank()) continue;
 
-      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
-      String expectedCommand = getTextField(config, "command");
-      if (expectedCommand == null || !command.command().equals(expectedCommand)) continue;
+      if (!matchesCwdRequirement(config, latestSnapshot)) continue;
 
-      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
-      String expectedPath = getTextField(config, "resolvedPath");
-      if (expectedPath != null) {
-        String rawPath = firstNonOptionArgument(command.args());
-        if (rawPath == null) continue;
-        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
-        if (!expectedPath.equals(actualPath)) continue;
-      }
+      if (!matchesNudgeCommandPattern(config, command, latestSnapshot)) continue;
 
       // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
       if (!matchesFlagRequirements(config, latestSnapshot)) {
@@ -5555,6 +5551,82 @@ public class StoryServiceImpl implements StoryService {
 
     // near-miss가 없으면 일반 터미널 실행으로 진행한다.
     return null;
+  }
+
+  private boolean matchesNudgeCommandPattern(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    if (config == null || config.isNull() || command == null) {
+      return false;
+    }
+
+    JsonNode acceptedForms = config.get("acceptedForms");
+    if (acceptedForms != null && acceptedForms.isArray()) {
+      List<String> tokens = new ArrayList<>();
+      tokens.add(command.command());
+      tokens.addAll(command.args());
+      for (JsonNode acceptedForm : acceptedForms) {
+        if (matchesCommandForm(acceptedForm, tokens)) {
+          return true;
+        }
+      }
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      String rawCommand = command.command() + " " + String.join(" ", command.args());
+      try {
+        return Pattern.compile(commandRegex, Pattern.DOTALL).matcher(rawCommand.trim()).matches();
+      } catch (PatternSyntaxException e) {
+        log.warn("Invalid nudge commandRegex: {}", commandRegex, e);
+        return false;
+      }
+    }
+
+    // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+    String expectedCommand = getTextField(config, "command");
+    if (expectedCommand == null || !command.command().equals(expectedCommand)) {
+      return false;
+    }
+
+    // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+    String expectedPath = getTextField(config, "resolvedPath");
+    if (expectedPath != null) {
+      String rawPath = firstNonOptionArgument(command.args());
+      if (rawPath == null) return false;
+      String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+      return expectedPath.equals(actualPath);
+    }
+
+    return true;
+  }
+
+  private String buildPromptFromSnapshot(
+      JsonNode snapshot, TerminalChapterProfile profile, String fallbackCwd) {
+    JsonNode terminal = snapshot.path("terminal");
+    String cwd = terminal.path("cwd").asText(fallbackCwd);
+    if (cwd == null || cwd.isBlank()) {
+      cwd = profile.defaultCwd();
+    }
+
+    String promptUser = terminal.path("promptUser").asText(profile.promptUser());
+    String promptHost = terminal.path("promptHost").asText(profile.promptHost());
+    String displayCwd = toPromptDisplayCwd(cwd, profile.defaultCwd());
+    String promptSymbol = "root".equals(promptUser) ? "#" : "$";
+
+    return promptUser + "@" + promptHost + ":" + displayCwd + promptSymbol;
+  }
+
+  private String toPromptDisplayCwd(String cwd, String defaultCwd) {
+    if (cwd == null || cwd.isBlank()) {
+      return "~";
+    }
+    if (cwd.equals(defaultCwd)) {
+      return "~";
+    }
+    if (cwd.startsWith(defaultCwd + "/")) {
+      return "~" + cwd.substring(defaultCwd.length());
+    }
+    return cwd;
   }
 
   /**
