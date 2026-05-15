@@ -342,7 +342,7 @@ export const Lucas: React.FC = () => {
               type="text"
               value={hintInput}
               onChange={(event) => setHintInput(event.target.value)}
-              placeholder={isHintRequesting ? '응답 생성 중...' : '루카스에게 메시지를 보내세요'}
+              placeholder={isHintRequesting ? '생각 중...' : '루카스에게 질문하기'}
               autoFocus
               disabled={isHintRequesting}
             />
