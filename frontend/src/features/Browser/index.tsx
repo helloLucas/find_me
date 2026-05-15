@@ -171,10 +171,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if (currentNode?.code?.startsWith("CH2_")) {
       return [{
         id: "tab1",
-        title: "History",
+        title: "방문 기록",
         url: "system://history",
         component: "history",
-        history: [{ url: "system://history", component: "history", title: "History" }],
+        history: [{ url: "system://history", component: "history", title: "방문 기록" }],
         historyIndex: 0,
         currentView: "home",
         selectedHint: null,
@@ -876,10 +876,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  검색 기록 (History)
+                  검색 기록
                 </button>
               </div>
             )}
