@@ -319,6 +319,53 @@ img {
   animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.desktop-window-shell {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: bottom center;
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 180ms ease;
+  animation: desktop-window-open 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform, filter;
+}
+
+.desktop-window-shell--minimized {
+  opacity: 0;
+  transform: translate3d(0, 68px, 0) scale(0.94);
+  filter: brightness(0.82) saturate(0.78);
+  pointer-events: none;
+}
+
+.desktop-window-shell--closing {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0) scale(0.96);
+  filter: brightness(1.18) saturate(0.85);
+  pointer-events: none;
+}
+
+@keyframes desktop-window-open {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.96);
+    filter: brightness(1.16) saturate(1.12);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-window-shell {
+    animation: none;
+    transition: none;
+  }
+}
+
 @keyframes fadeInScale {
   0% {
     opacity: 0;
