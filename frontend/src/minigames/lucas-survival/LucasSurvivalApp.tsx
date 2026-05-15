@@ -1220,8 +1220,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     final: false,
     startTextUntil: 0,
   });
-  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
-
   const [hud, setHud] = useState<HudState>({
     timerText: '05:00',
     hpPercent: 100,
@@ -1364,12 +1362,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     lastMsRef.current = performance.now();
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(loop);
-
-    if (!isPractice) {
-      void fragmentApi.startMinigame('4').then((res) => {
-        setGameSessionId(res);
-      });
-    }
   }, [appendCombatLog, ensureAudio, playSfx, isPractice]);
 
   const stopGame = useCallback(() => {
@@ -4881,7 +4873,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     </div>
   );
 }
-
 
 
 
