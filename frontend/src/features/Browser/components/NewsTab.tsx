@@ -22,6 +22,10 @@ const SCROLL_BOTTOM_TOLERANCE_PX = 2;
 const CORRUPTION_CASCADE_DURATION_MS = 1400;
 const MIN_CORRUPTION_STEP_MS = 120;
 
+function isArticleScrolledToBottom(element: HTMLDivElement) {
+  return element.scrollTop + element.clientHeight >= element.scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
+}
+
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -58,6 +62,7 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   const corruptionStepTimerRef = useRef<number | null>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
   const scrollPersistFrameRef = useRef<number | null>(null);
+  const transitionFrameRef = useRef<number | null>(null);
   const pendingScrollTopRef = useRef(0);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
@@ -118,6 +123,11 @@ export const NewsTab: React.FC<NewsTabProps> = ({
       window.clearTimeout(corruptionStepTimerRef.current);
       corruptionStepTimerRef.current = null;
     }
+
+    if (transitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(transitionFrameRef.current);
+      transitionFrameRef.current = null;
+    }
   }, [currentNode?.id]);
 
   useEffect(() => {
@@ -163,6 +173,10 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         window.cancelAnimationFrame(scrollPersistFrameRef.current);
         scrollPersistFrameRef.current = null;
       }
+      if (transitionFrameRef.current !== null) {
+        window.cancelAnimationFrame(transitionFrameRef.current);
+        transitionFrameRef.current = null;
+      }
     };
   }, []);
 
@@ -196,10 +210,33 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     });
   }, [currentNode, isScrollTriggeredArticleNode, submitStoryAction]);
 
+  const handleArticleBottomReached = useCallback(() => {
+    if (!isScrollTriggeredArticleNode || !showArticle) return;
+
+    if (usesScrollCascadeCorruption && !scrollCorruptionTriggered) {
+      setScrollCorruptedUntilIndex(-1);
+      setScrollCorruptionNodeId(currentNode?.id ?? null);
+    }
+
+    if (transitionFrameRef.current !== null) return;
+
+    transitionFrameRef.current = window.requestAnimationFrame(() => {
+      transitionFrameRef.current = null;
+      triggerArticleScrollTransition();
+    });
+  }, [
+    currentNode?.id,
+    isScrollTriggeredArticleNode,
+    scrollCorruptionTriggered,
+    showArticle,
+    triggerArticleScrollTransition,
+    usesScrollCascadeCorruption,
+  ]);
+
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      const { scrollTop, scrollHeight, clientHeight } = element;
+      const { scrollTop } = element;
 
       pendingScrollTopRef.current = scrollTop;
       if (scrollPersistFrameRef.current === null) {
@@ -209,31 +246,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
         });
       }
 
-      const isAtBottom =
-        scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
-
-      if (
-        usesScrollCascadeCorruption &&
-        !scrollCorruptionTriggered &&
-        isAtBottom
-      ) {
-        setScrollCorruptedUntilIndex(-1);
-        setScrollCorruptionNodeId(currentNode?.id ?? null);
-      }
-
-      if (!isScrollTriggeredArticleNode || !showArticle) return;
-
-      if (isAtBottom) {
-        triggerArticleScrollTransition();
+      if (isArticleScrolledToBottom(element)) {
+        handleArticleBottomReached();
       }
     },
     [
-      currentNode?.id,
-      isScrollTriggeredArticleNode,
-      scrollCorruptionTriggered,
-      showArticle,
-      triggerArticleScrollTransition,
-      usesScrollCascadeCorruption,
+      handleArticleBottomReached,
     ]
   );
 

@@ -161,12 +161,45 @@ function useRenderedLines(text: string) {
   return { lines, measureRef };
 }
 
-function useScrambledFrame(lines: string[], intensity: ArticleCorruptionIntensity) {
+function useElementVisibility<T extends Element>() {
+  const targetRef = useRef<T | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const element = targetRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(Boolean(entry?.isIntersecting));
+      },
+      {
+        root: null,
+        rootMargin: "120px 0px",
+        threshold: 0,
+      }
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return { targetRef, isVisible };
+}
+
+function useScrambledFrame(
+  lines: string[],
+  intensity: ArticleCorruptionIntensity,
+  isVisible: boolean
+) {
   const [scrambledFrame, setScrambledFrame] = useState(() =>
     buildScrambledFrame(lines, intensity)
   );
 
   useEffect(() => {
+    if (!isVisible) return;
+
     const syncFrameId = window.setTimeout(() => {
       setScrambledFrame(buildScrambledFrame(lines, intensity));
     }, 0);
@@ -181,7 +214,7 @@ function useScrambledFrame(lines: string[], intensity: ArticleCorruptionIntensit
       window.clearTimeout(syncFrameId);
       window.clearInterval(intervalId);
     };
-  }, [lines, intensity]);
+  }, [lines, intensity, isVisible]);
 
   return scrambledFrame;
 }
@@ -202,7 +235,8 @@ function CorruptionLayers({
   intensity: ArticleCorruptionIntensity;
 }) {
   const { lines, measureRef } = useRenderedLines(text);
-  const scrambledFrame = useScrambledFrame(lines, intensity);
+  const { targetRef, isVisible } = useElementVisibility<HTMLSpanElement>();
+  const scrambledFrame = useScrambledFrame(lines, intensity, isVisible);
   const baseLines = useMemo(() => renderLines(scrambledFrame.baseLines), [scrambledFrame.baseLines]);
   const cyanLines = useMemo(() => renderLines(scrambledFrame.cyanLines), [scrambledFrame.cyanLines]);
   const magentaLines = useMemo(
@@ -211,7 +245,7 @@ function CorruptionLayers({
   );
 
   return (
-    <span className="story-corrupted-paragraph__content">
+    <span ref={targetRef} className="story-corrupted-paragraph__content">
       <span aria-hidden="true" ref={measureRef} className="story-corrupted-paragraph__layout">
         {text}
       </span>
