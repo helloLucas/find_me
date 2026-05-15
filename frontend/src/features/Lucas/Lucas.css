@@ -421,9 +421,16 @@
 
 .hint-input-form input:disabled,
 .hint-input-form button:disabled {
-  cursor: not-allowed;
   opacity: 0.55;
   filter: saturate(0.7);
+}
+
+.hint-input-form input:disabled {
+  cursor: not-allowed;
+}
+
+.hint-input-form button:disabled {
+  cursor: default;
 }
 
 .hint-input-form button:disabled:hover {
