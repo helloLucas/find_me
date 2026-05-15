@@ -23,11 +23,12 @@ export const Taskbar: React.FC = () => {
   const hasConversations = Object.keys(conversations).length > 0;
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
-  const terminalWindow = windows.find((windowState) => windowState.id === "terminal");
-  const messengerWindow = windows.find((windowState) => windowState.id === "messenger");
-  const browserWindows = windows.filter((windowState) => windowState.type === "browser");
-  const notepadWindows = windows.filter((windowState) => windowState.type === "notepad");
-  const minigameWindows = windows.filter((windowState) => windowState.type === "minigame");
+  const taskbarWindows = windows.filter((windowState) => !windowState.isClosing);
+  const terminalWindow = taskbarWindows.find((windowState) => windowState.id === "terminal");
+  const messengerWindow = taskbarWindows.find((windowState) => windowState.id === "messenger");
+  const browserWindows = taskbarWindows.filter((windowState) => windowState.type === "browser");
+  const notepadWindows = taskbarWindows.filter((windowState) => windowState.type === "notepad");
+  const minigameWindows = taskbarWindows.filter((windowState) => windowState.type === "minigame");
   const pendingOpenChatAction = Object.values(conversations)
     .flatMap((conversation) => conversation.actions ?? [])
     .find((action) => action.actionType === "open_friend_chat");

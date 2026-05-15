@@ -12,6 +12,7 @@ export interface WindowState {
   title: string;
   isMinimized: boolean;
   isMaximized: boolean;
+  isClosing: boolean;
   zIndex: number;
   content?: string;
 }
@@ -26,6 +27,7 @@ interface WindowStore {
     legacyId?: string
   ) => void;
   closeWindow: (id: DesktopWindowId) => void;
+  markWindowClosing: (id: DesktopWindowId) => void;
   minimizeWindow: (id: DesktopWindowId) => void;
   maximizeWindow: (id: DesktopWindowId) => void;
   toggleMaximizeWindow: (id: DesktopWindowId) => void;
@@ -67,6 +69,7 @@ function getTopVisibleWindowId(
   return (
     [...windows]
       .filter((windowState) => !windowState.isMinimized && windowState.id !== excludedId)
+      .filter((windowState) => !windowState.isClosing)
       .sort((left, right) => right.zIndex - left.zIndex)[0]?.id ?? null
   );
 }
@@ -106,6 +109,7 @@ function bringWindowToFront(
       ? {
         ...windowState,
         ...patch,
+        isClosing: false,
         isMinimized: false,
         zIndex: nextZIndex,
       }
@@ -143,6 +147,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         content,
         isMinimized: false,
         isMaximized: false,
+        isClosing: false,
         zIndex: nextZIndex,
       };
 
@@ -157,6 +162,22 @@ export const useWindowStore = create<WindowStore>((set) => ({
       const windows = state.windows.filter((windowState) => windowState.id !== id);
       const activeWindowId =
         state.activeWindowId === id ? getTopVisibleWindowId(windows) : state.activeWindowId;
+
+      return {
+        windows,
+        activeWindowId,
+      };
+    }),
+
+  markWindowClosing: (id) =>
+    set((state) => {
+      const windows = state.windows.map((windowState) =>
+        windowState.id === id ? { ...windowState, isClosing: true } : windowState
+      );
+      const activeWindowId =
+        state.activeWindowId === id
+          ? getTopVisibleWindowId(windows, id)
+          : state.activeWindowId;
 
       return {
         windows,

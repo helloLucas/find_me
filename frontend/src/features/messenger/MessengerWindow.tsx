@@ -80,7 +80,7 @@ interface MessengerWindowProps {
 export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) => {
   const { conversations, activeRoomId, setActiveRoom, markMessengerSeen } = useMessengerStore();
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === windowId));
-  const { closeWindow, focusWindow, openWindow } = useWindowStore();
+  const { closeWindow, markWindowClosing, focusWindow, openWindow } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const windowRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -107,10 +107,11 @@ export const MessengerWindow: React.FC<MessengerWindowProps> = ({ windowId }) =>
     if (isClosing) return;
 
     setIsClosing(true);
+    markWindowClosing(windowId);
     window.setTimeout(() => {
       closeWindow(windowId);
     }, WINDOW_CLOSE_ANIMATION_MS);
-  }, [closeWindow, isClosing, windowId]);
+  }, [closeWindow, isClosing, markWindowClosing, windowId]);
 
   const isInCh3 = Boolean(currentNode?.code?.startsWith("CH3_"));
   const visibleMessages = conversation?.messages.filter((msg) => {

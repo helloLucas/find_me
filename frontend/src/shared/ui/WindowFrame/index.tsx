@@ -9,6 +9,7 @@ interface WindowFrameProps {
   children: React.ReactNode;
   zIndex: number;
   onClose?: () => void;
+  onCloseStart?: () => void;
   onMinimize?: () => void;
   onFocus?: () => void;
   onToggleMaximize?: () => void;
@@ -32,6 +33,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   children,
   zIndex,
   onClose,
+  onCloseStart,
   onMinimize,
   onFocus,
   onToggleMaximize,
@@ -246,6 +248,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     if (!onClose || isClosing) return;
 
     setIsClosing(true);
+    onCloseStart?.();
     window.setTimeout(() => {
       onClose();
     }, WINDOW_CLOSE_ANIMATION_MS);
