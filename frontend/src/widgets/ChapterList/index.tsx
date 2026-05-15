@@ -11,7 +11,7 @@ import { ChapterCard } from './ui/ChapterCard';
  */
 export const ChapterList = () => {
     const { data: chapters, isLoading, isError } = useChapterStatus();
-    const { selectChapter, isSelectingChapter } = useChapterNavigate();
+    const { selectChapter } = useChapterNavigate();
     const shouldResolveEndingSignal = Boolean(
         chapters?.some((chapter) => chapter.code === 'week04' && chapter.status === CHAPTER_STATUS.COMPLETED)
     );
@@ -39,11 +39,7 @@ export const ChapterList = () => {
                         && Boolean(endingProgress?.hasUnlockedEnding)
                         && !endingProgress?.allUnlocked
                     }
-                    onClick={() => {
-                        if (!isSelectingChapter) {
-                            void selectChapter(chapter.code);
-                        }
-                    }}
+                    onClick={() => selectChapter(chapter.uriHash)}
                 />
             ))}
         </div>
