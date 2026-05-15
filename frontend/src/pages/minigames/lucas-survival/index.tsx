@@ -2,5 +2,5 @@ import { LucasSurvivalApp } from '../../../minigames/lucas-survival/LucasSurviva
 import '../../../minigames/lucas-survival/styles.css';
 
 export default function LucasSurvivalMinigamePage() {
-  return <LucasSurvivalApp isPractice={true} />;
+  return <LucasSurvivalApp isPractice={false} />;
 }
