@@ -8,6 +8,7 @@ import { PreVideoPlayer } from "../../features/story-runtime/ui/PreVideoPlayer";
 import { audioManager } from "../../features/story-runtime/audioManager";
 import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { EndingResultOverlay } from "../../widgets/EndingResultOverlay";
+import { EndingCredits } from "../../widgets/EndingCredits";
 import { PlayConnectionBanner } from "../../widgets/PlayConnectionBanner";
 import { EndingCredits } from "../../widgets/EndingCredits";
 import { trackAnalyticsEvent } from "../../shared/analytics";

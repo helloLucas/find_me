@@ -19,13 +19,15 @@ const CREDITS_DATA = {
         { role: 'DIRECTOR', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'PLANNING & NARRATIVE DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'FRONTEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SOUND & VISUAL DESIGN', names: 'Arin Kim, Woongki Min,\nSeohyun Park, Donghun Yoo,\nYujin Lee, Jaeyong Lee' },
+        { role: 'UI/UX & VISUAL DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
+        { role: 'SOUND DESIGN', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
     ],
     right: [
         { role: 'BACKEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'INFRASTRUCTURE & DEVOPS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'VIDEO & MOTION GRAPHICS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers,\nAnd You' }
+        { role: 'QA & PLAYTESTING', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
+        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers, And You' }
     ]
 };
 
@@ -107,6 +109,7 @@ export const EndingCredits: React.FC<EndingCreditsProps> = ({ onComplete }) => {
                 muted
                 playsInline
                 crossOrigin="anonymous"
+                poster="/void_city_ending_bg.png"
                 src="https://djbod0nv85jx9.cloudfront.net/videos/ending/ending_credits.mp4"
                 onEnded={startFinale}
             />
