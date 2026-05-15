@@ -9,6 +9,10 @@ type AuthUserProfile = {
   role?: UserRole | null;
 };
 
+function isDecodedTokenExpired(decoded: { exp?: number }) {
+  return typeof decoded.exp === "number" && decoded.exp * 1000 <= Date.now();
+}
+
 interface AuthState {
   isLoggedIn: boolean;
   role: UserRole | null;
@@ -41,6 +45,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (accessToken) {
       try {
         const decoded: any = jwtDecode(accessToken);
+        if (isDecodedTokenExpired(decoded)) {
+          set({
+            isLoggedIn: false,
+            role: null,
+            nickname: "ANONYMOUS",
+            isInitialized: false,
+          });
+          return;
+        }
         set({
           isLoggedIn: true,
           role: decoded.role || null,
