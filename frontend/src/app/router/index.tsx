@@ -12,6 +12,7 @@ import AdminPage from "../../pages/admin";
 import MinigameSelectionPage from "../../pages/minigames/MinigameSelectionPage";
 import { PacmanArcadePage, StarforceArcadePage, PacketDashArcadePage, LucasSurvivalArcadePage, LucasRouteArcadePage } from "../../pages/minigames/ArcadeMinigamePages";
 import AppShell from "../../widgets/layout/app-shell";
+import TestCreditsPage from "../../pages/test/credits";
 
 function withShell(element: ReactNode) {
   return <AppShell>{element}</AppShell>;
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: withShell(<AdminPage />),
+  },
+  {
+    path: "/test/credits",
+    element: <TestCreditsPage />,
   },
   {
     path: "*",

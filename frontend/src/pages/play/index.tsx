@@ -10,6 +10,7 @@ import { ChapterCompletionModal } from "../../widgets/ChapterCompletionModal";
 import { EndingResultOverlay } from "../../widgets/EndingResultOverlay";
 import { EndingCredits } from "../../widgets/EndingCredits";
 import { PlayConnectionBanner } from "../../widgets/PlayConnectionBanner";
+import { EndingCredits } from "../../widgets/EndingCredits";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 import { useTrackVisible } from "../../shared/analytics/useTrackVisible";
 import type { StoryNode } from "../../shared/types/story";
