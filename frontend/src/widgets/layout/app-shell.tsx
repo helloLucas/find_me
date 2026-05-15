@@ -44,7 +44,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
   // [중요] 자식 컴포넌트의 useEffect보다 먼저 실행되도록 렌더링 단계에서 동기적으로 플래그 설정
   // refreshLock이 걸려있지 않을 때만 플래그를 세팅하여 중복 실행 방지
-  if (isExpired && !isAtRoot && !refreshLock.current) {
+  if (isExpired && !refreshLock.current) {
     sessionStorage.setItem('is_silent_refreshing', 'true');
   }
 
@@ -52,18 +52,17 @@ export default function AppShell({ children }: PropsWithChildren) {
   useEffect(() => {
     // refreshLock.current가 true인 동안은 이 블록에 절대 진입하지 않습니다.
     // isRefreshingUI 변경으로 리렌더링이 발생해도 중복 실행이 차단됩니다.
-    if (!isExpired || isAtRoot || refreshLock.current) return;
+    if (!isExpired || refreshLock.current) return;
 
     console.warn(t("auth.accessTokenExpired"));
 
     // 동기적으로 즉시 락 획득 (await 이전, 어떤 비동기 컨텍스트 스위치도 없이)
     refreshLock.current = true;
-    setIsRefreshingUI(true);
+    setIsRefreshingUI(!isAtRoot);
 
     const attemptRefresh = async () => {
       // 네트워크 에러 여부를 finally에서 판단하기 위한 플래그
       let isNetworkOrServerError = false;
-      let refreshSucceeded = false;
 
       try {
         const cleanAxios = axios.create();
@@ -82,7 +81,6 @@ export default function AppShell({ children }: PropsWithChildren) {
 
         tokenManager.setAccessToken(newAccessToken);
         checkAuth(); // authStore 동기화
-        refreshSucceeded = true;
 
       } catch (error: any) {
         isNetworkOrServerError = isConnectionError(error);
@@ -94,6 +92,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           // 4xx 에러: 리프레시 토큰 자체 만료 → 세션 완전 종료
           console.error('Silent refresh failed (Refresh Token expired):', error);
           clearAuth();
+          if (isAtRoot) return;
           sessionStorage.setItem('show_session_expired_popup', 'true');
           navigate('/', { replace: true });
         }
