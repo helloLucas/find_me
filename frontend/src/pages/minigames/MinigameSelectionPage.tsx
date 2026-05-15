@@ -39,8 +39,8 @@ const MinigameSelectionPage = () => {
             id: 'lucas-survival',
             title: 'LUCAS SURVIVAL',
             chapter: 4,
-            description: 'UNDER DEVELOPMENT',
-            status: 'locked' as const,
+            description: 'SURVIVE THE CYBER SWARM',
+            status: 'available' as const,
             path: '/minigames/lucas-survival',
             backgroundImage: '/lucas_survival_bg.png'
         },
@@ -48,8 +48,8 @@ const MinigameSelectionPage = () => {
             id: 'lucas-route',
             title: 'LUCAS ROUTE',
             chapter: 4,
-            description: 'UNDER DEVELOPMENT',
-            status: 'locked' as const,
+            description: 'NAVIGATE THE OPTIMAL PATH',
+            status: 'available' as const,
             path: '/minigames/lucas-route',
             backgroundImage: '/lucas_route_bg.png'
         }

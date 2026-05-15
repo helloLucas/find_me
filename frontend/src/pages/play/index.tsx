@@ -61,8 +61,12 @@ export default function PlayPage() {
 
   useEffect(() => {
     audioManager.enableGlobalClickSfx("mouse_click_v1.mp3");
-    initializeStory(chapterCode ?? "week01");
+    if (chapterCode) {
+      initializeStory(chapterCode);
+    }
     processedNodeIdRef.current = null;
+    setIsPlayingVideo(false);
+    setCurrentPreVideoUrl(null);
 
     // 플레이 진입(마운트/종료 후 재시작) 시 해당 챕터 메모장 로컬 데이터 초기화
     if (chapterCode) {
@@ -116,7 +120,9 @@ export default function PlayPage() {
     }
   };
 
-  const shouldShowEndingOverlay = !isPlayingVideo && currentNode?.nodeType === "ending";
+  const currentEndingType = getEndingType(currentNode);
+  const shouldShowEndingOverlay =
+    !isPlayingVideo && currentNode?.nodeType === "ending" && Boolean(currentEndingType);
   const shouldShowCompletionModal =
     !isPlayingVideo && !shouldShowEndingOverlay && isChapterCompletionNode(currentNode);
 
@@ -133,7 +139,7 @@ export default function PlayPage() {
 
       {shouldShowCompletionModal && <ChapterCompletionModal />}
 
-      {shouldShowEndingOverlay && <EndingResultOverlay endingType={getEndingType(currentNode)} />}
+      {shouldShowEndingOverlay && <EndingResultOverlay endingType={currentEndingType} />}
 
       {/* Hidden info for development/debugging */}
       {/* <div className="absolute top-2 right-2 text-[8px] text-white/20 pointer-events-none">

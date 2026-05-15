@@ -494,18 +494,19 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
         y: availableHeight / 2 - defaultTerminalSize.h / 2,
       }}
     >
-      <div
-        ref={scrollContainerRef}
-        data-clarity-mask="true"
-        className="w-full h-full overflow-y-auto p-4 text-gray-400 font-terminal text-xs leading-tight terminal-scrollbar"
-        onClick={() => {
-          focusWindow(windowState.id);
-          if (window.getSelection()?.toString() === "") {
-            inputRef.current?.focus();
-          }
-        }}
-      >
-        <div ref={contentRef}>
+      <div className="terminal-retro-surface relative h-full w-full overflow-hidden">
+        <div
+          ref={scrollContainerRef}
+          data-clarity-mask="true"
+          className="relative z-10 w-full h-full overflow-y-auto p-4 text-white font-terminal text-xs leading-tight terminal-scrollbar"
+          onClick={() => {
+            focusWindow(windowState.id);
+            if (window.getSelection()?.toString() === "") {
+              inputRef.current?.focus();
+            }
+          }}
+        >
+          <div ref={contentRef}>
           {terminalOutput.map((output, index) => {
             const part2StartIndex = terminalOutput.findIndex(o => o.text.includes("[SESSION MAP : NULL POINT"));
             const isPart2 = part2StartIndex !== -1 && index >= part2StartIndex;
@@ -529,7 +530,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           if (outputInlinePromptMode) {
             if (inlineAnswer !== undefined) {
               return (
-                <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
+                <div key={output.id} className="terminal-crt-text mb-1 whitespace-pre-wrap text-white">
                   {output.text}
                   {outputInlinePromptMode === "password" ? "" : ` ${inlineAnswer}`}
                 </div>
@@ -538,8 +539,8 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
 
             if (isInlinePromptActive && index === terminalOutput.length - 1) {
               return (
-                <div key={output.id} className="mb-1 flex flex-wrap items-baseline text-gray-400">
-                  <span className="whitespace-pre-wrap">{output.text}</span>
+                <div key={output.id} className="mb-1 flex flex-wrap items-baseline text-white">
+                  <span className="terminal-crt-text whitespace-pre-wrap">{output.text}</span>
                   <form
                     onSubmit={handleCommandSubmit}
                     className="ml-1 inline-flex min-w-20 flex-1 items-center"
@@ -551,13 +552,13 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                       value={inputValue}
                       onChange={(event) => setInputValue(event.target.value)}
                       autoFocus
-                      className="min-w-20 flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
+                      className="terminal-crt-input min-w-20 flex-1 bg-transparent border-none outline-none text-white focus:ring-0 p-0"
                       autoComplete="off"
                       spellCheck="false"
                       style={{
-                        textShadow: "none",
                         color: outputInlinePromptMode === "password" ? "transparent" : undefined,
-                        caretColor: "rgb(156 163 175)",
+                        caretColor: "#ffffff",
+                        textShadow: outputInlinePromptMode === "password" ? "none" : undefined,
                       }}
                       onPaste={handlePaste}
                       onKeyDown={handleKeyDown}
@@ -573,12 +574,11 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
             return (
               <div key={output.id} className="mb-1 whitespace-pre-wrap">
                 <span
-                  className="text-green-500 mr-2"
-                  style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+                  className="terminal-crt-text terminal-crt-text-green text-green-500 mr-2"
                 >
                   {promptInput.prompt}
                 </span>
-                <span className="text-gray-400" style={{ textShadow: "none" }}>
+                <span className="terminal-crt-text text-white">
                   {promptInput.command}
                 </span>
               </div>
@@ -586,7 +586,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           }
 
           return (
-            <div key={output.id} className="mb-1 whitespace-pre-wrap text-gray-400">
+            <div key={output.id} className="mb-1 whitespace-pre-wrap text-white">
               <AnimatedTerminalLine text={output.text} isPart2={isPart2} />
             </div>
           );
@@ -596,8 +596,7 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
           <div className="flex flex-col mt-2">
             <div className="flex items-center">
               <span
-                className="text-green-500 mr-2"
-                style={{ textShadow: "0 0 5px rgba(74, 222, 128, 0.4)" }}
+                className="terminal-crt-text terminal-crt-text-green text-green-500 mr-2"
               >
                 {promptString}
               </span>
@@ -612,17 +611,16 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
                     setAutocompleteSuggestions([]);
                   }}
                   autoFocus
-                  className="flex-1 bg-transparent border-none outline-none text-gray-400 focus:ring-0 p-0"
+                  className="terminal-crt-input flex-1 bg-transparent border-none outline-none text-white focus:ring-0 p-0"
                   autoComplete="off"
                   spellCheck="false"
-                  style={{ textShadow: "none" }}
                   onPaste={handlePaste}
                   onKeyDown={handleKeyDown}
                 />
               </form>
             </div>
             {autocompleteSuggestions.length > 0 && (
-              <div className="text-gray-400 whitespace-pre-wrap mt-1">
+              <div className="terminal-crt-text text-white whitespace-pre-wrap mt-1">
                 {autocompleteSuggestions.length > 20
                   ? autocompleteSuggestions.slice(0, 20).join("  ") +
                     `\n...and ${autocompleteSuggestions.length - 20} more items`
@@ -631,14 +629,15 @@ export const TerminalScene: React.FC<TerminalSceneProps> = ({ windowId }) => {
             )}
           </div>
         ) : !isInlinePromptActive ? (
-          <div className="flex items-center mt-2 text-gray-400">
-            <span className="animate-pulse animate-duration-1000" style={{ textShadow: "none" }}>
+          <div className="flex items-center mt-2 text-white">
+            <span className="terminal-crt-text animate-pulse animate-duration-1000">
               _
             </span>
           </div>
         ) : null}
+          </div>
+          <div ref={endOfOutputRef} />
         </div>
-        <div ref={endOfOutputRef} />
       </div>
     </WindowFrame>
   );

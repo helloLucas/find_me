@@ -7,7 +7,12 @@ export const fragmentApi = {
     return response.data.data;
   },
 
-  acquireFragment: async (code: string): Promise<void> => {
-    await axiosInstance.post<BaseResponse<null>>(`/api/v1/fragments/acquire/${code}`);
+  startMinigame: async (code: string): Promise<string> => {
+    const response = await axiosInstance.post<BaseResponse<{ sessionId: string }>>(`/api/v1/fragments/start/${code}`);
+    return response.data.data.sessionId;
+  },
+
+  acquireFragment: async (code: string, sessionId: string): Promise<void> => {
+    await axiosInstance.post<BaseResponse<null>>(`/api/v1/fragments/acquire/${code}?sessionId=${sessionId}`);
   },
 };
