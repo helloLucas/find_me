@@ -282,7 +282,38 @@ Nmap run completed -- 1 IP address scanned
 
 ```text
 Lucas: "22번. SSH."
-Lucas: "오래된 관리 포트가 아직 살아 있어."
+Lucas: "버전까지 찍어. 취약한 호환 계층이면 뚫을 수 있어."
+```
+
+버전 확인:
+
+```bash
+nmap -sV -p 22 10.2.2.2
+```
+
+출력:
+
+```bash
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     SSH-1.2 universe bridge
+
+Service Info: Access Level <guest>
+Protocol marker: SSH-1.2 legacy compatibility
+Legacy CRC32 reset path detected
+Vulnerability fingerprint: CVE-2001-0144
+
+[HINT]
+fictional helper available: /usr/bin/sshnuke
+sshnuke profile: Lucas-built reset tool for SSH-1.2 universe bridge
+effect: overwrite root password seed without interactive login
+root seed can be supplied by external observer keystroke
+```
+
+루카스:
+
+```text
+Lucas: "저 버전이야. SSH-1 호환 계층에 CRC32 리셋 경로가 남아 있어."
+Lucas: "내가 만든 sshnuke는 그 틈만 찌르도록 맞춰둔 도구야. root 패스워드를 네 입력값으로 덮어써. sshnuke 10.2.2.2 -rootpw=\"네가 기억할 값\"."
 ```
 
 ### 7-3. sshnuke 실행
@@ -309,12 +340,15 @@ System open: Access Level <9>
 [UNIVERSE_CORE_BROADCAST]
 Root credential reset accepted by external observer keystroke.
 PID: 000_LUCAS is requesting attachment to privileged session.
+
+[NEXT]
+ssh root@10.2.2.2
 ```
 
 루카스:
 
 ```text
-Lucas: "멈추지 마. 지금 끊기면 방금 연 문이 닫혀."
+Lucas: "패스워드는 네가 방금 넣은 seed로 바뀌었어. 이제 SSH로 들어가. ssh root@10.2.2.2, 물어보면 그 값을 그대로 입력해."
 ```
 
 ### 7-4. root 접속

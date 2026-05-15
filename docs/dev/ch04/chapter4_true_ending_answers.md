@@ -16,7 +16,9 @@ my-rootpw
 mount lucas-server:/home/guest /mnt/lucas-server
 ```
 
-`-rootpw` 값은 예시다. 플레이어가 설정한 값을 SSH password prompt에 그대로 입력하면 된다. SSH 접속 후에는 `universe-core`의 별도 서버 세션이므로, hosts에 잡힌 `lucas-server` 별칭의 `/home/guest`를 `/mnt/lucas-server`에 붙인다.
+`nmap -sV`는 SSH가 단순히 열려 있는지만 보는 단계가 아니라 `SSH-1.2 universe bridge`와 `CVE-2001-0144` 단서를 확인하는 단계다. 루카스는 이 호환 계층의 CRC32 reset path만 찌르도록 `sshnuke`를 준비해 둔 것으로 설명한다.
+
+`-rootpw` 값은 예시다. 플레이어가 설정한 값을 SSH password prompt에 그대로 입력하면 된다. `sshnuke` 성공 후에는 바로 `ssh root@10.2.2.2`로 접속을 이어가야 한다. SSH 접속 후에는 `universe-core`의 별도 서버 세션이므로, hosts에 잡힌 `lucas-server` 별칭의 `/home/guest`를 `/mnt/lucas-server`에 붙인다.
 
 허용되는 마운트 대체 입력:
 
