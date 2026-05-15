@@ -70,11 +70,13 @@ export default function PlayPage() {
     setCurrentPreVideoUrl(null);
 
     // 플레이 진입(마운트/종료 후 재시작) 시 해당 챕터 메모장 로컬 데이터 초기화
+    /*
     if (chapterCode) {
       localStorage.removeItem(`notebook_memo_tabs_${chapterCode}`);
       localStorage.removeItem(`notebook_memo_active_tab_id_${chapterCode}`);
       localStorage.removeItem("notebook_memo_content");
     }
+    */
 
     return () => {
       audioManager.disableGlobalClickSfx();
