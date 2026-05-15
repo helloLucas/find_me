@@ -225,14 +225,6 @@
       "contentKey": "CH3_CORE_GROUP_GPG",
       "storyKey": "CORE_GROUP_GPG"
     },
-    "/home/guest/.route_cache": {
-      "type": "directory",
-      "name": ".route_cache",
-      "readable": true,
-      "executable": true,
-      "protected": false,
-      "hidden": true
-    },
     "/home/guest/trash": {
       "type": "directory",
       "name": "trash",
