@@ -200,9 +200,7 @@ public class HintOrchestrationServiceImpl implements HintOrchestrationService {
     if ("auto".equalsIgnoreCase(normalized)) {
       return "자동 트리거";
     }
-    if (looksLikeInternalActionToken(normalized)) {
-      return "해당 UI 요소";
-    }
+    
     int atIndex = normalized.indexOf('@');
     if (atIndex > 0) {
       return normalized.substring(0, atIndex + 1) + "서버ip";
