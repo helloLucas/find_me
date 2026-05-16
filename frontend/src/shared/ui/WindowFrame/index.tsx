@@ -1,17 +1,21 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { WindowControlButton } from "../WindowControls";
 import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
+
+const WINDOW_CLOSE_ANIMATION_MS = 320;
 
 interface WindowFrameProps {
   title: string;
   children: React.ReactNode;
   zIndex: number;
   onClose?: () => void;
+  onCloseStart?: () => void;
   onMinimize?: () => void;
   onFocus?: () => void;
   onToggleMaximize?: () => void;
   isMinimized?: boolean;
   isMaximized?: boolean;
+  taskbarTarget?: { x: number; y: number };
   defaultPosition?: { x: number; y: number };
   defaultSize?: { w: number; h: number };
   minSize?: { w: number; h: number };
@@ -25,16 +29,35 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function getMinimizeVars(
+  target: { x: number; y: number } | undefined,
+  geometry: { x: number; y: number; w: number; h: number },
+  isMaximized: boolean
+): React.CSSProperties {
+  if (!target) return {};
+
+  const center = isMaximized
+    ? { x: window.innerWidth / 2, y: Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT) / 2 }
+    : { x: geometry.x + geometry.w / 2, y: geometry.y + geometry.h / 2 };
+
+  return {
+    "--desktop-window-minimize-x": `${target.x - center.x}px`,
+    "--desktop-window-minimize-y": `${target.y - center.y}px`,
+  } as React.CSSProperties;
+}
+
 export const WindowFrame: React.FC<WindowFrameProps> = ({
   title,
   children,
   zIndex,
   onClose,
+  onCloseStart,
   onMinimize,
   onFocus,
   onToggleMaximize,
   isMinimized = false,
   isMaximized = false,
+  taskbarTarget,
   defaultPosition = { x: 100, y: 100 },
   defaultSize = { w: 600, h: 400 },
   minSize = { w: 300, h: 200 },
@@ -44,6 +67,13 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   theme = "green",
 }) => {
   const windowRef = useRef<HTMLDivElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [renderGeometry, setRenderGeometry] = useState({
+    x: defaultPosition.x,
+    y: defaultPosition.y,
+    w: defaultSize.w,
+    h: defaultSize.h,
+  });
   const geom = useRef({
     x: defaultPosition.x,
     y: defaultPosition.y,
@@ -123,6 +153,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       const handleMouseUp = () => {
         geom.current.isDragging = false;
+        setRenderGeometry({
+          x: geom.current.x,
+          y: geom.current.y,
+          w: geom.current.w,
+          h: geom.current.h,
+        });
         if (windowRef.current) windowRef.current.style.transition = "";
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
@@ -161,6 +197,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
     const onMouseUp = () => {
       geom.current.isDragging = false;
+      setRenderGeometry({
+        x: geom.current.x,
+        y: geom.current.y,
+        w: geom.current.w,
+        h: geom.current.h,
+      });
       if (windowRef.current) windowRef.current.style.transition = "";
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -229,6 +271,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
     const onMouseUp = () => {
       geom.current.isResizing = false;
+      setRenderGeometry({
+        x: geom.current.x,
+        y: geom.current.y,
+        w: geom.current.w,
+        h: geom.current.h,
+      });
       if (windowRef.current) windowRef.current.style.transition = "";
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -237,6 +285,16 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     if (windowRef.current) windowRef.current.style.transition = "none";
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleClose = () => {
+    if (!onClose || isClosing) return;
+
+    setIsClosing(true);
+    onCloseStart?.();
+    window.setTimeout(() => {
+      onClose();
+    }, WINDOW_CLOSE_ANIMATION_MS);
   };
 
   const themeClasses = theme === "cyan"
@@ -266,82 +324,95 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       ? "text-[#FF00FF] hover:bg-[#2A002A] hover:text-[#FF00FF] hover:border-[#FF00FF]/50"
       : "text-green-600 hover:bg-green-900/60 hover:text-green-300 hover:border-green-500/50";
 
-  const baseClasses =
-    `absolute flex flex-col overflow-hidden bg-black border-2 ${themeClasses} ring-1 ring-black origin-bottom`;
-  const stateClasses = isMinimized
-    ? "opacity-0 scale-50 pointer-events-none transition-all duration-300 ease-in-out"
-    : isMaximized
-      ? "!inset-0 !w-full !h-full !transform-none rounded-none border-0"
-      : "opacity-100 scale-100 rounded-sm";
+  const frameClasses =
+    `desktop-window-shell flex h-full w-full flex-col overflow-hidden bg-black border-2 ${themeClasses} ring-1 ring-black`;
+  const outerStateClasses = `${isMinimized ? "pointer-events-none" : ""} ${
+    isMaximized ? "!inset-0 !w-full !h-full !transform-none" : ""
+  }`;
+  const frameStateClasses = `${isMinimized ? "desktop-window-shell--minimized" : ""} ${
+    isMaximized ? "rounded-none border-0" : "rounded-sm"
+  } ${isClosing ? "desktop-window-shell--closing" : ""}`;
+  const minimizeVars = getMinimizeVars(
+    taskbarTarget,
+    renderGeometry,
+    isMaximized
+  );
 
   return (
     <div
       ref={windowRef}
-      className={`${baseClasses} ${stateClasses}`}
-      style={{ zIndex }}
+      className={`desktop-window-geometry absolute ${outerStateClasses} ${isClosing ? "pointer-events-none" : ""}`}
+      style={{
+        zIndex,
+        width: defaultSize.w,
+        height: defaultSize.h,
+        transform: `translate(${defaultPosition.x}px, ${defaultPosition.y}px)`,
+      }}
       onMouseDownCapture={onFocus}
     >
-      <div
-        className={`flex h-8 cursor-default items-center justify-between select-none px-1 ${headerClasses}`}
-        onMouseDown={handleHeaderMouseDown}
-        onDoubleClick={allowMaximize ? onToggleMaximize : undefined}
-      >
-        <div className={`flex items-center space-x-2 px-2 font-window-title text-sm tracking-wide font-bold ${titleClasses}`}>
-          <div className={`w-3 h-3 rounded-sm opacity-80 ${iconClasses}`} />
-          <span>{title}</span>
+      <div className={`${frameClasses} ${frameStateClasses}`} style={minimizeVars}>
+        <div
+          className={`flex h-8 cursor-default items-center justify-between select-none px-1 ${headerClasses}`}
+          onMouseDown={handleHeaderMouseDown}
+          onDoubleClick={allowMaximize ? onToggleMaximize : undefined}
+        >
+          <div className={`flex items-center space-x-2 px-2 font-window-title text-sm tracking-wide font-bold ${titleClasses}`}>
+            <div className={`w-3 h-3 rounded-sm opacity-80 ${iconClasses}`} />
+            <span>{title}</span>
+          </div>
+
+          <div className="flex items-center h-full gap-1 mr-1">
+            {allowMinimize && onMinimize && (
+              <WindowControlButton
+                variant="minimize"
+                label="Minimize"
+                className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMinimize();
+                }}
+              />
+            )}
+            {allowMaximize && onToggleMaximize && (
+              <WindowControlButton
+                variant={isMaximized ? "restore" : "maximize"}
+                label={isMaximized ? "Restore" : "Maximize"}
+                className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleMaximize();
+                }}
+              />
+            )}
+            {onClose && (
+              <WindowControlButton
+                variant="close"
+                label="Close"
+                className={`mx-[1px] border-transparent bg-transparent hover:border-red-500/50 hover:bg-red-800/70 hover:text-white ${theme === "cyan" ? "text-[#00D4FF]" : theme === "magenta" ? "text-[#FF00FF]" : "text-green-600"}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleClose();
+                }}
+              />
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center h-full gap-1 mr-1">
-          {allowMinimize && onMinimize && (
-            <WindowControlButton
-              variant="minimize"
-              label="Minimize"
-              className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onMinimize();
-              }}
-            />
-          )}
-          {allowMaximize && onToggleMaximize && (
-            <WindowControlButton
-              variant={isMaximized ? "restore" : "maximize"}
-              label={isMaximized ? "Restore" : "Maximize"}
-              className={`mx-[1px] border-transparent bg-transparent ${buttonClasses}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleMaximize();
-              }}
-            />
-          )}
-          {onClose && (
-            <WindowControlButton
-              variant="close"
-              label="Close"
-              className={`mx-[1px] border-transparent bg-transparent hover:border-red-500/50 hover:bg-red-800/70 hover:text-white ${theme === "cyan" ? "text-[#00D4FF]" : theme === "magenta" ? "text-[#FF00FF]" : "text-green-600"}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onClose();
-              }}
-            />
-          )}
-        </div>
+        <div className={`flex-1 overflow-hidden bg-black relative ${isMinimized ? "pointer-events-none" : "pointer-events-auto"}`}>{children}</div>
+
+        {allowResize && !isMaximized && !isMinimized && (
+          <>
+            <div className="absolute top-0 left-0 w-2 h-2 cursor-nwse-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "nw")} />
+            <div className="absolute top-0 right-0 w-2 h-2 cursor-nesw-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "ne")} />
+            <div className="absolute bottom-0 left-0 w-2 h-2 cursor-nesw-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "sw")} />
+            <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "se")} />
+            <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "n")} />
+            <div className="absolute bottom-0 left-2 right-2 h-2 cursor-ns-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "s")} />
+            <div className="absolute top-2 bottom-2 left-0 w-1 cursor-ew-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "w")} />
+            <div className="absolute top-2 bottom-2 right-0 w-2 cursor-ew-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "e")} />
+          </>
+        )}
       </div>
-
-      <div className="flex-1 overflow-hidden pointer-events-auto bg-black relative">{children}</div>
-
-      {allowResize && !isMaximized && !isMinimized && (
-        <>
-          <div className="absolute top-0 left-0 w-2 h-2 cursor-nwse-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "nw")} />
-          <div className="absolute top-0 right-0 w-2 h-2 cursor-nesw-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "ne")} />
-          <div className="absolute bottom-0 left-0 w-2 h-2 cursor-nesw-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "sw")} />
-          <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-50" onMouseDown={(event) => handleResizeMouseDown(event, "se")} />
-          <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "n")} />
-          <div className="absolute bottom-0 left-2 right-2 h-2 cursor-ns-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "s")} />
-          <div className="absolute top-2 bottom-2 left-0 w-1 cursor-ew-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "w")} />
-          <div className="absolute top-2 bottom-2 right-0 w-2 cursor-ew-resize z-40" onMouseDown={(event) => handleResizeMouseDown(event, "e")} />
-        </>
-      )}
     </div>
   );
 };

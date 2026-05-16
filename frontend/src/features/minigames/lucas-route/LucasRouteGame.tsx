@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWindowStore } from "../../../app/store/windowStore";
+import type { DesktopWindowId } from "../../../shared/config/desktopWindows";
+import { audioManager } from "../../story-runtime/audioManager";
 import {
   LUCAS_ROUTE_ASSETS,
   LUCAS_ROUTE_GAME_CONFIG,
@@ -768,11 +771,21 @@ function drawGame(
   }
 }
 
-export default function LucasRouteGame({ isPractice }: { isPractice?: boolean }) {
+interface LucasRouteGameProps {
+  isPractice?: boolean;
+  storyLinked?: boolean;
+  windowId?: DesktopWindowId;
+  onStoryClear?: () => void | Promise<void>;
+}
+
+export default function LucasRouteGame({ isPractice = false, storyLinked = false, windowId, onStoryClear }: LucasRouteGameProps) {
   const navigate = useNavigate();
+  const activeWindowId = useWindowStore((state) => state.activeWindowId);
   const [initialGame] = useState(() => createInitialGame());
+  const gameRootRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const gameRef = useRef<GameState>(initialGame);
+  const storyClearReportedRef = useRef(false);
   const renderRef = useRef<RenderState>({
     visualPacket: { ...initialGame.packet },
     cameraRow: initialGame.packet.row,
@@ -780,12 +793,70 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
   });
   const rafRef = useRef<number | null>(null);
   const hudTimerRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previousBgmNameRef = useRef<string | null>(null);
+  const hasSuspendedStoryBgmRef = useRef(false);
   const assetsRef = useRef<LoadedRouteAssets>(EMPTY_ROUTE_ASSETS);
   const [hud, setHud] = useState(() => createHud(initialGame));
 
   const syncHud = useCallback(() => {
     setHud(createHud(gameRef.current));
   }, []);
+
+  const playRouteBgm = useCallback(() => {
+    if (!hasSuspendedStoryBgmRef.current) {
+      previousBgmNameRef.current = audioManager.getCurrentBgmName();
+      audioManager.stopBgm();
+      hasSuspendedStoryBgmRef.current = true;
+    }
+
+    if (!audioRef.current) {
+      const audio = new Audio(LUCAS_ROUTE_GAME_CONFIG.bgmUrl);
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.volume = 0.42;
+      audioRef.current = audio;
+    }
+
+    audioRef.current.play().catch((error) => {
+      console.warn("Lucas Route BGM autoplay blocked:", error);
+    });
+  }, []);
+
+  const pauseRouteBgm = useCallback((reset = false) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.pause();
+    if (reset) {
+      try {
+        audio.currentTime = 0;
+      } catch {
+        // Some browsers can reject seeking before metadata is available.
+      }
+    }
+  }, []);
+
+  const reportStoryClear = useCallback(() => {
+    if (isPractice || !storyLinked || storyClearReportedRef.current) return;
+
+    storyClearReportedRef.current = true;
+    void Promise.resolve(onStoryClear?.()).catch((error) => {
+      storyClearReportedRef.current = false;
+      console.error("Failed to report Lucas Route clear:", error);
+    });
+  }, [isPractice, onStoryClear, storyLinked]);
+
+  useEffect(() => {
+    if (!storyLinked) {
+      storyClearReportedRef.current = false;
+      return;
+    }
+
+    if (hud.status === "complete") {
+      reportStoryClear();
+    }
+  }, [hud.status, reportStoryClear, storyLinked]);
 
   const startNewRun = useCallback(
     (message = "Packet resent from Yuseong meteor.") => {
@@ -800,8 +871,9 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
         lastNow: performance.now(),
       };
       syncHud();
+      playRouteBgm();
     },
-    [syncHud],
+    [playRouteBgm, syncHud],
   );
 
   const losePacket = useCallback(
@@ -823,11 +895,14 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
   const completeRun = useCallback(() => {
     const game = gameRef.current;
+    if (game.status === "complete") return;
+
     game.status = "complete";
     game.bestRow = END_ROW;
     game.message = "NY Lucas Server accepted the packet.";
     syncHud();
-  }, [syncHud]);
+    reportStoryClear();
+  }, [reportStoryClear, syncHud]);
 
   const movePacket = useCallback(
     (dc: number, dr: number) => {
@@ -837,6 +912,7 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
         game.status = "running";
         game.startedAt = performance.now();
         game.message = "Lucas packet launched. Reach New York without packet loss.";
+        playRouteBgm();
       } else if (game.status === "lost" || game.status === "complete") {
         startNewRun();
         return;
@@ -867,8 +943,33 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
       syncHud();
     },
-    [completeRun, losePacket, startNewRun, syncHud],
+    [completeRun, losePacket, playRouteBgm, startNewRun, syncHud],
   );
+
+  useEffect(() => {
+    return () => {
+      pauseRouteBgm(true);
+      audioRef.current = null;
+
+      if (hasSuspendedStoryBgmRef.current && previousBgmNameRef.current) {
+        audioManager.playBgm(previousBgmNameRef.current);
+      }
+    };
+  }, [pauseRouteBgm]);
+
+  useEffect(() => {
+    if (hud.status === "running" || hud.status === "lost") {
+      playRouteBgm();
+      return;
+    }
+
+    if (hud.status === "idle") {
+      pauseRouteBgm(true);
+      return;
+    }
+
+    pauseRouteBgm(false);
+  }, [hud.status, pauseRouteBgm, playRouteBgm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -886,7 +987,23 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
   }, []);
 
   useEffect(() => {
+    if (windowId && activeWindowId !== windowId) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      gameRootRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeWindowId, windowId]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (windowId && activeWindowId !== windowId) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.isContentEditable || target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") {
+        return;
+      }
+
       const key = event.key.toLowerCase();
       const movement: Record<string, [number, number] | undefined> = {
         arrowup: [0, 1],
@@ -913,7 +1030,7 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [movePacket, startNewRun]);
+  }, [activeWindowId, movePacket, startNewRun, windowId]);
 
   useEffect(() => {
     const tick = (now: number) => {
@@ -965,7 +1082,12 @@ export default function LucasRouteGame({ isPractice }: { isPractice?: boolean })
   const progress = Math.round((hud.currentRow / END_ROW) * 100);
 
   return (
-    <div className="lucas-route-game" data-status={hud.status}>
+    <div
+      ref={gameRootRef}
+      className="lucas-route-game"
+      data-status={hud.status}
+      tabIndex={-1}
+    >
       <header className="lucas-route-game__header">
         <div>
           <p className="lucas-route-game__eyebrow">standalone process</p>

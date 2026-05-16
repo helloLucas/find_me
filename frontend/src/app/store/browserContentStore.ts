@@ -14,6 +14,9 @@ interface BrowserContentState {
   lastCopiedCommand: string | null; // 브라우저에서 복사된 마지막 커맨드
   newsTabClickTrigger: number; // 기사 추가 클릭 트리거
   cyberPacketDashTabClickTrigger: number; // 사이버 패킷 대시 탭 추가 클릭 트리거
+  lucasRouteTabClickTrigger: number;
+  lucasRouteStoryLinked: boolean;
+  lucasSurvivalTabClickTrigger: number;
   newsScrollTop: number; // 뉴스 탭 스크롤 위치 저장
   searchHistory: SearchHistoryItem[]; // 챕터 3 전용 검색어 기록 저장소 (검색어 + 실제 검색시각)
   mergeContent: (content?: BrowserContent | null) => void;
@@ -24,6 +27,11 @@ interface BrowserContentState {
   resetNewsTabClickTrigger: () => void; // 기사 추가 클릭 트리거 초기화 함수
   triggerCyberPacketDashTabClick: () => void; // 사이버 패킷 대시 탭 추가 클릭 트리거 증가 함수
   resetCyberPacketDashTabClickTrigger: () => void; // 사이버 패킷 대시 탭 추가 클릭 트리거 초기화 함수
+  triggerLucasRouteTabClick: (options?: { storyLinked?: boolean }) => void;
+  setLucasRouteStoryLinked: (storyLinked: boolean) => void;
+  resetLucasRouteTabClickTrigger: () => void;
+  triggerLucasSurvivalTabClick: () => void;
+  resetLucasSurvivalTabClickTrigger: () => void;
   setNewsScrollTop: (scrollTop: number) => void; // 뉴스 탭 스크롤 위치 설정 함수
   addSearchHistory: (query: string) => void; // 챕터 3 검색 기록 추가 액션 (실제 현재 시각 저장)
   resetSearchHistory: () => void; // 챕터 3 검색 기록 리셋 액션
@@ -36,6 +44,9 @@ export const useBrowserContentStore = create<BrowserContentState>((set) => ({
   isChapter2Mode: false,
   newsTabClickTrigger: 0,
   cyberPacketDashTabClickTrigger: 0,
+  lucasRouteTabClickTrigger: 0,
+  lucasRouteStoryLinked: false,
+  lucasSurvivalTabClickTrigger: 0,
   newsScrollTop: 0,
   searchHistory: [],
   mergeContent: (content) => {
@@ -55,6 +66,14 @@ export const useBrowserContentStore = create<BrowserContentState>((set) => ({
   resetNewsTabClickTrigger: () => set({ newsTabClickTrigger: 0 }),
   triggerCyberPacketDashTabClick: () => set((state) => ({ cyberPacketDashTabClickTrigger: state.cyberPacketDashTabClickTrigger + 1 })),
   resetCyberPacketDashTabClickTrigger: () => set({ cyberPacketDashTabClickTrigger: 0 }),
+  triggerLucasRouteTabClick: (options) => set((state) => ({
+    lucasRouteTabClickTrigger: state.lucasRouteTabClickTrigger + 1,
+    lucasRouteStoryLinked: Boolean(options?.storyLinked),
+  })),
+  setLucasRouteStoryLinked: (storyLinked) => set({ lucasRouteStoryLinked: storyLinked }),
+  resetLucasRouteTabClickTrigger: () => set({ lucasRouteTabClickTrigger: 0, lucasRouteStoryLinked: false }),
+  triggerLucasSurvivalTabClick: () => set((state) => ({ lucasSurvivalTabClickTrigger: state.lucasSurvivalTabClickTrigger + 1 })),
+  resetLucasSurvivalTabClickTrigger: () => set({ lucasSurvivalTabClickTrigger: 0 }),
   setNewsScrollTop: (scrollTop) => set({ newsScrollTop: scrollTop }),
   addSearchHistory: (query) => {
     const now = new Date();
@@ -68,5 +87,5 @@ export const useBrowserContentStore = create<BrowserContentState>((set) => ({
     }));
   },
   resetSearchHistory: () => set({ searchHistory: [] }),
-  resetContent: () => set({ content: {}, isRelayClueUnlocked: false, isChapter2Mode: false, lastCopiedCommand: null, newsTabClickTrigger: 0, cyberPacketDashTabClickTrigger: 0, newsScrollTop: 0, searchHistory: [] }),
+  resetContent: () => set({ content: {}, isRelayClueUnlocked: false, isChapter2Mode: false, lastCopiedCommand: null, newsTabClickTrigger: 0, cyberPacketDashTabClickTrigger: 0, lucasRouteTabClickTrigger: 0, lucasRouteStoryLinked: false, lucasSurvivalTabClickTrigger: 0, newsScrollTop: 0, searchHistory: [] }),
 }));

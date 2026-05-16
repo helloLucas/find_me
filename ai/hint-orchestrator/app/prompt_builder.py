@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import re
@@ -14,10 +14,10 @@ def resolve_hint_level(
     settings = get_settings()
     if low_confidence:
         return "LOW_CONFIDENCE"
-    
+
     stress_score = (fail_count_after_action * settings.hint_stress_fail_weight) + \
                    (repeat_count_after_action * settings.hint_stress_repeat_weight)
-                   
+
     if stress_score >= settings.hint_level_strong_stress_threshold:
         return "STRONG"
     if stress_score >= settings.hint_level_medium_stress_threshold:
@@ -379,8 +379,27 @@ def _adapt_expected_input_by_hint_level(
     level = (hint_level or "").upper()
     action = (action_type or "").strip().lower()
 
-    if level in {"MEDIUM", "STRONG"}:
-        return exact_value or raw_expected or _generic_expected_label(action)
+    if level == "STRONG":
+        if exact_value:
+            return exact_value
+        raw_text = _safe_str(raw_expected)
+        if raw_text and _looks_like_command_text(raw_text):
+            return raw_text
+        return _generic_expected_label(action)
+
+    if level == "MEDIUM":
+        if exact_value:
+            return exact_value
+        raw_text = _safe_str(raw_expected)
+        if raw_text:
+            head = _command_head(raw_text)
+            if head:
+                by_head = _medium_pattern_by_command_head(head)
+                if by_head:
+                    return by_head
+            if _looks_like_command_text(raw_text):
+                return raw_text
+        return _generic_expected_label(action)
     command_candidate = exact_value or raw_expected
     command_head = _command_head(command_candidate) or _command_head(command_from_config)
 
@@ -400,99 +419,136 @@ def _light_pattern_by_rule(rule: str, command_from_config: str | None) -> str | 
     if rule == "RELAY_REQUEST":
         return 'echo "<문자열>" | nc <host> <port>'
     if rule == "RELAY_REQUEST_TO_FILE":
-        return 'echo "<문자열>" | nc <host> <port> > <파일경로>'
+        return 'echo "<문자열>" | nc <host> <port> > <출력파일>'
     if rule == "PARSED_TAR_COMMAND":
-        return "tar <옵션> <출력.tar> <대상들...>"
+        return f"tar <옵션> <요구하는 파일명.tar> <대상들...>"
     if rule == "FIND_TMP_COMMAND":
-        return 'find <경로> -name "<패턴>"'
+        return f'find <경로> -name "<패턴>"'
     if rule == "NC_SEND_FILE":
         return "nc <host> <port> < <file>"
     if rule == "CHAINED_COMMAND":
-        return "<명령어1> && <명령어2>"
+        return f"<명령어1> && <명령어2>"
     if rule == "AUTO_SYSTEM":
         return "auto"
+    if rule in {"USER_FRAGMENTS_PRESENT", "USER_FRAGMENTS_INCOMPLETE"}:
+        return "sh <lucas_route.sh>"
+    if rule == "REGEX_FALLBACK":
+        return None
     if rule in {"NORMALIZED_COMMAND", "VIRTUAL_FS_COMMAND"} and command_from_config:
         return _light_pattern_by_command_head(_command_head(command_from_config))
     return None
 
-
 def _medium_pattern_by_rule(rule: str, command_from_config: str | None) -> str | None:
     if rule == "PARSED_TAR_COMMAND":
-        return "tar -cvf <출력.tar> <대상1> <대상2>"
+        return f"tar -cvf <요구하는 파일명.tar> <대상1> <대상2>"
     if rule == "FIND_TMP_COMMAND":
-        return 'find <경로> -name "<패턴>"'
+        return f'find <경로> -name "<패턴>"'
     if rule == "NC_SEND_FILE":
         return "nc <host> <port> < <file>"
     if rule == "CHAINED_COMMAND":
-        return "<명령어1> && <명령어2>"
+        return f"<명령어1> && <명령어2>"
     if rule == "AUTO_SYSTEM":
         return "auto"
+    if rule in {"USER_FRAGMENTS_PRESENT", "USER_FRAGMENTS_INCOMPLETE"}:
+        return "sh lucas_route.sh"
+    if rule == "REGEX_FALLBACK":
+        return None
     if rule in {"NORMALIZED_COMMAND", "VIRTUAL_FS_COMMAND"} and command_from_config:
         return _medium_pattern_by_command_head(_command_head(command_from_config))
     return None
-
 
 def _light_pattern_by_command_head(command_head: str | None) -> str | None:
     head = (command_head or "").lower().strip()
     if not head:
         return None
+    if head.startswith("sshnuke_"):
+        return "sshnuke <host> --rootpw <password>"
+    if head.startswith("mount_"):
+        return "mount <소스경로> <마운트경로>"
+    if head == "mount":
+        return "mount <소스경로> <마운트경로>"
+    if head == "ssh":
+        return "우리가 권한을 얻어서 뭘 하려 했는지 떠올려봐."
+    if head == "sshnuke":
+        return "sshnuke <host> --rootpw <password>"
+    if head == "execute":
+        return "execute <qasm_path>"
+    if head == "systemctl":
+        return "systemctl <action> <unit>"
+    if head == "nmap":
+        return f"nmap <옵션> <host>"
     if head == "ls":
-        return "ls <옵션>"
+        return f"ls <옵션>"
     if head == "find":
-        return "find <경로> <조건>"
+        return f"find <경로> <조건>"
     if head == "cat":
-        return "cat <경로>"
+        return f"cat <경로>"
     if head == "grep":
-        return "grep <패턴> <경로>"
+        return f"grep <패턴> <경로>"
     if head == "echo":
-        return "echo <문자열>"
+        return f"echo <문자열>"
     if head == "tar":
-        return "tar <옵션> <압축파일> <대상들...>"
+        return f"tar <옵션> <압축파일> <대상들...>"
     return f"{head} <옵션> <대상>"
-
 
 def _medium_pattern_by_command_head(command_head: str | None) -> str | None:
     head = (command_head or "").lower().strip()
     if not head:
         return None
+    if head.startswith("mount_"):
+        return "mount <소스경로> <마운트경로>"
+    if head.startswith("sshnuke_"):
+        return "sshnuke <host> --rootpw <password>"
     if head == "ls":
-        return "ls -a[l] <경로>"
+        return f"ls -a[l] <경로>"
     if head == "find":
-        return 'find <경로> -name "<패턴>"'
+        return f'find <경로> -name "<패턴>"'
     if head == "cat":
-        return "cat <파일경로>"
+        return f"cat <파일경로>"
     if head == "grep":
-        return "grep -n <패턴> <파일경로>"
+        return f"grep -n <패턴> <파일경로>"
     if head == "echo":
-        return "echo <문자열> | <다음명령>"
+        return f"echo <문자열> | <다음명령>"
     if head == "tar":
-        return "tar -cvf <출력.tar> <대상1> <대상2>"
+        return f"tar -cvf <요구하는 파일명.tar> <대상1> <대상2>"
     return f"{head} <옵션> <대상>"
-
 
 def _generalize_command_text(command: str) -> str:
     head = _command_head(command)
     if not head:
-        return "쉘 실행 명령어"
+        return f"명령어 <옵션> <대상>"
     low = command.strip().lower()
     if low.startswith("ls"):
-        return "ls <옵션> <경로>"
+        return f"ls <옵션> <경로>"
     if low.startswith("find ") and " -name " in low:
-        return 'find <경로> -name "<패턴>"'
+        return f'find <경로> -name "<패턴>"'
     if low.startswith("cat "):
-        return "cat <파일경로>"
+        return f"cat <파일경로>"
     if low.startswith("grep "):
-        return "grep <패턴> <파일경로>"
+        return f"grep <패턴> <파일경로>"
     if low.startswith("echo ") and "| nc " in low and " > " in low:
-        return 'echo "<문자열>" | nc <host> <port> > <파일경로>'
+        return f'echo "<문자열>" | nc <host> <port> > <출력파일>'
     if low.startswith("echo ") and "| nc " in low:
-        return 'echo "<문자열>" | nc <host> <port>'
+        return f'echo "<문자열>" | nc <host> <port>'
     if low.startswith("nc "):
         return "nc <host> <port> < <file>"
+    if low.startswith("mount"):
+        return "mount <소스경로> <마운트경로>"
+    if low.startswith("ssh"):
+        return "우리가 권한을 얻어서 뭘 하려 했는지 떠올려봐."
+    if low.startswith("sshnuke "):
+        return "sshnuke <host> --rootpw <password>"
+    if low.startswith("sshnuke_"):
+        return "sshnuke <host> --rootpw <password>"
+    if low.startswith("execute "):
+        return "execute <qasm_path>"
+    if low.startswith("systemctl "):
+        return "systemctl <action> <unit>"
+    if low.startswith("nmap "):
+        return f"nmap <옵션> <host>"
     if low.startswith("tar "):
-        return "tar <옵션> <압축파일> <대상들...>"
+        return f"tar <옵션> <압축파일> <대상들...>"
     return f"{head} <대상>"
-
 
 def _command_head(command: str | None) -> str | None:
     if not command:
@@ -505,13 +561,12 @@ def _command_head(command: str | None) -> str | None:
 
 def _generic_expected_label(action: str) -> str:
     if action == "command":
-        return "쉘 실행 명령어"
+        return "명령어"
     if action == "click":
-        return "화면 상호작용"
+        return "클릭"
     if action == "system":
         return "시스템 동작"
     return "유효한 동작"
-
 
 def _as_dict(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
@@ -675,8 +730,9 @@ def _build_command_from_accepted_forms(config: dict[str, Any]) -> str | None:
         if not any_order:
             any_order = _as_text_list(form.get("requiredArgsAnyOrder"))
         if any_order:
-            any_order = sorted(any_order)
-            args.append(any_order[0])
+            # Backend matcher accepts any order for these args.
+            # Keep all required args in hint generation for parity.
+            args.extend(any_order)
 
         resolved_path = _normalize_hint_path(_safe_str(form.get("resolvedPath")))
         if resolved_path:
@@ -861,3 +917,4 @@ def _looks_like_command_text(value: str | None) -> bool:
     if any(ch in text for ch in ('"', "'", "/", ".", "-", "<", ">", "|", "&", "=")):
         return True
     return False
+

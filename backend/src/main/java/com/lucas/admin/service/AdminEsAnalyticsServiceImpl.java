@@ -1,9 +1,9 @@
 package com.lucas.admin.service;
 
-import com.lucas.admin.dto.response.AdminFilterOptionsResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lucas.admin.dto.response.AdminEsAnalyticsResponse;
+import com.lucas.admin.dto.response.AdminFilterOptionsResponse;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -23,12 +23,9 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -44,7 +41,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
 
-  private static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private static final DateTimeFormatter TS_FMT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
   private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private static final int MIN_TOP_N = 5;
@@ -184,7 +182,8 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
 
     List<AdminEsAnalyticsResponse.UserOption> users = loadUsersByIds(safeUserIds);
     Map<Long, AdminEsAnalyticsResponse.UserOption> userMap =
-        users.stream().collect(Collectors.toMap(AdminEsAnalyticsResponse.UserOption::userId, u -> u));
+        users.stream()
+            .collect(Collectors.toMap(AdminEsAnalyticsResponse.UserOption::userId, u -> u));
 
     if (!esEnabled || isBlank(esBaseUrl)) {
       return fallbackResponse(filter, "ES 비활성화 또는 URL 누락", userMap, safeUserIds);
@@ -233,8 +232,7 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     List<AdminEsAnalyticsResponse.UserJourney> journeys =
         parseUserJourneys(aggs.path("users"), userMap, topN);
 
-    AdminEsAnalyticsResponse.UserComparison comparison =
-        buildComparison(journeys, selectedUserIds);
+    AdminEsAnalyticsResponse.UserComparison comparison = buildComparison(journeys, selectedUserIds);
 
     return new AdminEsAnalyticsResponse(
         filter,
@@ -299,9 +297,7 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
   }
 
   private List<AdminEsAnalyticsResponse.UserJourney> parseUserJourneys(
-      JsonNode usersAgg,
-      Map<Long, AdminEsAnalyticsResponse.UserOption> userMap,
-      int topN) {
+      JsonNode usersAgg, Map<Long, AdminEsAnalyticsResponse.UserOption> userMap, int topN) {
     List<AdminEsAnalyticsResponse.UserJourney> rows = new ArrayList<>();
     for (JsonNode bucket : buckets(usersAgg)) {
       long userId = bucket.path("key").asLong(-1);
@@ -343,13 +339,16 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
       }
       nodeStats =
           nodeStats.stream()
-              .sorted(Comparator.comparingLong(AdminEsAnalyticsResponse.UserNodeStat::totalCount).reversed())
+              .sorted(
+                  Comparator.comparingLong(AdminEsAnalyticsResponse.UserNodeStat::totalCount)
+                      .reversed())
               .limit(topN)
               .toList();
       nodeActionSummaries =
           nodeActionSummaries.stream()
               .sorted(
-                  Comparator.comparingLong(AdminEsAnalyticsResponse.UserNodeActionSummary::totalCount)
+                  Comparator.comparingLong(
+                          AdminEsAnalyticsResponse.UserNodeActionSummary::totalCount)
                       .reversed())
               .limit(topN)
               .toList();
@@ -384,7 +383,8 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     List<AdminEsAnalyticsResponse.UserNodeActionItem> actions = new ArrayList<>();
     for (JsonNode action : buckets(topActionsAgg)) {
       JsonNode actionTypeBucket = firstBucket(action.path("action_type"));
-      String actionType = actionTypeBucket != null ? actionTypeBucket.path("key").asText("unknown") : "unknown";
+      String actionType =
+          actionTypeBucket != null ? actionTypeBucket.path("key").asText("unknown") : "unknown";
       actions.add(
           new AdminEsAnalyticsResponse.UserNodeActionItem(
               actionType,
@@ -479,13 +479,7 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
         (a, b) -> Long.compare((b.leftTotal() + b.rightTotal()), (a.leftTotal() + a.rightTotal())));
 
     return new AdminEsAnalyticsResponse.UserComparison(
-        true,
-        leftId,
-        rightId,
-        left.summary(),
-        right.summary(),
-        nodeRows,
-        commandRows);
+        true, leftId, rightId, left.summary(), right.summary(), nodeRows, commandRows);
   }
 
   private AdminEsAnalyticsResponse.UserComparison emptyComparison() {
@@ -598,12 +592,18 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     timelineAgg.put(
         "date_histogram",
         Map.of(
-            "field", "timestamp",
-            "calendar_interval", "1d",
-            "time_zone", zoneId.getId(),
-            "min_doc_count", 0,
-            "format", "yyyy-MM-dd",
-            "extended_bounds", Map.of("min", range.fromDate(), "max", range.toDate())));
+            "field",
+            "timestamp",
+            "calendar_interval",
+            "1d",
+            "time_zone",
+            zoneId.getId(),
+            "min_doc_count",
+            0,
+            "format",
+            "yyyy-MM-dd",
+            "extended_bounds",
+            Map.of("min", range.fromDate(), "max", range.toDate())));
     timelineAgg.put(
         "aggs",
         Map.of(
@@ -617,13 +617,22 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
     Map<String, Object> bottleneckAgg = new LinkedHashMap<>();
     bottleneckAgg.put(
         "terms",
-        Map.of("field", "from_node_id", "size", topN, "missing", "UNKNOWN", "order", Map.of("_count", "desc")));
+        Map.of(
+            "field",
+            "from_node_id",
+            "size",
+            topN,
+            "missing",
+            "UNKNOWN",
+            "order",
+            Map.of("_count", "desc")));
     bottleneckAgg.put(
         "aggs",
         Map.of(
             "fail", Map.of("filter", Map.of("term", Map.of("result", "FAIL"))),
             "error", Map.of("filter", Map.of("term", Map.of("result", "ERROR"))),
-            "chapters", Map.of("terms", Map.of("field", "chapter_id", "size", 1, "missing", "UNKNOWN"))));
+            "chapters",
+                Map.of("terms", Map.of("field", "chapter_id", "size", 1, "missing", "UNKNOWN"))));
     aggs.put("bottlenecks", bottleneckAgg);
 
     Map<String, Object> commandScope = new LinkedHashMap<>();
@@ -675,23 +684,18 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
                                     "missing",
                                     "(empty)"),
                                 "aggs",
-                                    Map.of(
-                                        "action_type",
-                                            Map.of(
-                                                "terms",
-                                                Map.of("field", "action_type", "size", 1)),
-                                        "success",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "SUCCESS"))),
-                                        "fail",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "FAIL"))),
-                                        "error",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "ERROR"))))))),
+                                Map.of(
+                                    "action_type",
+                                        Map.of("terms", Map.of("field", "action_type", "size", 1)),
+                                    "success",
+                                        Map.of(
+                                            "filter", Map.of("term", Map.of("result", "SUCCESS"))),
+                                    "fail",
+                                        Map.of("filter", Map.of("term", Map.of("result", "FAIL"))),
+                                    "error",
+                                        Map.of(
+                                            "filter",
+                                            Map.of("term", Map.of("result", "ERROR"))))))),
             "command_scope",
                 Map.of(
                     "filter", Map.of("term", Map.of("action_type", "command")),
@@ -708,19 +712,16 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
                                     "missing",
                                     "(empty)"),
                                 "aggs",
-                                    Map.of(
-                                        "success",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "SUCCESS"))),
-                                        "fail",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "FAIL"))),
-                                        "error",
-                                            Map.of(
-                                                "filter",
-                                                Map.of("term", Map.of("result", "ERROR")))))))));
+                                Map.of(
+                                    "success",
+                                        Map.of(
+                                            "filter", Map.of("term", Map.of("result", "SUCCESS"))),
+                                    "fail",
+                                        Map.of("filter", Map.of("term", Map.of("result", "FAIL"))),
+                                    "error",
+                                        Map.of(
+                                            "filter",
+                                            Map.of("term", Map.of("result", "ERROR")))))))));
     aggs.put("users", userAgg);
 
     root.put("aggs", aggs);
@@ -748,7 +749,8 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
   }
 
   private String resolveEndpointUrl() {
-    String base = esBaseUrl.endsWith("/") ? esBaseUrl.substring(0, esBaseUrl.length() - 1) : esBaseUrl;
+    String base =
+        esBaseUrl.endsWith("/") ? esBaseUrl.substring(0, esBaseUrl.length() - 1) : esBaseUrl;
     String encodedPattern = URLEncoder.encode(esIndexPattern, StandardCharsets.UTF_8);
     return base + "/" + encodedPattern + "/_search";
   }
@@ -806,7 +808,8 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
   private String epochMillisToText(double epochMillis) {
     if (epochMillis <= 0) return null;
     long millis = (long) epochMillis;
-    ZonedDateTime zdt = ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault());
+    ZonedDateTime zdt =
+        ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault());
     return zdt.toLocalDateTime().format(TS_FMT);
   }
 
@@ -873,11 +876,7 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
 
   private List<Long> normalizeUserIds(List<Long> userIds) {
     if (userIds == null || userIds.isEmpty()) return List.of();
-    return userIds.stream()
-        .filter(Objects::nonNull)
-        .filter(id -> id > 0)
-        .distinct()
-        .toList();
+    return userIds.stream().filter(Objects::nonNull).filter(id -> id > 0).distinct().toList();
   }
 
   private int clamp(int value, int min, int max) {
@@ -899,5 +898,10 @@ public class AdminEsAnalyticsServiceImpl implements AdminAnalyticsService {
   }
 
   private record TimeRange(
-      String fromIso, String toIso, String fromDate, String toDate, String fromText, String toText) {}
+      String fromIso,
+      String toIso,
+      String fromDate,
+      String toDate,
+      String fromText,
+      String toText) {}
 }

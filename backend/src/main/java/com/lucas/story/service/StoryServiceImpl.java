@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
+import com.lucas.chapter.service.ChapterService;
 import com.lucas.ending.service.EndingService;
 import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.global.exception.CustomException;
@@ -43,6 +44,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,12 +57,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * 스토리 진행 서비스 구현체.
  *
- * <p>
- * 플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리, 그리고 최근 행동 맥락 기록 기능을 제공한다.
+ * <p>플레이어의 스토리 시작, 현재 위치 조회, 상태 전이(transition) 처리, 그리고 최근 행동 맥락 기록 기능을 제공한다.
  *
- * <p>
- * 핵심 흐름: 1) DB의 story_transitions 테이블 기반으로 전이 매칭 2) 진행 상태와 스냅샷 갱신 3) 확정된 전이 결과를
- * Redis
+ * <p>핵심 흐름: 1) DB의 story_transitions 테이블 기반으로 전이 매칭 2) 진행 상태와 스냅샷 갱신 3) 확정된 전이 결과를 Redis
  * recent-actions/context에 기록
  *
  * @see StoryService
@@ -95,6 +95,7 @@ public class StoryServiceImpl implements StoryService {
   private static final String RULE_HASH_FILE_CHECK = "HASH_FILE_CHECK";
   private static final String RULE_USER_FRAGMENTS_PRESENT = "USER_FRAGMENTS_PRESENT";
   private static final String RULE_USER_FRAGMENTS_INCOMPLETE = "USER_FRAGMENTS_INCOMPLETE";
+  private static final String RULE_REGEX_FALLBACK = "REGEX_FALLBACK";
   private static final String CHAPTER_02_CODE = "week02";
   private static final String CHAPTER_03_CODE = "week03";
   private static final String CHAPTER_04_CODE = "week04";
@@ -110,50 +111,51 @@ public class StoryServiceImpl implements StoryService {
   private static final String TERMINAL_PROMPT_USER = "guest";
   private static final String TERMINAL_PROMPT_HOST = "lucas-server";
   private static final String RELAY_REDIRECTION_NUDGE = "리다이렉션 방향과 파일 경로를 다시 확인해봐.";
-  private static final Map<String, String> CHAPTER_START_NODE_CODES = Map.of(
-      CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE, CHAPTER_04_CODE, CHAPTER_04_START_NODE_CODE);
+  private static final Map<String, String> CHAPTER_START_NODE_CODES =
+      Map.of(
+          CHAPTER_03_CODE, CHAPTER_03_START_NODE_CODE, CHAPTER_04_CODE, CHAPTER_04_START_NODE_CODE);
 
   /** 터미널/VFS 기반 챕터가 공유하는 런타임 리소스 위치와 기본 프롬프트 설정입니다. */
-  private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES = Map.of(
-      CHAPTER_02_CODE,
-      new TerminalChapterProfile(
+  private static final Map<String, TerminalChapterProfile> TERMINAL_CHAPTER_PROFILES =
+      Map.of(
           CHAPTER_02_CODE,
-          CHAPTER_02_TERMINAL_PROFILE,
-          CHAPTER_02_VFS_VERSION,
-          "/story/chapter02/vfs.json",
-          CHAPTER_02_DEFAULT_CWD,
-          TERMINAL_PROMPT_USER,
-          TERMINAL_PROMPT_HOST),
-      CHAPTER_03_CODE,
-      new TerminalChapterProfile(
+          new TerminalChapterProfile(
+              CHAPTER_02_CODE,
+              CHAPTER_02_TERMINAL_PROFILE,
+              CHAPTER_02_VFS_VERSION,
+              "/story/chapter02/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST),
           CHAPTER_03_CODE,
-          CHAPTER_03_TERMINAL_PROFILE,
-          CHAPTER_03_VFS_VERSION,
-          "/story/chapter03/vfs.json",
-          CHAPTER_02_DEFAULT_CWD,
-          TERMINAL_PROMPT_USER,
-          TERMINAL_PROMPT_HOST),
-      CHAPTER_04_CODE,
-      new TerminalChapterProfile(
+          new TerminalChapterProfile(
+              CHAPTER_03_CODE,
+              CHAPTER_03_TERMINAL_PROFILE,
+              CHAPTER_03_VFS_VERSION,
+              "/story/chapter03/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST),
           CHAPTER_04_CODE,
-          CHAPTER_04_TERMINAL_PROFILE,
-          CHAPTER_04_VFS_VERSION,
-          "/story/chapter04/vfs.json",
-          CHAPTER_02_DEFAULT_CWD,
-          TERMINAL_PROMPT_USER,
-          TERMINAL_PROMPT_HOST));
+          new TerminalChapterProfile(
+              CHAPTER_04_CODE,
+              CHAPTER_04_TERMINAL_PROFILE,
+              CHAPTER_04_VFS_VERSION,
+              "/story/chapter04/vfs.json",
+              CHAPTER_02_DEFAULT_CWD,
+              TERMINAL_PROMPT_USER,
+              TERMINAL_PROMPT_HOST));
 
   /**
    * 터미널 챕터별 런타임 프로필입니다.
    *
-   * @param chapterCode     DB chapters.code와 snapshot.chapterCode에 저장되는 챕터 코드
-   * @param terminalProfile story_nodes.prompt_meta.terminalProfile과 매칭되는 프론트/백엔드
-   *                        식별자
-   * @param vfsVersion      snapshot에 기록할 VFS 리소스 버전
+   * @param chapterCode DB chapters.code와 snapshot.chapterCode에 저장되는 챕터 코드
+   * @param terminalProfile story_nodes.prompt_meta.terminalProfile과 매칭되는 프론트/백엔드 식별자
+   * @param vfsVersion snapshot에 기록할 VFS 리소스 버전
    * @param vfsResourcePath classpath 기준 vfs.json 리소스 경로
-   * @param defaultCwd      새 스냅샷과 상대 경로 해석에 사용할 기본 작업 디렉터리
-   * @param promptUser      터미널 프롬프트에 표시할 사용자명
-   * @param promptHost      터미널 프롬프트에 표시할 호스트명
+   * @param defaultCwd 새 스냅샷과 상대 경로 해석에 사용할 기본 작업 디렉터리
+   * @param promptUser 터미널 프롬프트에 표시할 사용자명
+   * @param promptHost 터미널 프롬프트에 표시할 호스트명
    */
   private record TerminalChapterProfile(
       String chapterCode,
@@ -162,8 +164,7 @@ public class StoryServiceImpl implements StoryService {
       String vfsResourcePath,
       String defaultCwd,
       String promptUser,
-      String promptHost) {
-  }
+      String promptHost) {}
 
   private final UserRepository userRepository;
   private final ChapterRepository chapterRepository;
@@ -171,6 +172,7 @@ public class StoryServiceImpl implements StoryService {
   private final StoryTransitionRepository storyTransitionRepository;
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final UserChapterProgressRepository userChapterProgressRepository;
+  private final ChapterService chapterService;
   private final EndingService endingService;
   private final RecentActionService recentActionService;
   private final TerminalCommandService terminalCommandService;
@@ -185,8 +187,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * Bean 초기화 시 터미널 챕터의 정적 VFS 리소스를 메모리에 로드합니다.
    *
-   * <p>
-   * 전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
+   * <p>전이 검증과 자유 터미널 fallback 모두 동일한 정적 VFS 정의를 사용해야 하므로 애플리케이션 시작 시 한 번만 로드합니다.
    */
   @PostConstruct
   public void init() {
@@ -197,9 +198,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * classpath의 터미널 챕터 VFS JSON 파일들을 읽어 챕터 코드별로 캐싱합니다.
    *
-   * <p>
-   * 개별 챕터의 VFS 리소스가 없거나 파싱에 실패해도 서버 기동은 유지하고, 해당 챕터만 빈 VFS fallback이 적용되도록 로그만
-   * 남깁니다.
+   * <p>개별 챕터의 VFS 리소스가 없거나 파싱에 실패해도 서버 기동은 유지하고, 해당 챕터만 빈 VFS fallback이 적용되도록 로그만 남깁니다.
    */
   private void loadVfsJson() {
     // 재초기화 상황에서도 이전 캐시가 남지 않도록 먼저 비운다.
@@ -245,13 +244,31 @@ public class StoryServiceImpl implements StoryService {
   @Override
   @Transactional
   public StoryNodeResponseDto startStory(Long userId, StartStoryRequestDto request) {
+    String uriHash = request.getUriHash();
+    String chapterCode = null;
+
+    // 모든 챕터를 조회해서 해시값이 일치하는 것을 찾음
+    List<Chapter> allChapters = chapterRepository.findAll();
+    for (Chapter c : allChapters) {
+      if (chapterService.generateUriHash(c.getCode()).equals(uriHash)) {
+        chapterCode = c.getCode();
+        break;
+      }
+    }
+
+    if (chapterCode == null) {
+      throw new CustomException(ErrorCode.E3001);
+    }
+
     // 요청된 챕터 코드로 챕터 조회
-    Chapter chapter = chapterRepository
-        .findByCode(request.getChapterCode())
-        .orElseThrow(() -> new CustomException(ErrorCode.E3001));
+    final String finalChapterCode = chapterCode;
+    Chapter chapter =
+        chapterRepository
+            .findByCode(finalChapterCode)
+            .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode = findStartNode(request.getChapterCode());
+    StoryNode firstNode = findStartNode(finalChapterCode);
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
@@ -264,12 +281,13 @@ public class StoryServiceImpl implements StoryService {
 
     if (progress == null) {
       // 최초 플레이: 새 진행 레코드 생성
-      progress = UserStoryProgress.builder()
-          .user(user)
-          .latestChapter(chapter)
-          .latestNode(firstNode)
-          .latestSnapshotJson(emptySnapshot)
-          .build();
+      progress =
+          UserStoryProgress.builder()
+              .user(user)
+              .latestChapter(chapter)
+              .latestNode(firstNode)
+              .latestSnapshotJson(emptySnapshot)
+              .build();
     } else {
       // 재시작: 기존 진행 레코드를 신규 챕터/노드로 갱신
       progress.updateProgress(chapter, firstNode, emptySnapshot);
@@ -287,9 +305,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 시작 시 사용할 첫 노드를 조회한다.
    *
-   * <p>
-   * Chapter 3처럼 뒤늦게 도입부 노드가 추가된 챕터는 DB id 순서만으로 시작점을 정할 수 없으므로, 명시 시작 노드 코드를 먼저
-   * 조회하고 기존 정렬 기준을
+   * <p>Chapter 3처럼 뒤늦게 도입부 노드가 추가된 챕터는 DB id 순서만으로 시작점을 정할 수 없으므로, 명시 시작 노드 코드를 먼저 조회하고 기존 정렬 기준을
    * fallback으로 유지한다.
    *
    * @param chapterCode 시작할 챕터 코드
@@ -314,8 +330,8 @@ public class StoryServiceImpl implements StoryService {
 
     // 명시 시작 노드가 있으면 같은 챕터 안의 노드인지까지 함께 검증한다.
     if (configuredStartNodeCode != null) {
-      java.util.Optional<StoryNode> configuredStartNode = storyNodeRepository.findByChapter_CodeAndCode(chapterCode,
-          configuredStartNodeCode);
+      java.util.Optional<StoryNode> configuredStartNode =
+          storyNodeRepository.findByChapter_CodeAndCode(chapterCode, configuredStartNodeCode);
 
       // seed가 아직 갱신되지 않은 환경에서는 기존 id 순서 fallback으로 기동 가능성을 유지한다.
       if (configuredStartNode.isPresent()) {
@@ -344,9 +360,10 @@ public class StoryServiceImpl implements StoryService {
     User user = getAuthenticatedUser(userId);
 
     // 유저의 진행 기록 조회 (없으면 에러)
-    UserStoryProgress progress = userStoryProgressRepository
-        .findById(user.getId())
-        .orElseThrow(() -> new CustomException(ErrorCode.E3003));
+    UserStoryProgress progress =
+        userStoryProgressRepository
+            .findById(user.getId())
+            .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
     // 마지막으로 도달한 노드 정보를 DTO로 변환하여 반환
     return StoryNodeResponseDto.from(progress.getLatestNode());
@@ -359,9 +376,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 유저의 액션(명령어 입력, 클릭 등)을 받아 스토리 상태를 전이시킨다.
    *
-   * <p>
-   * 처리 순서: 1) 현재 진행 상태 조회 2) story_transitions 테이블에서 매칭되는 전이 검색 3) 진행 상태 갱신 4)
-   * 확정된 결과를 Redis
+   * <p>처리 순서: 1) 현재 진행 상태 조회 2) story_transitions 테이블에서 매칭되는 전이 검색 3) 진행 상태 갱신 4) 확정된 결과를 Redis
    * recent-actions/context에 기록
    *
    * @param request 유저 액션 정보 (nodeId, actionType, inputValue)
@@ -376,9 +391,10 @@ public class StoryServiceImpl implements StoryService {
     // ── Step 1: DB 기반 스토리 전이 ──
     // 현재 노드에서 출발하는 전이 목록을 우선순위 순으로 조회하고,
     // 유저의 액션과 매칭되는 전이를 찾아 다음 노드로 진행한다.
-    UserStoryProgress progress = userStoryProgressRepository
-        .findById(user.getId())
-        .orElseThrow(() -> new CustomException(ErrorCode.E3003));
+    UserStoryProgress progress =
+        userStoryProgressRepository
+            .findById(user.getId())
+            .orElseThrow(() -> new CustomException(ErrorCode.E3003));
 
     // 현재 유저가 위치한 노드와 챕터 (에러 로그용으로 보관)
     StoryNode currentNode = progress.getLatestNode();
@@ -386,22 +402,24 @@ public class StoryServiceImpl implements StoryService {
 
     try {
       // 현재 노드에서 출발 가능한 전이 목록 (우선순위 내림차순)
-      List<StoryTransition> transitions = storyTransitionRepository
-          .findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+      List<StoryTransition> transitions =
+          storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
       // server_rule matcher가 flags/cwd/vfsOverlay를 볼 수 있도록 현재 snapshot을 한 번 꺼낸다.
       JsonNode latestSnapshot = progress.getLatestSnapshotJson();
 
       // 유저 입력과 매칭되는 전이 검색 (exact / regex 검증)
-      StoryTransition matched = transitions.stream()
-          .filter(t -> matchesTransition(t, request, latestSnapshot, user.getId()))
-          .findFirst()
-          .orElse(null);
+      StoryTransition matched =
+          transitions.stream()
+              .filter(t -> matchesTransition(t, request, latestSnapshot, user.getId()))
+              .findFirst()
+              .orElse(null);
 
       if (matched == null) {
         // ── Step 2: 터미널 챕터 Fallback ──
         // DB 전이에 실패했을 때, 터미널 프로필 노드라면 가상 파일 시스템 로직으로 처리한다.
-        TransitionResponseDto terminalResponse = handleTerminalFallback(user, progress, currentNode, request);
+        TransitionResponseDto terminalResponse =
+            handleTerminalFallback(user, progress, currentNode, request);
         if (terminalResponse != null) {
           return terminalResponse;
         }
@@ -426,8 +444,9 @@ public class StoryServiceImpl implements StoryService {
 
       if (isFailNode) {
         Chapter failChapter = nextNode.getChapter();
-        JsonNode failSnapshot = createTransitionSnapshot(
-            failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+        JsonNode failSnapshot =
+            createTransitionSnapshot(
+                failChapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
         progress.updateProgress(failChapter, nextNode, failSnapshot);
         userStoryProgressRepository.save(progress);
 
@@ -457,8 +476,9 @@ public class StoryServiceImpl implements StoryService {
       // 도착 노드가 속한 챕터 정보
       Chapter chapter = nextNode.getChapter();
       // 현재 상태 스냅샷 생성
-      JsonNode snapshot = createTransitionSnapshot(
-          chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
+      JsonNode snapshot =
+          createTransitionSnapshot(
+              chapter, nextNode, latestSnapshot, request, matched.getEffectBundle());
 
       // 유저 진행 상태를 다음 노드로 갱신 후 저장
       progress.updateProgress(chapter, nextNode, snapshot);
@@ -522,11 +542,12 @@ public class StoryServiceImpl implements StoryService {
     // FAIL 또는 ERROR일 때 카운트를 올리고, SUCCESS일 때만 리셋합니다.
     boolean isFail = "FAIL".equals(result) || "ERROR".equals(result);
     boolean isSuccess = "SUCCESS".equals(result);
-    boolean shouldResetFailCountOnSuccess = isSuccess
-        && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
+    boolean shouldResetFailCountOnSuccess =
+        isSuccess && !(ACTION_TYPE_CLICK.equals(actionType) && DISMISS_INPUT.equals(normInput));
 
-    int failCountAfterAction = storyActionLogService.updateAndGetFailCount(
-        sessionId, isFail, shouldResetFailCountOnSuccess);
+    int failCountAfterAction =
+        storyActionLogService.updateAndGetFailCount(
+            sessionId, isFail, shouldResetFailCountOnSuccess);
 
     // hint_requested 여부 추출
     boolean hintRequested = false;
@@ -554,22 +575,23 @@ public class StoryServiceImpl implements StoryService {
     String fromNodeId = currentNode != null ? currentNode.getCode() : "UNKNOWN";
     String toNodeId = nextNode != null ? nextNode.getCode() : "UNKNOWN";
 
-    StoryActionLogEvent event = StoryActionLogEvent.builder()
-        .timestamp(timestamp)
-        .sessionId(sessionId)
-        .userId(user.getId())
-        .chapterId(chapterId)
-        .fromNodeId(fromNodeId)
-        .toNodeId(toNodeId)
-        .actionType(actionType)
-        .inputValue(rawInput)
-        .inputValueNorm(normInput)
-        .result(result)
-        .failCountAfterAction(failCountAfterAction)
-        .hintRequested(hintRequested)
-        .stateVersion(stateVersion)
-        .source(source)
-        .build();
+    StoryActionLogEvent event =
+        StoryActionLogEvent.builder()
+            .timestamp(timestamp)
+            .sessionId(sessionId)
+            .userId(user.getId())
+            .chapterId(chapterId)
+            .fromNodeId(fromNodeId)
+            .toNodeId(toNodeId)
+            .actionType(actionType)
+            .inputValue(rawInput)
+            .inputValueNorm(normInput)
+            .result(result)
+            .failCountAfterAction(failCountAfterAction)
+            .hintRequested(hintRequested)
+            .stateVersion(stateVersion)
+            .source(source)
+            .build();
 
     storySessionRedisService.recordAction(
         sessionId,
@@ -619,11 +641,11 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 매칭되는 transition이 없어서 거절된 요청을 Redis recent-actions에 기록한다.
    *
-   * @param user        요청을 보낸 인증 유저
-   * @param progress    유저의 현재 스토리 진행 상태
+   * @param user 요청을 보낸 인증 유저
+   * @param progress 유저의 현재 스토리 진행 상태
    * @param currentNode 요청 당시 유저가 위치한 노드
-   * @param request     유저가 보낸 transition 요청
-   * @param exception   transition 매칭 실패 예외
+   * @param request 유저가 보낸 transition 요청
+   * @param exception transition 매칭 실패 예외
    */
   private void recordRejectedTransitionAction(
       User user,
@@ -641,17 +663,18 @@ public class StoryServiceImpl implements StoryService {
     String result = resolveRejectedResult(request, exception);
 
     // Redis에 저장할 최근 행동 이벤트를 현재 상태 기준으로 구성한다.
-    RecentActionEvent event = RecentActionEvent.builder()
-        .userId(user.getId())
-        .chapterCode(chapterCode)
-        .actionType(request.getActionType())
-        .input(request.getInputValue())
-        .result(result)
-        .nodeCode(currentNode.getCode())
-        .cwd(resolveCwd(snapshot, request))
-        .snapshotVersion(extractInteger(snapshot, "/snapshotVersion"))
-        .scanPercent(extractInteger(snapshot, "/scanPercent"))
-        .build();
+    RecentActionEvent event =
+        RecentActionEvent.builder()
+            .userId(user.getId())
+            .chapterCode(chapterCode)
+            .actionType(request.getActionType())
+            .input(request.getInputValue())
+            .result(result)
+            .nodeCode(currentNode.getCode())
+            .cwd(resolveCwd(snapshot, request))
+            .snapshotVersion(extractInteger(snapshot, "/snapshotVersion"))
+            .scanPercent(extractInteger(snapshot, "/scanPercent"))
+            .build();
 
     // DB 변경이 없는 거절 이벤트는 transaction commit을 기다리지 않고 즉시 Redis에 기록한다.
     recentActionService.recordAction(event);
@@ -660,13 +683,13 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 처리 결과를 Redis recent-actions에 남길 이벤트로 변환한다.
    *
-   * @param user           요청을 보낸 인증 유저
-   * @param chapter        transition 이후 유저가 위치한 챕터
-   * @param request        유저가 보낸 transition 요청
-   * @param transition     매칭된 story transition
-   * @param fromNode       transition 출발 노드
-   * @param toNode         transition 도착 노드
-   * @param snapshot       transition 이후 저장할 snapshot
+   * @param user 요청을 보낸 인증 유저
+   * @param chapter transition 이후 유저가 위치한 챕터
+   * @param request 유저가 보낸 transition 요청
+   * @param transition 매칭된 story transition
+   * @param fromNode transition 출발 노드
+   * @param toNode transition 도착 노드
+   * @param snapshot transition 이후 저장할 snapshot
    * @param fallbackResult effect_bundle에 recentResult가 없을 때 사용할 기본 result
    * @return Redis에 저장할 최근 행동 이벤트
    */
@@ -727,7 +750,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.recentResult를 우선 사용하고 없으면 기본 result를 반환한다.
    *
-   * @param transition     매칭된 story transition
+   * @param transition 매칭된 story transition
    * @param fallbackResult 기본 result 코드
    * @return recent-actions에 저장할 result 코드
    */
@@ -763,7 +786,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 매칭 실패 예외를 recent-actions result 코드로 변환한다.
    *
-   * @param request   유저가 보낸 transition 요청
+   * @param request 유저가 보낸 transition 요청
    * @param exception transition 처리 중 발생한 예외
    * @return recent-actions에 저장할 실패 result 코드
    */
@@ -791,7 +814,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot 또는 요청 meta에서 현재 가상 터미널 경로를 결정한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param request  유저가 보낸 transition 요청
+   * @param request 유저가 보낸 transition 요청
    * @return cwd 값이 있으면 해당 값, 없으면 null
    */
   private String resolveCwd(JsonNode snapshot, TransitionRequestDto request) {
@@ -836,7 +859,7 @@ public class StoryServiceImpl implements StoryService {
    * JsonNode에서 JSON Pointer 경로의 문자열 값을 추출한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param pointer  JSON Pointer 경로
+   * @param pointer JSON Pointer 경로
    * @return 문자열 값이 있으면 해당 값, 없으면 null
    */
   private String extractText(JsonNode snapshot, String pointer) {
@@ -869,7 +892,7 @@ public class StoryServiceImpl implements StoryService {
    * JsonNode에서 JSON Pointer 경로의 정수 값을 추출한다.
    *
    * @param snapshot 값을 읽을 snapshot JSON
-   * @param pointer  JSON Pointer 경로
+   * @param pointer JSON Pointer 경로
    * @return 정수 값이 있으면 해당 값, 없으면 null
    */
   private Integer extractInteger(JsonNode snapshot, String pointer) {
@@ -906,7 +929,8 @@ public class StoryServiceImpl implements StoryService {
    * @throws CustomException E3000 - 유저 미존재
    */
   private User getAuthenticatedUser(Long userId) {
-    User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.E3000));
 
     // 최초 플레이인 경우 진행 환경(1챕터 해금 및 최초 스토리 진행 레코드)을 조성해준다.
     if (!userChapterProgressRepository.existsByUserId(user.getId())) {
@@ -946,11 +970,10 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라
-   * exact(완전 일치) 또는
+   * 전이(Transition)가 유저의 요청과 매칭되는지 검증한다. - actionType 일치 여부 확인 - validatorType에 따라 exact(완전 일치) 또는
    * regex(정규식) 비교
    *
-   * @param t       DB에서 조회한 전이 후보
+   * @param t DB에서 조회한 전이 후보
    * @param request 유저의 액션 요청
    * @return 매칭되면 true
    */
@@ -966,14 +989,13 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
     // 입력값이 없으면 매칭 불가
-    if (request.getInputValue() == null)
-      return false;
+    if (request.getInputValue() == null) return false;
 
     // validatorType에 따라 매칭 방식 분기
     return switch (t.getValidatorType()) {
       case "exact" ->
-        matchesExactTransition(
-            t.getExpectedInput(), request.getInputValue(), t.getValidatorConfig()); // 완전 일치
+          matchesExactTransition(
+              t.getExpectedInput(), request.getInputValue(), t.getValidatorConfig()); // 완전 일치
       case "regex" -> request.getInputValue().matches(t.getExpectedInput()); // 정규식 매칭
       case "server_rule" -> matchesServerRuleTransition(t, request, latestSnapshot, userId);
       default -> false; // 지원하지 않는 validatorType은 매칭 실패로 처리
@@ -998,8 +1020,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * server_rule validator_config를 기준으로 transition 매칭 여부를 판단한다.
    *
-   * @param transition     DB에서 조회한 server_rule transition
-   * @param request        유저의 transition 요청
+   * @param transition DB에서 조회한 server_rule transition
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return server_rule이 통과하면 true
    */
@@ -1040,6 +1062,10 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
+    if (config.path("nudgeOnly").asBoolean(false)) {
+      return false;
+    }
+
     // Chapter 2 MVP에서 현재 코드 구조만으로 안전하게 처리 가능한 룰만 분기한다.
     return switch (rule) {
       case RULE_AUTO_SYSTEM -> matchesAutoSystemRule(request);
@@ -1053,24 +1079,63 @@ public class StoryServiceImpl implements StoryService {
       case RULE_CONNECT_RELAY -> matchesConnectRelayRule(config, request, latestSnapshot);
       case RULE_RELAY_REQUEST -> matchesRelayRequestRule(config, request, latestSnapshot, false);
       case RULE_RELAY_REQUEST_TO_FILE ->
-        matchesRelayRequestRule(config, request, latestSnapshot, true);
+          matchesRelayRequestRule(config, request, latestSnapshot, true);
       case RULE_VALIDATE_CORE_GROUP_DAT ->
-        matchesValidateCoreGroupDatRule(config, request, latestSnapshot);
+          matchesValidateCoreGroupDatRule(config, request, latestSnapshot);
       case RULE_GPG_OUTPUT_EXISTS -> matchesGpgOutputExistsRule(config, request, latestSnapshot);
       case RULE_FILE_EQUIVALENCE -> matchesFileEquivalenceRule(config, request, latestSnapshot);
       case RULE_CONFIRMATION_STREAM_TO_SCRIPT ->
-        matchesConfirmationStreamToScriptRule(config, request, latestSnapshot);
+          matchesConfirmationStreamToScriptRule(config, request, latestSnapshot);
       case RULE_DISCOVER_FILE -> matchesDiscoverFileRule(config, request, latestSnapshot);
       case RULE_CREATE_FILE_EQUIVALENT ->
-        matchesCreateFileEquivalentRule(config, request, latestSnapshot);
+          matchesCreateFileEquivalentRule(config, request, latestSnapshot);
       case RULE_FILE_COMPOSITION -> matchesFileCompositionRule(config, request, latestSnapshot);
       case RULE_HASH_FILE_CHECK -> matchesHashFileCheckRule(config, request, latestSnapshot);
       case RULE_USER_FRAGMENTS_PRESENT ->
-        matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, true);
+          matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, true);
       case RULE_USER_FRAGMENTS_INCOMPLETE ->
-        matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
+          matchesUserFragmentsGateRule(config, request, latestSnapshot, userId, false);
+      case RULE_REGEX_FALLBACK -> matchesRegexFallbackRule(config, request, latestSnapshot);
       default -> false;
     };
+  }
+
+  /**
+   * 현재 노드에서 명시적으로 처리해야 하는 오답 입력을 잡기 위한 fallback 정규식 룰입니다.
+   *
+   * <p>예: SSH password prompt에서 정답 비밀번호가 아닌 값을 입력했을 때 일반 터미널 fallback으로 빠지지 않고 password retry 노드로
+   * 이동시킵니다.
+   */
+  private boolean matchesRegexFallbackRule(
+      JsonNode config, TransitionRequestDto request, JsonNode latestSnapshot) {
+    if (request == null) {
+      return false;
+    }
+
+    if (!matchesFlagRequirements(config, latestSnapshot)) {
+      return false;
+    }
+
+    if (!matchesCwdRequirement(config, latestSnapshot)) {
+      return false;
+    }
+
+    String input = request.getInputValue();
+    if (input == null || input.isBlank()) {
+      return false;
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex == null || commandRegex.isBlank()) {
+      return false;
+    }
+
+    try {
+      return Pattern.compile(commandRegex, Pattern.DOTALL).matcher(input).matches();
+    } catch (PatternSyntaxException e) {
+      log.warn("Invalid REGEX_FALLBACK rule: {}", commandRegex, e);
+      return false;
+    }
   }
 
   /**
@@ -1104,8 +1169,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * NORMALIZED_COMMAND server_rule을 기준으로 명령어와 인자를 비교한다.
    *
-   * @param config         transition의 validator_config JSON
-   * @param request        유저의 transition 요청
+   * @param config transition의 validator_config JSON
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return command와 args가 정규화 기준으로 일치하면 true
    */
@@ -1208,12 +1273,11 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다. Chapter 2에서 사용자가 임시 파일들을
-   * 찾는 과정을 유연하게 허용하기 위해
+   * FIND_TMP_COMMAND server_rule을 기반으로 find 명령어를 검증한다. Chapter 2에서 사용자가 임시 파일들을 찾는 과정을 유연하게 허용하기 위해
    * 도입되었다.
    *
-   * @param config         transition의 validator_config JSON
-   * @param request        유저의 transition 요청
+   * @param config transition의 validator_config JSON
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 명령어 구조와 검색 대상(루트, 파일 패턴)이 조건에 맞으면 true
    */
@@ -1275,10 +1339,9 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다. '.' 또는 워크스페이스의 절대 경로(/home/guest)를
-   * 허용한다.
+   * find 명령어의 검색 시작 경로가 워크스페이스 루트를 가리키는지 확인한다. '.' 또는 워크스페이스의 절대 경로(/home/guest)를 허용한다.
    *
-   * @param rawRoot        사용자가 입력한 경로 문자열
+   * @param rawRoot 사용자가 입력한 경로 문자열
    * @param latestSnapshot 현재 진행 snapshot
    * @return 유효한 루트 경로면 true
    */
@@ -1288,9 +1351,10 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // 경로 끝의 '/' 제거 및 정규화
-    String normalized = rawRoot.endsWith("/") && rawRoot.length() > 1
-        ? rawRoot.substring(0, rawRoot.length() - 1)
-        : rawRoot;
+    String normalized =
+        rawRoot.endsWith("/") && rawRoot.length() > 1
+            ? rawRoot.substring(0, rawRoot.length() - 1)
+            : rawRoot;
 
     // '.'인 경우 현재 작업 디렉토리가 루트인지 확인
     if (".".equals(normalized)) {
@@ -1324,8 +1388,12 @@ public class StoryServiceImpl implements StoryService {
     // validator_config.command에는 cat, sh 같은 기대 명령이 들어 있다.
     String expectedCommand = getTextField(config, "command");
 
+    List<String> alternateCommands = getTextArrayField(config, "alternateCommands");
+    boolean commandMatches =
+        command.command().equals(expectedCommand) || alternateCommands.contains(command.command());
+
     // 명령어 이름이 다르면 해당 VFS transition은 대상이 아니다.
-    if (!command.command().equals(expectedCommand)) {
+    if (!commandMatches) {
       // 다른 명령은 우선순위가 낮은 다른 transition 또는 fallback이 처리한다.
       return false;
     }
@@ -1389,8 +1457,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * PARSED_TAR_COMMAND server_rule을 기준으로 tar 아카이브 생성 명령을 검증한다.
    *
-   * @param config         transition의 validator_config JSON
-   * @param request        유저의 transition 요청
+   * @param config transition의 validator_config JSON
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return output file, 포함 파일, 금지/감지 파일 조건이 맞으면 true
    */
@@ -1449,8 +1517,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * NC_SEND_FILE server_rule을 기준으로 nc 전송 명령을 검증한다.
    *
-   * @param config         transition의 validator_config JSON
-   * @param request        유저의 transition 요청
+   * @param config transition의 validator_config JSON
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return host/port/timeout/stdinFile 조건이 맞으면 true
    */
@@ -1521,8 +1589,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * CHAINED_COMMAND server_rule을 기준으로 연결 명령의 순서와 인자를 검증한다.
    *
-   * @param config         transition의 validator_config JSON
-   * @param request        유저의 transition 요청
+   * @param config transition의 validator_config JSON
+   * @param request 유저의 transition 요청
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return operator와 하위 command들이 모두 맞으면 true
    */
@@ -1544,9 +1612,10 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // raw input을 operator 기준으로 분리한다.
-    String[] rawCommands = request
-        .getInputValue()
-        .split("\\s*" + java.util.regex.Pattern.quote(operator) + "\\s*", -1);
+    String[] rawCommands =
+        request
+            .getInputValue()
+            .split("\\s*" + java.util.regex.Pattern.quote(operator) + "\\s*", -1);
 
     // validator_config.commands는 기대 command 목록이다.
     JsonNode expectedCommands = config.get("commands");
@@ -1594,11 +1663,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * DISCOVER_OPEN_PORT rule을 검증한다.
    *
-   * <p>
-   * Chapter 3 seed는 nmap, ss, netstat, nc 중 하나로 9091 relay 포트를 발견하는 입력을 허용한다.
+   * <p>Chapter 3 seed는 nmap, ss, netstat, nc 중 하나로 9091 relay 포트를 발견하는 입력을 허용한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return 허용된 포트 탐색 명령이면 true
    */
@@ -1633,8 +1701,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * DISCOVER_OPEN_PORT의 개별 허용 방식을 검증한다.
    *
-   * @param method     acceptedMethods의 단일 method 설정
-   * @param command    사용자 입력 명령
+   * @param method acceptedMethods의 단일 method 설정
+   * @param command 사용자 입력 명령
    * @param targetPort 찾아야 하는 relay 포트
    * @return 해당 method가 입력과 일치하면 true
    */
@@ -1676,8 +1744,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * CONNECT_RELAY rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return nc host port 형식이 relay 접속 조건과 맞으면 true
    */
@@ -1713,9 +1781,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * RELAY_REQUEST 및 RELAY_REQUEST_TO_FILE rule을 검증한다.
    *
-   * @param config             transition validator_config
-   * @param request            사용자 transition 요청
-   * @param latestSnapshot     현재 진행 snapshot
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
+   * @param latestSnapshot 현재 진행 snapshot
    * @param outputFileRequired 파일 저장형 요청이면 true
    * @return relay 요청 payload와 nc 대상, 출력 파일 조건이 맞으면 true
    */
@@ -1774,11 +1842,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 저장형 relay 명령의 리다이렉션 near-miss 여부를 판단해 범주형 힌트를 반환한다.
    *
-   * <p>
-   * 정답 파일명이나 다음 행동을 직접 노출하지 않고, 리다이렉션 방향과 파일 경로만 다시 보도록 안내한다.
+   * <p>정답 파일명이나 다음 행동을 직접 노출하지 않고, 리다이렉션 방향과 파일 경로만 다시 보도록 안내한다.
    *
-   * @param config         transition validator_config
-   * @param command        사용자가 입력한 파싱된 명령
+   * @param config transition validator_config
+   * @param command 사용자가 입력한 파싱된 명령
    * @param latestSnapshot 현재 진행 snapshot
    * @return relay 저장형 near-miss이면 힌트 문구, 아니면 null
    */
@@ -1850,8 +1917,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * VALIDATE_CORE_GROUP_DAT rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return core_group.dat 작성 내용이 성공/실패 branch 조건과 맞으면 true
    */
@@ -1885,8 +1952,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * GPG_OUTPUT_EXISTS rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return gpg symmetric 출력 경로가 기대값과 맞으면 true
    */
@@ -1919,8 +1986,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * FILE_EQUIVALENCE rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return cp/mv/cat로 기대 파일을 targetFile에 복제하려는 입력이면 true
    */
@@ -1930,7 +1997,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    ParsedFileCopyCommand copyCommand = parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
     if (copyCommand == null) {
       return false;
     }
@@ -1949,8 +2017,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * CONFIRMATION_STREAM_TO_SCRIPT rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return 충분한 확인 토큰을 script로 stream하는 입력이면 true
    */
@@ -1975,8 +2043,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * DISCOVER_FILE rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return ls/find/cd 후 ls로 targetFile을 찾는 입력이면 true
    */
@@ -2012,8 +2080,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * find -name 형태로 targetFile을 찾는 입력인지 검증한다.
    *
-   * @param command        파싱된 find 명령어
-   * @param targetFile     찾아야 하는 파일 절대 경로
+   * @param command 파싱된 find 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
    * @param latestSnapshot 현재 진행 snapshot
    * @return targetFile 이름과 탐색 루트가 일치하면 true
    */
@@ -2036,8 +2104,9 @@ public class StoryServiceImpl implements StoryService {
       // -name 뒤에는 파일명 패턴이 온다.
       if ("-name".equals(arg)) {
         // 다음 값이 targetName이면 파일명 조건을 충족한다.
-        targetNameSeen = targetNameSeen
-            || (i + 1 < command.args().size() && targetName.equals(command.args().get(i + 1)));
+        targetNameSeen =
+            targetNameSeen
+                || (i + 1 < command.args().size() && targetName.equals(command.args().get(i + 1)));
 
         // -name 값까지 소비했으므로 다음 반복에서 건너뛴다.
         i++;
@@ -2085,10 +2154,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * ls 형태로 targetFile 또는 targetFile이 있는 디렉터리를 확인하는 입력인지 검증한다.
    *
-   * @param command        파싱된 ls 명령어
-   * @param targetFile     찾아야 하는 파일 절대 경로
+   * @param command 파싱된 ls 명령어
+   * @param targetFile 찾아야 하는 파일 절대 경로
    * @param latestSnapshot 현재 진행 snapshot
-   * @param cwdOverride    cd 이후처럼 임시로 적용할 기준 cwd
+   * @param cwdOverride cd 이후처럼 임시로 적용할 기준 cwd
    * @return targetFile 또는 부모 디렉터리를 ls로 조회하면 true
    */
   private boolean matchesLsDiscovery(
@@ -2097,12 +2166,14 @@ public class StoryServiceImpl implements StoryService {
     String targetDirectory = parentPathOf(targetFile);
 
     // 기준 cwd가 없으면 snapshot의 현재 cwd를 사용한다.
-    String baseCwd = cwdOverride == null || cwdOverride.isBlank()
-        ? extractText(latestSnapshot, "/terminal/cwd")
-        : cwdOverride;
+    String baseCwd =
+        cwdOverride == null || cwdOverride.isBlank()
+            ? extractText(latestSnapshot, "/terminal/cwd")
+            : cwdOverride;
 
     // 옵션을 제외한 실제 path 인자만 모은다.
-    List<String> pathArgs = command.args().stream().filter(arg -> !arg.startsWith("-")).collect(Collectors.toList());
+    List<String> pathArgs =
+        command.args().stream().filter(arg -> !arg.startsWith("-")).collect(Collectors.toList());
 
     // path 인자가 없는 ls는 현재 디렉터리를 조회한다.
     if (pathArgs.isEmpty()) {
@@ -2118,8 +2189,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * cd targetDirectory 후 ls로 targetFile을 찾는 입력인지 검증한다.
    *
-   * @param input          사용자 원문 입력
-   * @param targetFile     찾아야 하는 파일 절대 경로
+   * @param input 사용자 원문 입력
+   * @param targetFile 찾아야 하는 파일 절대 경로
    * @param latestSnapshot 현재 진행 snapshot
    * @return cd와 ls가 같은 입력 안에서 순서대로 수행되면 true
    */
@@ -2169,8 +2240,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * CREATE_FILE_EQUIVALENT rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return sourceFile을 targetFile로 복사하는 입력이면 true
    */
@@ -2180,7 +2251,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    ParsedFileCopyCommand copyCommand = parseFileCopyCommand(request.getInputValue(), latestSnapshot);
+    ParsedFileCopyCommand copyCommand =
+        parseFileCopyCommand(request.getInputValue(), latestSnapshot);
     if (copyCommand == null) {
       return false;
     }
@@ -2193,8 +2265,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * FILE_COMPOSITION rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return orderedSources를 targetFile로 합치는 입력이면 true
    */
@@ -2221,8 +2293,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * HASH_FILE_CHECK rule을 검증한다.
    *
-   * @param config         transition validator_config
-   * @param request        사용자 transition 요청
+   * @param config transition validator_config
+   * @param request 사용자 transition 요청
    * @param latestSnapshot 현재 진행 snapshot
    * @return sha256sum 또는 shasum -a 256 대상이 targetFile이면 true
    */
@@ -2254,7 +2326,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config에서 문자열 필드를 안전하게 읽는다.
    *
-   * @param node      값을 읽을 JSON node
+   * @param node 값을 읽을 JSON node
    * @param fieldName 읽을 필드명
    * @return 문자열 필드가 있으면 값, 없으면 null
    */
@@ -2287,7 +2359,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config에서 문자열 배열 필드를 안전하게 읽는다.
    *
-   * @param node      값을 읽을 JSON node
+   * @param node 값을 읽을 JSON node
    * @param fieldName 읽을 배열 필드명
    * @return 문자열 값만 포함한 배열, 필드가 없으면 빈 배열
    */
@@ -2338,7 +2410,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config.cwd 조건이 현재 snapshot의 terminal.cwd와 맞는지 확인한다.
    *
-   * @param config         transition validator_config
+   * @param config transition validator_config
    * @param latestSnapshot 현재 진행 snapshot
    * @return cwd 조건이 없거나 현재 cwd와 같으면 true
    */
@@ -2362,7 +2434,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * command form 설정과 실제 token 목록을 비교한다.
    *
-   * @param form         command/args 또는 command/argsAnyOrder 설정
+   * @param form command/args 또는 command/argsAnyOrder 설정
    * @param actualTokens tokenizer로 분해한 실제 입력
    * @return command와 args 조건이 맞으면 true
    */
@@ -2422,9 +2494,18 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
+    List<String> acceptedValues = getTextArrayField(config, "acceptedValues");
+    if (!acceptedValues.isEmpty() && !acceptedValues.contains(request.getInputValue().trim())) {
+      return false;
+    }
+
     String commandRegex = getTextField(config, "commandRegex");
     if (commandRegex != null && !commandRegex.isBlank()) {
       if (!request.getInputValue().matches(commandRegex)) {
+        return false;
+      }
+    } else if (config.has("acceptedForms") || config.has("command")) {
+      if (!matchesNormalizedCommandRule(config, request, latestSnapshot)) {
         return false;
       }
     }
@@ -2516,17 +2597,14 @@ public class StoryServiceImpl implements StoryService {
 
   /** nc host/port 명령에서 추출한 구조입니다. */
   private record ParsedNetcatCommand(
-      String host, int port, String stdinFile, List<String> trailingValues) {
-  }
+      String host, int port, String stdinFile, List<String> trailingValues) {}
 
   /** relay 요청 입력에서 추출한 payload, nc 대상, 출력 파일 구조입니다. */
   private record ParsedRelayInvocation(
-      String payload, ParsedNetcatCommand netcatCommand, String outputFile) {
-  }
+      String payload, ParsedNetcatCommand netcatCommand, String outputFile) {}
 
   /** 파일 복사/동등성 rule에서 사용하는 source/target 구조입니다. */
-  private record ParsedFileCopyCommand(String command, String sourceFile, String targetFile) {
-  }
+  private record ParsedFileCopyCommand(String command, String sourceFile, String targetFile) {}
 
   private ParsedNetcatCommand parseNetcatCommand(List<String> args) {
     List<String> positionals = new ArrayList<>();
@@ -2564,9 +2642,10 @@ public class StoryServiceImpl implements StoryService {
         continue;
       }
 
-      List<String> trailingValues = i + 2 >= positionals.size()
-          ? List.of()
-          : new ArrayList<>(positionals.subList(i + 2, positionals.size()));
+      List<String> trailingValues =
+          i + 2 >= positionals.size()
+              ? List.of()
+              : new ArrayList<>(positionals.subList(i + 2, positionals.size()));
       return new ParsedNetcatCommand(positionals.get(i), port, stdinFile, trailingValues);
     }
     return null;
@@ -2661,8 +2740,8 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
     return java.util.regex.Pattern.compile(
-        "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b",
-        java.util.regex.Pattern.CASE_INSENSITIVE)
+            "\\b" + java.util.regex.Pattern.quote(expectedRequest) + "\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE)
         .matcher(payload)
         .find();
   }
@@ -2738,8 +2817,9 @@ public class StoryServiceImpl implements StoryService {
       }
     }
 
-    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\b[\\w_]+\\s+(ACTIVE|DELETED|UNKNOWN)\\b")
-        .matcher(normalized);
+    java.util.regex.Matcher matcher =
+        java.util.regex.Pattern.compile("\\b[\\w_]+\\s+(ACTIVE|DELETED|UNKNOWN)\\b")
+            .matcher(normalized);
     while (matcher.find()) {
       String line = matcher.group().trim();
       if (!lines.contains(line)) {
@@ -2752,13 +2832,11 @@ public class StoryServiceImpl implements StoryService {
   /**
    * core_group.dat 검증에 사용할 상태 라인 목록을 추출한다.
    *
-   * <p>
-   * 직접 파일 내용을 작성한 입력은 기존처럼 상태 라인을 바로 읽고, 사용자가 PEOPLE 덤프 파일을 grep/awk/sed로 필터링한
-   * 입력은
+   * <p>직접 파일 내용을 작성한 입력은 기존처럼 상태 라인을 바로 읽고, 사용자가 PEOPLE 덤프 파일을 grep/awk/sed로 필터링한 입력은
    * sourceStatusLines를 기준으로 실제 결과 파일에 들어갈 상태 라인을 추론한다.
    *
-   * @param input          사용자가 입력한 터미널 명령 문자열
-   * @param config         transition validator_config
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
    * @param latestSnapshot 현재 진행 snapshot
    * @return core_group.dat에 들어간 것으로 판단되는 상태 라인 목록
    */
@@ -2779,12 +2857,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * PEOPLE 덤프 파일을 필터링해 core_group.dat를 만드는 명령의 결과 상태 라인을 추론한다.
    *
-   * <p>
-   * 실제 shell을 실행하지 않으므로, 사용자가 만든 relay 덤프 파일(contentKey)과 grep/awk/sed 필터 의도를 함께
-   * 확인한다.
+   * <p>실제 shell을 실행하지 않으므로, 사용자가 만든 relay 덤프 파일(contentKey)과 grep/awk/sed 필터 의도를 함께 확인한다.
    *
-   * @param input          사용자가 입력한 터미널 명령 문자열
-   * @param config         transition validator_config
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
    * @param latestSnapshot 현재 진행 snapshot
    * @return 필터링 결과로 만들어진 상태 라인 목록, 인식할 수 없으면 빈 목록
    */
@@ -2830,8 +2906,8 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 명령 문자열이 snapshot에 생성된 PEOPLE relay 덤프 파일을 참조하는지 확인한다.
    *
-   * @param input          사용자가 입력한 터미널 명령 문자열
-   * @param config         transition validator_config
+   * @param input 사용자가 입력한 터미널 명령 문자열
+   * @param config transition validator_config
    * @param latestSnapshot 현재 진행 snapshot
    * @return 명령 토큰 중 하나가 PEOPLE 덤프 파일 경로와 일치하면 true
    */
@@ -2874,7 +2950,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot overlay에서 지정 contentKey를 가진 생성 파일 경로를 찾는다.
    *
    * @param latestSnapshot 현재 진행 snapshot
-   * @param contentKeys    허용할 contentKey 목록
+   * @param contentKeys 허용할 contentKey 목록
    * @return 삭제되지 않은 생성 파일의 절대 경로 집합
    */
   private Set<String> findCreatedPathsByContentKeys(
@@ -2883,7 +2959,8 @@ public class StoryServiceImpl implements StoryService {
     Set<String> paths = new LinkedHashSet<>();
 
     // createdNodes 배열을 읽는다.
-    JsonNode createdNodes = latestSnapshot == null ? null : latestSnapshot.path("vfsOverlay").path("createdNodes");
+    JsonNode createdNodes =
+        latestSnapshot == null ? null : latestSnapshot.path("vfsOverlay").path("createdNodes");
 
     // createdNodes가 없으면 동적 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
@@ -2954,7 +3031,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 사용자의 필터가 DELETED/UNKNOWN 같은 제외 대상 상태를 선택하는지 판정한다.
    *
-   * @param input  사용자가 입력한 터미널 명령 문자열
+   * @param input 사용자가 입력한 터미널 명령 문자열
    * @param config transition validator_config
    * @return 제외 상태를 선택하거나 ACTIVE를 반전하면 true
    */
@@ -3020,7 +3097,7 @@ public class StoryServiceImpl implements StoryService {
    * 상태 라인 목록에서 특정 상태로 끝나는 라인만 남긴다.
    *
    * @param statusLines 원본 상태 라인 목록
-   * @param status      선택할 상태 문자열
+   * @param status 선택할 상태 문자열
    * @return 지정 상태 라인 목록
    */
   private List<String> filterStatusLinesByStatus(List<String> statusLines, String status) {
@@ -3043,7 +3120,7 @@ public class StoryServiceImpl implements StoryService {
    * 상태 라인 목록에서 rejectStatuses에 해당하는 라인만 남긴다.
    *
    * @param statusLines 원본 상태 라인 목록
-   * @param config      transition validator_config
+   * @param config transition validator_config
    * @return 실패 branch가 검증할 수 있는 제외 대상 상태 라인 목록
    */
   private List<String> filterRejectedStatusLines(List<String> statusLines, JsonNode config) {
@@ -3195,8 +3272,8 @@ public class StoryServiceImpl implements StoryService {
   private boolean streamsInfiniteConfirmation(String input, List<String> acceptedTokens) {
     String normalized = input.toLowerCase();
     return (normalized.startsWith("yes ")
-        || normalized.startsWith("yes|")
-        || normalized.startsWith("yes |"))
+            || normalized.startsWith("yes|")
+            || normalized.startsWith("yes |"))
         || (normalized.contains("while") && acceptedTokens.stream().anyMatch(normalized::contains));
   }
 
@@ -3368,17 +3445,15 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /** PARSED_TAR_COMMAND 검증에 필요한 tar 명령 구조입니다. */
-  private record ParsedTarCommand(String outputFile, List<String> inputFiles) {
-  }
+  private record ParsedTarCommand(String outputFile, List<String> inputFiles) {}
 
   /** NC_SEND_FILE 검증에 필요한 nc 명령 구조입니다. */
-  private record ParsedNcCommand(Integer timeoutSeconds, String host, int port, String stdinFile) {
-  }
+  private record ParsedNcCommand(Integer timeoutSeconds, String host, int port, String stdinFile) {}
 
   /**
    * server_rule 공통 선행 조건을 검사한다.
    *
-   * @param config         transition의 validator_config JSON
+   * @param config transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return required/forbidden flag와 created file 조건이 모두 맞으면 true
    */
@@ -3402,7 +3477,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config의 requiredFlags / forbiddenFlags 조건을 검사한다.
    *
-   * @param config         transition의 validator_config JSON
+   * @param config transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 플래그 조건을 만족하면 true
    */
@@ -3435,7 +3510,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * validator_config.requiredCreatedFiles 조건을 검사한다.
    *
-   * @param config         transition의 validator_config JSON
+   * @param config transition의 validator_config JSON
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 필요한 동적 생성 파일이 현재 overlay에 남아 있으면 true
    */
@@ -3466,7 +3541,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot overlay에 특정 created path가 현재 유효하게 존재하는지 확인한다.
    *
    * @param snapshot 유저의 현재 진행 snapshot
-   * @param path     확인할 절대 경로
+   * @param path 확인할 절대 경로
    * @return createdNodes에 있고 removedPaths에 없으면 true
    */
   private boolean isActiveCreatedPath(JsonNode snapshot, String path) {
@@ -3477,7 +3552,8 @@ public class StoryServiceImpl implements StoryService {
     }
 
     // createdNodes 배열을 가져온다.
-    JsonNode createdNodes = snapshot == null ? null : snapshot.path("vfsOverlay").path("createdNodes");
+    JsonNode createdNodes =
+        snapshot == null ? null : snapshot.path("vfsOverlay").path("createdNodes");
 
     // createdNodes가 배열이 아니면 동적 생성 파일이 없다.
     if (createdNodes == null || !createdNodes.isArray()) {
@@ -3502,12 +3578,13 @@ public class StoryServiceImpl implements StoryService {
    * snapshot overlay에서 path가 removedPaths에 포함되어 있는지 확인한다.
    *
    * @param snapshot 유저의 현재 진행 snapshot
-   * @param path     확인할 절대 경로
+   * @param path 확인할 절대 경로
    * @return removedPaths에 있으면 true
    */
   private boolean isRemovedPath(JsonNode snapshot, String path) {
     // removedPaths 배열을 가져온다.
-    JsonNode removedPaths = snapshot == null ? null : snapshot.path("vfsOverlay").path("removedPaths");
+    JsonNode removedPaths =
+        snapshot == null ? null : snapshot.path("vfsOverlay").path("removedPaths");
 
     // removedPaths가 배열이 아니면 삭제된 path가 없다.
     if (removedPaths == null || !removedPaths.isArray()) {
@@ -3551,7 +3628,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 입력 경로가 validator_config의 절대/상대 경로 허용 정책을 만족하는지 확인한다.
    *
-   * @param config  transition의 validator_config JSON
+   * @param config transition의 validator_config JSON
    * @param rawPath 유저가 입력한 원문 경로
    * @return 허용된 경로 표현이면 true
    */
@@ -3583,7 +3660,7 @@ public class StoryServiceImpl implements StoryService {
    * 현재 snapshot의 cwd 기준으로 입력 경로를 VFS 절대 경로로 정규화한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPath        유저가 입력한 경로
+   * @param rawPath 유저가 입력한 경로
    * @return 정규화된 VFS 절대 경로
    */
   private String resolveSnapshotPath(JsonNode latestSnapshot, String rawPath) {
@@ -3606,8 +3683,8 @@ public class StoryServiceImpl implements StoryService {
    * 지정한 cwd 기준으로 입력 경로를 VFS 절대 경로로 정규화한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param cwd            경로 해석에 사용할 기준 cwd
-   * @param rawPath        유저가 입력한 경로
+   * @param cwd 경로 해석에 사용할 기준 cwd
+   * @param rawPath 유저가 입력한 경로
    * @return 정규화된 VFS 절대 경로
    */
   private String resolveSnapshotPathFromCwd(JsonNode latestSnapshot, String cwd, String rawPath) {
@@ -3624,12 +3701,11 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다. 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고,
-   * 디렉토리는 하위 파일 전체 목록으로
+   * tar 명령어의 입력 경로들을 VFS 절대 경로 목록으로 해소한다. 와일드카드(Glob) 패턴은 매칭되는 파일 목록으로 확장하고, 디렉토리는 하위 파일 전체 목록으로
    * 확장한다.
    *
    * @param latestSnapshot 유저의 현재 진행 snapshot
-   * @param rawPaths       유저가 입력한 원본 경로 목록 (예: sys/, *.tmp)
+   * @param rawPaths 유저가 입력한 원본 경로 목록 (예: sys/, *.tmp)
    * @return 해소된 VFS 절대 경로들의 리스트 (중복 제거)
    */
   private List<String> resolveTarInputPaths(JsonNode latestSnapshot, List<String> rawPaths) {
@@ -3742,9 +3818,27 @@ public class StoryServiceImpl implements StoryService {
    */
   private VfsContext createVfsContext(JsonNode latestSnapshot) {
     // snapshot에 vfsOverlay가 있으면 해당 값을 사용한다.
-    JsonNode overlay = latestSnapshot == null
-        ? objectMapper.createObjectNode()
-        : latestSnapshot.path("vfsOverlay");
+    JsonNode overlay =
+        latestSnapshot == null
+            ? objectMapper.createObjectNode()
+            : latestSnapshot.path("vfsOverlay").deepCopy();
+
+    if (overlay == null || !overlay.isObject()) {
+      overlay = objectMapper.createObjectNode();
+    }
+
+    JsonNode terminal = latestSnapshot == null ? null : latestSnapshot.path("terminal");
+    if (terminal != null && terminal.isObject()) {
+      ObjectNode overlayObject = (ObjectNode) overlay;
+      String promptUser = terminal.path("promptUser").asText(null);
+      String promptHost = terminal.path("promptHost").asText(null);
+      if (promptUser != null && !promptUser.isBlank()) {
+        overlayObject.put("promptUser", promptUser);
+      }
+      if (promptHost != null && !promptHost.isBlank()) {
+        overlayObject.put("promptHost", promptHost);
+      }
+    }
 
     String chapterCode = extractText(latestSnapshot, "/chapterCode");
     JsonNode staticVfs = getStaticVfs(chapterCode);
@@ -3756,9 +3850,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 코드에 맞는 정적 VFS JSON을 조회합니다.
    *
-   * <p>
-   * 진행 중인 snapshot이 오래되었거나 챕터 코드가 비어 있으면 기존 Chapter 2 VFS를 fallback으로 사용해 기존 저장
-   * 데이터와의 호환성을
+   * <p>진행 중인 snapshot이 오래되었거나 챕터 코드가 비어 있으면 기존 Chapter 2 VFS를 fallback으로 사용해 기존 저장 데이터와의 호환성을
    * 유지합니다.
    *
    * @param chapterCode snapshot 또는 Chapter 엔티티에서 확인한 챕터 코드
@@ -3820,9 +3912,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * snapshot의 chapterCode를 기준으로 터미널 런타임 프로필을 결정합니다.
    *
-   * <p>
-   * 기존 Chapter 2 데이터는 snapshot에 chapterCode가 없을 수 있으므로, 확인할 수 없는 경우 Chapter 2
-   * 프로필을 기본값으로 사용합니다.
+   * <p>기존 Chapter 2 데이터는 snapshot에 chapterCode가 없을 수 있으므로, 확인할 수 없는 경우 Chapter 2 프로필을 기본값으로 사용합니다.
    *
    * @param latestSnapshot 최신 진행 snapshot
    * @return snapshot에 대응하는 터미널 프로필
@@ -3838,7 +3928,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * resolved path 목록이 required path를 모두 포함하는지 검사한다.
    *
-   * @param actualPaths   실제 입력에서 정규화한 경로 목록
+   * @param actualPaths 실제 입력에서 정규화한 경로 목록
    * @param requiredPaths 반드시 포함되어야 하는 경로 목록
    * @return requiredPaths가 모두 포함되어 있으면 true
    */
@@ -3856,7 +3946,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * resolved path 목록이 금지 path를 하나라도 포함하는지 검사한다.
    *
-   * @param actualPaths    실제 입력에서 정규화한 경로 목록
+   * @param actualPaths 실제 입력에서 정규화한 경로 목록
    * @param forbiddenPaths 포함되면 안 되는 경로 목록
    * @return 금지 경로가 하나라도 있으면 true
    */
@@ -3877,9 +3967,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * tar 출력 파일명이 validator_config.outputFile 조건과 맞는지 검사한다.
    *
-   * @param rawOutputFile      유저가 입력한 tar 출력 파일 경로
+   * @param rawOutputFile 유저가 입력한 tar 출력 파일 경로
    * @param expectedOutputFile validator_config의 outputFile
-   * @param latestSnapshot     유저의 현재 진행 snapshot
+   * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 파일명이 맞으면 true
    */
   private boolean matchesOutputFile(
@@ -3998,8 +4088,7 @@ public class StoryServiceImpl implements StoryService {
   }
 
   /**
-   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다. Chapter 2에서 사용자의 다양한 습관을 포용하기 위해
-   * 사용된다.
+   * tar 명령어의 구식 옵션(하이픈 없는 형식, 예: cvf)인지 확인한다. Chapter 2에서 사용자의 다양한 습관을 포용하기 위해 사용된다.
    *
    * @param arg 옵션 토큰
    * @return c, v, f로만 구성된 구식 옵션 토큰이면 true
@@ -4153,8 +4242,8 @@ public class StoryServiceImpl implements StoryService {
    * CHAINED_COMMAND의 하위 command가 기대 config와 일치하는지 검사한다.
    *
    * @param expectedCommand 기대 하위 command 설정
-   * @param actualCommand   유저가 입력한 하위 command
-   * @param latestSnapshot  유저의 현재 진행 snapshot
+   * @param actualCommand 유저가 입력한 하위 command
+   * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return command/args/resolvedPath 조건이 일치하면 true
    */
   private boolean matchesConfiguredSubCommand(
@@ -4208,34 +4297,33 @@ public class StoryServiceImpl implements StoryService {
   /**
    * story transition 결과를 프론트엔드 응답 DTO로 변환합니다.
    *
-   * <p>
-   * 이동 대상 노드 정보, transition effect 목록, 갱신된 snapshot, result 코드를 한 응답에 묶습니다.
-   * Chapter 2에서는 프론트가
+   * <p>이동 대상 노드 정보, transition effect 목록, 갱신된 snapshot, result 코드를 한 응답에 묶습니다. Chapter 2에서는 프론트가
    * snapshot과 effects를 함께 받아 터미널/브라우저/스토리 런타임 상태를 동기화합니다.
    *
-   * @param node         전이 후 도착한 스토리 노드
+   * @param node 전이 후 도착한 스토리 노드
    * @param effectBundle DB transition에 저장된 effect_bundle JSON
-   * @param result       프론트에 전달할 전이 결과 코드
-   * @param snapshot     전이 후 저장된 최신 진행 snapshot
+   * @param result 프론트에 전달할 전이 결과 코드
+   * @param snapshot 전이 후 저장된 최신 진행 snapshot
    * @return 프론트에 반환할 transition 응답 DTO
    */
   private TransitionResponseDto buildResponseFromNode(
       StoryNode node, JsonNode effectBundle, String result, JsonNode snapshot) {
     // 노드의 대사(outputBundle)와 메타데이터를 포함하여 응답 빌드
-    TransitionResponseDto.TransitionResponseDtoBuilder builder = TransitionResponseDto.builder()
-        .nextNode(
-            NextNodeDto.builder()
-                .id(node.getId())
-                .code(node.getCode())
-                .nodeType(node.getNodeType())
-                .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
-                .promptType(node.getPromptType())
-                .promptMeta(node.getPromptMeta())
-                .isCheckpoint(node.isCheckpoint())
-                .isTerminal(node.isTerminal())
-                .build())
-        .snapshot(convertSnapshotToMap(snapshot))
-        .result(result);
+    TransitionResponseDto.TransitionResponseDtoBuilder builder =
+        TransitionResponseDto.builder()
+            .nextNode(
+                NextNodeDto.builder()
+                    .id(node.getId())
+                    .code(node.getCode())
+                    .nodeType(node.getNodeType())
+                    .outputBundle(node.getOutputBundle()) // 대사 및 JSON 데이터 포함
+                    .promptType(node.getPromptType())
+                    .promptMeta(node.getPromptMeta())
+                    .isCheckpoint(node.isCheckpoint())
+                    .isTerminal(node.isTerminal())
+                    .build())
+            .snapshot(convertSnapshotToMap(snapshot))
+            .result(result);
 
     // 효과(effectBundle)가 존재하면 DTO 리스트로 변환하여 추가
     if (effectBundle != null && !effectBundle.isEmpty()) {
@@ -4269,25 +4357,22 @@ public class StoryServiceImpl implements StoryService {
 
     // Jackson TypeReference를 사용해 JSON object를 Map으로 안전하게 변환한다.
     return objectMapper.convertValue(
-        snapshot, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-        });
+        snapshot, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
   }
 
   /**
    * 챕터 시작 전 해당 유저의 챕터 접근 권한(해금 여부)을 검증한다.
    *
-   * <p>
-   * 현재 챕터에 대한 진행 데이터가 없더라도 직전 챕터가 완료(COMPLETED)된 상태라면, 동적으로 현재 챕터의 진행 상태를
-   * 해금(UNLOCKED)으로 생성하여
+   * <p>현재 챕터에 대한 진행 데이터가 없더라도 직전 챕터가 완료(COMPLETED)된 상태라면, 동적으로 현재 챕터의 진행 상태를 해금(UNLOCKED)으로 생성하여
    * 진입을 허용한다.
    *
-   * @param user    검증 대상 유저 엔티티
+   * @param user 검증 대상 유저 엔티티
    * @param chapter 접근하려는 대상 챕터 엔티티
    * @throws CustomException A1002 - 챕터 접근 권한이 없거나 이전 챕터를 클리어하지 않은 경우
    */
   private void validateChapterUnlocked(User user, Chapter chapter) {
-    java.util.Optional<UserChapterProgress> progressOpt = userChapterProgressRepository
-        .findByUserIdAndChapterId(user.getId(), chapter.getId());
+    java.util.Optional<UserChapterProgress> progressOpt =
+        userChapterProgressRepository.findByUserIdAndChapterId(user.getId(), chapter.getId());
 
     if (progressOpt.isPresent()) {
       if (progressOpt.get().getStatus() == ChapterStatus.LOCKED) {
@@ -4298,24 +4383,27 @@ public class StoryServiceImpl implements StoryService {
 
     // 데이터가 없는 경우: 이전 챕터(sortOrder - 1) 클리어 여부 검사 후 동적 해금
     if (chapter.getSortOrder() > 1) {
-      Chapter prevChapter = chapterRepository
-          .findBySortOrder(chapter.getSortOrder() - 1)
-          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+      Chapter prevChapter =
+          chapterRepository
+              .findBySortOrder(chapter.getSortOrder() - 1)
+              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
 
-      UserChapterProgress prevProgress = userChapterProgressRepository
-          .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
-          .orElseThrow(() -> new CustomException(ErrorCode.A1002));
+      UserChapterProgress prevProgress =
+          userChapterProgressRepository
+              .findByUserIdAndChapterId(user.getId(), prevChapter.getId())
+              .orElseThrow(() -> new CustomException(ErrorCode.A1002));
 
       if (prevProgress.getStatus() != ChapterStatus.COMPLETED) {
         throw new CustomException(ErrorCode.A1002);
       }
 
       // 이전 챕터를 깼으므로 현재 챕터 UNLOCKED 레코드 동적 생성 및 진입 허용
-      UserChapterProgress newProgress = UserChapterProgress.builder()
-          .user(user)
-          .chapter(chapter)
-          .status(ChapterStatus.UNLOCKED)
-          .build();
+      UserChapterProgress newProgress =
+          UserChapterProgress.builder()
+              .user(user)
+              .chapter(chapter)
+              .status(ChapterStatus.UNLOCKED)
+              .build();
       userChapterProgressRepository.save(newProgress);
       log.info(
           "Dynamically unlocked chapter: User={}, Chapter={}", user.getId(), chapter.getCode());
@@ -4360,8 +4448,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 챕터 시작 또는 전이 시 사용할 빈 스냅샷(JSON)을 생성한다.
    *
-   * <p>
-   * 터미널/VFS 기반 챕터는 공통 확장 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
+   * <p>터미널/VFS 기반 챕터는 공통 확장 snapshot 기본 구조를 생성하고, 다른 챕터는 기존 위치 식별 snapshot을 유지한다.
    */
   private void unlockEndingIfPresent(User user, StoryNode node) {
     if (!"ending".equals(node.getNodeType())) {
@@ -4403,11 +4490,11 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition 이후 저장할 snapshot을 생성하고 이전 snapshot의 상태를 이어받는다.
    *
-   * @param chapter          transition 이후 챕터 엔티티
-   * @param node             transition 이후 노드 엔티티
+   * @param chapter transition 이후 챕터 엔티티
+   * @param node transition 이후 노드 엔티티
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param request          유저의 transition 요청
-   * @param effectBundle     transition 성공 후 snapshot에 반영할 effect_bundle
+   * @param request 유저의 transition 요청
+   * @param effectBundle transition 성공 후 snapshot에 반영할 effect_bundle
    * @return transition 이후 저장할 snapshot JSON
    */
   private JsonNode createTransitionSnapshot(
@@ -4470,9 +4557,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 terminal 상태를 새 터미널 snapshot으로 이어받는다.
    *
-   * @param snapshot         값을 채울 새 snapshot JSON
+   * @param snapshot 값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param request          유저의 transition 요청
+   * @param request 유저의 transition 요청
    */
   private void carryTerminal(
       ObjectNode snapshot, JsonNode previousSnapshot, TransitionRequestDto request) {
@@ -4510,9 +4597,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 object 필드를 새 snapshot으로 복사한다.
    *
-   * @param snapshot         값을 채울 새 snapshot JSON
+   * @param snapshot 값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param fieldName        복사할 object 필드명
+   * @param fieldName 복사할 object 필드명
    */
   private void carryObjectField(ObjectNode snapshot, JsonNode previousSnapshot, String fieldName) {
     // 이전 snapshot이 없으면 복사할 값도 없다.
@@ -4537,9 +4624,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 정수 필드를 새 snapshot으로 복사한다.
    *
-   * @param snapshot         값을 채울 새 snapshot JSON
+   * @param snapshot 값을 채울 새 snapshot JSON
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param fieldName        복사할 정수 필드명
+   * @param fieldName 복사할 정수 필드명
    */
   private void carryIntegerField(ObjectNode snapshot, JsonNode previousSnapshot, String fieldName) {
     // 이전 snapshot이 없으면 복사할 값도 없다.
@@ -4564,10 +4651,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 이전 snapshot의 문자열 값을 대상 object field에 복사한다.
    *
-   * @param target           값을 쓸 대상 object
+   * @param target 값을 쓸 대상 object
    * @param previousSnapshot transition 이전 최신 snapshot
-   * @param sourcePointer    값을 읽을 JSON Pointer
-   * @param targetFieldName  값을 쓸 대상 필드명
+   * @param sourcePointer 값을 읽을 JSON Pointer
+   * @param targetFieldName 값을 쓸 대상 필드명
    */
   private void copyTextField(
       ObjectNode target, JsonNode previousSnapshot, String sourcePointer, String targetFieldName) {
@@ -4587,9 +4674,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * transition effect_bundle의 상태 변경 지시를 터미널 snapshot에 반영한다.
    *
-   * @param snapshot     값을 갱신할 터미널 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param effectBundle transition의 effect_bundle JSON
-   * @param request      transition을 발생시킨 사용자 요청
+   * @param request transition을 발생시킨 사용자 요청
    */
   private void applyEffectBundleToSnapshot(
       ObjectNode snapshot, JsonNode effectBundle, TransitionRequestDto request) {
@@ -4641,7 +4728,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.setScanPercent를 snapshot.scanPercent에 반영한다.
    *
-   * @param snapshot       값을 갱신할 터미널 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param setScanPercent scanPercent JSON value
    */
   private void applySetScanPercent(ObjectNode snapshot, JsonNode setScanPercent) {
@@ -4658,7 +4745,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.snapshotPatch를 dotted path 기준으로 snapshot에 반영한다.
    *
-   * @param snapshot      값을 갱신할 snapshot
+   * @param snapshot 값을 갱신할 snapshot
    * @param snapshotPatch dotted path를 key로 가진 patch JSON object
    */
   private void applySnapshotPatch(ObjectNode snapshot, JsonNode snapshotPatch) {
@@ -4685,10 +4772,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * dotted path의 특정 위치에 patch 값을 저장한다.
    *
-   * @param current   현재 object node
+   * @param current 현재 object node
    * @param pathParts dotted path를 분해한 배열
-   * @param index     현재 처리 중인 path index
-   * @param value     저장할 JSON 값
+   * @param index 현재 처리 중인 path index
+   * @param value 저장할 JSON 값
    */
   private void applySnapshotPatchValue(
       ObjectNode current, String[] pathParts, int index, JsonNode value) {
@@ -4700,9 +4787,10 @@ public class StoryServiceImpl implements StoryService {
 
     // 중간 path는 object여야 하므로 없거나 object가 아니면 새 object로 교체한다.
     JsonNode child = current.get(pathParts[index]);
-    ObjectNode childObject = child != null && child.isObject()
-        ? (ObjectNode) child
-        : current.putObject(pathParts[index]);
+    ObjectNode childObject =
+        child != null && child.isObject()
+            ? (ObjectNode) child
+            : current.putObject(pathParts[index]);
 
     // 다음 path 조각을 재귀적으로 처리한다.
     applySnapshotPatchValue(childObject, pathParts, index + 1, value);
@@ -4711,9 +4799,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect_bundle.vfsOverlay 변경사항을 snapshot.vfsOverlay에 병합한다.
    *
-   * @param snapshot      값을 갱신할 터미널 snapshot
+   * @param snapshot 값을 갱신할 터미널 snapshot
    * @param overlayEffect vfsOverlay effect JSON object
-   * @param request       transition을 발생시킨 사용자 요청
+   * @param request transition을 발생시킨 사용자 요청
    */
   private void applyVfsOverlayEffect(
       ObjectNode snapshot, JsonNode overlayEffect, TransitionRequestDto request) {
@@ -4739,10 +4827,10 @@ public class StoryServiceImpl implements StoryService {
   /**
    * effect createdNodes를 snapshot.vfsOverlay.createdNodes에 path 기준으로 병합한다.
    *
-   * @param snapshot      transition 이후 snapshot
+   * @param snapshot transition 이후 snapshot
    * @param targetOverlay snapshot의 vfsOverlay object
-   * @param createdNodes  effect_bundle의 createdNodes array
-   * @param request       transition을 발생시킨 사용자 요청
+   * @param createdNodes effect_bundle의 createdNodes array
+   * @param request transition을 발생시킨 사용자 요청
    */
   private void mergeCreatedNodes(
       ObjectNode snapshot,
@@ -4783,9 +4871,9 @@ public class StoryServiceImpl implements StoryService {
   /**
    * createdNode에 저장할 실제 VFS 경로를 결정한다.
    *
-   * @param snapshot    현재 transition 이후 snapshot
+   * @param snapshot 현재 transition 이후 snapshot
    * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
-   * @param request     transition을 발생시킨 사용자 요청
+   * @param request transition을 발생시킨 사용자 요청
    * @return snapshot에 저장할 절대 VFS 경로
    */
   private String resolveCreatedNodePath(
@@ -4809,7 +4897,7 @@ public class StoryServiceImpl implements StoryService {
    * createdNode의 path만 실제 저장 경로로 바꾼 사본을 만든다.
    *
    * @param createdNode effect_bundle.vfsOverlay.createdNodes의 단일 항목
-   * @param path        snapshot에 저장할 절대 VFS 경로
+   * @param path snapshot에 저장할 절대 VFS 경로
    * @return path가 보정된 createdNode 사본
    */
   private JsonNode rewriteCreatedNodePath(JsonNode createdNode, String path) {
@@ -4830,7 +4918,7 @@ public class StoryServiceImpl implements StoryService {
    * effect removedPaths를 snapshot.vfsOverlay.removedPaths에 중복 없이 병합한다.
    *
    * @param targetOverlay snapshot의 vfsOverlay object
-   * @param removedPaths  effect_bundle의 removedPaths array
+   * @param removedPaths effect_bundle의 removedPaths array
    */
   private void mergeRemovedPaths(ObjectNode targetOverlay, JsonNode removedPaths) {
     // removedPaths가 배열이 아니면 병합할 삭제 경로가 없다.
@@ -4899,7 +4987,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * ObjectNode 하위 object field를 보장한다.
    *
-   * @param parent    부모 JSON object
+   * @param parent 부모 JSON object
    * @param fieldName 보장할 object field 이름
    * @return 존재하거나 새로 만든 ObjectNode
    */
@@ -4920,7 +5008,7 @@ public class StoryServiceImpl implements StoryService {
   /**
    * ObjectNode 하위 array field를 보장한다.
    *
-   * @param parent    부모 JSON object
+   * @param parent 부모 JSON object
    * @param fieldName 보장할 array field 이름
    * @return 존재하거나 새로 만든 ArrayNode
    */
@@ -4942,7 +5030,7 @@ public class StoryServiceImpl implements StoryService {
    * ArrayNode에서 path field가 일치하는 object를 제거한다.
    *
    * @param array 제거 대상 array
-   * @param path  제거할 path
+   * @param path 제거할 path
    */
   private void removeObjectWithPath(ArrayNode array, String path) {
     // 뒤에서 앞으로 순회해야 remove 시 index가 꼬이지 않는다.
@@ -5002,9 +5090,9 @@ public class StoryServiceImpl implements StoryService {
    * 터미널/VFS 기반 챕터에 공통으로 필요한 기본 snapshot 필드를 채운다.
    *
    * @param snapshot 값을 채울 빈 snapshot JSON
-   * @param chapter  현재 챕터 엔티티
-   * @param node     현재 스토리 노드 엔티티
-   * @param profile  현재 챕터에 대응하는 터미널 런타임 프로필
+   * @param chapter 현재 챕터 엔티티
+   * @param node 현재 스토리 노드 엔티티
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
   private void populateTerminalSnapshot(
       ObjectNode snapshot, Chapter chapter, StoryNode node, TerminalChapterProfile profile) {
@@ -5046,7 +5134,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot의 terminal 객체를 챕터 프로필 기본값으로 채운다.
    *
    * @param snapshot terminal 객체를 추가할 snapshot JSON
-   * @param profile  현재 챕터에 대응하는 터미널 런타임 프로필
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
   private void populateTerminal(ObjectNode snapshot, TerminalChapterProfile profile) {
     // terminal 객체를 snapshot 하위에 생성한다.
@@ -5088,7 +5176,7 @@ public class StoryServiceImpl implements StoryService {
    * snapshot의 flags 객체를 챕터별 기본 진행 상태로 초기화한다.
    *
    * @param snapshot flags 객체를 추가할 snapshot JSON
-   * @param profile  현재 챕터에 대응하는 터미널 런타임 프로필
+   * @param profile 현재 챕터에 대응하는 터미널 런타임 프로필
    */
   private void populateTerminalFlags(ObjectNode snapshot, TerminalChapterProfile profile) {
     // flags 객체를 snapshot 하위에 생성한다.
@@ -5229,13 +5317,12 @@ public class StoryServiceImpl implements StoryService {
   /**
    * 터미널 프로필 노드에서 매칭되는 전이가 없을 때 일반 명령어(자유 탐색)를 처리하는 폴백 메소드입니다.
    *
-   * <p>
-   * DB 전이 검색에 실패한 경우 호출되며, 현재 챕터의 VFS 로직을 통해 STAY 결과를 생성합니다.
+   * <p>DB 전이 검색에 실패한 경우 호출되며, 현재 챕터의 VFS 로직을 통해 STAY 결과를 생성합니다.
    *
-   * @param user        요청을 보낸 인증 유저 객체
-   * @param progress    유저의 현재 스토리 진행 상태 기록
+   * @param user 요청을 보낸 인증 유저 객체
+   * @param progress 유저의 현재 스토리 진행 상태 기록
    * @param currentNode 유저가 현재 위치한 스토리 노드
-   * @param request     전이 요청 데이터 (입력된 명령어 포함)
+   * @param request 전이 요청 데이터 (입력된 명령어 포함)
    * @return STAY 타입의 전이 결과 응답 (터미널 출력값 포함) 또는 처리 불가 시 null
    */
   private TransitionResponseDto handleTerminalFallback(
@@ -5244,7 +5331,8 @@ public class StoryServiceImpl implements StoryService {
     // 1. 현재 노드의 메타데이터를 확인하여 지원하는 터미널 프로필인지 검증합니다.
     JsonNode promptMeta = currentNode.getPromptMeta();
     // prompt_meta.terminalProfile 값으로 챕터별 런타임 프로필을 찾는다.
-    String terminalProfile = promptMeta == null ? null : promptMeta.path("terminalProfile").asText(null);
+    String terminalProfile =
+        promptMeta == null ? null : promptMeta.path("terminalProfile").asText(null);
     TerminalChapterProfile profile = getTerminalChapterProfileByTerminalProfile(terminalProfile);
     // 프로필 정보가 없거나 현재 노드의 챕터와 불일치하면 폴백 처리를 하지 않는다.
     if (profile == null || !profile.chapterCode().equals(currentNode.getChapter().getCode())) {
@@ -5271,6 +5359,7 @@ public class StoryServiceImpl implements StoryService {
     String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
     if (nudgeMessage != null) {
       String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+      String prompt = buildPromptFromSnapshot(latestSnapshot, profile, cwd);
 
       // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
       // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
@@ -5320,15 +5409,14 @@ public class StoryServiceImpl implements StoryService {
           .snapshot(
               objectMapper.convertValue(
                   latestSnapshot,
-                  new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-                  }))
+                  new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
           // 터미널에는 별다른 에러 없이 프롬프트만 갱신
           .terminalResult(
               TransitionResponseDto.TerminalResultDto.builder()
                   .stdout(List.of())
                   .stderr(List.of())
                   .cwd(cwd)
-                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .prompt(prompt)
                   .resultCode("NUDGE")
                   .build())
           .build();
@@ -5340,7 +5428,8 @@ public class StoryServiceImpl implements StoryService {
 
     // 5. TerminalCommandService를 통해 명령어를 실행하고 결과를 받아옵니다.
     // 스냅샷 내의 terminal 섹션 데이터(현재 CWD 등)를 함께 전달합니다.
-    TerminalResult result = terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
+    TerminalResult result =
+        terminalCommandService.execute(command, latestSnapshot.path("terminal"), vfs);
 
     // 6. 실행 결과를 반영하여 새로운 스냅샷 데이터를 생성합니다.
     ObjectNode updatedSnapshot = (ObjectNode) latestSnapshot.deepCopy();
@@ -5393,38 +5482,33 @@ public class StoryServiceImpl implements StoryService {
         .snapshot(
             objectMapper.convertValue(
                 updatedSnapshot,
-                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-                }))
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}))
         .build();
   }
 
   /**
    * 현재 노드의 transition 중 커맨드 패턴은 매칭되지만 플래그 조건만 불충족한 "near-miss"를 감지한다.
    *
-   * <p>
-   * transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만
-   * requiredFlags를 만족하지 못하면
+   * <p>transition의 validator_config에 nudgeOnFlagMiss 필드가 있고, 커맨드/경로가 일치하지만 requiredFlags를 만족하지 못하면
    * 해당 넛지 메시지를 반환한다.
    *
-   * @param currentNode    유저가 현재 위치한 스토리 노드
-   * @param command        유저가 입력한 파싱된 커맨드 객체
+   * @param currentNode 유저가 현재 위치한 스토리 노드
+   * @param command 유저가 입력한 파싱된 커맨드 객체
    * @param latestSnapshot 유저의 현재 진행 snapshot
    * @return 넛지 메시지 (near-miss가 없으면 null)
    */
   private String findNudgeForCommand(
       StoryNode currentNode, ParsedCommand command, JsonNode latestSnapshot) {
     // 현재 노드에서 출발하는 모든 transition을 우선순위 순으로 조회한다.
-    List<StoryTransition> transitions = storyTransitionRepository
-        .findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
+    List<StoryTransition> transitions =
+        storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(currentNode.getId());
 
     for (StoryTransition t : transitions) {
       // server_rule 이외의 validator는 near-miss 감지 대상이 아니다.
-      if (!"server_rule".equals(t.getValidatorType()))
-        continue;
+      if (!"server_rule".equals(t.getValidatorType())) continue;
 
       JsonNode config = t.getValidatorConfig();
-      if (config == null || config.isNull())
-        continue;
+      if (config == null || config.isNull()) continue;
 
       String rule = getTextField(config, "rule");
 
@@ -5436,13 +5520,12 @@ public class StoryServiceImpl implements StoryService {
       }
 
       if ("PARSED_TAR_COMMAND".equals(rule)) {
-        if (!"tar".equals(command.command()))
-          continue;
+        if (!"tar".equals(command.command())) continue;
 
         // tar 생성 옵션(-c)이 있는지 확인
-        boolean isCreate = command.args().stream().anyMatch(arg -> arg.startsWith("-") && arg.contains("c"));
-        if (!isCreate)
-          continue;
+        boolean isCreate =
+            command.args().stream().anyMatch(arg -> arg.startsWith("-") && arg.contains("c"));
+        if (!isCreate) continue;
 
         // DB 트랜지션을 수정하지 않고 하드코딩으로 안전하게 넛지를 생성
         String expectedFile = getTextField(config, "outputFile");
@@ -5454,24 +5537,11 @@ public class StoryServiceImpl implements StoryService {
 
       // nudgeOnFlagMiss가 없는 일반 transition은 넛지 대상이 아니다.
       String nudge = getTextField(config, "nudgeOnFlagMiss");
-      if (nudge == null || nudge.isBlank())
-        continue;
+      if (nudge == null || nudge.isBlank()) continue;
 
-      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
-      String expectedCommand = getTextField(config, "command");
-      if (expectedCommand == null || !command.command().equals(expectedCommand))
-        continue;
+      if (!matchesCwdRequirement(config, latestSnapshot)) continue;
 
-      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
-      String expectedPath = getTextField(config, "resolvedPath");
-      if (expectedPath != null) {
-        String rawPath = firstNonOptionArgument(command.args());
-        if (rawPath == null)
-          continue;
-        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
-        if (!expectedPath.equals(actualPath))
-          continue;
-      }
+      if (!matchesNudgeCommandPattern(config, command, latestSnapshot)) continue;
 
       // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
       if (!matchesFlagRequirements(config, latestSnapshot)) {
@@ -5481,6 +5551,82 @@ public class StoryServiceImpl implements StoryService {
 
     // near-miss가 없으면 일반 터미널 실행으로 진행한다.
     return null;
+  }
+
+  private boolean matchesNudgeCommandPattern(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    if (config == null || config.isNull() || command == null) {
+      return false;
+    }
+
+    JsonNode acceptedForms = config.get("acceptedForms");
+    if (acceptedForms != null && acceptedForms.isArray()) {
+      List<String> tokens = new ArrayList<>();
+      tokens.add(command.command());
+      tokens.addAll(command.args());
+      for (JsonNode acceptedForm : acceptedForms) {
+        if (matchesCommandForm(acceptedForm, tokens)) {
+          return true;
+        }
+      }
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      String rawCommand = command.command() + " " + String.join(" ", command.args());
+      try {
+        return Pattern.compile(commandRegex, Pattern.DOTALL).matcher(rawCommand.trim()).matches();
+      } catch (PatternSyntaxException e) {
+        log.warn("Invalid nudge commandRegex: {}", commandRegex, e);
+        return false;
+      }
+    }
+
+    // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+    String expectedCommand = getTextField(config, "command");
+    if (expectedCommand == null || !command.command().equals(expectedCommand)) {
+      return false;
+    }
+
+    // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+    String expectedPath = getTextField(config, "resolvedPath");
+    if (expectedPath != null) {
+      String rawPath = firstNonOptionArgument(command.args());
+      if (rawPath == null) return false;
+      String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+      return expectedPath.equals(actualPath);
+    }
+
+    return true;
+  }
+
+  private String buildPromptFromSnapshot(
+      JsonNode snapshot, TerminalChapterProfile profile, String fallbackCwd) {
+    JsonNode terminal = snapshot.path("terminal");
+    String cwd = terminal.path("cwd").asText(fallbackCwd);
+    if (cwd == null || cwd.isBlank()) {
+      cwd = profile.defaultCwd();
+    }
+
+    String promptUser = terminal.path("promptUser").asText(profile.promptUser());
+    String promptHost = terminal.path("promptHost").asText(profile.promptHost());
+    String displayCwd = toPromptDisplayCwd(cwd, profile.defaultCwd());
+    String promptSymbol = "root".equals(promptUser) ? "#" : "$";
+
+    return promptUser + "@" + promptHost + ":" + displayCwd + promptSymbol;
+  }
+
+  private String toPromptDisplayCwd(String cwd, String defaultCwd) {
+    if (cwd == null || cwd.isBlank()) {
+      return "~";
+    }
+    if (cwd.equals(defaultCwd)) {
+      return "~";
+    }
+    if (cwd.startsWith(defaultCwd + "/")) {
+      return "~" + cwd.substring(defaultCwd.length());
+    }
+    return cwd;
   }
 
   /**
@@ -5524,8 +5670,8 @@ public class StoryServiceImpl implements StoryService {
    * 터미널의 VFS 경로 자동완성 후보를 조회합니다.
    *
    * @param userId 사용자 식별자
-   * @param cwd    현재 작업 디렉토리
-   * @param input  현재 입력 중인 경로 조각
+   * @param cwd 현재 작업 디렉토리
+   * @param input 현재 입력 중인 경로 조각
    * @return 일치하는 파일 및 디렉토리명 리스트
    */
   @Override

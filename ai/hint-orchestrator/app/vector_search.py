@@ -282,7 +282,7 @@ class VectorSearchRepository:
 
             if transition_id_num is not None:
                 metadata["transition_id"] = transition_id_num
-            if transition_expected_input is not None:
+            if self._should_overwrite_expected_input(metadata, transition_expected_input):
                 metadata["expected_input"] = transition_expected_input
             if transition_action_type is not None:
                 metadata["action_type"] = transition_action_type
@@ -380,6 +380,36 @@ class VectorSearchRepository:
                     break
         target_count = self._target_count_by_hint_level(hint_level, evidence_limit)
         return selected[:target_count]
+
+    def _should_overwrite_expected_input(
+        self,
+        metadata: dict[str, Any],
+        transition_expected_input: Any,
+    ) -> bool:
+        if transition_expected_input is None:
+            return False
+
+        current_expected = metadata.get("expected_input")
+        if self._looks_like_literal_command(current_expected):
+            # CH4 variant rows keep their literal command as source of truth.
+            return False
+
+        # For key-based rows (CH1~CH3 legacy), keep runtime alignment with story_transitions.
+        return True
+
+    def _looks_like_literal_command(self, value: Any) -> bool:
+        if value is None:
+            return False
+        text = str(value).strip()
+        if not text:
+            return False
+        if re.fullmatch(r"[A-Z][A-Z0-9_]*", text):
+            return False
+        if " " in text:
+            return True
+        if text.startswith("./") or text.startswith("/"):
+            return True
+        return any(ch in text for ch in ('"', "'", ".", "/", "-", "<", ">", "|", "&", "="))
 
     def _evidence_sort_key(
         self,

@@ -10,6 +10,7 @@ import { MessengerNotificationCard, MessengerWindow } from "../../features/messe
 import { Lucas } from "../../features/Lucas/Lucas";
 import { DocumentViewer } from "../../features/DocumentViewer/DocumentViewer";
 import { CallOverlay } from "../../features/story-runtime/ui/CallOverlay";
+import { useParams } from "react-router-dom";
 import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import {
@@ -24,6 +25,7 @@ import { TrashWindow } from "../../features/trash/TrashWindow";
 import LucasSurvivalMinigamePage from "../../pages/minigames/lucas-survival";
 
 export const Desktop: React.FC = () => {
+  const { chapterCode } = useParams();
   const { windows, openWindow, blurAllWindows } = useWindowStore();
   const { currentNode, submitStoryClick } = useStoryRuntimeStore();
   const desktopViewRef = useTrackVisible<HTMLDivElement>({
@@ -60,7 +62,15 @@ export const Desktop: React.FC = () => {
     { id: "email", label: "Bug Report", icon: "/pixel_email_cyberpunk.png" },
   ];
 
-  if (currentNode?.code?.startsWith("CH3_")) {
+  const currentChapter = (() => {
+    const rawChapterCode = chapterCode || "";
+    if (rawChapterCode === "week03" || rawChapterCode === "ch3" || rawChapterCode === "week3") return 3;
+    if (!currentNode?.code) return 0;
+    const match = currentNode.code.match(/^CH(\d+)_/i);
+    return match ? parseInt(match[1], 10) : 0;
+  })();
+
+  if (currentChapter === 3) {
     icons.splice(3, 0, { id: "trash", label: "Recycle Bin", icon: "/pixel_trash_icon.svg" });
   }
 
@@ -288,7 +298,7 @@ export const Desktop: React.FC = () => {
                 title={windowState.title}
                 icon={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
                 defaultWidth={1200}
-                defaultHeight={760}
+                defaultHeight={860}
                 minWidth={960}
                 minHeight={620}
               >

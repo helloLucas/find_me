@@ -15,13 +15,117 @@ interface SearchTabProps {
   setCurrentSearchQuery?: (query: string | null) => void;
 }
 
+function renderInlineMarkdown(text: string) {
+  const segments = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+
+  return segments.map((segment, index) => {
+    if (segment.startsWith("`") && segment.endsWith("`")) {
+      return (
+        <code
+          key={`${segment}-${index}`}
+          className="rounded border border-[#543ab7]/40 bg-[#05020c] px-1.5 py-0.5 font-browser-code text-[0.92em] text-[#ffe259]"
+        >
+          {segment.slice(1, -1)}
+        </code>
+      );
+    }
+
+    if (segment.startsWith("**") && segment.endsWith("**")) {
+      return (
+        <strong key={`${segment}-${index}`} className="font-bold text-[#4ce2fc]">
+          {segment.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <React.Fragment key={`${segment}-${index}`}>{segment}</React.Fragment>;
+  });
+}
+
+function MarkdownHintContent({ content }: { content: string }) {
+  const lines = content.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+
+    elements.push(
+      <ul key={`list-${elements.length}`} className="my-3 list-disc space-y-1 pl-5 text-[#c7b3ff]">
+        {listItems.map((item, index) => (
+          <li key={`${item}-${index}`}>{renderInlineMarkdown(item)}</li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trimEnd();
+
+    if (!line.trim()) {
+      flushList();
+      return;
+    }
+
+    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      flushList();
+      const level = headingMatch[1].length;
+      const headingClassName =
+        level === 1
+          ? "mt-1 mb-3 text-xl font-bold text-[#4ce2fc]"
+          : level === 2
+            ? "mt-4 mb-2 text-lg font-bold text-[#4ce2fc]"
+            : "mt-3 mb-2 text-base font-bold text-[#a48cff]";
+
+      elements.push(
+        <div key={`heading-${elements.length}`} className={headingClassName}>
+          {renderInlineMarkdown(headingMatch[2])}
+        </div>
+      );
+      return;
+    }
+
+    const listMatch = line.match(/^[-*]\s+(.+)$/);
+    if (listMatch) {
+      listItems.push(listMatch[1]);
+      return;
+    }
+
+    const quoteMatch = line.match(/^>\s?(.+)$/);
+    if (quoteMatch) {
+      flushList();
+      elements.push(
+        <blockquote
+          key={`quote-${elements.length}`}
+          className="my-3 border-l-2 border-[#4ce2fc]/60 bg-[#05020c]/70 py-2 pl-4 text-[#9cecff]"
+        >
+          {renderInlineMarkdown(quoteMatch[1])}
+        </blockquote>
+      );
+      return;
+    }
+
+    flushList();
+    elements.push(
+      <p key={`paragraph-${elements.length}`} className="my-2 leading-relaxed text-[#c7b3ff]">
+        {renderInlineMarkdown(line)}
+      </p>
+    );
+  });
+
+  flushList();
+
+  return <div className="font-browser-content text-base leading-relaxed">{elements}</div>;
+}
+
 export const SearchTab: React.FC<SearchTabProps> = ({
   isChapter3Mode = false,
   currentView = "home",
   setCurrentView = () => { },
   selectedHint = null,
   setSelectedHint = () => { },
-  detailOrigin = null,
   setDetailOrigin = () => { },
   currentSearchQuery = null,
   setCurrentSearchQuery = () => { },
@@ -35,18 +139,26 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   useEffect(() => {
     if (currentView === "search_result") {
-      setIsDecrypting(true);
+      const startTimer = window.setTimeout(() => {
+        setIsDecrypting(true);
+      }, 0);
       const timer = setTimeout(() => {
         setIsDecrypting(false);
       }, 600);
-      return () => clearTimeout(timer);
+      return () => {
+        window.clearTimeout(startTimer);
+        clearTimeout(timer);
+      };
     }
   }, [currentView, selectedHint, currentSearchQuery]);
 
   // 상단 검색창 검색어 연동
   useEffect(() => {
     if (currentSearchQuery) {
-      setHeaderSearchQuery(currentSearchQuery);
+      const timer = window.setTimeout(() => {
+        setHeaderSearchQuery(currentSearchQuery);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [currentSearchQuery]);
 
@@ -61,8 +173,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   // 탭 상태 전환 감지 시 검색창 리셋
   useEffect(() => {
     if (currentView === "home") {
-      setSearchQuery("");
-      setHeaderSearchQuery("");
+      const timer = window.setTimeout(() => {
+        setSearchQuery("");
+        setHeaderSearchQuery("");
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [currentView]);
 
@@ -150,7 +265,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   // ==================== 1. 방문 기록 리스트 뷰 (history_list) ====================
   if (isChapter3Mode && currentView === "history_list") {
     return (
-      <div className="w-full h-full bg-[#07040e] text-[#c7b3ff] flex flex-col font-sans select-none animate-fade-in overflow-y-auto">
+      <div className="w-full h-full bg-[#07040e] text-[#c7b3ff] flex flex-col font-browser-content select-none animate-fade-in overflow-y-auto">
         {/* 중앙 단(Column)을 강제해 주는 Max-Width 기반 이너 래퍼 */}
         <div className="w-full max-w-5xl mx-auto px-8 pt-8 pb-10 flex flex-col flex-1">
           {/* 방문 기록 헤더 바 */}
@@ -159,7 +274,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <svg className="w-5 h-5 text-[#4ce2fc]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm font-bold tracking-wider text-[#4ce2fc] uppercase font-mono">
+              <span className="text-sm font-bold tracking-wider text-[#4ce2fc] uppercase font-browser-code">
                 방문 기록 (System Logs)
               </span>
             </div>
@@ -175,7 +290,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 className="group w-full flex items-center justify-between bg-[#0d071c]/80 hover:bg-[#1a1130] border border-[#543ab7]/30 hover:border-[#a48cff]/60 px-4 py-3 rounded-sm cursor-pointer transition-all duration-150 shrink-0"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-[10px] font-mono text-[#543ab7] group-hover:text-[#a48cff] shrink-0">
+                  <span className="text-[10px] font-browser-code text-[#543ab7] group-hover:text-[#a48cff] shrink-0">
                     {item.time}
                   </span>
                   <span className="text-xs font-semibold text-[#c7b3ff] group-hover:text-[#a48cff] truncate">
@@ -196,7 +311,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 className="group w-full flex items-center justify-between bg-[#0d071c] hover:bg-[#150d2e] border border-[#543ab7]/30 hover:border-[#4ce2fc]/60 px-4 py-3 rounded-sm cursor-pointer transition-all duration-150 hover:shadow-[0_0_8px_rgba(76,226,252,0.1)] shrink-0"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-[10px] font-mono text-[#543ab7] group-hover:text-[#4ce2fc] shrink-0">
+                  <span className="text-[10px] font-browser-code text-[#543ab7] group-hover:text-[#4ce2fc] shrink-0">
                     {getFakeTime(searchHistory.length + hint.id)}
                   </span>
                   <span className="text-xs font-semibold text-[#c7b3ff] group-hover:text-[#4ce2fc] truncate">
@@ -217,7 +332,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   // ==================== 2. 결과창 조건부 렌더링 뷰 (search_result) ====================
   if (currentView === "search_result") {
     return (
-      <div className="w-full h-full bg-[#07040e] text-[#c7b3ff] flex flex-col font-sans select-none animate-fade-in overflow-y-auto">
+      <div className="w-full h-full bg-[#07040e] text-[#c7b3ff] flex flex-col font-browser-content select-none animate-fade-in overflow-y-auto">
         <style>{`
           @keyframes decrypt-fill {
             0% { width: 0%; }
@@ -235,10 +350,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             {/* 축소형 로고 */}
             <div
               onClick={handleLogoClick}
-              className="w-32 shrink-0 flex items-center justify-start font-extrabold tracking-wider text-3xl font-mono select-none cursor-pointer transition-transform duration-150 active:scale-95"
+              className="w-32 shrink-0 flex items-center justify-start font-extrabold tracking-wider text-3xl font-browser-code select-none cursor-pointer transition-transform duration-150 active:scale-95"
             >
               <span className="text-[#4ce2fc]" style={{ textShadow: "0 0 8px rgba(76, 226, 252, 0.8)" }}>NE</span>
-              <span className="text-[#ffe259] scale-110 inline-block font-sans mx-1" style={{ textShadow: "0 0 10px rgba(255, 226, 89, 0.95)" }}>X</span>
+              <span className="text-[#ffe259] scale-110 inline-block font-browser-content mx-1" style={{ textShadow: "0 0 10px rgba(255, 226, 89, 0.95)" }}>X</span>
               <span className="text-[#4ce2fc]" style={{ textShadow: "0 0 8px rgba(76, 226, 252, 0.8)" }}>US</span>
             </div>
 
@@ -255,7 +370,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   type="text"
                   value={headerSearchQuery}
                   onChange={(e) => setHeaderSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-none outline-none text-[#c7b3ff] text-base font-sans placeholder-[#543ab7]/70"
+                  className="w-full bg-transparent border-none outline-none text-[#c7b3ff] text-base font-browser-content placeholder-[#543ab7]/70"
                   placeholder="Search the network..."
                 />
                 {headerSearchQuery && (
@@ -276,7 +391,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             <div className="w-full max-w-2xl">
               {isDecrypting ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 w-full">
-                  <div className="text-xs text-[#4ce2fc] tracking-widest animate-pulse font-mono uppercase">
+                  <div className="text-xs text-[#4ce2fc] tracking-widest animate-pulse font-browser-code uppercase">
                     LOG DECRYPTING...
                   </div>
                   <div className="w-32 h-1 bg-[#110a26] rounded overflow-hidden relative border border-[#543ab7]/30">
@@ -295,17 +410,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   </h2>
 
                   {/* 힌트 상세 본문 카드형 격벽 */}
-                  <div className="border-l-2 border-[#543ab7]/50 pl-4 py-1 text-base text-[#c7b3ff] leading-relaxed whitespace-pre-wrap font-sans max-w-2xl bg-[#0d071c]/20 rounded-r-md pr-4">
-                    {selectedHint.content}
+                  <div className="max-w-2xl rounded-r-md border-l-2 border-[#543ab7]/50 bg-[#0d071c]/20 py-1 pl-4 pr-4">
+                    <MarkdownHintContent content={selectedHint.content} />
                   </div>
                 </div>
               ) : (
                 // 매칭 실패 화면 (No search results found)
                 <div className="w-full animate-fade-in flex flex-col py-6">
-                  <div className="text-base text-[#ff9d76] tracking-wide mb-2 font-mono">
+                  <div className="text-base text-[#ff9d76] tracking-wide mb-2 font-browser-code">
                     No search results found for "<span className="text-[#ffe259]">{currentSearchQuery}</span>"
                   </div>
-                  <div className="text-base text-[#543ab7] font-sans">
+                  <div className="text-base text-[#543ab7] font-browser-content">
                     입력하신 키워드를 다시 한 번 확인해 주십시오.
                   </div>
                 </div>
@@ -322,7 +437,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#0a0514] font-browser-chrome px-6 select-none animate-fade-in overflow-y-auto">
       {/* NEXUS Search 대형 로고 */}
       <div className="flex flex-col items-center mb-10 text-center">
-        <div className="flex items-center justify-center font-extrabold tracking-[0.05em] text-5xl font-mono select-none">
+        <div className="flex items-center justify-center font-extrabold tracking-[0.05em] text-5xl font-browser-code select-none">
           <span
             className="text-[#4ce2fc]"
             style={{ textShadow: "0 0 8px rgba(76, 226, 252, 0.9), 0 0 15px rgba(76, 226, 252, 0.6), 0 0 30px rgba(76, 226, 252, 0.35), 0 0 50px rgba(76, 226, 252, 0.15)" }}
@@ -330,7 +445,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             NE
           </span>
           <span
-            className="text-[#ffe259] mx-0.5 scale-110 inline-block font-sans"
+            className="text-[#ffe259] mx-0.5 scale-110 inline-block font-browser-content"
             style={{ textShadow: "0 0 10px rgba(255, 226, 89, 0.95), 0 0 18px rgba(255, 226, 89, 0.65), 0 0 35px rgba(255, 226, 89, 0.4), 0 0 55px rgba(255, 226, 89, 0.2)" }}
           >
             X
@@ -367,7 +482,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             placeholder="Search the network..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none text-[#c7b3ff] placeholder-[#543ab7] text-sm font-sans"
+            className="w-full bg-transparent border-none outline-none text-[#c7b3ff] placeholder-[#543ab7] text-sm font-browser-content"
           />
           {searchQuery && (
             <button

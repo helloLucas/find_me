@@ -1,11 +1,30 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../app/store/authStore";
+
+function formatSeoulTimestamp(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "00";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")} KST`;
+}
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const nickname = useAuthStore((state) => state.nickname);
+  const seoulTimestamp = useMemo(() => formatSeoulTimestamp(new Date()), []);
 
   useEffect(() => {
     // 백엔드로 404 접근 로그 전송 (비동기)
@@ -20,7 +39,8 @@ export default function NotFoundPage() {
           body: JSON.stringify({
             path: location.pathname,
             nickname: nickname || "ANONYMOUS",
-            timestamp: new Date().toISOString(),
+            timestamp: seoulTimestamp,
+            timezone: "Asia/Seoul",
           }),
         });
       } catch (e) {
@@ -30,7 +50,7 @@ export default function NotFoundPage() {
     };
 
     void log404Error();
-  }, [location.pathname, nickname]);
+  }, [location.pathname, nickname, seoulTimestamp]);
 
 
 
@@ -68,7 +88,7 @@ export default function NotFoundPage() {
 
           {/* Sub Message System Logs */}
           <div className="bg-black/50 p-3 text-xs md:text-sm text-[#16A34A] text-left border-l-4 border-[#22C55E]">
-            <p>&gt; TIMESTAMP: {new Date().toISOString()}</p>
+            <p>&gt; TIMESTAMP: {seoulTimestamp}</p>
             <p>&gt; ERR_CODE: NF_001</p>
             <p>&gt; ATTEMPTED_ACCESS: <span className="text-white">{location.pathname}</span></p>
           </div>
