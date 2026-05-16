@@ -28,8 +28,22 @@ class StoryServiceImplChapter3RuleTest {
 
   @BeforeEach
   void setUp() {
-    storyService = new StoryServiceImpl(
-        null, null, null, null, null, null, null, null, null, null, null, null, objectMapper);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            objectMapper);
     storyService.init();
   }
 
@@ -38,25 +52,28 @@ class StoryServiceImplChapter3RuleTest {
     StoryNodeRepository storyNodeRepository = mock(StoryNodeRepository.class);
     StoryNode configuredStart = storyNode("CH3_FRIEND_CALL");
 
-    storyService = new StoryServiceImpl(
-        null,
-        null,
-        storyNodeRepository,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        objectMapper);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            storyNodeRepository,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            objectMapper);
 
     when(storyNodeRepository.findByChapter_CodeAndCode("week03", "CH3_FRIEND_CALL"))
         .thenReturn(Optional.of(configuredStart));
 
-    Optional<StoryNode> result = ReflectionTestUtils.invokeMethod(storyService, "findStartNodeOptional", "week03");
+    Optional<StoryNode> result =
+        ReflectionTestUtils.invokeMethod(storyService, "findStartNodeOptional", "week03");
 
     assertThat(result).containsSame(configuredStart);
     verify(storyNodeRepository, never()).findFirstByChapter_CodeOrderByIdAsc("week03");
@@ -65,9 +82,9 @@ class StoryServiceImplChapter3RuleTest {
   @Test
   void normalizedCommandAcceptsChapter3AcceptedForms() throws Exception {
     assertThat(
-        matches(
-            "NORMALIZED_COMMAND",
-            """
+            matches(
+                "NORMALIZED_COMMAND",
+                """
                 {
                   "rule": "NORMALIZED_COMMAND",
                   "acceptedForms": [
@@ -77,8 +94,8 @@ class StoryServiceImplChapter3RuleTest {
                   "cwd": "/home/guest"
                 }
                 """,
-            "ls -la",
-            baseSnapshot()))
+                "ls -la",
+                baseSnapshot()))
         .isTrue();
   }
 
@@ -87,9 +104,9 @@ class StoryServiceImplChapter3RuleTest {
     JsonNode snapshot = baseSnapshot();
 
     assertThat(
-        matches(
-            "DISCOVER_OPEN_PORT",
-            """
+            matches(
+                "DISCOVER_OPEN_PORT",
+                """
                 {
                   "rule": "DISCOVER_OPEN_PORT",
                   "targetPort": 9091,
@@ -108,14 +125,14 @@ class StoryServiceImplChapter3RuleTest {
                   ]
                 }
                 """,
-            "nmap -sV 127.0.0.1",
-            snapshot))
+                "nmap -sV 127.0.0.1",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "CONNECT_RELAY",
-            """
+            matches(
+                "CONNECT_RELAY",
+                """
                 {
                   "rule": "CONNECT_RELAY",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -125,14 +142,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["port_9091_discovered"]
                 }
                 """,
-            "nc -w 3 127.0.0.1 9091",
-            snapshot))
+                "nc -w 3 127.0.0.1 9091",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "RELAY_REQUEST_TO_FILE",
-            """
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
                 {
                   "rule": "RELAY_REQUEST_TO_FILE",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -142,14 +159,14 @@ class StoryServiceImplChapter3RuleTest {
                   "outputFile": "/home/guest/my_people.list"
                 }
                 """,
-            "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > my_people.list",
-            snapshot))
+                "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > my_people.list",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "RELAY_REQUEST_TO_FILE",
-            """
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
                 {
                   "rule": "RELAY_REQUEST_TO_FILE",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -160,14 +177,14 @@ class StoryServiceImplChapter3RuleTest {
                   "allowAnyOutputFile": true
                 }
                 """,
-            "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > people.txt",
-            snapshot))
+                "printf 'PEOPLE\\n' | nc 127.0.0.1 9091 > people.txt",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "RELAY_REQUEST_TO_FILE",
-            """
+            matches(
+                "RELAY_REQUEST_TO_FILE",
+                """
                 {
                   "rule": "RELAY_REQUEST_TO_FILE",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -178,14 +195,14 @@ class StoryServiceImplChapter3RuleTest {
                   "allowAnyOutputFile": true
                 }
                 """,
-            "printf 'people\\n' | nc 127.0.0.1 9091 > people.txt",
-            snapshot))
+                "printf 'people\\n' | nc 127.0.0.1 9091 > people.txt",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "RELAY_REQUEST",
-            """
+            matches(
+                "RELAY_REQUEST",
+                """
                 {
                   "rule": "RELAY_REQUEST",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -194,8 +211,8 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["relay_contacted"]
                 }
                 """,
-            "nc 127.0.0.1 9091 <<< status",
-            snapshot))
+                "nc 127.0.0.1 9091 <<< status",
+                snapshot))
         .isTrue();
   }
 
@@ -204,9 +221,9 @@ class StoryServiceImplChapter3RuleTest {
     JsonNode snapshot = baseSnapshot();
 
     assertThat(
-        matches(
-            "RELAY_REQUEST",
-            """
+            matches(
+                "RELAY_REQUEST",
+                """
                 {
                   "rule": "RELAY_REQUEST",
                   "hostAliases": ["127.0.0.1", "localhost"],
@@ -215,40 +232,43 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["relay_contacted"]
                 }
                 """,
-            "echo FRAGMENT | nc localhost 9091 < laplace_fra",
-            snapshot))
+                "echo FRAGMENT | nc localhost 9091 < laplace_fra",
+                snapshot))
         .isFalse();
   }
 
   @Test
   void relayDumpNearMissUsesGenericRedirectionNudge() throws Exception {
     StoryTransitionRepository storyTransitionRepository = mock(StoryTransitionRepository.class);
-    storyService = new StoryServiceImpl(
-        null,
-        null,
-        null,
-        storyTransitionRepository,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        objectMapper);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            storyTransitionRepository,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            objectMapper);
     storyService.init();
 
     StoryNode currentNode = storyNode("CH3_RELAY_STATUS_VIEW");
     ReflectionTestUtils.setField(currentNode, "id", 208L);
 
-    StoryTransition transition = StoryTransition.builder()
-        .actionType("command")
-        .expectedInput("relay_request_FRAGMENT_to_file")
-        .validatorType("server_rule")
-        .validatorConfig(
-            json(
-                """
+    StoryTransition transition =
+        StoryTransition.builder()
+            .actionType("command")
+            .expectedInput("relay_request_FRAGMENT_to_file")
+            .validatorType("server_rule")
+            .validatorConfig(
+                json(
+                    """
                     {
                       "rule": "RELAY_REQUEST_TO_FILE",
                       "hostAliases": ["127.0.0.1", "localhost"],
@@ -258,16 +278,18 @@ class StoryServiceImplChapter3RuleTest {
                       "outputFile": "/home/guest/laplace_fragment_02.sh"
                     }
                     """))
-        .priority(100)
-        .build();
+            .priority(100)
+            .build();
     when(storyTransitionRepository.findByFromNode_IdOrderByPriorityDesc(208L))
         .thenReturn(List.of(transition));
 
-    Object command = ReflectionTestUtils.invokeMethod(
-        storyService, "parseCommand", "echo FRAGMENT | nc localhost 9091 < laplace_fra");
+    Object command =
+        ReflectionTestUtils.invokeMethod(
+            storyService, "parseCommand", "echo FRAGMENT | nc localhost 9091 < laplace_fra");
 
-    String nudge = ReflectionTestUtils.invokeMethod(
-        storyService, "findNudgeForCommand", currentNode, command, baseSnapshot());
+    String nudge =
+        ReflectionTestUtils.invokeMethod(
+            storyService, "findNudgeForCommand", currentNode, command, baseSnapshot());
 
     assertThat(nudge).isEqualTo("리다이렉션 방향과 파일 경로를 다시 확인해봐.");
   }
@@ -277,8 +299,9 @@ class StoryServiceImplChapter3RuleTest {
     JsonNode snapshot = baseSnapshot();
     StoryNode nextNode = storyNode("CH3_PEOPLE_DUMPED");
     TransitionRequestDto request = request("echo PEOPLE | nc -w 3 127.0.0.1 9091 > people.txt");
-    JsonNode effectBundle = json(
-        """
+    JsonNode effectBundle =
+        json(
+            """
             {
               "vfsOverlay": {
                 "createdNodes": [
@@ -294,14 +317,15 @@ class StoryServiceImplChapter3RuleTest {
             }
             """);
 
-    JsonNode nextSnapshot = ReflectionTestUtils.invokeMethod(
-        storyService,
-        "createTransitionSnapshot",
-        nextNode.getChapter(),
-        nextNode,
-        snapshot,
-        request,
-        effectBundle);
+    JsonNode nextSnapshot =
+        ReflectionTestUtils.invokeMethod(
+            storyService,
+            "createTransitionSnapshot",
+            nextNode.getChapter(),
+            nextNode,
+            snapshot,
+            request,
+            effectBundle);
 
     JsonNode createdNodes = nextSnapshot.at("/vfsOverlay/createdNodes");
     assertThat(createdNodes.findValuesAsText("path")).contains("/home/guest/people.txt");
@@ -311,7 +335,8 @@ class StoryServiceImplChapter3RuleTest {
   @Test
   void coreGroupValidationSeparatesSuccessAndFailureBranches() throws Exception {
     JsonNode snapshot = baseSnapshot();
-    String successConfig = """
+    String successConfig =
+        """
         {
           "rule": "VALIDATE_CORE_GROUP_DAT",
           "targetFile": "/home/guest/core_group.dat",
@@ -338,11 +363,14 @@ class StoryServiceImplChapter3RuleTest {
           }
         }
         """;
-    String failureConfig = successConfig.replace(
-        "\"requiredKnowledge\"", "\"expectFailure\": true,\n  \"requiredKnowledge\"");
+    String failureConfig =
+        successConfig.replace(
+            "\"requiredKnowledge\"", "\"expectFailure\": true,\n  \"requiredKnowledge\"");
 
-    String validInput = "printf 'Home_Contact ACTIVE\\nOld_Contact ACTIVE\\nClassmate_21 ACTIVE\\n' > core_group.dat";
-    String invalidInput = "printf 'Home_Contact ACTIVE\\nFriend_04 DELETED\\nClassmate_21 ACTIVE\\n' > core_group.dat";
+    String validInput =
+        "printf 'Home_Contact ACTIVE\\nOld_Contact ACTIVE\\nClassmate_21 ACTIVE\\n' > core_group.dat";
+    String invalidInput =
+        "printf 'Home_Contact ACTIVE\\nFriend_04 DELETED\\nClassmate_21 ACTIVE\\n' > core_group.dat";
     String grepValidInput = "grep ' ACTIVE$' people.txt > core_group.dat";
     String awkValidInput = "awk '$2 == \"ACTIVE\" { print $0 }' people.txt > core_group.dat";
     String sedValidInput = "sed -n '/ ACTIVE$/p' people.txt > core_group.dat";
@@ -370,15 +398,16 @@ class StoryServiceImplChapter3RuleTest {
   @Test
   void lateChapterFileRulesMatch() throws Exception {
     JsonNode snapshot = baseSnapshot();
-    JsonNode localSnapshot = json(
-        baseSnapshot()
-            .toString()
-            .replace("\"cwd\":\"/home/guest\"", "\"cwd\":\"/usr/bin/local\""));
+    JsonNode localSnapshot =
+        json(
+            baseSnapshot()
+                .toString()
+                .replace("\"cwd\":\"/home/guest\"", "\"cwd\":\"/usr/bin/local\""));
 
     assertThat(
-        matches(
-            "GPG_OUTPUT_EXISTS",
-            """
+            matches(
+                "GPG_OUTPUT_EXISTS",
+                """
                 {
                   "rule": "GPG_OUTPUT_EXISTS",
                   "inputFile": "/home/guest/core_group.dat",
@@ -386,14 +415,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["core_group_validated"]
                 }
                 """,
-            "gpg -c -o core_group.dat.gpg core_group.dat",
-            snapshot))
+                "gpg -c -o core_group.dat.gpg core_group.dat",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "FILE_EQUIVALENCE",
-            """
+            matches(
+                "FILE_EQUIVALENCE",
+                """
                 {
                   "rule": "FILE_EQUIVALENCE",
                   "targetFile": "/tmp/safe_zone.dat.gpg",
@@ -402,14 +431,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["core_group_encrypted"]
                 }
                 """,
-            "cp core_group.dat.gpg /tmp/safe_zone.dat.gpg",
-            snapshot))
+                "cp core_group.dat.gpg /tmp/safe_zone.dat.gpg",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "CONFIRMATION_STREAM_TO_SCRIPT",
-            """
+            matches(
+                "CONFIRMATION_STREAM_TO_SCRIPT",
+                """
                 {
                   "rule": "CONFIRMATION_STREAM_TO_SCRIPT",
                   "scriptPath": "/home/guest/sever_external_nodes.sh",
@@ -418,14 +447,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["external_sever_attempted", "safe_zone_registered"]
                 }
                 """,
-            "printf 'y\\ny\\ny\\n' | sh sever_external_nodes.sh",
-            snapshot))
+                "printf 'y\\ny\\ny\\n' | sh sever_external_nodes.sh",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "DISCOVER_FILE",
-            """
+            matches(
+                "DISCOVER_FILE",
+                """
                 {
                   "rule": "DISCOVER_FILE",
                   "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
@@ -433,14 +462,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["ghost_mode_enabled"]
                 }
                 """,
-            "ls /usr/bin/local/laplace_fragment_03.sh",
-            snapshot))
+                "ls /usr/bin/local/laplace_fragment_03.sh",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "DISCOVER_FILE",
-            """
+            matches(
+                "DISCOVER_FILE",
+                """
                 {
                   "rule": "DISCOVER_FILE",
                   "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
@@ -448,14 +477,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["ghost_mode_enabled"]
                 }
                 """,
-            "cd /usr/bin/local && ls",
-            snapshot))
+                "cd /usr/bin/local && ls",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "DISCOVER_FILE",
-            """
+            matches(
+                "DISCOVER_FILE",
+                """
                 {
                   "rule": "DISCOVER_FILE",
                   "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
@@ -463,14 +492,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["ghost_mode_enabled"]
                 }
                 """,
-            "find /usr/bin/local -name laplace_fragment_03.sh",
-            snapshot))
+                "find /usr/bin/local -name laplace_fragment_03.sh",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "DISCOVER_FILE",
-            """
+            matches(
+                "DISCOVER_FILE",
+                """
                 {
                   "rule": "DISCOVER_FILE",
                   "targetFile": "/usr/bin/local/laplace_fragment_03.sh",
@@ -478,14 +507,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["ghost_mode_enabled"]
                 }
                 """,
-            "ls",
-            localSnapshot))
+                "ls",
+                localSnapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "CREATE_FILE_EQUIVALENT",
-            """
+            matches(
+                "CREATE_FILE_EQUIVALENT",
+                """
                 {
                   "rule": "CREATE_FILE_EQUIVALENT",
                   "sourceFile": "/usr/bin/local/laplace_fragment_03.sh",
@@ -494,14 +523,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["fragment03_found"]
                 }
                 """,
-            "cp laplace_fragment_03.sh ~/laplace_fragment_03.sh",
-            localSnapshot))
+                "cp laplace_fragment_03.sh ~/laplace_fragment_03.sh",
+                localSnapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "FILE_COMPOSITION",
-            """
+            matches(
+                "FILE_COMPOSITION",
+                """
                 {
                   "rule": "FILE_COMPOSITION",
                   "targetFile": "/home/guest/laplace.qasm",
@@ -513,14 +542,14 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["fragment03_copied"]
                 }
                 """,
-            "cat laplace_fragment_01.sh laplace_fragment_02.sh laplace_fragment_03.sh > laplace.qasm",
-            snapshot))
+                "cat laplace_fragment_01.sh laplace_fragment_02.sh laplace_fragment_03.sh > laplace.qasm",
+                snapshot))
         .isTrue();
 
     assertThat(
-        matches(
-            "HASH_FILE_CHECK",
-            """
+            matches(
+                "HASH_FILE_CHECK",
+                """
                 {
                   "rule": "HASH_FILE_CHECK",
                   "targetFile": "/home/guest/laplace.qasm",
@@ -531,28 +560,30 @@ class StoryServiceImplChapter3RuleTest {
                   "requiredFlags": ["laplace_qasm_created"]
                 }
                 """,
-            "shasum -a 256 laplace.qasm",
-            snapshot))
+                "shasum -a 256 laplace.qasm",
+                snapshot))
         .isTrue();
   }
 
   @Test
   void userFragmentsPresentRuleRequiresOneFragmentFromEveryGroup() throws Exception {
     UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
-    storyService = new StoryServiceImpl(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        fragmentRepository,
-        objectMapper);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
     storyService.init();
 
     when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
@@ -560,9 +591,9 @@ class StoryServiceImplChapter3RuleTest {
         .thenReturn(true);
 
     assertThat(
-        matchesWithUser(
-            "USER_FRAGMENTS_PRESENT",
-            """
+            matchesWithUser(
+                "USER_FRAGMENTS_PRESENT",
+                """
                 {
                   "rule": "USER_FRAGMENTS_PRESENT",
                   "commandRegex": "(?is)^\\\\s*sha256sum\\\\s+process_index\\\\.db\\\\s*$",
@@ -572,37 +603,39 @@ class StoryServiceImplChapter3RuleTest {
                   ]
                 }
                 """,
-            "sha256sum process_index.db",
-            baseSnapshot(),
-            42L))
+                "sha256sum process_index.db",
+                baseSnapshot(),
+                42L))
         .isTrue();
   }
 
   @Test
   void userFragmentsIncompleteRuleMatchesWhenAGroupIsMissing() throws Exception {
     UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
-    storyService = new StoryServiceImpl(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        fragmentRepository,
-        objectMapper);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
     storyService.init();
 
     when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
 
     assertThat(
-        matchesWithUser(
-            "USER_FRAGMENTS_INCOMPLETE",
-            """
+            matchesWithUser(
+                "USER_FRAGMENTS_INCOMPLETE",
+                """
                 {
                   "rule": "USER_FRAGMENTS_INCOMPLETE",
                   "commandRegex": "(?is)^\\\\s*sha256sum\\\\s+process_index\\\\.db\\\\s*$",
@@ -612,21 +645,66 @@ class StoryServiceImplChapter3RuleTest {
                   ]
                 }
                 """,
-            "sha256sum process_index.db",
-            baseSnapshot(),
-            42L))
+                "sha256sum process_index.db",
+                baseSnapshot(),
+                42L))
         .isTrue();
+  }
+
+  @Test
+  void userFragmentsPresentRuleCanGateNonCommandStoryCallback() throws Exception {
+    UserFragmentRepository fragmentRepository = mock(UserFragmentRepository.class);
+    storyService =
+        new StoryServiceImpl(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            fragmentRepository,
+            objectMapper);
+    storyService.init();
+
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "1")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "2")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "3")).thenReturn(true);
+    when(fragmentRepository.existsByUserIdAndFragmentCode(42L, "4")).thenReturn(true);
+
+    String config =
+        """
+        {
+          "rule": "USER_FRAGMENTS_PRESENT",
+          "acceptedValues": ["lucas_route_clear"],
+          "requiredFragmentGroups": [["1"], ["2"], ["3"], ["4"]]
+        }
+        """;
+
+    assertThat(
+            matchesWithUser(
+                "USER_FRAGMENTS_PRESENT", config, "lucas_route_clear", baseSnapshot(), 42L))
+        .isTrue();
+    assertThat(
+            matchesWithUser("USER_FRAGMENTS_PRESENT", config, "anything_else", baseSnapshot(), 42L))
+        .isFalse();
   }
 
   private boolean matches(String rule, String configJson, String input, JsonNode snapshot)
       throws Exception {
-    StoryTransition transition = StoryTransition.builder()
-        .actionType("command")
-        .expectedInput(rule)
-        .validatorType("server_rule")
-        .validatorConfig(json(configJson))
-        .priority(100)
-        .build();
+    StoryTransition transition =
+        StoryTransition.builder()
+            .actionType("command")
+            .expectedInput(rule)
+            .validatorType("server_rule")
+            .validatorConfig(json(configJson))
+            .priority(100)
+            .build();
 
     return Boolean.TRUE.equals(
         ReflectionTestUtils.invokeMethod(
@@ -636,13 +714,14 @@ class StoryServiceImplChapter3RuleTest {
   private boolean matchesWithUser(
       String rule, String configJson, String input, JsonNode snapshot, Long userId)
       throws Exception {
-    StoryTransition transition = StoryTransition.builder()
-        .actionType("command")
-        .expectedInput(rule)
-        .validatorType("server_rule")
-        .validatorConfig(json(configJson))
-        .priority(100)
-        .build();
+    StoryTransition transition =
+        StoryTransition.builder()
+            .actionType("command")
+            .expectedInput(rule)
+            .validatorType("server_rule")
+            .validatorConfig(json(configJson))
+            .priority(100)
+            .build();
 
     return Boolean.TRUE.equals(
         ReflectionTestUtils.invokeMethod(

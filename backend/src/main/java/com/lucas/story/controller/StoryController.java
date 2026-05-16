@@ -41,9 +41,9 @@ public class StoryController {
       @Valid @RequestBody StartStoryRequestDto request) {
     StoryNodeResponseDto response = storyService.startStory(principal.getUserId(), request);
     log.info(
-        "User ID: {} started story (Chapter: {}). Reached NodeCode: {}",
+        "User ID: {} started story with hash: {}. Reached NodeCode: {}",
         principal.getUserId(),
-        request.getChapterCode(),
+        request.getUriHash(),
         response.getNodeCode());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(BaseResponse.success("스토리 시작 성공", response));

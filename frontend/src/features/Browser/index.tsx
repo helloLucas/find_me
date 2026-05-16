@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useWindowStore } from "../../app/store/windowStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { NewsTab } from "./components/NewsTab";
@@ -9,8 +10,11 @@ import { StarforceTab } from "./components/StarforceTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { DocTab } from "./components/DocTab";
 import { CyberPacketDashTab } from "./components/CyberPacketDashTab";
+import { LucasSurvivalTab } from "./components/LucasSurvivalTab";
+import { LucasRouteTab } from "./components/LucasRouteTab";
 import { NetworkDevTools } from "./components/NetworkDevTools";
 import { ContextMenu } from "../../shared/ui/ContextMenu";
+import { WindowControlButton } from "../../shared/ui/WindowControls";
 import { useStoryRuntimeStore } from "../story-runtime/storyRuntime.store";
 import { type Chapter3Hint } from "./data/chapter3Hints";
 import type { DesktopWindowId } from "../../shared/config/desktopWindows";
@@ -23,10 +27,10 @@ interface Tab {
   id: string;
   title: string;
   url: string;
-  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
+  component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash" | "lucasroute" | "lucassurvival";
   history: Array<{
     url: string;
-    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash";
+    component: "news" | "home" | "pacman" | "starforce" | "history" | "doc" | "search" | "cardmatching" | "cyberpacketdash" | "lucasroute" | "lucassurvival";
     title: string;
   }>;
   historyIndex: number;
@@ -47,16 +51,19 @@ type KeyboardLockNavigator = Navigator & {
 };
 
 export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
+  const { chapterCode } = useParams<{ chapterCode?: string }>();
   const { closeWindow, focusWindow } = useWindowStore();
   const { currentNode, submitStoryInspect } = useStoryRuntimeStore();
-  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger } = useBrowserContentStore();
+  const { content: browserContent, isChapter2Mode, setIsChapter2Mode, newsTabClickTrigger, cyberPacketDashTabClickTrigger, lucasRouteTabClickTrigger, lucasRouteStoryLinked, lucasSurvivalTabClickTrigger } = useBrowserContentStore();
+  const currentChapter = useMemo(() => {
+    const nodeMatch = currentNode?.code.match(/^CH(\d+)_/);
+    if (nodeMatch) return Number(nodeMatch[1]);
 
-  // currentNode?.code에서 챕터 번호 추출 (예: "CH1_..." -> 1, "CH2_..." -> 2, "CH3_..." -> 3, "CH4_..." -> 4, 없으면 1)
-  const currentChapter = (() => {
-    if (!currentNode?.code) return 1;
-    const match = currentNode.code.match(/^CH(\d+)_/);
-    return match ? parseInt(match[1], 10) : 1;
-  })();
+    const routeMatch = chapterCode?.match(/(?:week|ch)(\d+)/i);
+    if (routeMatch) return Number(routeMatch[1]);
+
+    return 1;
+  }, [chapterCode, currentNode?.code]);
 
   // 챕터 2 여부 감지 (최초 진입 시 1회만 설정)
   useEffect(() => {
@@ -102,6 +109,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     return () => {
       useBrowserContentStore.getState().resetNewsTabClickTrigger();
       useBrowserContentStore.getState().resetCyberPacketDashTabClickTrigger();
+      useBrowserContentStore.getState().resetLucasRouteTabClickTrigger();
+      useBrowserContentStore.getState().resetLucasSurvivalTabClickTrigger();
     };
   }, []);
 
@@ -162,10 +171,10 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if (currentNode?.code?.startsWith("CH2_")) {
       return [{
         id: "tab1",
-        title: "History",
+        title: "방문 기록",
         url: "system://history",
         component: "history",
-        history: [{ url: "system://history", component: "history", title: "History" }],
+        history: [{ url: "system://history", component: "history", title: "방문 기록" }],
         historyIndex: 0,
         currentView: "home",
         selectedHint: null,
@@ -307,7 +316,63 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     });
   }, [cyberPacketDashTabClickTrigger]);
 
-  const handleNewTab = () => {
+  const lastLucasRouteTabClickTriggerRef = useRef(0);
+
+  useEffect(() => {
+    if (lucasRouteTabClickTrigger === 0) return;
+    if (lucasRouteTabClickTrigger === lastLucasRouteTabClickTriggerRef.current) return;
+    lastLucasRouteTabClickTriggerRef.current = lucasRouteTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingTab = prev.find((tab) => tab.component === "lucasroute");
+      if (existingTab) {
+        queueMicrotask(() => setActiveTabId(existingTab.id));
+        return prev;
+      }
+
+      const newId = `tab_lucasroute_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Lucas Route",
+        url: "system://lucas-route",
+        component: "lucasroute" as const,
+        history: [{ url: "system://lucas-route", component: "lucasroute" as const, title: "Lucas Route" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [lucasRouteTabClickTrigger]);
+
+  const lastLucasSurvivalTabClickTriggerRef = useRef(0);
+
+  useEffect(() => {
+    if (lucasSurvivalTabClickTrigger === 0) return;
+    if (lucasSurvivalTabClickTrigger === lastLucasSurvivalTabClickTriggerRef.current) return;
+    lastLucasSurvivalTabClickTriggerRef.current = lucasSurvivalTabClickTrigger;
+
+    setTabs((prev) => {
+      const existingTab = prev.find((tab) => tab.component === "lucassurvival");
+      if (existingTab) {
+        queueMicrotask(() => setActiveTabId(existingTab.id));
+        return prev;
+      }
+
+      const newId = `tab_lucassurvival_${Date.now()}`;
+      const newTab = {
+        id: newId,
+        title: "Lucas Survival",
+        url: "system://lucas-survival",
+        component: "lucassurvival" as const,
+        history: [{ url: "system://lucas-survival", component: "lucassurvival" as const, title: "Lucas Survival" }],
+        historyIndex: 0,
+      };
+      queueMicrotask(() => setActiveTabId(newId));
+      return [...prev, newTab];
+    });
+  }, [lucasSurvivalTabClickTrigger]);
+
+  const handleNewTab = React.useCallback(() => {
     const newId = `tab_${Date.now()}`;
     const isCh1 = currentChapter === 1;
 
@@ -351,7 +416,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
 
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newId);
-  };
+  }, [currentChapter]);
 
   const navigateTab = (id: string, url: string, component: Tab["component"], title: string) => {
     setTabs((prev) =>
@@ -413,7 +478,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     );
   };
 
-  const openDevTools = () => {
+  const openDevTools = React.useCallback(() => {
     setShowDevTools(true);
 
     // DevTools 너비가 브라우저 전체 너비의 70%를 넘지 않도록 제한
@@ -428,18 +493,18 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     if (inspectTarget && canSubmitStoryAction(currentNode, "inspect", inspectTarget)) {
       void submitStoryInspect(inspectTarget);
     }
-  };
+  }, [currentNode, devToolsWidth, submitStoryInspect]);
 
-  const toggleDevTools = () => {
+  const toggleDevTools = React.useCallback(() => {
     if (showDevTools) {
       setShowDevTools(false);
       return;
     }
 
     openDevTools();
-  };
+  }, [showDevTools, openDevTools]);
 
-  const handleCloseTab = (id: string) => {
+  const handleCloseTab = React.useCallback((id: string) => {
     setTabs((prev) => {
       const filtered = prev.filter((tab) => tab.id !== id);
       if (filtered.length === 0) {
@@ -451,7 +516,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
       }
       return filtered;
     });
-  };
+  }, [activeTabId, closeWindow, windowId]);
 
   useEffect(() => {
     const keyboard = (navigator as KeyboardLockNavigator).keyboard;
@@ -653,11 +718,23 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
     });
   };
 
+  const handleCloseContextMenu = React.useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     focusWindow(windowId);
-    setContextMenu({ x: event.clientX, y: event.clientY });
+    
+    // 기존 컨텍스트 메뉴가 열려있다면 즉시 닫아서 레이스 컨디션 방지
+    setContextMenu(null);
+    
+    // 다음 프레임에서 새로운 위치로 메뉴 열기
+    const { clientX, clientY } = event;
+    requestAnimationFrame(() => {
+      setContextMenu({ x: clientX, y: clientY });
+    });
   };
 
   return (
@@ -688,7 +765,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
           <div
             key={tab.id}
             className={`
-              flex items-center gap-2 px-3 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
+              flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-xs rounded-t border-2 border-b-0 max-w-[150px]
               ${activeTabId === tab.id
                 ? "bg-[#0a0514] border-[#543ab7] text-[#0ff] z-10 translate-y-[2px]"
                 : "bg-[#1a1130] border-transparent text-[#a48cff] hover:bg-[#241a4a] cursor-pointer"}
@@ -696,15 +773,15 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             onClick={() => setActiveTabId(tab.id)}
           >
             <span className="truncate flex-1">{tab.title}</span>
-            <button
-              className="w-4 h-4 flex items-center justify-center hover:bg-white/10 rounded-full"
+            <WindowControlButton
+              variant="close"
+              label="Close tab"
+              className="!h-4 !w-4 !p-0 border-transparent bg-transparent text-[#a48cff]/70 hover:border-transparent hover:bg-transparent hover:text-[#0ff] focus-visible:ring-[#0ff]/60 [&>svg]:!h-3.5 [&>svg]:!w-3.5"
               onClick={(event) => {
                 event.stopPropagation();
                 handleCloseTab(tab.id);
               }}
-            >
-              x
-            </button>
+            />
           </div>
         ))}
         <button
@@ -799,10 +876,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-[#c7b3ff] hover:bg-[#1a1130] hover:text-[#4ce2fc] transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  검색 기록 (History)
+                  검색 기록
                 </button>
               </div>
             )}
@@ -850,6 +924,8 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
             <DocTab url={activeTab.url} />
           )}
           {(activeTab?.component === 'cardmatching' || activeTab?.component === 'cyberpacketdash') && <CyberPacketDashTab windowId={windowId} />}
+          {activeTab?.component === 'lucassurvival' && <LucasSurvivalTab />}
+          {activeTab?.component === 'lucasroute' && <LucasRouteTab storyLinked={lucasRouteStoryLinked} windowId={windowId} />}
         </div>
 
         {showDevTools && (
@@ -890,7 +966,7 @@ export const Browser: React.FC<BrowserProps> = ({ windowId }) => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={handleCloseContextMenu}
           items={[
             { label: "New Tab", onClick: handleNewTab },
             { label: showDevTools ? "Close DevTools" : "Open DevTools", onClick: toggleDevTools },

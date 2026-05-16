@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock } from "../../shared/ui/Clock";
 import { useClientStore } from "../../app/store/clientStore";
@@ -10,26 +10,41 @@ import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.
 import { canSubmitStoryAction } from "../../features/story-runtime/storyActionGuards";
 import { ExitGameOverlay } from "../../shared/ui/ExitGameOverlay/ExitGameOverlay";
 import { VolumeControl } from "./VolumeControl";
-import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS } from "../../shared/config/desktopWindows";
+import { DESKTOP_LAYER, DESKTOP_WINDOW_DEFINITIONS, type DesktopWindowId } from "../../shared/config/desktopWindows";
 import { useNotepadStore } from "../../app/store/notepadStore";
 import { trackAnalyticsEvent } from "../../shared/analytics";
 
 export const Taskbar: React.FC = () => {
   const navigate = useNavigate();
   const { terminalUser, terminalHost, terminalPath } = useClientStore();
-  const { windows, focusWindow, minimizeWindow, activeWindowId, openWindow } = useWindowStore();
+  const { windows, focusWindow, minimizeWindow, activeWindowId, openWindow, setWindowTaskbarTarget } = useWindowStore();
   const { conversations } = useMessengerStore();
   const { currentNode, submitStoryClick, isLoading } = useStoryRuntimeStore();
   const hasConversations = Object.keys(conversations).length > 0;
   const [showExitOverlay, setShowExitOverlay] = useState(false);
 
-  const terminalWindow = windows.find((windowState) => windowState.id === "terminal");
-  const messengerWindow = windows.find((windowState) => windowState.id === "messenger");
-  const browserWindows = windows.filter((windowState) => windowState.type === "browser");
-  const notepadWindows = windows.filter((windowState) => windowState.type === "notepad");
+  const taskbarWindows = windows.filter((windowState) => !windowState.isClosing);
+  const terminalWindow = taskbarWindows.find((windowState) => windowState.id === "terminal");
+  const messengerWindow = taskbarWindows.find((windowState) => windowState.id === "messenger");
+  const browserWindows = taskbarWindows.filter((windowState) => windowState.type === "browser");
+  const notepadWindows = taskbarWindows.filter((windowState) => windowState.type === "notepad");
+  const minigameWindows = taskbarWindows.filter((windowState) => windowState.type === "minigame");
   const pendingOpenChatAction = Object.values(conversations)
     .flatMap((conversation) => conversation.actions ?? [])
     .find((action) => action.actionType === "open_friend_chat");
+
+  const registerTaskbarTarget = useCallback(
+    (windowId: DesktopWindowId | undefined, element: HTMLButtonElement | null) => {
+      if (!windowId || !element) return;
+
+      const rect = element.getBoundingClientRect();
+      setWindowTaskbarTarget(windowId, {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+    },
+    [setWindowTaskbarTarget]
+  );
 
   const consumePendingOpenChatAction = () => {
     if (!pendingOpenChatAction) return;
@@ -151,6 +166,7 @@ export const Taskbar: React.FC = () => {
           <div className="h-6 w-px bg-white/10 mx-1" />
 
           <button
+            ref={(element) => registerTaskbarTarget(messengerWindow?.id, element)}
             className={`flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-white/20 active:bg-white/30 hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${hasConversations ? "" : "opacity-50 pointer-events-none"}`}
             onClick={handleMessengerTaskbarClick}
           >
@@ -169,6 +185,7 @@ export const Taskbar: React.FC = () => {
           <div className="flex items-center gap-1">
             {terminalWindow && (
               <button
+                ref={(element) => registerTaskbarTarget(terminalWindow.id, element)}
                 onClick={handleTerminalTaskbarClick}
                 className={`flex h-8 px-3 items-center justify-start min-w-[150px] max-w-[200px] rounded truncate text-green-400 text-xs transition-all font-desktop-ui ${
                   terminalWindow.isMinimized
@@ -187,6 +204,7 @@ export const Taskbar: React.FC = () => {
               return (
                 <button
                   key={windowState.id}
+                  ref={(element) => registerTaskbarTarget(windowState.id, element)}
                   onClick={() =>
                     windowState.isMinimized || !isActive
                       ? focusWindow(windowState.id)
@@ -214,6 +232,7 @@ export const Taskbar: React.FC = () => {
               return (
                 <button
                   key={windowState.id}
+                  ref={(element) => registerTaskbarTarget(windowState.id, element)}
                   onClick={() =>
                     windowState.isMinimized || !isActive
                       ? focusWindow(windowState.id)
@@ -227,6 +246,34 @@ export const Taskbar: React.FC = () => {
                 >
                   <img
                     src="/pixel_notepad_icon.svg"
+                    className="w-4 h-4 mr-2 object-contain"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                  <span className="text-white text-xs truncate leading-none">{windowState.title}</span>
+                </button>
+              );
+            })}
+
+            {minigameWindows.map((windowState) => {
+              const isActive = !windowState.isMinimized && activeWindowId === windowState.id;
+
+              return (
+                <button
+                  key={windowState.id}
+                  ref={(element) => registerTaskbarTarget(windowState.id, element)}
+                  onClick={() =>
+                    windowState.isMinimized || !isActive
+                      ? focusWindow(windowState.id)
+                      : minimizeWindow(windowState.id)
+                  }
+                  className={`flex items-center px-2 py-1 h-8 max-w-[170px] rounded border ${
+                    isActive
+                      ? "bg-white/20 border-white/30 shadow-[inset_0_2px_5px_rgba(0,0,0,0.2)]"
+                      : "bg-transparent border-transparent hover:bg-white/10"
+                  } transition-all`}
+                >
+                  <img
+                    src={DESKTOP_WINDOW_DEFINITIONS[windowState.id].iconPath}
                     className="w-4 h-4 mr-2 object-contain"
                     style={{ imageRendering: "pixelated" }}
                   />

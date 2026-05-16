@@ -4,6 +4,8 @@ import { useWindowStore } from "../../../app/store/windowStore";
 import { DESKTOP_TASKBAR_HEIGHT } from "../../config/desktopWindows";
 import { WindowControlButton } from "../WindowControls";
 
+const WINDOW_CLOSE_ANIMATION_MS = 320;
+
 interface WindowProps {
   id: string;
   title: string;
@@ -41,6 +43,18 @@ function toPixelSize(value: string | number, fallback: number) {
   return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
+function getMinimizeVars(
+  target: { x: number; y: number } | undefined,
+  center: { x: number; y: number }
+): React.CSSProperties {
+  if (!target) return {};
+
+  return {
+    "--desktop-window-minimize-x": `${target.x - center.x}px`,
+    "--desktop-window-minimize-y": `${target.y - center.y}px`,
+  } as React.CSSProperties;
+}
+
 export const Window: React.FC<WindowProps> = ({
   id,
   title,
@@ -52,12 +66,14 @@ export const Window: React.FC<WindowProps> = ({
   minHeight = 300,
 }) => {
   const windowState = useWindowStore((state) => state.windows.find((window) => window.id === id));
-  const { closeWindow, minimizeWindow, maximizeWindow, restoreWindow, focusWindow } = useWindowStore();
+  const { closeWindow, markWindowClosing, minimizeWindow, maximizeWindow, restoreWindow, focusWindow } = useWindowStore();
   const [size, setSize] = useState<{ width: string | number; height: string | number }>({
     width: defaultWidth,
     height: defaultHeight,
   });
   const [position, setPosition] = useState(() => getInitialWindowPosition(defaultWidth, defaultHeight));
+  const [isClosing, setIsClosing] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   if (!windowState) {
     return null;
@@ -65,6 +81,14 @@ export const Window: React.FC<WindowProps> = ({
 
   const isMaximized = windowState.isMaximized;
   const isMinimized = windowState.isMinimized;
+  const currentWidth = isMaximized ? window.innerWidth : toPixelSize(size.width, defaultWidth);
+  const currentHeight = isMaximized
+    ? Math.max(0, window.innerHeight - DESKTOP_TASKBAR_HEIGHT)
+    : toPixelSize(size.height, defaultHeight);
+  const currentCenter = isMaximized
+    ? { x: currentWidth / 2, y: currentHeight / 2 }
+    : { x: position.x + currentWidth / 2, y: position.y + currentHeight / 2 };
+  const minimizeVars = getMinimizeVars(windowState.taskbarTarget, currentCenter);
 
   const handleToggleMaximize = () => {
     if (isMaximized) {
@@ -73,6 +97,16 @@ export const Window: React.FC<WindowProps> = ({
     }
 
     maximizeWindow(windowState.id);
+  };
+
+  const handleClose = () => {
+    if (isClosing) return;
+
+    setIsClosing(true);
+    markWindowClosing(windowState.id);
+    window.setTimeout(() => {
+      closeWindow(windowState.id);
+    }, WINDOW_CLOSE_ANIMATION_MS);
   };
 
   const handleHeaderMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -133,14 +167,19 @@ export const Window: React.FC<WindowProps> = ({
 
   return (
     <Rnd
+      className={isInteracting ? "" : "desktop-window-geometry"}
       size={isMaximized ? { width: "100%", height: "100%" } : size}
       position={isMaximized ? { x: 0, y: 0 } : position}
+      onDragStart={() => setIsInteracting(true)}
       onDragStop={(_event, data) => {
+        setIsInteracting(false);
         if (!isMaximized) {
           setPosition({ x: data.x, y: data.y });
         }
       }}
+      onResizeStart={() => setIsInteracting(true)}
       onResizeStop={(_event, _direction, ref, _delta, nextPosition) => {
+        setIsInteracting(false);
         if (!isMaximized) {
           setSize({ width: ref.style.width, height: ref.style.height });
           setPosition(nextPosition);
@@ -155,15 +194,15 @@ export const Window: React.FC<WindowProps> = ({
       bounds="parent"
       style={{
         zIndex: windowState.zIndex,
-        pointerEvents: isMinimized ? "none" : "auto",
+        pointerEvents: isMinimized || isClosing ? "none" : "auto",
       }}
     >
       <div
-        className="w-full h-full flex flex-col bg-[#0f0c29] border-2 border-[#543ab7] rounded shadow-[0_0_15px_rgba(84,58,183,0.7)] overflow-hidden transition-all duration-300 ease-in-out origin-bottom"
-        style={{
-          opacity: isMinimized ? 0 : 1,
-          transform: isMinimized ? "scale(0.8) translateY(100px)" : "scale(1) translateY(0)",
-        }}
+        className={`desktop-window-shell w-full h-full flex flex-col bg-[#0f0c29] border-2 border-[#543ab7] rounded shadow-[0_0_15px_rgba(84,58,183,0.7)] overflow-hidden ${
+          isMinimized ? "desktop-window-shell--minimized" : ""
+        } ${isClosing ? "desktop-window-shell--closing" : ""
+        }`}
+        style={minimizeVars}
       >
         <div
           className="window-drag-handle flex cursor-default items-center justify-between px-2 py-1 bg-gradient-to-r from-[#240b36] to-[#0f0c29] border-b-2 border-[#543ab7] select-none"
@@ -211,7 +250,7 @@ export const Window: React.FC<WindowProps> = ({
               className="border-transparent text-[#ff3366] hover:border-[#ff3366] hover:bg-[#ff3366]/20"
               onClick={(event) => {
                 event.stopPropagation();
-                closeWindow(windowState.id);
+                handleClose();
               }}
             />
           </div>

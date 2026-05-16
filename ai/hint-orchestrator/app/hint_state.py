@@ -112,6 +112,37 @@ async def set_one_time_hint_served(
     _memory_state[redis_key] = {"served": True}
 
 
+async def next_ch4_strong_cycle(
+    *,
+    session_id: str,
+    chapter_code: str,
+    from_node_code: str,
+    ttl_seconds: int,
+) -> int:
+    global _redis_client
+    scope = _scope_key(session_id, chapter_code, from_node_code)
+    redis_key = f"lucas:hint:ch4:strong-cycle:{scope}"
+    ttl = _resolve_ttl_seconds(ttl_seconds)
+
+    if _redis_client is not None:
+        try:
+            next_value = int(await _redis_client.incr(redis_key))
+            if next_value == 1:
+                await _redis_client.expire(redis_key, ttl)
+            return next_value
+        except Exception:
+            pass
+
+    previous = _memory_state.get(redis_key, {}).get("count")
+    try:
+        prev_value = int(previous)
+    except Exception:
+        prev_value = 0
+    next_value = max(0, prev_value) + 1
+    _memory_state[redis_key] = {"count": next_value}
+    return next_value
+
+
 async def check_and_update_repeat_count(
     *,
     session_id: str,

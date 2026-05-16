@@ -2,23 +2,21 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { PropsWithChildren } from "react";
+import axios from "axios";
 import { useAuthStore } from "../../app/store/authStore";
 import { useClientStore } from "../../app/store/clientStore";
 import { tokenManager } from "../../shared/utils/tokenManager";
-import { useModalStore } from "../../app/store/modalStore";
-import { GlobalModal } from "../GlobalModal";
-import { GlobalToast } from "../GlobalToast";
+import { openConnectionFailedModal, useModalStore } from "../../app/store/modalStore";
 import { jwtDecode } from "jwt-decode";
 import axiosInstance from '../../shared/api/axiosInstance';
-import axios from 'axios';
 import { useClipboardStore } from "../../app/store/clipboardStore";
+import { isConnectionError } from "../../shared/api/apiError";
 
 export default function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const checkAuth = useAuthStore((state) => state.checkAuth);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const openModal = useModalStore((state) => state.openModal);
   const { isAccessing, setIsAccessing } = useClientStore();
 
@@ -64,7 +62,6 @@ export default function AppShell({ children }: PropsWithChildren) {
     const attemptRefresh = async () => {
       // 네트워크 에러 여부를 finally에서 판단하기 위한 플래그
       let isNetworkOrServerError = false;
-      let refreshSucceeded = false;
 
       try {
         const cleanAxios = axios.create();
@@ -83,24 +80,27 @@ export default function AppShell({ children }: PropsWithChildren) {
 
         tokenManager.setAccessToken(newAccessToken);
         checkAuth(); // authStore 동기화
-        refreshSucceeded = true;
+        const { useConnectionStatusStore } = await import("../../app/store/connectionStatusStore");
+        useConnectionStatusStore.getState().markOnline();
 
       } catch (error: any) {
-        isNetworkOrServerError = !error.response || error.response.status >= 500;
+        isNetworkOrServerError = isConnectionError(error);
 
         if (isNetworkOrServerError) {
-          // 네트워크/서버 에러: 락 해제 후 axiosInstance 인터셉터의 대기열에 위임
-          console.warn('Silent refresh paused (network/server error). Delegating to interceptor queue.');
+          console.warn('Silent refresh failed due to network/server error.');
+          const { useConnectionStatusStore } = await import("../../app/store/connectionStatusStore");
+          useConnectionStatusStore.getState().markOffline();
+          openConnectionFailedModal();
         } else {
           // 4xx 에러: 리프레시 토큰 자체 만료 → 세션 완전 종료
           console.error('Silent refresh failed (Refresh Token expired):', error);
-          clearAuth();
+          useAuthStore.getState().clearAuth();
           sessionStorage.setItem('show_session_expired_popup', 'true');
           navigate('/', { replace: true });
         }
 
       } finally {
-        // ✅ [핵심] 성공/실패/예외 모든 경우에 finally에서 단 한 번만 락 해제
+        // [핵심] 성공/실패/예외 모든 경우에 finally에서 단 한 번만 락 해제
         // try/catch 각 분기에서 개별 해제하면 경쟁 조건 발생 가능성이 있습니다.
         // cleanup 함수에서는 이 값을 절대 건드리지 않습니다.
         refreshLock.current = false;
@@ -111,13 +111,12 @@ export default function AppShell({ children }: PropsWithChildren) {
 
     attemptRefresh();
 
-    // ✅ [cleanup 규칙] refreshLock.current와 sessionStorage 플래그를 절대 건드리지 않습니다.
+    // [cleanup 규칙] refreshLock.current와 sessionStorage 플래그를 절대 건드리지 않습니다.
     // cleanup에서 이 값들을 초기화하면, setIsRefreshingUI(true)로 인한 리렌더링 시
     // React가 cleanup → re-effect 사이클을 돌면서 진행 중인 락이 풀려버리는
     // 경쟁 조건이 발생합니다. 모든 정리는 finally 블록이 책임집니다.
     return () => { /* intentionally empty: lock/flag cleanup is handled in finally */ };
-  }, [isExpired, isAtRoot, clearAuth, navigate, checkAuth, t]);
-
+  }, [isExpired, isAtRoot, navigate, checkAuth, t]);
   // 세션 만료 팝업 감지
   useEffect(() => {
     const showPopup = sessionStorage.getItem('show_session_expired_popup');
@@ -301,9 +300,6 @@ export default function AppShell({ children }: PropsWithChildren) {
           </div>
         </div>
       )}
-
-      <GlobalToast />
-      <GlobalModal />
     </div>
   );
 }

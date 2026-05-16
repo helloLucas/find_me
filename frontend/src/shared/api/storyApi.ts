@@ -3,12 +3,11 @@ import type { BaseResponse } from "../types/api";
 import type { StoryNodeResponse, TransitionRequest, TransitionResponse } from "../types/story";
 
 export const storyApi = {
-  startStory: async (chapterCode: string): Promise<StoryNodeResponse> => {
-    const response = await axiosInstance.post<BaseResponse<StoryNodeResponse>>(
-      "/api/v1/story/start",
-      { chapterCode }
-    );
-    return response.data.data;
+  startStory: async (uriHash: string): Promise<BaseResponse<StoryNodeResponse>> => {
+    const response = await axiosInstance.post<BaseResponse<StoryNodeResponse>>("/api/v1/story/start", {
+      uriHash,
+    });
+    return response.data;
   },
 
   getCurrentNode: async (): Promise<StoryNodeResponse> => {

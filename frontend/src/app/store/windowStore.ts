@@ -12,8 +12,10 @@ export interface WindowState {
   title: string;
   isMinimized: boolean;
   isMaximized: boolean;
+  isClosing: boolean;
   zIndex: number;
   content?: string;
+  taskbarTarget?: { x: number; y: number };
 }
 
 interface WindowStore {
@@ -26,7 +28,9 @@ interface WindowStore {
     legacyId?: string
   ) => void;
   closeWindow: (id: DesktopWindowId) => void;
+  markWindowClosing: (id: DesktopWindowId) => void;
   minimizeWindow: (id: DesktopWindowId) => void;
+  setWindowTaskbarTarget: (id: DesktopWindowId, target: { x: number; y: number }) => void;
   maximizeWindow: (id: DesktopWindowId) => void;
   toggleMaximizeWindow: (id: DesktopWindowId) => void;
   focusWindow: (id: DesktopWindowId) => void;
@@ -67,6 +71,7 @@ function getTopVisibleWindowId(
   return (
     [...windows]
       .filter((windowState) => !windowState.isMinimized && windowState.id !== excludedId)
+      .filter((windowState) => !windowState.isClosing)
       .sort((left, right) => right.zIndex - left.zIndex)[0]?.id ?? null
   );
 }
@@ -106,6 +111,7 @@ function bringWindowToFront(
       ? {
         ...windowState,
         ...patch,
+        isClosing: false,
         isMinimized: false,
         zIndex: nextZIndex,
       }
@@ -143,6 +149,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         content,
         isMinimized: false,
         isMaximized: false,
+        isClosing: false,
         zIndex: nextZIndex,
       };
 
@@ -164,6 +171,22 @@ export const useWindowStore = create<WindowStore>((set) => ({
       };
     }),
 
+  markWindowClosing: (id) =>
+    set((state) => {
+      const windows = state.windows.map((windowState) =>
+        windowState.id === id ? { ...windowState, isClosing: true } : windowState
+      );
+      const activeWindowId =
+        state.activeWindowId === id
+          ? getTopVisibleWindowId(windows, id)
+          : state.activeWindowId;
+
+      return {
+        windows,
+        activeWindowId,
+      };
+    }),
+
   minimizeWindow: (id) =>
     set((state) => {
       const windows = state.windows.map((windowState) =>
@@ -178,6 +201,26 @@ export const useWindowStore = create<WindowStore>((set) => ({
         windows,
         activeWindowId,
       };
+    }),
+
+  setWindowTaskbarTarget: (id, target) =>
+    set((state) => {
+      let hasChanged = false;
+      const windows = state.windows.map((windowState) => {
+        if (windowState.id !== id) return windowState;
+        if (
+          windowState.taskbarTarget &&
+          Math.abs(windowState.taskbarTarget.x - target.x) < 0.5 &&
+          Math.abs(windowState.taskbarTarget.y - target.y) < 0.5
+        ) {
+          return windowState;
+        }
+
+        hasChanged = true;
+        return { ...windowState, taskbarTarget: target };
+      });
+
+      return hasChanged ? { windows } : state;
     }),
 
   maximizeWindow: (id) =>
