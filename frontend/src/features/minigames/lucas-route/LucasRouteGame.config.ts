@@ -16,6 +16,7 @@ export type SegmentTuning = {
 };
 
 export const LUCAS_ROUTE_GAME_CONFIG = {
+  bgmUrl: "https://djbod0nv85jx9.cloudfront.net/audios/minigame_4_v1.mp3",
   logicalWidth: 1000,
   logicalHeight: 760,
   boardX: 86,

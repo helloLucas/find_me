@@ -22,4 +22,12 @@ public interface ChapterService {
    * @return 챕터 상태 목록. 각 항목은 챕터 코드, 제목, 화면 노출용 상태를 포함합니다.
    */
   List<ChapterProgressResponse> getChapterProgressList(Long userId);
+
+  /**
+   * 평문 챕터 코드를 노출하지 않기 위해 결정론적 해시값을 생성합니다.
+   *
+   * @param code 챕터 코드 (예: "week01")
+   * @return 고정된 길이의 해시 문자열
+   */
+  String generateUriHash(String code);
 }

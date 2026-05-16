@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fragmentApi } from '../../shared/api/fragmentApi';
+import { audioManager } from '../../features/story-runtime/audioManager';
 import {
   BASE_PLAYER_STATS,
   CANVAS_HEIGHT,
@@ -37,6 +37,8 @@ import type {
   UpgradeCard,
 } from './types';
 
+const LUCAS_SURVIVAL_BGM_URL = 'https://djbod0nv85jx9.cloudfront.net/audios/minigame_5_v1.mp3';
+
 type UnitSpriteKey =
   | 'player'
   | 'enemy_noise'
@@ -53,94 +55,94 @@ type SpriteStore = Record<string, HTMLImageElement[]>;
 
 const UNIT_SPRITE_PATHS: Record<UnitSpriteKey, string[]> = {
   player: [
-    '/minigames/lucas-survival/sprites/units/player_0.png',
-    '/minigames/lucas-survival/sprites/units/player_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/player_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/player_1.png',
   ],
   enemy_noise: [
-    '/minigames/lucas-survival/sprites/units/enemy_noise_0.png',
-    '/minigames/lucas-survival/sprites/units/enemy_noise_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_noise_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_noise_1.png',
   ],
   enemy_runner: [
-    '/minigames/lucas-survival/sprites/units/enemy_runner_0.png',
-    '/minigames/lucas-survival/sprites/units/enemy_runner_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_runner_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_runner_1.png',
   ],
   enemy_worm: [
-    '/minigames/lucas-survival/sprites/units/enemy_worm_0.png',
-    '/minigames/lucas-survival/sprites/units/enemy_worm_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_worm_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_worm_1.png',
   ],
   enemy_drone: [
-    '/minigames/lucas-survival/sprites/units/enemy_drone_0.png',
-    '/minigames/lucas-survival/sprites/units/enemy_drone_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_drone_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_drone_1.png',
   ],
   enemy_golem: [
-    '/minigames/lucas-survival/sprites/units/enemy_golem_0.png',
-    '/minigames/lucas-survival/sprites/units/enemy_golem_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_golem_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/enemy_golem_1.png',
   ],
   boss_cache: [
-    '/minigames/lucas-survival/sprites/units/boss_cache_0.png',
-    '/minigames/lucas-survival/sprites/units/boss_cache_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_cache_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_cache_1.png',
   ],
   boss_process: [
-    '/minigames/lucas-survival/sprites/units/boss_process_0.png',
-    '/minigames/lucas-survival/sprites/units/boss_process_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_process_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_process_1.png',
   ],
   boss_firewall: [
-    '/minigames/lucas-survival/sprites/units/boss_firewall_0.png',
-    '/minigames/lucas-survival/sprites/units/boss_firewall_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_firewall_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_firewall_1.png',
   ],
   boss_reaper: [
-    '/minigames/lucas-survival/sprites/units/boss_reaper_0.png',
-    '/minigames/lucas-survival/sprites/units/boss_reaper_1.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_reaper_0.png',
+    '/minigame-assets/lucas-survival/sprites/units/boss_reaper_1.png',
   ],
 };
 
 const ITEM_SPRITE_PATHS: Record<ItemKind, string[]> = {
-  small_heal: ['/minigames/lucas-survival/sprites/items/small_heal.png'],
-  big_heal: ['/minigames/lucas-survival/sprites/items/big_heal.png'],
-  magnet_core: ['/minigames/lucas-survival/sprites/items/magnet_core.png'],
-  clock_booster: ['/minigames/lucas-survival/sprites/items/clock_booster.png'],
-  shield_shard: ['/minigames/lucas-survival/sprites/items/shield_shard.png'],
-  emp_bomb: ['/minigames/lucas-survival/sprites/items/emp_bomb.png'],
-  overclock_chip: ['/minigames/lucas-survival/sprites/items/overclock_chip.png'],
-  repair_nanites: ['/minigames/lucas-survival/sprites/items/repair_nanites.png'],
-  data_vacuum: ['/minigames/lucas-survival/sprites/items/data_vacuum.png'],
-  firewall_battery: ['/minigames/lucas-survival/sprites/items/firewall_battery.png'],
-  critical_patch: ['/minigames/lucas-survival/sprites/items/critical_patch.png'],
-  cooldown_cache: ['/minigames/lucas-survival/sprites/items/cooldown_cache.png'],
-  revival_fragment: ['/minigames/lucas-survival/sprites/items/revival_fragment.png'],
-  boss_key_fragment: ['/minigames/lucas-survival/sprites/items/boss_key_fragment.png'],
-  xp_compressor: ['/minigames/lucas-survival/sprites/items/xp_compressor.png'],
-  glitch_decoy: ['/minigames/lucas-survival/sprites/items/glitch_decoy.png'],
-  damage_amplifier: ['/minigames/lucas-survival/sprites/items/damage_amplifier.png'],
-  emergency_escape_protocol: ['/minigames/lucas-survival/sprites/items/emergency_escape_protocol.png'],
-  upgrade_chest: ['/minigames/lucas-survival/sprites/items/upgrade_chest.png'],
-  packet_battery: ['/minigames/lucas-survival/sprites/items/overclock_chip.png'],
-  kernel_patch: ['/minigames/lucas-survival/sprites/items/firewall_battery.png'],
-  hot_cache: ['/minigames/lucas-survival/sprites/items/cooldown_cache.png'],
-  rollback_token: ['/minigames/lucas-survival/sprites/items/repair_nanites.png'],
-  vacuum_plus_plus_core: ['/minigames/lucas-survival/sprites/items/data_vacuum.png'],
-  failover_shield: ['/minigames/lucas-survival/sprites/items/shield_shard.png'],
-  data_leech: ['/minigames/lucas-survival/sprites/items/critical_patch.png'],
-  clock_freeze_chip: ['/minigames/lucas-survival/sprites/items/clock_booster.png'],
-  overheat_module: ['/minigames/lucas-survival/sprites/items/damage_amplifier.png'],
-  boss_trace_key: ['/minigames/lucas-survival/sprites/items/boss_key_fragment.png'],
+  small_heal: ['/minigame-assets/lucas-survival/sprites/items/small_heal.png'],
+  big_heal: ['/minigame-assets/lucas-survival/sprites/items/big_heal.png'],
+  magnet_core: ['/minigame-assets/lucas-survival/sprites/items/magnet_core.png'],
+  clock_booster: ['/minigame-assets/lucas-survival/sprites/items/clock_booster.png'],
+  shield_shard: ['/minigame-assets/lucas-survival/sprites/items/shield_shard.png'],
+  emp_bomb: ['/minigame-assets/lucas-survival/sprites/items/emp_bomb.png'],
+  overclock_chip: ['/minigame-assets/lucas-survival/sprites/items/overclock_chip.png'],
+  repair_nanites: ['/minigame-assets/lucas-survival/sprites/items/repair_nanites.png'],
+  data_vacuum: ['/minigame-assets/lucas-survival/sprites/items/data_vacuum.png'],
+  firewall_battery: ['/minigame-assets/lucas-survival/sprites/items/firewall_battery.png'],
+  critical_patch: ['/minigame-assets/lucas-survival/sprites/items/critical_patch.png'],
+  cooldown_cache: ['/minigame-assets/lucas-survival/sprites/items/cooldown_cache.png'],
+  revival_fragment: ['/minigame-assets/lucas-survival/sprites/items/revival_fragment.png'],
+  boss_key_fragment: ['/minigame-assets/lucas-survival/sprites/items/boss_key_fragment.png'],
+  xp_compressor: ['/minigame-assets/lucas-survival/sprites/items/xp_compressor.png'],
+  glitch_decoy: ['/minigame-assets/lucas-survival/sprites/items/glitch_decoy.png'],
+  damage_amplifier: ['/minigame-assets/lucas-survival/sprites/items/damage_amplifier.png'],
+  emergency_escape_protocol: ['/minigame-assets/lucas-survival/sprites/items/emergency_escape_protocol.png'],
+  upgrade_chest: ['/minigame-assets/lucas-survival/sprites/items/upgrade_chest.png'],
+  packet_battery: ['/minigame-assets/lucas-survival/sprites/items/overclock_chip.png'],
+  kernel_patch: ['/minigame-assets/lucas-survival/sprites/items/firewall_battery.png'],
+  hot_cache: ['/minigame-assets/lucas-survival/sprites/items/cooldown_cache.png'],
+  rollback_token: ['/minigame-assets/lucas-survival/sprites/items/repair_nanites.png'],
+  vacuum_plus_plus_core: ['/minigame-assets/lucas-survival/sprites/items/data_vacuum.png'],
+  failover_shield: ['/minigame-assets/lucas-survival/sprites/items/shield_shard.png'],
+  data_leech: ['/minigame-assets/lucas-survival/sprites/items/critical_patch.png'],
+  clock_freeze_chip: ['/minigame-assets/lucas-survival/sprites/items/clock_booster.png'],
+  overheat_module: ['/minigame-assets/lucas-survival/sprites/items/damage_amplifier.png'],
+  boss_trace_key: ['/minigame-assets/lucas-survival/sprites/items/boss_key_fragment.png'],
 };
 
 const EFFECT_SPRITE_PATHS: Record<string, string[]> = {
   projectile_player: [
-    '/minigames/lucas-survival/sprites/effects/projectile_player_0.png',
-    '/minigames/lucas-survival/sprites/effects/projectile_player_1.png',
+    '/minigame-assets/lucas-survival/sprites/effects/projectile_player_0.png',
+    '/minigame-assets/lucas-survival/sprites/effects/projectile_player_1.png',
   ],
   projectile_enemy: [
-    '/minigames/lucas-survival/sprites/effects/projectile_enemy_0.png',
-    '/minigames/lucas-survival/sprites/effects/projectile_enemy_1.png',
+    '/minigame-assets/lucas-survival/sprites/effects/projectile_enemy_0.png',
+    '/minigame-assets/lucas-survival/sprites/effects/projectile_enemy_1.png',
   ],
-  orb_small: ['/minigames/lucas-survival/sprites/effects/skill_signal_orb_0.png'],
-  orb_medium: ['/minigames/lucas-survival/sprites/effects/skill_signal_orb_1.png'],
-  orb_large: ['/minigames/lucas-survival/sprites/effects/skill_signal_orb_2.png'],
-  mine: ['/minigames/lucas-survival/sprites/effects/skill_memory_mine_0.png'],
-  turret: ['/minigames/lucas-survival/sprites/effects/skill_proxy_turret_0.png'],
-  decoy: ['/minigames/lucas-survival/sprites/items/glitch_decoy.png'],
+  orb_small: ['/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_0.png'],
+  orb_medium: ['/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_1.png'],
+  orb_large: ['/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_2.png'],
+  mine: ['/minigame-assets/lucas-survival/sprites/effects/skill_memory_mine_0.png'],
+  turret: ['/minigame-assets/lucas-survival/sprites/effects/skill_proxy_turret_0.png'],
+  decoy: ['/minigame-assets/lucas-survival/sprites/items/glitch_decoy.png'],
 };
 
 const ALL_SKILL_IDS: SkillId[] = [
@@ -169,56 +171,56 @@ const ALL_SKILL_IDS: SkillId[] = [
 ];
 
 const CARD_ART_PATHS: Record<UpgradeCard['cardType'], string> = {
-  new_skill: '/minigames/lucas-survival/sprites/cards/card_new_skill.png',
-  skill_upgrade: '/minigames/lucas-survival/sprites/cards/card_skill_upgrade.png',
-  stat_upgrade: '/minigames/lucas-survival/sprites/cards/card_stat_upgrade.png',
-  survival_upgrade: '/minigames/lucas-survival/sprites/cards/card_survival_upgrade.png',
-  economy_upgrade: '/minigames/lucas-survival/sprites/cards/card_economy_upgrade.png',
-  evolution: '/minigames/lucas-survival/sprites/cards/card_evolution.png',
+  new_skill: '/minigame-assets/lucas-survival/sprites/cards/card_new_skill.png',
+  skill_upgrade: '/minigame-assets/lucas-survival/sprites/cards/card_skill_upgrade.png',
+  stat_upgrade: '/minigame-assets/lucas-survival/sprites/cards/card_stat_upgrade.png',
+  survival_upgrade: '/minigame-assets/lucas-survival/sprites/cards/card_survival_upgrade.png',
+  economy_upgrade: '/minigame-assets/lucas-survival/sprites/cards/card_economy_upgrade.png',
+  evolution: '/minigame-assets/lucas-survival/sprites/cards/card_evolution.png',
 };
 
 const SYSTEM_CARD_ART_BY_TYPE: Partial<Record<UpgradeCard['cardType'], string>> = {
-  stat_upgrade: '/minigames/lucas-survival/sprites/items/overclock_chip.png',
-  survival_upgrade: '/minigames/lucas-survival/sprites/items/firewall_battery.png',
-  economy_upgrade: '/minigames/lucas-survival/sprites/items/xp_compressor.png',
+  stat_upgrade: '/minigame-assets/lucas-survival/sprites/items/overclock_chip.png',
+  survival_upgrade: '/minigame-assets/lucas-survival/sprites/items/firewall_battery.png',
+  economy_upgrade: '/minigame-assets/lucas-survival/sprites/items/xp_compressor.png',
 };
 
 const CARD_ART_BY_CARD_ID: Record<string, string> = {
-  'move-speed': '/minigames/lucas-survival/sprites/items/clock_booster.png',
-  'damage-amp': '/minigames/lucas-survival/sprites/items/damage_amplifier.png',
-  'cooldown-compress': '/minigames/lucas-survival/sprites/items/cooldown_cache.png',
-  'crit-code': '/minigames/lucas-survival/sprites/items/critical_patch.png',
-  'crit-dmg': '/minigames/lucas-survival/sprites/items/overclock_chip.png',
-  'defense-patch': '/minigames/lucas-survival/sprites/items/firewall_battery.png',
-  regen: '/minigames/lucas-survival/sprites/items/repair_nanites.png',
-  'hp-expand': '/minigames/lucas-survival/sprites/items/big_heal.png',
-  'pickup-range': '/minigames/lucas-survival/sprites/items/data_vacuum.png',
-  'exp-rate': '/minigames/lucas-survival/sprites/items/xp_compressor.png',
+  'move-speed': '/minigame-assets/lucas-survival/sprites/items/clock_booster.png',
+  'damage-amp': '/minigame-assets/lucas-survival/sprites/items/damage_amplifier.png',
+  'cooldown-compress': '/minigame-assets/lucas-survival/sprites/items/cooldown_cache.png',
+  'crit-code': '/minigame-assets/lucas-survival/sprites/items/critical_patch.png',
+  'crit-dmg': '/minigame-assets/lucas-survival/sprites/items/overclock_chip.png',
+  'defense-patch': '/minigame-assets/lucas-survival/sprites/items/firewall_battery.png',
+  regen: '/minigame-assets/lucas-survival/sprites/items/repair_nanites.png',
+  'hp-expand': '/minigame-assets/lucas-survival/sprites/items/big_heal.png',
+  'pickup-range': '/minigame-assets/lucas-survival/sprites/items/data_vacuum.png',
+  'exp-rate': '/minigame-assets/lucas-survival/sprites/items/xp_compressor.png',
 };
 
 const SKILL_ICON_PATHS: Record<SkillId, string> = {
-  debug_shot: '/minigames/lucas-survival/sprites/icons/skill_debug_shot.png',
-  signal_orb: '/minigames/lucas-survival/sprites/effects/skill_signal_orb_1.png',
-  firewall_ring: '/minigames/lucas-survival/sprites/effects/skill_firewall_ring_1.png',
-  packet_storm: '/minigames/lucas-survival/sprites/effects/skill_packet_storm_1.png',
-  memory_mine: '/minigames/lucas-survival/sprites/effects/skill_memory_mine_1.png',
-  lucas_beam: '/minigames/lucas-survival/sprites/effects/skill_lucas_beam_1.png',
-  trace_blade: '/minigames/lucas-survival/sprites/effects/skill_trace_blade_1.png',
-  null_grenade: '/minigames/lucas-survival/sprites/effects/skill_null_grenade_1.png',
-  proxy_turret: '/minigames/lucas-survival/sprites/effects/skill_proxy_turret_1.png',
-  data_lightning: '/minigames/lucas-survival/sprites/effects/skill_data_lightning_1.png',
-  black_ice_field: '/minigames/lucas-survival/sprites/effects/skill_black_ice_field_1.png',
-  recursive_drone: '/minigames/lucas-survival/sprites/effects/skill_recursive_drone_1.png',
-  quantum_spike: '/minigames/lucas-survival/sprites/effects/skill_quantum_spike_1.png',
-  system_purge: '/minigames/lucas-survival/sprites/effects/skill_system_purge_1.png',
-  ghost_fork: '/minigames/lucas-survival/sprites/effects/skill_ghost_fork_1.png',
-  checksum_burst: '/minigames/lucas-survival/sprites/effects/skill_checksum_burst_1.png',
-  port_snare: '/minigames/lucas-survival/sprites/effects/skill_port_snare_1.png',
-  stack_overflow: '/minigames/lucas-survival/sprites/effects/skill_stack_overflow_1.png',
-  mirror_packet: '/minigames/lucas-survival/sprites/effects/skill_mirror_packet_1.png',
-  thread_splitter: '/minigames/lucas-survival/sprites/effects/skill_thread_splitter_1.png',
-  latency_field: '/minigames/lucas-survival/sprites/effects/skill_latency_field_1.png',
-  root_access: '/minigames/lucas-survival/sprites/effects/skill_root_access_1.png',
+  debug_shot: '/minigame-assets/lucas-survival/sprites/icons/skill_debug_shot.png',
+  signal_orb: '/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_1.png',
+  firewall_ring: '/minigame-assets/lucas-survival/sprites/effects/skill_firewall_ring_1.png',
+  packet_storm: '/minigame-assets/lucas-survival/sprites/effects/skill_packet_storm_1.png',
+  memory_mine: '/minigame-assets/lucas-survival/sprites/effects/skill_memory_mine_1.png',
+  lucas_beam: '/minigame-assets/lucas-survival/sprites/effects/skill_lucas_beam_1.png',
+  trace_blade: '/minigame-assets/lucas-survival/sprites/effects/skill_trace_blade_1.png',
+  null_grenade: '/minigame-assets/lucas-survival/sprites/effects/skill_null_grenade_1.png',
+  proxy_turret: '/minigame-assets/lucas-survival/sprites/effects/skill_proxy_turret_1.png',
+  data_lightning: '/minigame-assets/lucas-survival/sprites/effects/skill_data_lightning_1.png',
+  black_ice_field: '/minigame-assets/lucas-survival/sprites/effects/skill_black_ice_field_1.png',
+  recursive_drone: '/minigame-assets/lucas-survival/sprites/effects/skill_recursive_drone_1.png',
+  quantum_spike: '/minigame-assets/lucas-survival/sprites/effects/skill_quantum_spike_1.png',
+  system_purge: '/minigame-assets/lucas-survival/sprites/effects/skill_system_purge_1.png',
+  ghost_fork: '/minigame-assets/lucas-survival/sprites/effects/skill_ghost_fork_1.png',
+  checksum_burst: '/minigame-assets/lucas-survival/sprites/effects/skill_checksum_burst_1.png',
+  port_snare: '/minigame-assets/lucas-survival/sprites/effects/skill_port_snare_1.png',
+  stack_overflow: '/minigame-assets/lucas-survival/sprites/effects/skill_stack_overflow_1.png',
+  mirror_packet: '/minigame-assets/lucas-survival/sprites/effects/skill_mirror_packet_1.png',
+  thread_splitter: '/minigame-assets/lucas-survival/sprites/effects/skill_thread_splitter_1.png',
+  latency_field: '/minigame-assets/lucas-survival/sprites/effects/skill_latency_field_1.png',
+  root_access: '/minigame-assets/lucas-survival/sprites/effects/skill_root_access_1.png',
 };
 
 const SKILL_RARITY: Record<SkillId, Rarity> = {
@@ -368,9 +370,9 @@ const ITEM_VISUAL: Record<ItemKind, { ring: string; fill: string; tag: string }>
 };
 
 const ORB_GUIDE = [
-  { id: 'exp_small', name: '경험치 조각(소)', value: '경험치 +3', image: '/minigames/lucas-survival/sprites/effects/skill_signal_orb_0.png' },
-  { id: 'exp_medium', name: '경험치 조각(중)', value: '경험치 +8', image: '/minigames/lucas-survival/sprites/effects/skill_signal_orb_1.png' },
-  { id: 'exp_large', name: '경험치 조각(대)', value: '경험치 +20', image: '/minigames/lucas-survival/sprites/effects/skill_signal_orb_2.png' },
+  { id: 'exp_small', name: '경험치 조각(소)', value: '경험치 +3', image: '/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_0.png' },
+  { id: 'exp_medium', name: '경험치 조각(중)', value: '경험치 +8', image: '/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_1.png' },
+  { id: 'exp_large', name: '경험치 조각(대)', value: '경험치 +20', image: '/minigame-assets/lucas-survival/sprites/effects/skill_signal_orb_2.png' },
 ];
 
 const SKILL_FX_SCALE: Partial<Record<SkillId, number>> = {
@@ -867,9 +869,9 @@ const loadSpriteStore = async () => {
       (id): [string, string[]] => [
         `skill_${id}`,
         [
-          `/minigames/lucas-survival/sprites/effects/skill_${id}_0.png`,
-          `/minigames/lucas-survival/sprites/effects/skill_${id}_1.png`,
-          `/minigames/lucas-survival/sprites/effects/skill_${id}_2.png`,
+          `/minigame-assets/lucas-survival/sprites/effects/skill_${id}_0.png`,
+          `/minigame-assets/lucas-survival/sprites/effects/skill_${id}_1.png`,
+          `/minigame-assets/lucas-survival/sprites/effects/skill_${id}_2.png`,
         ],
       ],
     ),
@@ -1208,13 +1210,15 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const spriteStoreRef = useRef<SpriteStore>({});
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioMasterRef = useRef<GainNode | null>(null);
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const previousBgmNameRef = useRef<string | null>(null);
+  const hasSuspendedStoryBgmRef = useRef(false);
   const sfxThrottleRef = useRef<Record<string, number>>({});
   const sfxMutedRef = useRef(false);
   const rafRef = useRef<number>(0);
   const lastMsRef = useRef<number>(0);
   const keysRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
-  const hasRecordedClearRef = useRef(false);
   const timelineRef = useRef({
     mid1: false,
     mid2: false,
@@ -1222,7 +1226,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     final: false,
     startTextUntil: 0,
   });
-
   const [hud, setHud] = useState<HudState>({
     timerText: '05:00',
     hpPercent: 100,
@@ -1244,16 +1247,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
 
-  useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
-
-    hasRecordedClearRef.current = true;
-    void fragmentApi.acquireFragment('4').catch((error) => {
-      hasRecordedClearRef.current = false;
-      console.error('Failed to record Lucas survival clear:', error);
-    });
-  }, [hud.status, isPractice]);
-
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
     if (!audioContextRef.current) {
@@ -1270,6 +1263,42 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
       void audioContextRef.current.resume();
     }
     return audioContextRef.current;
+  }, []);
+
+  const playSurvivalBgm = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!hasSuspendedStoryBgmRef.current) {
+      previousBgmNameRef.current = audioManager.getCurrentBgmName();
+      audioManager.stopBgm();
+      hasSuspendedStoryBgmRef.current = true;
+    }
+
+    if (!bgmRef.current) {
+      const audio = new Audio(LUCAS_SURVIVAL_BGM_URL);
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.volume = 0.42;
+      bgmRef.current = audio;
+    }
+
+    bgmRef.current.play().catch((error) => {
+      console.warn('Lucas Survival BGM autoplay blocked:', error);
+    });
+  }, []);
+
+  const pauseSurvivalBgm = useCallback((reset = false) => {
+    const audio = bgmRef.current;
+    if (!audio) return;
+
+    audio.pause();
+    if (reset) {
+      try {
+        audio.currentTime = 0;
+      } catch {
+        // Seeking can fail before metadata is available in some browsers.
+      }
+    }
   }, []);
 
   const playSfx = useCallback((kind: 'shoot' | 'hit' | 'levelup' | 'select' | 'boss' | 'pickup') => {
@@ -1371,11 +1400,12 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
       result: null,
     });
     void ensureAudio();
+    playSurvivalBgm();
     playSfx('select');
     lastMsRef.current = performance.now();
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(loop);
-  }, [appendCombatLog, ensureAudio, playSfx]);
+  }, [appendCombatLog, ensureAudio, playSfx, playSurvivalBgm, isPractice]);
 
   const stopGame = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -4378,9 +4408,32 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     };
   }, [draw]);
 
+  useEffect(() => {
+    if (hud.status === 'clear' || hud.status === 'failed') {
+      pauseSurvivalBgm();
+    }
+  }, [hud.status, pauseSurvivalBgm]);
+
+  useEffect(() => {
+    return () => {
+      pauseSurvivalBgm(true);
+      bgmRef.current = null;
+
+      if (hasSuspendedStoryBgmRef.current && previousBgmNameRef.current) {
+        audioManager.playBgm(previousBgmNameRef.current);
+      }
+    };
+  }, [pauseSurvivalBgm]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         if (e.repeat) return;
@@ -4408,6 +4461,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   useEffect(() => {
     if (hud.status !== 'levelup' || cards.length === 0) return;
     const onCardKey = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'ArrowLeft') {
         e.preventDefault();
         setSelectedCardIndex((prev) => Math.max(0, prev - 1));
@@ -4427,6 +4487,13 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   useEffect(() => {
     if (!isGuideOpen) return;
     const onEsc = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
+          (document.activeElement as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
       if (e.code === 'Escape') {
         e.preventDefault();
         setIsGuideOpen(false);
@@ -4667,7 +4734,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
                 style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
                 onClick={() => navigate('/minigames')}
               >
-                RETURN TO LOBBY
+                BACK TO LOBBY
               </button>
             )}
           </div>
@@ -4676,7 +4743,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     }
 
     return null;
-  }, [applyCard, cards, hud, selectedCardIndex, startGame]);
+  }, [applyCard, cards, hud, selectedCardIndex, startGame, isPractice, navigate]);
 
   return (
     <div className="ls-root">
@@ -4865,13 +4932,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     </div>
   );
 }
-
-
-
-
-
-
-
 
 
 

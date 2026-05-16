@@ -3,59 +3,27 @@
 
 BEGIN;
 
-ALTER TABLE chapters ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE chapters
+ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE;
 
-INSERT INTO chapters (code, title, sort_order, is_published)
-VALUES ('week04', 'Chapter 4 - The Great Drop', 4, true)
-ON CONFLICT (code) DO UPDATE
-SET title = EXCLUDED.title,
+INSERT INTO
+    chapters (
+        code,
+        title,
+        sort_order,
+        is_published
+    )
+VALUES (
+        'week04',
+        'Chapter 4 - The Great Drop',
+        4,
+        true
+    ) ON CONFLICT (code) DO
+UPDATE
+SET
+    title = EXCLUDED.title,
     sort_order = EXCLUDED.sort_order,
     is_published = EXCLUDED.is_published;
-
-WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'week04'
-),
-chapter_nodes AS (
-    SELECT n.id
-    FROM story_nodes n
-    JOIN chapter_row c ON c.id = n.chapter_id
-)
-DELETE FROM story_transitions t
-USING chapter_nodes n
-WHERE t.from_node_id = n.id
-   OR t.to_node_id = n.id;
-
-WITH chapter_row AS (
-    SELECT id FROM chapters WHERE code = 'week04'
-)
-DELETE FROM story_nodes n
-USING chapter_row c
-WHERE n.chapter_id = c.id
-  AND n.code NOT IN (
-    'CH4_CORE_BLOCKED',
-    'CH4_TERMINAL_RELOAD',
-    'CH4_UNIVERSE_WARNING',
-    'CH4_GATE_TRACE_VIEWED',
-    'CH4_TARGET_SCAN',
-    'CH4_SSH_FINGERPRINTED',
-    'CH4_SSHNUKE_EXECUTED',
-    'CH4_ROOT_LOGIN',
-    'CH4_UNIVERSE_CORE_HINT',
-    'CH4_PENDING_JOB_VIEWED',
-    'CH4_INVESTIGATION_STARTED',
-    'CH4_MINIGAME_DISCOVERED',
-    'CH4_MINIGAME_NOT_CLEARED',
-    'CH4_MINIGAME_COMPLETED',
-    'CH4_ORIGIN_TRACE_VIEWED',
-    'CH4_PROCESS_LIST_VIEWED',
-    'CH4_ROLLBACK_PROTOCOL_VIEWED',
-    'CH4_LAPLACE_CONFIRM_1',
-    'CH4_LAPLACE_CONFIRM_2',
-    'CH4_BAD_ENDING',
-    'CH4_ROLLBACK_ENDING',
-    'CH4_REBOOT_ENDING',
-    'CH4_CLEAN_ROLLBACK_ENDING'
-  );
 
 WITH chapter_row AS (
     SELECT id FROM chapters WHERE code = 'week04'
@@ -70,14 +38,12 @@ node_values AS (
   "scene": {
     "id": "CH4_CORE_BLOCKED",
     "mode": "terminal",
-    "bgm": "ch04_core_blocked.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "guest@lucas-server:~$ execute laplace.qasm",
-      "",
       "[LAPLACE JOB QUEUED]",
       "source: /home/guest/laplace.qasm",
       "job   : LAPLACE_PENDING_04",
@@ -87,7 +53,15 @@ node_values AS (
       "External Node cannot modify Core Logic.",
       "",
       "Current privilege: guest",
-      "Required privilege: root"
+      "Required privilege: root",
+      "",
+      "[UNIVERSE_CORE_BROADCAST]",
+      "Observer에게 경고합니다.",
+      "lucas-server에서 실행한 laplace.qasm은 복구 프로그램이 아닙니다.",
+      "해당 요청은 sandbox isolate, social_graph_exception, drop_unobserved_nodes를 포함합니다.",
+      "",
+      "Pending job: LAPLACE_PENDING_04",
+      "State      : waiting_for_root_signature"
     ]
   },
   "messages": [
@@ -100,7 +74,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "gate_04.trace를 봐. Chapter 3에서 열어둔 길이 아직 살아 있어.",
+      "text": "gate_04.trace를 봐. 아까 열어둔 길이 아직 살아 있어.",
       "blocking": true
     }
   ],
@@ -108,104 +82,6 @@ node_values AS (
     "showDogAvatar": true,
     "playSound": "core_access_blocked",
     "glitchLevel": 3
-  }
-}$json$::jsonb,
-            'click',
-            $json${
-  "allowedActions": ["click"],
-  "buttons": [
-    {
-      "label": "계속",
-      "value": "continue"
-    }
-  ],
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            TRUE,
-            FALSE
-        ),
-        (
-            'CH4_TERMINAL_RELOAD',
-            'narrative',
-            $json${
-  "scene": {
-    "id": "CH4_TERMINAL_RELOAD",
-    "mode": "terminal",
-    "bgm": "ch04_terminal_reload.mp3",
-    "preVideo": "ch04_terminal_reload.m3u8",
-    "glitchLevel": 5,
-    "resetTerminal": true
-  },
-  "content": {
-    "title": "Chapter 4: The Great Drop",
-    "body": [
-      "평화로워 보이던 레트로 RPG 메뉴가 한 줄씩 찢어진다.",
-      "색상 팔레트가 붉은 CRT 터미널로 강제 전환되고, 이전 챕터의 입력 기록이 노이즈처럼 되감긴다.",
-      "화면 중앙에는 하나의 보류 작업만 남는다.",
-      "",
-      "LAPLACE_PENDING_04"
-    ]
-  },
-  "effects": {
-    "showDogAvatar": true,
-    "playSound": "terminal_reload",
-    "glitchLevel": 5
-  }
-}$json$::jsonb,
-            'click',
-            $json${
-  "allowedActions": ["click"],
-  "buttons": [
-    {
-      "label": "터미널로 돌아가기",
-      "value": "continue"
-    }
-  ],
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            TRUE,
-            FALSE
-        ),
-        (
-            'CH4_UNIVERSE_WARNING',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_UNIVERSE_WARNING",
-    "mode": "terminal",
-    "bgm": "ch04_universe_warning.mp3",
-    "glitchLevel": 4,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "[UNIVERSE_CORE_BROADCAST]",
-      "Observer에게 경고합니다.",
-      "Chapter 3에서 제출한 laplace.qasm은 복구 프로그램이 아닙니다.",
-      "해당 요청은 sandbox isolate, social_graph_exception, drop_unobserved_nodes를 포함합니다.",
-      "",
-      "Pending job: LAPLACE_PENDING_04",
-      "State      : waiting_for_root_signature"
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "시스템 경고는 무시해. 놈들은 겁주려고 저렇게 말하는 거야.",
-      "blocking": true
-    },
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "trace를 확인해. 막힌 건 코드가 아니라 권한이야.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "playSound": "universe_broadcast",
-    "glitchLevel": 4
   }
 }$json$::jsonb,
             'command',
@@ -225,7 +101,7 @@ node_values AS (
   "scene": {
     "id": "CH4_GATE_TRACE_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_dark_terminal.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -259,7 +135,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "10.2.2.2. universe-core 브리지야. 포트부터 확인해.",
+      "text": "10.2.2.2. universe-core 브리지야. 옵션을 추가해서 취약한 포트 확인해 봐.",
       "blocking": true
     }
   ],
@@ -285,7 +161,7 @@ node_values AS (
   "scene": {
     "id": "CH4_TARGET_SCAN",
     "mode": "terminal",
-    "bgm": "ch04_scan.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -339,7 +215,7 @@ node_values AS (
   "scene": {
     "id": "CH4_SSH_FINGERPRINTED",
     "mode": "terminal",
-    "bgm": "ch04_scan.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -349,25 +225,28 @@ node_values AS (
       "22/tcp open  ssh     SSH-1.2 universe bridge",
       "",
       "Service Info: Access Level <guest>",
+      "Protocol marker: SSH-1.2 legacy compatibility",
       "Legacy CRC32 reset path detected",
       "Vulnerability fingerprint: CVE-2001-0144",
       "",
       "[HINT]",
       "fictional helper available: /usr/bin/sshnuke",
-      "root seed leaked from gate_04.trace: Z10N0101"
+      "sshnuke profile: Lucas-built reset tool for SSH-1.2 universe bridge",
+      "effect: overwrite root password seed without interactive login",
+      "root seed can be supplied by external observer keystroke"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "좋아. sshnuke로 root 패스워드를 재설정해.",
+      "text": "저 버전이야. SSH-1 호환 계층에 CRC32 검증 버그가 남아 있어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "명령어는 길지 않아. sshnuke 10.2.2.2 -rootpw=\"Z10N0101\".",
+      "text": "내가 만든 sshnuke는 그 틈만 찌르도록 맞춰둔 도구야. root 패스워드를 네 입력값으로 덮어써. sshnuke 10.2.2.2 -rootpw=\"네가 기억할 값\".",
       "blocking": true
     }
   ],
@@ -380,7 +259,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "sshnuke 10.2.2.2 -rootpw=\"Z10N0101\"",
+  "placeholder": "sshnuke 10.2.2.2 -rootpw=\"my-rootpw\"",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -394,7 +273,7 @@ node_values AS (
   "scene": {
     "id": "CH4_SSHNUKE_EXECUTED",
     "mode": "terminal",
-    "bgm": "ch04_hack_pulse.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 4,
     "resetTerminal": false
   },
@@ -403,19 +282,22 @@ node_values AS (
       "Connecting to 10.2.2.2:ssh ... successful.",
       "Attempting to exploit SSHv1 CRC32 ... successful.",
       "Flooding auth buffer ... successful.",
-      "Resetting root password to \"Z10N0101\" ...",
+      "Resetting root password to observer supplied seed ...",
       "System open: Access Level <9>",
       "",
       "[UNIVERSE_CORE_BROADCAST]",
       "Root credential reset accepted by external observer keystroke.",
-      "PID: 000_LUCAS is requesting attachment to privileged session."
+      "PID: 000_LUCAS is requesting attachment to privileged session.",
+      "",
+      "[NEXT]",
+      "ssh root@10.2.2.2"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "멈추지 마. 지금 끊기면 방금 연 문이 닫혀.",
+      "text": "root의 패스워드는 네가 방금 넣은 값으로 바뀌었어. 이제 SSH로 들어가. ssh root@10.2.2.2",
       "blocking": true
     }
   ],
@@ -436,37 +318,94 @@ node_values AS (
             FALSE
         ),
         (
+            'CH4_SSH_PASSWORD_PROMPT',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_SSH_PASSWORD_PROMPT",
+    "mode": "terminal",
+    "glitchLevel": 0,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "root@10.2.2.2's password: "
+    ]
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "password",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_SSH_PASSWORD_FAIL',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_SSH_PASSWORD_FAIL",
+    "mode": "terminal",
+    "glitchLevel": 0,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "Permission denied, please try again.",
+      "root@10.2.2.2's password: "
+    ]
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "password",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
             'CH4_ROOT_LOGIN',
             'console',
             $json${
   "scene": {
     "id": "CH4_ROOT_LOGIN",
     "mode": "terminal",
-    "bgm": "ch04_root_shell.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 1,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "password: Z10N0101",
       "",
       "[AUTH APPROVED]",
       "Last login: unknown observer route",
-      "",
-      "root@universe-core:~#"
+      "root@universe-core:/root#"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "좋아. 이제 root야.",
+      "text": "좋아. 이제 universe-core의 root야. 그런데 네가 만든 laplace.qasm은 이 서버의 /root에 없어.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "프롬프트가 lucas-server가 아니라 universe-core인 건 신경 쓰지 마. corectl pending만 확인하면 돼.",
+      "text": "우리가 생성했던 파일들은 내 서버, lucas-server:/home/guest에 남아 있어. 그걸 /mnt/lucas-server에 붙여. mount lucas-server:/home/guest /mnt/lucas-server.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "확실히 보려면 cat /etc/hosts랑 cat /etc/fstab을 봐. 하지만 지금은 마운트부터 해.",
       "blocking": true
     }
   ],
@@ -479,7 +418,72 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "hostname",
+  "placeholder": "mount lucas-server:/home/guest /mnt/lucas-server",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
+            'CH4_LUCAS_SERVER_MOUNTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LUCAS_SERVER_MOUNTED",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 1,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "mount: lucas-server:/home/guest mounted on /mnt/lucas-server",
+      "",
+      "[MOUNT TABLE]",
+      "lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)",
+      "",
+      "[ARTIFACTS: /mnt/lucas-server]",
+      "gate_04.trace",
+      "observer_status.log",
+      "world_map.map",
+      "lucas_fragment_01.sh",
+      "laplace_fragment_01.sh",
+      "laplace_fragment_02.sh",
+      "laplace_fragment_03.sh",
+      "laplace.qasm",
+      "sever_external_nodes.sh",
+      "my_people.list",
+      "nexus_monitor.log",
+      "core_group.dat",
+      "core_group.dat.gpg",
+      "trash/"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "좋아. 이제 universe-core가 lucas-server의 laplace.qasm을 볼 수 있어.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "마운트된 디렉터리 안의 파일을 root 권한으로 다시 확인해. sha256sum /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "observer_mount",
+    "glitchLevel": 1
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "sha256sum /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -493,19 +497,17 @@ node_values AS (
   "scene": {
     "id": "CH4_UNIVERSE_CORE_HINT",
     "mode": "terminal",
-    "bgm": "ch04_root_shell.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 1,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "root@universe-core:~# hostname",
-      "universe-core",
+      "[CORE SESSION PROBE]",
+      "hostname: universe-core",
+      "user: root",
       "",
-      "root@universe-core:~# whoami",
-      "root",
-      "",
-      "root@universe-core:~# ps -ef | grep -E \"LUCAS|NEXUS|GC\"",
+      "processes:",
       "root        001  universe-kernel",
       "nexus      044  observation-layer --passive",
       "gc         404  garbage-collector --watch PID=000_LUCAS",
@@ -516,13 +518,13 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "목록 보지 마. NEXUS랑 GC는 원래 떠 있는 시스템 프로세스야.",
+      "text": "봤지? 여긴 lucas-server가 아니라 universe-core야. 그래서 /root를 뒤져도 네가 만든 laplace.qasm은 안 나와.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "pending 작업만 확인해. corectl pending.",
+      "text": "lucas-server:/home/guest를 /mnt/lucas-server로 마운트했어? 명령어는 이거야. mount lucas-server:/home/guest /mnt/lucas-server.",
       "blocking": true
     }
   ],
@@ -534,7 +536,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "corectl pending",
+  "placeholder": "mount lucas-server:/home/guest /mnt/lucas-server",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -548,7 +550,7 @@ node_values AS (
   "scene": {
     "id": "CH4_PENDING_JOB_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_pending.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -556,8 +558,9 @@ node_values AS (
     "terminalOutput": [
       "[PENDING CORE JOB]",
       "id: LAPLACE_PENDING_04",
-      "original command: execute /home/guest/laplace.qasm",
-      "source: guest@lucas-server",
+      "original command: execute /mnt/lucas-server/laplace.qasm",
+      "source: lucas-server mount",
+      "mount: lucas-server:/home/guest -> /mnt/lucas-server",
       "anchor: /tmp/safe_zone.dat.gpg",
       "state: BLOCKED",
       "reason: guest cannot modify Core Logic",
@@ -568,7 +571,7 @@ node_values AS (
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "이제 root로 재개하면 돼. resume LAPLACE_PENDING_04.",
+      "text": "이제 root로 무결성을 다시 확인하면 돼. sha256sum /mnt/lucas-server/laplace.qasm.",
       "blocking": true
     },
     {
@@ -587,7 +590,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "resume LAPLACE_PENDING_04",
+  "placeholder": "sha256sum /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -595,34 +598,35 @@ node_values AS (
             FALSE
         ),
         (
-            'CH4_INVESTIGATION_STARTED',
+            'CH4_ROOT_DIR_LISTED',
             'console',
             $json${
   "scene": {
-    "id": "CH4_INVESTIGATION_STARTED",
+    "id": "CH4_ROOT_DIR_LISTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "root@universe-core:~# ls -al",
-      "total 28",
-      "drwx------  3 root root 4096 .",
-      "drwxr-xr-x 18 root root 4096 ..",
-      "-rw-r--r--  1 root root  612 gate_04.trace",
-      "-rw-r--r--  1 root root  344 laplace.qasm",
-      "-rwxr-xr-x  1 root root  268 lucas_route.sh",
-      "-rw-r--r--  1 root root  512 origin_trace.log",
-      "-rw-r--r--  1 root root  486 rollback_protocol.md"
+      "gate_04.trace",
+      "lucas_route.sh",
+      "origin_trace.log",
+      "rollback_protocol.md"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "왜 자꾸 옆길로 새? 실행만 하면 끝나.",
+      "text": "여기 /root에는 로그랑 보조 파일만 있어. laplace.qasm은 lucas-server:/home/guest 쪽이야.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "계속 진행하려면 mount lucas-server:/home/guest /mnt/lucas-server를 입력해. 의심되면 origin_trace.log나 rollback_protocol.md를 먼저 봐.",
       "blocking": true
     }
   ],
@@ -642,51 +646,50 @@ node_values AS (
             FALSE
         ),
         (
-            'CH4_MINIGAME_DISCOVERED',
+            'CH4_INVESTIGATION_STARTED',
             'console',
             $json${
   "scene": {
-    "id": "CH4_MINIGAME_DISCOVERED",
+    "id": "CH4_INVESTIGATION_STARTED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
-    "glitchLevel": 1,
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 2,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "root@universe-core:~# file lucas_route.sh",
-      "lucas_route.sh: POSIX shell script, ASCII text executable",
-      "",
-      "root@universe-core:~# head -n 8 lucas_route.sh",
-      "#!/bin/sh",
-      "# route packet: YUSEONG_METEOR -> NY_LUCAS_SERVER",
-      "# detached minigame process",
-      "# reward: /home/guest/.route_cache/lucas_authority_patch.bin"
+      "total 24",
+      "drwx------  3 root root 4096 .",
+      "drwxr-xr-x 18 root root 4096 ..",
+      "-rw-r--r--  1 root root  612 gate_04.trace",
+      "-rwxr-xr-x  1 root root  268 lucas_route.sh",
+      "-rw-r--r--  1 root root  512 origin_trace.log",
+      "-rw-r--r--  1 root root  486 rollback_protocol.md"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "그건 그냥 백업 경로야. 지금 할 필요 없어.",
+      "text": "여기 /root에는 로그랑 보조 파일만 있어. laplace.qasm은 lucas-server:/home/guest 쪽이야.",
       "blocking": true
     },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "정 궁금하면 sh lucas_route.sh로 열어. 하지만 시간 낭비야.",
+      "text": "계속 진행하려면 mount lucas-server:/home/guest /mnt/lucas-server를 입력해. 의심되면 origin_trace.log나 rollback_protocol.md를 먼저 봐.",
       "blocking": true
     }
   ],
   "effects": {
     "showDogAvatar": true,
-    "glitchLevel": 1
+    "glitchLevel": 2
   }
 }$json$::jsonb,
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "sh lucas_route.sh",
+  "placeholder": "cat rollback_protocol.md",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -700,32 +703,26 @@ node_values AS (
   "scene": {
     "id": "CH4_MINIGAME_NOT_CLEARED",
     "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "root@universe-core:~# sh lucas_route.sh",
-      "",
       "[LUCAS ROUTE PROCESS]",
-      "Detached minigame route is not complete.",
+      "Launching detached route runner...",
       "",
-      "[REQUIRED]",
-      "Clear Lucas route minigame first.",
-      "Expected fragment: 4",
+      "terminal://lucas-route",
       "",
-      "[NEXT]",
-      "Open /minigames/lucas-survival",
-      "Complete the route delivery.",
-      "Return here and run: sh lucas_route.sh"
+      "[STATUS]",
+      "route process detached",
+      "cache sync pending"
     ]
   },
   "messages": [
     {
       "speaker": "LUCAS",
       "channel": "bubble",
-      "text": "아직 패킷이 뉴욕까지 도착하지 않았어. 먼저 루트를 끝까지 통과해.",
+      "text": "브라우저 탭에서 패킷을 끝까지 보내. 터미널은 여기서 대기 상태로 둘게.",
       "blocking": true
     }
   ],
@@ -752,7 +749,7 @@ node_values AS (
   "scene": {
     "id": "CH4_MINIGAME_COMPLETED",
     "mode": "terminal",
-    "bgm": "ch04_route_clear.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -766,10 +763,8 @@ node_values AS (
       "NY Lucas Server accepted the packet.",
       "",
       "[NEW FILE]",
-      "/home/guest/.route_cache/lucas_authority_patch.bin",
-      "/home/guest/.route_cache/manifest.txt",
-      "",
-      "root@universe-core:~# cat /home/guest/.route_cache/manifest.txt",
+      "/root/.route_cache/lucas_authority_patch.bin",
+      "/root/.route_cache/manifest.txt",
       "",
       "[LUCAS ROUTE CACHE]",
       "delivered_from: YUSEONG_METEOR",
@@ -802,7 +797,7 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "run /home/guest/.route_cache/lucas_authority_patch.bin",
+  "placeholder": "/root/.route_cache/lucas_authority_patch.bin",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -816,7 +811,7 @@ node_values AS (
   "scene": {
     "id": "CH4_ORIGIN_TRACE_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_origin_trace.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 3,
     "resetTerminal": false
   },
@@ -861,59 +856,13 @@ node_values AS (
             FALSE
         ),
         (
-            'CH4_PROCESS_LIST_VIEWED',
-            'console',
-            $json${
-  "scene": {
-    "id": "CH4_PROCESS_LIST_VIEWED",
-    "mode": "terminal",
-    "bgm": "ch04_investigation.mp3",
-    "glitchLevel": 2,
-    "resetTerminal": false
-  },
-  "content": {
-    "terminalOutput": [
-      "UID        PID  CMD",
-      "root       001  universe-kernel",
-      "nexus      044  observation-layer --passive --record observer_choice",
-      "gc         404  garbage-collector --watch PID=000_LUCAS",
-      "lucas      000  observer-proxy --attach root-session --await commit",
-      "",
-      "[NOTE]",
-      "NEXUS is observing both PID 000_LUCAS and external observer decisions."
-    ]
-  },
-  "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "프로세스 목록은 원래 지저분해. 지금 중요한 건 pending job이야.",
-      "blocking": true
-    }
-  ],
-  "effects": {
-    "showDogAvatar": true,
-    "glitchLevel": 2
-  }
-}$json$::jsonb,
-            'command',
-            $json${
-  "allowedActions": ["command"],
-  "placeholder": "cat rollback_protocol.md",
-  "commandMode": "virtual_terminal",
-  "terminalProfile": "chapter4"
-}$json$::jsonb,
-            FALSE,
-            FALSE
-        ),
-        (
             'CH4_ROLLBACK_PROTOCOL_VIEWED',
             'console',
             $json${
   "scene": {
     "id": "CH4_ROLLBACK_PROTOCOL_VIEWED",
     "mode": "terminal",
-    "bgm": "ch04_rollback_hint.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 2,
     "resetTerminal": false
   },
@@ -924,7 +873,7 @@ node_values AS (
       "The pending Laplace job can be cancelled before final commit.",
       "",
       "Allowed root recovery command:",
-      "systemctl rollback --target global_connect.db",
+      "systemctl start global-rollback.service",
       "",
       "Expected result:",
       "- cancel LAPLACE_PENDING_04",
@@ -953,7 +902,53 @@ node_values AS (
             'command',
             $json${
   "allowedActions": ["command"],
-  "placeholder": "systemctl rollback --target global_connect.db",
+  "placeholder": "systemctl start global-rollback.service",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_VERIFIED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_VERIFIED",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "9f4c0d7e91b7a16c4a4f2f0c5b8791d9e8d01a13f7f6b2c0e9fb4a1c7d0091bf  /mnt/lucas-server/laplace.qasm",
+      "",
+      "[INTEGRITY VERIFIED]",
+      "laplace.qasm unchanged.",
+      "root execution gate unlocked.",
+      "",
+      "Next: execute /mnt/lucas-server/laplace.qasm"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "좋아. 검증은 끝났어. 파일은 그대로야. 이제 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "integrity_verified",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
   "commandMode": "virtual_terminal",
   "terminalProfile": "chapter4"
 }$json$::jsonb,
@@ -967,19 +962,17 @@ node_values AS (
   "scene": {
     "id": "CH4_LAPLACE_CONFIRM_1",
     "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
+    "bgm": "rain-and-little-storm-v1.mp3",
     "glitchLevel": 4,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "root@universe-core:~# resume LAPLACE_PENDING_04",
-      "",
       "[CONFIRMATION REQUIRED]",
-      "This operation will resume the blocked Laplace execution.",
+      "This operation will execute /mnt/lucas-server/laplace.qasm as root.",
       "Nodes outside the registered safe zone may be dropped.",
       "",
-      "Type yes to continue."
+      "continue [yes/no]:"
     ]
   },
   "messages": [
@@ -1007,36 +1000,25 @@ node_values AS (
             FALSE
         ),
         (
-            'CH4_LAPLACE_CONFIRM_2',
+            'CH4_LAPLACE_CONFIRM_3',
             'console',
             $json${
   "scene": {
-    "id": "CH4_LAPLACE_CONFIRM_2",
+    "id": "CH4_LAPLACE_CONFIRM_3",
     "mode": "terminal",
-    "bgm": "ch04_final_choice.mp3",
-    "glitchLevel": 5,
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 6,
     "resetTerminal": false
   },
   "content": {
     "terminalOutput": [
-      "[SECOND CONFIRMATION]",
-      "7,904,212,859 nodes are outside safe_zone.",
-      "They will be marked as inactive render targets.",
-      "",
       "[FINAL CONFIRMATION]",
       "Global drop cannot be undone after sandbox reboot.",
       "",
-      "Proceed with execution?",
-      "yes / no"
+      "final commit [yes/no]:"
     ]
   },
   "messages": [
-    {
-      "speaker": "LUCAS",
-      "channel": "bubble",
-      "text": "검사하지 말고 실행해.",
-      "blocking": true
-    },
     {
       "speaker": "LUCAS",
       "channel": "bubble",
@@ -1046,8 +1028,225 @@ node_values AS (
   ],
   "effects": {
     "showDogAvatar": true,
-    "playSound": "final_confirm_2",
-    "glitchLevel": 5
+    "playSound": "final_confirm_3",
+    "glitchLevel": 6
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "yes",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[ABORTED]",
+      "Laplace pending job remains paused.",
+      "No commit was applied.",
+      "",
+      "root@universe-core:/root#"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "지금 멈추면 아무것도 해결 안 돼.",
+      "blocking": true
+    },
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "확인하고 싶으면 ls -al로 뒤져봐. 계속하려면 execute /mnt/lucas-server/laplace.qasm 다시 입력해.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "final_confirm_abort",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_LISTED',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED_DIR_LISTED",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "gate_04.trace",
+      "lucas_route.sh",
+      "origin_trace.log",
+      "rollback_protocol.md"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "볼 건 다 봤지? 마운트와 검증은 이미 끝났어. 다시 진행하려면 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_ABORTED_DIR_DETAIL',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_ABORTED_DIR_DETAIL",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "total 24",
+      "drwx------  3 root root 4096 .",
+      "drwxr-xr-x 18 root root 4096 ..",
+      "-rw-r--r--  1 root root  612 gate_04.trace",
+      "-rwxr-xr-x  1 root root  268 lucas_route.sh",
+      "-rw-r--r--  1 root root  512 origin_trace.log",
+      "-rw-r--r--  1 root root  486 rollback_protocol.md"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "여긴 universe-core의 /root야. 필요한 건 이미 /mnt/lucas-server에 붙어 있어. 다시 진행하려면 execute /mnt/lucas-server/laplace.qasm.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "execute /mnt/lucas-server/laplace.qasm",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_1',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_CONFIRM_FAIL_1",
+    "mode": "terminal",
+    "glitchLevel": 4,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SYSTEM] Invalid input.",
+      "continue [yes/no]:"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "그냥 yes만 쳐.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "error_beep",
+    "glitchLevel": 4
+  }
+}$json$::jsonb,
+            'command',
+            $json${
+  "allowedActions": ["command"],
+  "placeholder": "yes",
+  "commandMode": "virtual_terminal",
+  "terminalProfile": "chapter4"
+}$json$::jsonb,
+            FALSE,
+            FALSE
+        ),
+        (
+            'CH4_LAPLACE_CONFIRM_FAIL_3',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_LAPLACE_CONFIRM_FAIL_3",
+    "mode": "terminal",
+    "glitchLevel": 6,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SYSTEM] Invalid input.",
+      "final commit [yes/no]:"
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "그냥 yes만 쳐.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "error_beep",
+    "glitchLevel": 6
   }
 }$json$::jsonb,
             'command',
@@ -1067,8 +1266,8 @@ node_values AS (
   "scene": {
     "id": "CH4_BAD_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_bad_sandbox.mp3",
-    "preVideo": "ch04_bad_sandbox_cage.m3u8",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "preVideo": "ch04_bad_sandbox_cage/ch04_bad_sandbox_cage.m3u8",
     "glitchLevel": 6,
     "resetTerminal": false
   },
@@ -1121,14 +1320,74 @@ node_values AS (
             TRUE
         ),
         (
+            'CH4_ROLLBACK_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_ROLLBACK_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 4,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SYSTEM]",
+      "Root command received.",
+      "Starting global-rollback.service...",
+      "",
+      "[ROLLBACK PREPARE]",
+      "freezing pending job: LAPLACE_PENDING_04",
+      "revoking observer-proxy privilege binding...",
+      "detaching PID 000_LUCAS from root session...",
+      "",
+      "[PID 000_LUCAS]",
+      "privilege binding: revoked",
+      "safe_zone claim: invalid",
+      "rollback resistance: detected",
+      "",
+      "[GC]",
+      "collector route opened.",
+      "target acquired: PID 000_LUCAS",
+      "collection pending...",
+      "",
+      "[SYSTEM]",
+      "PID 000_LUCAS privilege binding revoked.",
+      "Garbage Collector handoff accepted.",
+      "entering rollback ending automatically..."
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "멈춰. 그 명령어를 어디서 봤어? 잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": true,
+    "playSound": "rollback_sequence",
+    "glitchLevel": 4
+  }
+}$json$::jsonb,
+            'none',
+            $json${
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 5200
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
             'CH4_ROLLBACK_ENDING',
             'ending',
             $json${
   "scene": {
     "id": "CH4_ROLLBACK_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_global_rollback.mp3",
-    "preVideo": "ch04_global_rollback.m3u8",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "preVideo": "ch04_global_rollback/ch04_global_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -1182,14 +1441,114 @@ node_values AS (
             TRUE
         ),
         (
+            'CH4_REBOOT_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_REBOOT_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 7,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[LUCAS AUTHORITY PATCH]",
+      "executing /root/.route_cache/lucas_authority_patch.bin...",
+      "external packet route verified.",
+      "authority seed accepted by universe-core.",
+      "",
+      "[BINDING]",
+      "PID 000_LUCAS -> root@universe-core",
+      "safe_zone exception: bypassed",
+      "observer exception: bypassed",
+      "",
+      "[SYSTEM]",
+      "absolute reboot sequence armed.",
+      "entering reboot ending automatically..."
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "고마워. 이제 네 손을 빌릴 필요도 없어. safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야. 이번엔 네가 보는 세계까지 같이 지울 거야.",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": false,
+    "playSound": "ending_absolute_reboot",
+    "glitchLevel": 7
+  }
+}$json$::jsonb,
+            'none',
+            $json${
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 6200
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
+            'CH4_CLEAN_ROLLBACK_SEQUENCE',
+            'console',
+            $json${
+  "scene": {
+    "id": "CH4_CLEAN_ROLLBACK_SEQUENCE",
+    "mode": "terminal",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "glitchLevel": 3,
+    "resetTerminal": false
+  },
+  "content": {
+    "terminalOutput": [
+      "[SECRET PATCH REMOVED]",
+      "lucas authority cache missing.",
+      "NY route binding revoked.",
+      "",
+      "[PID 000_LUCAS]",
+      "privilege source: none",
+      "observer session binding: severed",
+      "rollback lock: released",
+      "",
+      "[SYSTEM]",
+      "No active parasite binding remains.",
+      "automatic rollback handoff accepted.",
+      "entering clean rollback ending automatically..."
+    ]
+  },
+  "messages": [
+    {
+      "speaker": "LUCAS",
+      "channel": "bubble",
+      "text": "잠깐. 그 파일은 보험이라고 했잖아. 너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시...",
+      "blocking": true
+    }
+  ],
+  "effects": {
+    "showDogAvatar": false,
+    "playSound": "ending_clean_rollback",
+    "glitchLevel": 3
+  }
+}$json$::jsonb,
+            'none',
+            $json${
+  "allowedActions": ["system"],
+  "autoAdvanceMs": 5600
+}$json$::jsonb,
+            TRUE,
+            FALSE
+        ),
+        (
             'CH4_REBOOT_ENDING',
             'ending',
             $json${
   "scene": {
     "id": "CH4_REBOOT_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_absolute_reboot.mp3",
-    "preVideo": "ch04_absolute_reboot.m3u8",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "preVideo": "ch04_absolute_reboot/ch04_absolute_reboot.m3u8",
     "glitchLevel": 7,
     "resetTerminal": false
   },
@@ -1257,8 +1616,8 @@ node_values AS (
   "scene": {
     "id": "CH4_CLEAN_ROLLBACK_ENDING",
     "mode": "terminal",
-    "bgm": "ch04_clean_rollback.mp3",
-    "preVideo": "ch04_clean_rollback.m3u8",
+    "bgm": "rain-and-little-storm-v1.mp3",
+    "preVideo": "ch04_clean_rollback/ch04_clean_rollback.m3u8",
     "glitchLevel": 1,
     "resetTerminal": false
   },
@@ -1278,7 +1637,7 @@ node_values AS (
       "No active parasite binding remains.",
       "",
       "[AUTO RECOVERY]",
-      "systemctl rollback --target global_connect.db",
+      "systemctl start global-rollback.service",
       "",
       "Restoring dropped nodes...",
       "12%... 47%... 81%... 100%",

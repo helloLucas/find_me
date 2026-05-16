@@ -34,11 +34,55 @@ from app.hint_state import (
     get_pattern_embedding,
     get_repeat_count,
     init_redis,
+    next_ch4_strong_cycle,
     set_one_time_hint_served,
     set_pattern_embedding,
 )
 
 settings = get_settings()
+
+CH3_RUNTIME_PATTERN_KEYS = {
+    "list_home_with_hidden",
+    "discover_open_port_9091",
+    "connect_relay_empty",
+    "relay_request_status",
+    "relay_request_people_view",
+    "relay_request_people_to_file",
+    "relay_request_monitor_view",
+    "relay_request_monitor_to_file",
+    "relay_request_fragment_view",
+    "relay_request_fragment_to_file",
+    "relay_request_route_view",
+    "relay_request_policy_view",
+    "validate_core_group_dat_success",
+    "validate_core_group_dat_fail",
+    "encrypt_core_group",
+    "register_safe_zone",
+    "sever_external_nodes_attempt",
+    "confirmation_stream_to_script",
+    "discover_fragment_03",
+    "copy_fragment_03_home",
+    "create_laplace_qasm",
+    "check_laplace_qasm",
+}
+
+CH4_HINT_DISABLED_FROM_NODES = {
+    "CH4_LUCAS_SERVER_MOUNTED",
+    "CH4_PENDING_JOB_VIEWED",
+    "CH4_INVESTIGATION_STARTED",
+    "CH4_MINIGAME_DISCOVERED",
+    "CH4_MINIGAME_NOT_CLEARED",
+    "CH4_MINIGAME_COMPLETED",
+    "CH4_ORIGIN_TRACE_VIEWED",
+    "CH4_PROCESS_LIST_VIEWED",
+    "CH4_ROLLBACK_PROTOCOL_VIEWED",
+    "CH4_LAPLACE_CONFIRM_1",
+    "CH4_LAPLACE_CONFIRM_2",
+    "CH4_LAPLACE_CONFIRM_3",
+    "CH4_LAPLACE_CONFIRM_FAIL_1",
+    "CH4_LAPLACE_CONFIRM_FAIL_2",
+    "CH4_LAPLACE_CONFIRM_FAIL_3",
+}
 
 
 @asynccontextmanager
@@ -235,6 +279,24 @@ def _matches_bootstrap_context(request: HintGenerateRequest, *, current_node: st
 
 @app.post("/v1/hints/retrieve", response_model=HintRetrieveResponse)
 async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveResponse:
+    if _is_ch4_hint_disabled_node(request.chapter_id, request.from_node_id):
+        blocked_hint_level = resolve_hint_level(request.fail_count_after_action, 0, True)
+        return HintRetrieveResponse(
+            message_type="hint_question",
+            route_decision="BLOCKED_NON_HINT",
+            intent_subtype="progress_hint",
+            selected_phase="blocked_story_policy",
+            low_confidence=True,
+            query_vector_dimension=0,
+            query_text="",
+            candidate_count=0,
+            repeat_count_after_action=0,
+            stress_score=0,
+            hint_level=blocked_hint_level,
+            command_usage_context=None,
+            evidences=[],
+        )
+
     llm: GmsLlmClient = app.state.gms_client
     repo: VectorSearchRepository = app.state.vector_repo
     user_message = _sanitize_user_message(request.user_message)
@@ -393,6 +455,24 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
     )
 
     if (
+        (request.chapter_id or "").strip().lower() == "week04"
+        and retrieval_hint_level == "STRONG"
+        and len(selected) >= 2
+    ):
+        cycle = await next_ch4_strong_cycle(
+            session_id=request.session_id,
+            chapter_code=request.chapter_id,
+            from_node_code=request.from_node_id,
+            ttl_seconds=settings.hint_repeat_ttl_seconds,
+        )
+        max_partner = len(selected) - 1
+        partner_idx = 1 + ((max(1, cycle) - 1) % max_partner)
+        anchor = selected[0]
+        partner = selected[partner_idx]
+        remainder = [item for idx, item in enumerate(selected) if idx not in {0, partner_idx}]
+        selected = [anchor, partner, *remainder]
+
+    if (
         settings.hint_runtime_pattern_rerank_enabled
         and (request.action_type or "").strip().lower() == "command"
         and selected
@@ -485,6 +565,12 @@ async def retrieve_hint_evidence(request: HintRetrieveRequest) -> HintRetrieveRe
     )
 
 
+def _is_ch4_hint_disabled_node(chapter_code: str | None, from_node_code: str | None) -> bool:
+    chapter = (chapter_code or "").strip().lower()
+    node = (from_node_code or "").strip().upper()
+    return chapter == "week04" and node in CH4_HINT_DISABLED_FROM_NODES
+
+
 async def _rerank_candidates_with_pattern_embeddings(
     *,
     llm: GmsLlmClient,
@@ -502,6 +588,9 @@ async def _rerank_candidates_with_pattern_embeddings(
         metadata = getattr(candidate, "metadata", {}) or {}
         action = str(metadata.get("action_type") or "").strip().lower()
         if action != "command":
+            scored.append((float("-inf"), idx, candidate))
+            continue
+        if not _should_runtime_pattern_embedding(metadata):
             scored.append((float("-inf"), idx, candidate))
             continue
 
@@ -538,6 +627,51 @@ def _pattern_text_from_metadata(metadata: dict[str, Any]) -> str | None:
     strong = _to_text(examples.get("example_strong"))
     medium = _to_text(examples.get("example_medium"))
     return (strong or medium or "").strip() or None
+
+
+def _should_runtime_pattern_embedding(metadata: dict[str, Any]) -> bool:
+    raw_expected = _to_text(metadata.get("expected_input"))
+    chapter_code = (_to_text(metadata.get("chapter_code")) or "").strip().lower()
+
+    if chapter_code == "week03":
+        normalized = (raw_expected or "").strip().lower()
+        return normalized in CH3_RUNTIME_PATTERN_KEYS
+
+    if _looks_like_literal_command(raw_expected):
+        return False
+
+    config = metadata.get("validator_config")
+    if not isinstance(config, dict):
+        return False
+
+    rule = str(config.get("rule") or "").strip()
+    if rule:
+        return True
+    if _to_text(config.get("command")):
+        return True
+
+    forms = config.get("acceptedForms")
+    return isinstance(forms, list) and len(forms) > 0
+
+
+def _looks_like_literal_command(value: str | None) -> bool:
+    if not value:
+        return False
+    text = value.strip()
+    if not text:
+        return False
+
+    # Rule-like keys are handled via validator_config-based conversion.
+    if re.fullmatch(r"[A-Z][A-Z0-9_]*", text):
+        return False
+
+    if " " in text:
+        return True
+    if text.startswith("./") or text.startswith("/"):
+        return True
+    if any(ch in text for ch in ('"', "'", ".", "/", "-", "<", ">", "|", "&", "=")):
+        return True
+    return False
 
 
 async def _get_or_create_pattern_embedding(
@@ -710,18 +844,32 @@ def _progress_patterns_by_level(evidences: list[EvidenceItem], level: str) -> li
 
 def _light_pattern_from_examples(examples: dict[str, Any]) -> str:
     head = str(examples.get("command_head") or "").strip().lower()
+    if head == "mount":
+        return "mount <소스경로> <마운트경로>"
+    if head == "ssh":
+        return "우리가 권한을 얻어서 뭘 하려 했는지 떠올려봐."
+    if head.startswith("sshnuke_"):
+        return "sshnuke <host> --rootpw <password>"
+    if head == "sshnuke":
+        return "sshnuke <host> --rootpw <password>"
+    if head == "execute":
+        return "execute <qasm_path>"
+    if head == "systemctl":
+        return "systemctl <action> <unit>"
+    if head == "nmap":
+        return f"nmap <옵션> <host>"
     if head == "ls":
-        return "ls <옵션> <경로>"
+        return f"ls <옵션> <경로>"
     if head == "find":
-        return 'find <경로> -name "<패턴>"'
+        return f'find <경로> -name "<패턴>"'
     if head == "cat":
-        return "cat <파일경로>"
+        return f"cat <파일경로>"
     if head == "grep":
-        return "grep <패턴> <파일경로>"
+        return f"grep <패턴> <파일경로>"
     if head == "echo":
-        return "echo <문자열>"
+        return f"echo <문자열>"
     if head == "tar":
-        return "tar <옵션> <압축파일> <대상들...>"
+        return f"tar <옵션> <압축파일> <대상들...>"
     if head:
         return f"{head} <옵션> <대상>"
     medium = str(examples.get("example_medium") or "").strip()
@@ -730,8 +878,7 @@ def _light_pattern_from_examples(examples: dict[str, Any]) -> str:
     strong = str(examples.get("example_strong") or "").strip()
     if strong:
         return strong
-    return "명령어 <옵션> <대상>"
-
+    return f"명령어 <옵션> <대상>"
 
 def _contains_all_command_heads(text: str, patterns: list[str]) -> bool:
     if not text:

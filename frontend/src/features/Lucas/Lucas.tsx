@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useCallOverlayStore } from '../../app/store/callOverlayStore';
 import { useLucasStore } from '../../app/store/lucasStore';
 import type { LucasMessage } from '../../app/store/lucasStore';
@@ -11,6 +11,7 @@ import './Lucas.css';
 const PENDING_FRAMES = ['.', '..', '...'];
 const ENABLE_INTERFERENCE_FX = true;
 const INTERFERENCE_DURATION_MS = 1700;
+const HINT_PANEL_EXIT_ANIMATION_MS = 275;
 const INTERFERENCE_TEXT_PATTERN =
   /(시스템\s*간섭|신호가\s*불안정|연결\s*상태|채널|노이즈|잠깐\s*뒤에\s*다시|재시도)/i;
 const HINT_ERROR_MESSAGES = [
@@ -50,6 +51,9 @@ export const Lucas: React.FC = () => {
   const [isHintRequesting, setIsHintRequesting] = useState(false);
   const [pendingFrame, setPendingFrame] = useState(0);
   const [isInterferenceFxActive, setIsInterferenceFxActive] = useState(false);
+  const [isHintPanelRendered, setIsHintPanelRendered] = useState(false);
+  const [isEntranceActive, setIsEntranceActive] = useState(true);
+  const [entranceKey, setEntranceKey] = useState(0);
   const hintMessagesRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const lastReadIndicesRef = useRef<Record<string, number>>({});
@@ -58,7 +62,10 @@ export const Lucas: React.FC = () => {
   const isRestoringScrollRef = useRef(false);
   const interferenceTimerRef = useRef<number | null>(null);
   const baseGlitchLevelRef = useRef(0);
+  const hasEnteredRef = useRef(false);
   const isHintPanelVisible = isHintMode && !isDialogueActive;
+  const shouldRenderHintPanel = isHintPanelVisible || isHintPanelRendered;
+  const isHintPanelClosing = !isHintPanelVisible && isHintPanelRendered;
 
   const isLastMessage = currentScene
     ? currentMessageIndex >= currentScene.messages.length - 1
@@ -178,6 +185,23 @@ export const Lucas: React.FC = () => {
   }, [chatHistory, isHintPanelVisible, isHintRequesting, chatScopeKey]);
 
   useEffect(() => {
+    if (isHintPanelVisible) {
+      const timer = window.setTimeout(() => {
+        setIsHintPanelRendered(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (!isHintPanelRendered) return;
+
+    const timer = window.setTimeout(() => {
+      setIsHintPanelRendered(false);
+    }, HINT_PANEL_EXIT_ANIMATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isHintPanelRendered, isHintPanelVisible]);
+
+  useEffect(() => {
     if (!isHintRequesting) {
       setPendingFrame(0);
       return;
@@ -195,6 +219,24 @@ export const Lucas: React.FC = () => {
       }
     };
   }, []);
+
+  // Glitch entrance animation on every hidden→visible transition
+  const wasVisibleRef = useRef(false);
+  useLayoutEffect(() => {
+    const shouldShow = isVisible || isDialogueActive || isHintMode || shouldRenderHintPanel || hasPromptButtons;
+    if (shouldShow && !wasVisibleRef.current) {
+      wasVisibleRef.current = true;
+      setIsEntranceActive(true);
+      setEntranceKey((k) => k + 1);
+      const timer = window.setTimeout(() => {
+        setIsEntranceActive(false);
+      }, 1200);
+      return () => window.clearTimeout(timer);
+    }
+    if (!shouldShow) {
+      wasVisibleRef.current = false;
+    }
+  }, [isVisible, isDialogueActive, isHintMode, shouldRenderHintPanel, hasPromptButtons]);
 
   const handleBubbleClick = () => {
     if (isTyping) {
@@ -263,11 +305,11 @@ export const Lucas: React.FC = () => {
     void submitStoryClick(inputValue);
   };
 
-  if (!isVisible && !isDialogueActive && !isHintMode && !hasPromptButtons) return null;
+  if (!isVisible && !isDialogueActive && !isHintMode && !shouldRenderHintPanel && !hasPromptButtons) return null;
 
   return (
     <div
-      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${isHintMode ? 'hint-mode' : ''}`}
+      className={`lucas-container ${isDialogueActive ? 'dialogue-mode' : ''} ${shouldRenderHintPanel ? 'hint-mode' : ''} ${isEntranceActive ? 'lucas-entrance' : ''}`}
       style={{ zIndex: DESKTOP_LAYER.assistant }}
     >
       {isDialogueActive && currentMessage && (
@@ -301,19 +343,28 @@ export const Lucas: React.FC = () => {
         </div>
       )}
 
-      {isHintMode && !isDialogueActive && (
-        <div className={`lucas-hint-ui ${isInterferenceFxActive ? 'interference-fx' : ''}`}>
+      {shouldRenderHintPanel && !isDialogueActive && (
+        <div
+          className={`lucas-hint-ui ${isHintPanelClosing ? 'hint-exit' : 'hint-enter'} ${
+            isInterferenceFxActive ? 'interference-fx' : ''
+          }`}
+        >
           <div className="hint-header">LUCAS SYSTEM INTERFACE</div>
           <div className="hint-messages" ref={hintMessagesRef} onScroll={persistHintScrollTop}>
-            {chatHistory.map((chat) => (
-              <div id={`lucas-msg-${chat.id}`} key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
-                <span className="chat-speaker">{chat.speaker}</span>
-                <div className="chat-text">{chat.text}</div>
-              </div>
-            ))}
+            {chatHistory.map((chat, index) => {
+              const previousChat = chatHistory[index - 1];
+              const isFirstInGroup = !previousChat || previousChat.speaker !== chat.speaker;
+
+              return (
+                <div id={`lucas-msg-${chat.id}`} key={chat.id} className={`chat-msg ${chat.speaker.toLowerCase()}`}>
+                  {isFirstInGroup && <span className="chat-speaker">{chat.speaker}</span>}
+                  <div className="chat-text">{chat.text}</div>
+                </div>
+              );
+            })}
             {isHintRequesting && (
               <div className="chat-msg lucas pending">
-                <span className="chat-speaker">LUCAS</span>
+                {chatHistory.at(-1)?.speaker !== 'LUCAS' && <span className="chat-speaker">LUCAS</span>}
                 <div className="chat-text pending-typing">{PENDING_FRAMES[pendingFrame]}</div>
               </div>
             )}
@@ -337,7 +388,7 @@ export const Lucas: React.FC = () => {
               type="text"
               value={hintInput}
               onChange={(event) => setHintInput(event.target.value)}
-              placeholder={isHintRequesting ? '응답 생성 중...' : '루카스에게 메시지를 보내세요'}
+              placeholder={isHintRequesting ? '생각 중...' : '루카스에게 질문하기'}
               autoFocus
               disabled={isHintRequesting}
             />
@@ -371,7 +422,7 @@ export const Lucas: React.FC = () => {
         }}
         style={{ cursor: isDialogueActive ? 'default' : 'pointer' }}
       >
-        <img src="/lucas.svg" alt="Lucas" className="lucas-avatar" />
+        <img key={entranceKey} src="/lucas.svg" alt="Lucas" className="lucas-avatar" />
         {glitchLevel > 0 && (
           <div className={`glitch-avatar-layer intensity-${Math.min(10, Math.max(0, glitchLevel))}`}>
             <img src="/lucas.svg" alt="" className="glitch-copy" />

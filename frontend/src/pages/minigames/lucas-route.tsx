@@ -1,5 +1,5 @@
 import { LucasRouteGame } from "../../features/minigames/lucas-route";
 
 export default function LucasRouteMiniGamePage() {
-  return <LucasRouteGame />;
+  return <LucasRouteGame isPractice={true} />;
 }

@@ -1,7 +1,7 @@
 package com.lucas.admin.service;
 
-import com.lucas.admin.dto.response.AdminFilterOptionsResponse;
 import com.lucas.admin.dto.response.AdminEsAnalyticsResponse;
+import com.lucas.admin.dto.response.AdminFilterOptionsResponse;
 import java.util.List;
 
 public interface AdminAnalyticsService {

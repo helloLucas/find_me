@@ -4,12 +4,24 @@ import { useClipboardStore } from "../../app/store/clipboardStore";
 import { useBrowserContentStore } from "../../app/store/browserContentStore";
 import { useToastStore } from "../../app/store/toastStore";
 import { useNotepadStore, type NotepadTab } from "../../app/store/notepadStore";
+import { useStoryRuntimeStore } from "../../features/story-runtime/storyRuntime.store";
 import "./NotepadWindow.css";
 
 export const NotepadWindow: React.FC = () => {
   const { chapterCode: rawChapterCode } = useParams();
   const chapterCode = rawChapterCode || "default";
-  const isChapter3 = chapterCode === "week03";
+  
+  const { currentNode } = useStoryRuntimeStore();
+  const currentChapter = (() => {
+    if (chapterCode === "week03" || chapterCode === "ch3" || chapterCode === "week3") return 3;
+    if (!currentNode?.code) return 0;
+    const match = currentNode.code.match(/^CH(\d+)_/i);
+    return match ? parseInt(match[1], 10) : 0;
+  })();
+  const isChapter3 = currentChapter === 3;
+  
+  // URL이 해싱된 경우에도 동일한 챕터의 탭을 공유할 수 있도록 정규화된 키 사용
+  const normalizedChapterCode = isChapter3 ? "week03" : chapterCode;
 
   const {
     tabs: allTabs,
@@ -21,8 +33,8 @@ export const NotepadWindow: React.FC = () => {
     setActiveTabId,
   } = useNotepadStore();
 
-  const tabs = allTabs[chapterCode] || [];
-  const activeTabId = allActiveTabIds[chapterCode] || "";
+  const tabs = allTabs[normalizedChapterCode] || [];
+  const activeTabId = allActiveTabIds[normalizedChapterCode] || "";
 
   // 탭 타이틀 인라인 수정을 위한 임시 상태
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -33,19 +45,19 @@ export const NotepadWindow: React.FC = () => {
   // 초기 탭 생성 (만약 탭이 하나도 없다면)
   useEffect(() => {
     if (tabs.length === 0) {
-      addTab(chapterCode, "제목 없음", "");
+      addTab(normalizedChapterCode, "제목 없음", "");
     }
-  }, [tabs.length, chapterCode, addTab]);
+  }, [tabs.length, normalizedChapterCode, addTab]);
 
   // 외부(예: TrashWindow)에서 업데이트 되었을 때 감지 (기존 호환성 유지)
   useEffect(() => {
     const handleUpdate = () => {
       const newContent = localStorage.getItem("notebook_memo_content") ?? "";
-      addTab(chapterCode, "recovery_notes", newContent);
+      addTab(normalizedChapterCode, "recovery_notes", newContent);
     };
     window.addEventListener("notepad-update", handleUpdate);
     return () => window.removeEventListener("notepad-update", handleUpdate);
-  }, [chapterCode, addTab]);
+  }, [normalizedChapterCode, addTab]);
 
   // 현재 활성화된 탭 객체 계산
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0] || { id: "", title: "제목 없음", content: "" };
@@ -54,18 +66,18 @@ export const NotepadWindow: React.FC = () => {
   // 텍스트 에어리어 실시간 입력 수정 연동
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!activeTab.id) return;
-    updateTabContent(chapterCode, activeTab.id, e.target.value);
+    updateTabContent(normalizedChapterCode, activeTab.id, e.target.value);
   };
 
   // 탭 추가 인터랙션
   const handleAddTab = () => {
-    addTab(chapterCode, "제목 없음", "");
+    addTab(normalizedChapterCode, "제목 없음", "");
   };
 
   // 탭 닫기 인터랙션
   const handleCloseTab = (e: React.MouseEvent, tabIdToClose: string) => {
     e.stopPropagation();
-    removeTab(chapterCode, tabIdToClose);
+    removeTab(normalizedChapterCode, tabIdToClose);
   };
 
   // 탭 이름 수정 제어
@@ -87,7 +99,7 @@ export const NotepadWindow: React.FC = () => {
       setEditingTabId(null);
       return;
     }
-    updateTabTitle(chapterCode, tabId, tempTitle.trim());
+    updateTabTitle(normalizedChapterCode, tabId, tempTitle.trim());
     setEditingTabId(null);
   };
 
@@ -124,7 +136,7 @@ export const NotepadWindow: React.FC = () => {
       textToInsert +
       content.substring(end);
 
-    updateTabContent(chapterCode, activeTab.id, nextContent);
+    updateTabContent(normalizedChapterCode, activeTab.id, nextContent);
 
     const newCursorPos = start + textToInsert.length;
     setTimeout(() => {
@@ -170,7 +182,7 @@ export const NotepadWindow: React.FC = () => {
               <div
                 key={tab.id}
                 className={`notepad-tab-item ${isActive ? "active" : ""}`}
-                onClick={() => !isEditing && setActiveTabId(chapterCode, tab.id)}
+                onClick={() => !isEditing && setActiveTabId(normalizedChapterCode, tab.id)}
                 onDoubleClick={() => !isEditing && startEditing(tab.id, tab.title)}
               >
                 {isEditing ? (

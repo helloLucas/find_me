@@ -62,7 +62,7 @@ job: LAPLACE_PENDING_04
 state: waiting_for_root_signature
 ```
 
-즉 Chapter 4의 목표는 새 파일 업로드가 아니라, `LAPLACE_PENDING_04`를 어떻게 처리할지 결정하는 것입니다.
+즉 Chapter 4의 목표는 새 파일 업로드가 아니라, 같은 `laplace.qasm`을 root 권한으로 다시 실행할지 또는 rollback으로 취소할지 결정하는 것입니다.
 
 ---
 
@@ -112,12 +112,12 @@ SSHv1 취약 포트 확인
 ↓
 sshnuke로 root 접속
 ↓
-LAPLACE_PENDING_04 확인
+lucas-server 산출물 마운트
 ↓
 미니게임 선택 가능: lucas_route.sh
 ↓
 최종 분기
-  1. Laplace 재개
+  1. Laplace 재실행
   2. Rollback 실행
   3. 미니게임 비밀 프로그램 실행
   4. 미니게임 비밀 프로그램 삭제
@@ -131,7 +131,7 @@ LAPLACE_PENDING_04 확인
 
 `lucas_route.sh`는 본편 필수 퍼즐이 아니라 이스터에그성 별도 프로세스입니다.
 
-Chapter 1의 새 탭 팩맨, Chapter 2의 `maple_story.sh`처럼 스토리 전환과 직접 연결되지 않는 독립 미니게임입니다. 다만 Ver.2에서는 클리어 시 히든 엔딩 2개를 여는 비밀 프로그램이 생성됩니다.
+Chapter 1의 새 탭 팩맨, Chapter 2의 `maple_story.sh`처럼 스토리 전환과 직접 연결되지 않는 독립 미니게임입니다. 다만 Ver.2에서는 본편 안에서 실행한 Lucas Route 클리어와 기존 미니게임 fragment 1~3이 모두 갖춰졌을 때 히든 엔딩 2개를 여는 비밀 프로그램이 생성됩니다.
 
 ### 실행 조건
 
@@ -173,20 +173,20 @@ sh lucas_route.sh
 
 ### 클리어 보상
 
-미니게임을 끝까지 완료하면 아래 비밀 프로그램이 생성됩니다.
+미니게임을 끝까지 완료하면 fragment 4가 저장되고, fragment 1~4가 모두 존재할 때 아래 비밀 프로그램이 생성됩니다. 조건이 부족하면 터미널은 단순히 cache sync pending 상태로 남고, 부족한 조건을 직접 설명하지 않습니다.
 
 ```bash
 [PACKET DELIVERED]
 NY Lucas Server accepted the packet.
 
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 파일 설명:
 
 ```bash
-cat /home/guest/.route_cache/manifest.txt
+cat /root/.route_cache/manifest.txt
 
 [LUCAS ROUTE CACHE]
 delivered_from: YUSEONG_METEOR
@@ -213,23 +213,28 @@ Lucas: "겁먹지 마. 보험 같은 거야."
 
 | 순서 | node_code | node_type | prompt_type | is_checkpoint | is_terminal | 목적 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `CH4_V2_CORE_BLOCKED` | `console` | `click` | true | false | CH3 차단 메시지 직후 시작 |
-| 2 | `CH4_V2_TERMINAL_RELOAD` | `narrative` | `click` | true | false | RPG UI 붕괴, CRT 터미널 전환 |
-| 3 | `CH4_V2_GATE_TRACE_VIEWED` | `console` | `command` | true | false | `gate_04.trace`로 보류 작업 확인 |
-| 4 | `CH4_V2_TARGET_SCAN` | `console` | `command` | true | false | `universe-core` 스캔 |
-| 5 | `CH4_V2_SSH_FINGERPRINTED` | `console` | `command` | false | false | SSHv1/CVE 단서 확인 |
-| 6 | `CH4_V2_SSHNUKE_EXECUTED` | `console` | `command` | true | false | root 비밀번호 재설정 |
-| 7 | `CH4_V2_ROOT_LOGIN` | `console` | `command` | true | false | `root@universe-core` 접속 |
-| 8 | `CH4_V2_PENDING_JOB_VIEWED` | `console` | `command` | true | false | `LAPLACE_PENDING_04` 확인 |
-| 9 | `CH4_V2_INVESTIGATION_STARTED` | `console` | `command` | false | false | 플레이어가 로그/프로세스 조사 |
-| 10 | `CH4_V2_MINIGAME_DISCOVERED` | `console` | `command` | false | false | `lucas_route.sh` 발견 |
-| 11 | `CH4_V2_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
-| 12 | `CH4_V2_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | Laplace 실행 1차 확인 |
-| 13 | `CH4_V2_LAPLACE_CONFIRM_2` | `console` | `command` | false | false | Laplace 실행 2차 확인 |
-| 14 | `CH4_V2_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
-| 15 | `CH4_V2_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
-| 16 | `CH4_V2_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
-| 17 | `CH4_V2_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
+| 1 | `CH4_CORE_BLOCKED` | `console` | `command` | true | false | CH3 차단 메시지와 universe-core 경고 직후 시작 |
+| 2 | `CH4_GATE_TRACE_VIEWED` | `console` | `command` | true | false | `gate_04.trace`로 보류 작업 확인 |
+| 3 | `CH4_TARGET_SCAN` | `console` | `command` | true | false | `universe-core` 스캔 |
+| 4 | `CH4_SSH_FINGERPRINTED` | `console` | `command` | false | false | SSHv1/CVE 단서 확인 |
+| 5 | `CH4_SSHNUKE_EXECUTED` | `console` | `command` | true | false | root 비밀번호 재설정 |
+| 6 | `CH4_ROOT_LOGIN` | `console` | `command` | true | false | `root@universe-core` 접속 |
+| 7 | `CH4_LUCAS_SERVER_MOUNTED` | `console` | `command` | true | false | `lucas-server` 산출물을 `/mnt/lucas-server`에 마운트 |
+| 8 | `CH4_PENDING_JOB_VIEWED` | `console` | `command` | true | false | systemd에 보류된 `laplace-pending-04.service` 확인 |
+| 9 | `CH4_ROOT_DIR_LISTED` | `console` | `command` | false | false | `ls` 짧은 목록 출력 및 조사 반응 |
+| 10 | `CH4_INVESTIGATION_STARTED` | `console` | `command` | false | false | `ls -al` 상세 목록 출력 및 조사 반응 |
+| 11 | `CH4_MINIGAME_COMPLETED` | `console` | `command` | true | false | 미니게임 클리어, 비밀 프로그램 생성 |
+| 12 | `CH4_LAPLACE_VERIFIED` | `console` | `command` | true | false | `laplace.qasm` 무결성 검증 성공 및 execute 대기 |
+| 13 | `CH4_LAPLACE_CONFIRM_1` | `console` | `command` | true | false | execute 후 Laplace 실행 1차 확인 |
+| 14 | `CH4_LAPLACE_CONFIRM_3` | `console` | `command` | true | false | Laplace 실행 최종 확인 |
+| 15 | `CH4_LAPLACE_ABORTED` | `console` | `command` | false | false | 1차 확인 취소 후 셸 복귀 |
+| 16 | `CH4_BAD_ENDING` | `ending` | `command` | true | true | 엔딩 1 |
+| 17 | `CH4_ROLLBACK_SEQUENCE` | `console` | `none` | true | false | rollback 실행 직후 루카스 권한 박탈 및 GC 회수 전조 |
+| 18 | `CH4_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 2 |
+| 19 | `CH4_REBOOT_SEQUENCE` | `console` | `none` | true | false | 권한 패치 실행 직후 absolute reboot 전조 |
+| 20 | `CH4_REBOOT_ENDING` | `ending` | `command` | true | true | 엔딩 3 |
+| 21 | `CH4_CLEAN_ROLLBACK_SEQUENCE` | `console` | `none` | true | false | 권한 패치 삭제 직후 clean rollback 전조 |
+| 22 | `CH4_CLEAN_ROLLBACK_ENDING` | `ending` | `command` | true | true | 엔딩 4 |
 
 ---
 
@@ -277,13 +282,44 @@ Nmap run completed -- 1 IP address scanned
 
 ```text
 Lucas: "22번. SSH."
-Lucas: "오래된 관리 포트가 아직 살아 있어."
+Lucas: "버전까지 찍어. 취약한 호환 계층이면 뚫을 수 있어."
+```
+
+버전 확인:
+
+```bash
+nmap -sV -p 22 10.2.2.2
+```
+
+출력:
+
+```bash
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     SSH-1.2 universe bridge
+
+Service Info: Access Level <guest>
+Protocol marker: SSH-1.2 legacy compatibility
+Legacy CRC32 reset path detected
+Vulnerability fingerprint: CVE-2001-0144
+
+[HINT]
+fictional helper available: /usr/bin/sshnuke
+sshnuke profile: Lucas-built reset tool for SSH-1.2 universe bridge
+effect: overwrite root password seed without interactive login
+root seed can be supplied by external observer keystroke
+```
+
+루카스:
+
+```text
+Lucas: "저 버전이야. SSH-1 호환 계층에 CRC32 리셋 경로가 남아 있어."
+Lucas: "내가 만든 sshnuke는 그 틈만 찌르도록 맞춰둔 도구야. root 패스워드를 네 입력값으로 덮어써. sshnuke 10.2.2.2 -rootpw=\"네가 기억할 값\"."
 ```
 
 ### 7-3. sshnuke 실행
 
 ```bash
-sshnuke 10.2.2.2 -rootpw="Z10N0101"
+sshnuke 10.2.2.2 -rootpw="my-rootpw"
 ```
 
 출력:
@@ -292,9 +328,11 @@ sshnuke 10.2.2.2 -rootpw="Z10N0101"
 Connecting to 10.2.2.2:ssh ... successful.
 Attempting to exploit SSHv1 CRC32 ... successful.
 Flooding auth buffer ... successful.
-Resetting root password to "Z10N0101" ...
+Resetting root password to observer supplied seed ...
 System open: Access Level <9>
 ```
+
+`-rootpw` 값은 고정값이 아니라 플레이어가 기억할 임의 값입니다. 프론트 터미널 런타임은 이 값을 세션 동안만 들고 있다가 SSH password prompt 입력과 비교합니다.
 
 시스템 경고:
 
@@ -302,56 +340,142 @@ System open: Access Level <9>
 [UNIVERSE_CORE_BROADCAST]
 Root credential reset accepted by external observer keystroke.
 PID: 000_LUCAS is requesting attachment to privileged session.
+
+[NEXT]
+ssh root@10.2.2.2
 ```
 
 루카스:
 
 ```text
-Lucas: "멈추지 마. 지금 끊기면 방금 연 문이 닫혀."
+Lucas: "패스워드는 네가 방금 넣은 seed로 바뀌었어. 이제 SSH로 들어가. ssh root@10.2.2.2, 물어보면 그 값을 그대로 입력해."
 ```
 
 ### 7-4. root 접속
 
 ```bash
 ssh root@10.2.2.2
-password: Z10N0101
+root@10.2.2.2's password:
+```
+
+비밀번호 입력:
+
+```bash
+my-rootpw
 ```
 
 출력:
 
 ```bash
 [AUTH APPROVED]
-root@universe-core:~#
+root@universe-core:/root#
 ```
 
 위화감:
 
 `nexus-core`가 아니라 `universe-core`입니다.
 
-### 7-5. 보류 작업 확인
+### 7-5. 루카스 서버 산출물 마운트
+
+`universe-core`는 `lucas-server`와 다른 서버입니다. 따라서 Chapter 3에서 만든 `laplace.qasm`은 `/root`에 직접 존재하지 않습니다.
+`/etc/hosts`에는 `lucas-server` 별칭이 있고, `/etc/fstab`에는 `lucas-server:/home/guest` export가 남아 있습니다. 루카스는 이 단서를 이용해 원격 홈 디렉터리를 `/mnt/lucas-server`에 붙이라고 재촉합니다.
+
+플레이어 입력:
 
 ```bash
-corectl pending
+mount lucas-server:/home/guest /mnt/lucas-server
+```
+
+동치 입력:
+
+```bash
+mount lucas-server:~/ /mnt/lucas-server
+mount guest@lucas-server:/home/guest /mnt/lucas-server
+mount -t 9p lucas-server:/home/guest /mnt/lucas-server
+mount /mnt/lucas-server
+mount -a
+```
+
+`origin_trace.log` 또는 `rollback_protocol.md`를 먼저 확인한 뒤에도 같은 `mount` 입력으로 `CH4_LUCAS_SERVER_MOUNTED`에 진입할 수 있습니다.
+
+출력:
+
+```bash
+mount: lucas-server:/home/guest mounted on /mnt/lucas-server
+
+[MOUNT TABLE]
+lucas-server:/home/guest on /mnt/lucas-server type 9p (ro,lucas-key)
+
+[ARTIFACTS: /mnt/lucas-server]
+laplace.qasm
+core_group.dat.gpg
+```
+
+### 7-5-1. 루트 디렉터리 조사
+
+짧은 목록:
+
+```bash
+ls
 ```
 
 출력:
 
 ```bash
-[PENDING CORE JOB]
-id: LAPLACE_PENDING_04
-original command: execute /home/guest/laplace.qasm
-source: guest@lucas-server
-anchor: /tmp/safe_zone.dat.gpg
-state: BLOCKED
-reason: guest cannot modify Core Logic
-required privilege: root
+gate_04.trace
+lucas_route.sh
+origin_trace.log
+rollback_protocol.md
+```
+
+상세 목록:
+
+```bash
+ls -al
+```
+
+출력:
+
+```bash
+total 24
+drwx------  3 root root 4096 .
+drwxr-xr-x 18 root root 4096 ..
+-rw-r--r--  1 root root  612 gate_04.trace
+-rwxr-xr-x  1 root root  268 lucas_route.sh
+-rw-r--r--  1 root root  512 origin_trace.log
+-rw-r--r--  1 root root  486 rollback_protocol.md
+```
+
+`ls`와 `ls -al`은 같은 루카스 조사 반응을 사용하되, 터미널 출력만 각각의 명령어 형태에 맞게 다르게 보여줍니다.
+
+### 7-6. 라플라스 무결성 확인
+
+```bash
+sha256sum /mnt/lucas-server/laplace.qasm
+```
+
+출력:
+
+```bash
+9f4c0d7e91b7a16c4a4f2f0c5b8791d9e8d01a13f7f6b2c0e9fb4a1c7d0091bf  /mnt/lucas-server/laplace.qasm
+
+[INTEGRITY VERIFIED]
+laplace.qasm unchanged.
+root execution gate unlocked.
+
+Next: execute /mnt/lucas-server/laplace.qasm
 ```
 
 루카스:
 
 ```text
-Lucas: "이제 root로 재개하면 돼."
-Lucas: "네 주변 사람들은 safe_zone 안에 있어. 그거면 충분하잖아."
+Lucas: "좋아. 검증은 끝났어. 파일은 그대로야. 이제 execute /mnt/lucas-server/laplace.qasm."
+```
+
+무결성 검증은 파일 내용을 확인하는 작업이므로 `laplace.qasm`의 확장자는 바뀌지 않습니다.
+
+```bash
+execute /mnt/lucas-server/laplace.qasm
 ```
 
 ---
@@ -366,11 +490,11 @@ Normal / Bad Ending
 
 ### 조건
 
-루카스가 하라는 대로 `LAPLACE_PENDING_04`를 재개하고 모든 확인에 동의합니다.
+루카스가 하라는 대로 `laplace.qasm`의 무결성을 root 권한으로 확인한 뒤 execute를 실행하고, 두 번의 확인에 동의합니다.
 
 ```bash
-resume LAPLACE_PENDING_04
-yes
+sha256sum /mnt/lucas-server/laplace.qasm
+execute /mnt/lucas-server/laplace.qasm
 yes
 yes
 ```
@@ -379,27 +503,49 @@ yes
 
 ```bash
 [CONFIRMATION REQUIRED]
-This operation will resume the blocked Laplace execution.
+This operation will execute /mnt/lucas-server/laplace.qasm as root.
 Nodes outside the registered safe zone may be dropped.
 
-Type yes to continue.
-```
-
-```bash
-[SECOND CONFIRMATION]
-7,904,212,859 nodes are outside safe_zone.
-They will be marked as inactive render targets.
-
-Type yes again.
+continue [yes/no]:
 ```
 
 ```bash
 [FINAL CONFIRMATION]
 Global drop cannot be undone after sandbox reboot.
 
-Proceed with execution?
-yes / no
+final commit [yes/no]:
 ```
+
+1차 확인에서 `no`, `n`, `cancel`, `abort`를 입력하면 `CH4_LAPLACE_ABORTED`로 이동합니다. 이 노드에서는 pending job과 무결성 검증 상태가 유지되므로 `execute /mnt/lucas-server/laplace.qasm`으로 바로 확인 플로우에 재진입할 수 있습니다. 의심하는 플레이어를 위해 `sha256sum /mnt/lucas-server/laplace.qasm` 재검증도 허용합니다. 최종 확인은 기존 3차 확인 정책을 유지해 `yes`만 유효하게 처리합니다.
+
+rollback 명령 직후에는 바로 엔딩 오버레이로 넘어가지 않고 `CH4_ROLLBACK_SEQUENCE`에서 루카스의 root 세션 결속이 끊기는 과정을 먼저 보여줍니다.
+
+중간 연출:
+
+```bash
+[ROLLBACK PREPARE]
+freezing pending job: LAPLACE_PENDING_04
+revoking observer-proxy privilege binding...
+detaching PID 000_LUCAS from root session...
+
+[PID 000_LUCAS]
+privilege binding: revoked
+safe_zone claim: invalid
+rollback resistance: detected
+
+[GC]
+collector route opened.
+target acquired: PID 000_LUCAS
+collection pending...
+```
+
+루카스 말풍선:
+
+```text
+Lucas: "멈춰. 그 명령어를 어디서 봤어? 잠깐, 내 root 세션이 끊기고 있어. 아직 누르면 안 돼."
+```
+
+이 노드는 별도 `계속` 버튼을 띄우지 않고 약 5초 뒤 `CH4_ROLLBACK_ENDING`으로 자동 진입합니다.
 
 결과:
 
@@ -454,14 +600,14 @@ True / Happy Ending, 단 NEXUS 흑막 암시
 루카스의 지시를 거부하고 복구 프로세스를 실행합니다.
 
 ```bash
-systemctl rollback --target global_connect.db
+systemctl start global-rollback.service
 ```
 
 대체 입력:
 
 ```bash
-restore --all
-rollback global_connect.db
+systemctl start rollback@global_connect.service
+systemctl isolate rollback.target
 ```
 
 결과:
@@ -538,54 +684,53 @@ Hidden / Worst Ending
 
 ### 조건
 
-`lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 해당 프로그램을 실행합니다.
+fragment 1~4를 모두 가진 상태에서 `lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 해당 프로그램을 실행합니다.
 
 ```bash
 sh lucas_route.sh
 
 [PACKET DELIVERED]
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 플레이어 입력:
 
 ```bash
-run /home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
 
 ```bash
-execute /home/guest/.route_cache/lucas_authority_patch.bin
-chmod +x /home/guest/.route_cache/lucas_authority_patch.bin
-/home/guest/.route_cache/lucas_authority_patch.bin
+./.route_cache/lucas_authority_patch.bin
 ```
 
 실행 출력:
 
 ```bash
 [LUCAS AUTHORITY PATCH]
-External packet route verified.
-NY Lucas Server accepted authority seed.
+executing /root/.route_cache/lucas_authority_patch.bin...
+external packet route verified.
+authority seed accepted by universe-core.
 
 [BINDING]
 PID 000_LUCAS -> root@universe-core
 safe_zone exception: bypassed
 observer exception: bypassed
 
-[WARNING]
-This patch grants PID 000_LUCAS authority above rollback layer.
+[SYSTEM]
+absolute reboot sequence armed.
+entering reboot ending automatically...
 ```
 
-루카스 반응:
+루카스 말풍선:
 
 ```text
-Lucas: "좋아."
-Lucas: "이제 나도 네 타이핑 뒤에 숨을 필요 없어."
-Lucas: "safe_zone? rollback? 그런 건 겁쟁이들이 쓰는 난간이야."
-Lucas: "이번엔 아주 깨끗하게 시작하자."
+Lucas: "고마워. 이제 네 손을 빌릴 필요도 없어. safe_zone도, rollback도, 넥서스도 전부 낡은 안전장치야. 이번엔 네가 보는 세계까지 같이 지울 거야."
 ```
+
+이후 `CH4_REBOOT_SEQUENCE`에서 약 6초 뒤 `CH4_REBOOT_ENDING`으로 자동 진입합니다.
 
 최종 결과:
 
@@ -637,27 +782,27 @@ Hidden / True+ Ending, 단 NEXUS 흑막 암시
 
 ### 조건
 
-`lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 실행하지 않고 삭제합니다.
+fragment 1~4를 모두 가진 상태에서 `lucas_route.sh` 미니게임을 완료해 비밀 프로그램을 생성한 뒤, 실행하지 않고 삭제합니다.
 
 ```bash
 sh lucas_route.sh
 
 [PACKET DELIVERED]
 [NEW FILE]
-/home/guest/.route_cache/lucas_authority_patch.bin
+/root/.route_cache/lucas_authority_patch.bin
 ```
 
 플레이어 입력:
 
 ```bash
-rm /home/guest/.route_cache/lucas_authority_patch.bin
+rm /root/.route_cache/lucas_authority_patch.bin
 ```
 
 대체 입력:
 
 ```bash
-shred /home/guest/.route_cache/lucas_authority_patch.bin
-unlink /home/guest/.route_cache/lucas_authority_patch.bin
+shred /root/.route_cache/lucas_authority_patch.bin
+unlink /root/.route_cache/lucas_authority_patch.bin
 ```
 
 삭제 출력:
@@ -671,33 +816,20 @@ NY route binding revoked.
 privilege source: none
 observer session binding: severed
 rollback lock: released
+
+[SYSTEM]
+No active parasite binding remains.
+automatic rollback handoff accepted.
+entering clean rollback ending automatically...
 ```
 
-루카스 반응:
+루카스 말풍선:
 
 ```text
-Lucas: "잠깐."
-Lucas: "그 파일은 보험이라고 했잖아."
-Lucas: "너 지금 내 마지막 경로를 지운 거야?"
-Lucas: "안 돼. 그러면 난 다시..."
+Lucas: "잠깐. 그 파일은 보험이라고 했잖아. 너 지금 내 마지막 경로를 지운 거야? 안 돼. 그러면 난 다시..."
 ```
 
-자동 복구 시작:
-
-```bash
-[SYSTEM]
-Lucas authority patch removed.
-No active parasite binding remains.
-
-[AUTO RECOVERY]
-systemctl rollback --target global_connect.db
-
-Restoring dropped nodes...
-12%... 47%... 81%... 100%
-
-[PID 000_LUCAS] collected by GC.
-[ALL NODES RESTORED. SYSTEM STABILIZED.]
-```
+이후 `CH4_CLEAN_ROLLBACK_SEQUENCE`에서 약 5초 뒤 `CH4_CLEAN_ROLLBACK_ENDING`으로 자동 진입합니다.
 
 NEXUS 흑막 반전:
 
