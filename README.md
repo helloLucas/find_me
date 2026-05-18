@@ -173,3 +173,54 @@ graph TD
    ```
 
 ---
+
+## 👥 팀원 소개
+
+<div align="center">
+  <table width="100%">
+    <tr>
+      <!-- 1. 김아린 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/ArinKim" target="_blank">
+          <img src="https://github.com/ArinKim.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="김아린 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">김아린</strong>
+      </td>
+      <!-- 2. 민웅기 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/wcharibo" target="_blank">
+          <img src="https://github.com/wcharibo.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="민웅기 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">민웅기</strong>
+      </td>
+      <!-- 3. 박서현 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/sseooh" target="_blank">
+          <img src="https://github.com/sseooh.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="박서현 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">박서현</strong>
+      </td>
+      <!-- 4. 유동훈 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/dbehdgns1215" target="_blank">
+          <img src="https://github.com/dbehdgns1215.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="유동훈 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">유동훈</strong>
+      </td>
+      <!-- 5. 이유진 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/yuj130605" target="_blank">
+          <img src="https://github.com/yuj130605.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="이유진 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">이유진</strong>
+      </td>
+      <!-- 6. 이재용 -->
+      <td align="center" width="16.6%">
+        <a href="https://github.com/jaeeyong" target="_blank">
+          <img src="https://github.com/jaeeyong.png" width="90px" style="border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.3); padding: 3px;" alt="이재용 Avatar">
+        </a><br/>
+        <strong style="font-size: 14px; display: inline-block; margin-top: 15px; margin-bottom: 10px;">이재용</strong>
+      </td>
+    </tr>
+  </table>
+</div>
