@@ -4,6 +4,13 @@ Source:
 
 - `presentation/monitoring_data/elk/for_presentations.csv`
 
+## Scope note
+
+이 문서는 Kibana Discover에서 export한 `for_presentations.csv` 부분 데이터를 재집계한 결과다. 최종 발표의 대표 ELK 수치는 더 넓은 범위의 Kibana 집계인 `presentation/monitoring_data/elk/kibana.md`와 `presentation/monitoring_data/elk/kibana-analysis.md`를 기준으로 사용한다.
+
+- 대표 수치: `kibana.md` 기준 raw logs 167,608건, structured game events 9,476건, users 159명
+- 세부 명령/노드 샘플: 이 문서의 CSV 기준 5,729건 분석 사용
+
 ## Verdict
 
 이 파일은 발표에서 "실제로 유저가 플레이했고, 어느 지점에서 막혔는지"를 설명하는 데 가장 직접적으로 쓸 수 있는 데이터다.

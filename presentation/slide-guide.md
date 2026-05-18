@@ -20,7 +20,7 @@
 | Mattermost report flow | `docs/mm_hint/mattermost_report_flow.md` | 10, 11, 12 | 설계/흐름 근거. 실제 리포트 수치 필요 |
 | GA4 | `presentation/monitoring_data/front_monitor/ga4_report.csv` 확보 | 11, 12, 18 | 요약 지표는 사용 가능. 이벤트/퍼널 상세는 추가 필요 |
 | Clarity | `presentation/monitoring_data/front_monitor/clarity_dashboard.csv` 확보 | 11, 12, 17, 18 | 대시보드 요약은 사용 가능. heatmap/recording 이미지는 추가 권장 |
-| 관리자 대시보드/ELK | `presentation/monitoring_data/elk/for_presentations.csv` 확보 | 11, 12, 17, 18 | 플레이 행동, 실패 명령어, 병목 노드 분석 가능 |
+| 관리자 대시보드/ELK | `presentation/monitoring_data/elk/kibana.md`, `for_presentations.csv` 확보 | 11, 12, 17, 18 | Kibana 전체 집계는 대표 수치, CSV는 실패 명령 세부 분석 |
 
 ---
 
@@ -267,18 +267,19 @@ git 근거:
 
 필요 데이터:
 - ELK export
-  - total action rows: 5,729
-  - known unique users: 88
-  - action session keys: 91
-  - success/fail/error: 3,871 / 1,783 / 75
-  - command action: 4,828, 전체의 84.27%
-  - command success rate: 62.78%
-  - hint_requested: 전부 false
+  - raw logs: 167,608
+  - structured game events: 9,476
+  - user_id 기준 users: 159
+  - action session keys: 159
+  - success/fail/error: 6,698 / 2,675 / 103
+  - command action: 7,182, 전체의 75.8%
+  - command success/fail/error: 4,492 / 2,675 / 15
   - 주요 병목:
-    - `CH2_GC_SCAN_ALERT`: 517 actions, 225 fails, fail rate 43.5%
-    - `CH1_TERMINAL_SSH_READY`: 117 actions, 95 fails, fail rate 81.2%
-    - `CH2_FILE_LIST`: 216 actions, 123 fails, fail rate 56.9%
-    - `CH4_GATE_TRACE_VIEWED`: 307 actions, 188 fails, fail rate 61.2%
+    - `CH2_GC_SCAN_ALERT`: 991 actions, 397 fail/error, fail/error rate 40.1%
+    - `CH2_LAPLACE_MISSION_READY`: 816 actions, 295 fail/error, fail/error rate 36.2%
+    - `CH4_GATE_TRACE_VIEWED`: 307 actions, 188 fail/error, fail/error rate 61.2%
+    - `CH2_FILE_LIST`: 390 actions, 187 fail/error, fail/error rate 47.9%
+    - `CH1_TERMINAL_SSH_READY`: 216 actions, 163 fail/error, fail/error rate 75.5%
   - 반복 실패 유형: 오타, 파일 실행 위치 혼동, 경로 이동 혼동, SSH 접속 형식 혼동
 
 Mattermost 계산 기준:
@@ -292,7 +293,8 @@ Mattermost 계산 기준:
 발표자 노트:
 - 유저가 막히는 지점을 감으로 찾지 않고, 실패 이벤트와 힌트 요청으로 보려고 했다.
 - ELK 기준으로 실제 실패 노드와 실패 명령어를 확인할 수 있다.
-- 단, export 범위는 2026-05-11 23:43:32 -> 2026-05-18 16:09:51로 GA4/AWS와 시작일이 다르다.
+- 대표 ELK 수치는 Kibana 전체 집계 기준이며, CSV export는 세부 명령 패턴을 확인하는 보조 자료다.
+- Kibana 구조화 이벤트 범위는 2026-04-30 05:19:29 -> 2026-05-18 08:09:16 UTC다.
 
 ---
 
@@ -528,17 +530,18 @@ Grafana/node_exporter sample:
   - CLS: 0.007
   - 추가 필요: 주요 heatmap screenshot, recording issue screenshot
 - 관리자 대시보드/ELK
-  - total action rows: 5,729
-  - known unique users: 88
-  - action session keys: 91
-  - success rate: 67.57%
-  - fail rate: 31.12%
-  - error rate: 1.31%
-  - week01 completion from logs: 18 / 77 known users, 23.4%
-  - week02 completion from logs: 4 / 19 known users, 21.1%
-  - week03 completion from logs: 7 / 17 known users, 41.2%
-  - week04 completion from logs: 3 / 4 known users, 75.0%, 표본 작음
-  - 가장 많이 막힌 노드 3개: `CH2_GC_SCAN_ALERT`, `CH4_GATE_TRACE_VIEWED`, `CH4_LAPLACE_ABORTED_DIR_DETAIL`
+  - raw logs: 167,608
+  - structured game events: 9,476
+  - user_id 기준 users: 159
+  - action session keys: 159
+  - success rate: 70.7%
+  - fail rate: 28.2%
+  - error rate: 1.1%
+  - week01: 2,390 events, 151 users, success 89.7%, fail 7.1%
+  - week02: 3,452 events, 54 users, success 61.4%, fail 38.2%
+  - week03: 1,992 events, 22 users, success 74.7%, fail 24.7%
+  - week04: 1,642 events, 7 users, success 57.6%, fail 42.3%, max fail count 34
+  - 가장 많이 막힌 노드: `CH2_GC_SCAN_ALERT`, `CH2_LAPLACE_MISSION_READY`, `CH4_GATE_TRACE_VIEWED`, `CH2_FILE_LIST`
   - 반복 실패 유형: 오타, 파일 실행 위치 혼동, 경로 이동 혼동, SSH 접속 형식 혼동
 
 현재 이미 넣을 수 있는 운영 근거:
@@ -552,17 +555,19 @@ Grafana/node_exporter sample:
 - GA4 events: 17,951
 - Clarity sessions: 134
 - Clarity unique users: 61
-- ELK action logs: 5,729
-- ELK known users: 88
-- ELK action session keys: 91
+- ELK raw logs: 167,608
+- ELK structured game events: 9,476
+- ELK users: 159
+- ELK action session keys: 159
 
 주의:
 - 이 장표에서 ALB requests를 "유저 수"처럼 쓰면 안 된다.
 - 유저 수는 GA4/관리자 대시보드의 unique user/session 기준으로 확정한다.
 - GA4와 Clarity의 날짜 범위가 다르다. GA4는 2026-05-04 -> 2026-05-18, Clarity는 2026-05-01 -> 2026-05-18이다.
 - Clarity 스마트 이벤트는 event count가 아니라 해당 이벤트가 발생한 session count로 읽는다.
-- ELK export는 2026-05-11 23:43:32 -> 2026-05-18 16:09:51 범위다. 전체 운영 기간 전체 완료율로 단정하면 안 된다.
-- ELK `session_id`는 `sess_user_{id}` 형태라 일반적인 웹 세션과 완전히 같지 않다. 발표에서는 action session key라고 표현한다.
+- ELK 대표 수치는 `kibana.md` 기준 2026-04-30 05:19:29 -> 2026-05-18 08:09:16 UTC 범위다.
+- `for_presentations.csv`의 5,729건은 더 좁은 부분 export이므로 대표 수치로 쓰지 않는다.
+- ELK `session_id`는 일반적인 브라우저 세션과 완전히 같지 않을 수 있다. 발표에서는 action session key라고 표현한다.
 
 발표자 노트:
 - 결과 장표는 발표의 결론이므로 숫자가 확정된 뒤 마지막에 채운다.
