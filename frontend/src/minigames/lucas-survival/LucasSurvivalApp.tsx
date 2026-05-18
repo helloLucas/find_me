@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fragmentApi } from '../../shared/api/fragmentApi';
+import { audioManager } from '../../features/story-runtime/audioManager';
 import {
   BASE_PLAYER_STATS,
   CANVAS_HEIGHT,
@@ -36,6 +36,8 @@ import type {
   SkillId,
   UpgradeCard,
 } from './types';
+
+const LUCAS_SURVIVAL_BGM_URL = 'https://djbod0nv85jx9.cloudfront.net/audios/minigame_5_v1.mp3';
 
 type UnitSpriteKey =
   | 'player'
@@ -1208,13 +1210,15 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const spriteStoreRef = useRef<SpriteStore>({});
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioMasterRef = useRef<GainNode | null>(null);
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const previousBgmNameRef = useRef<string | null>(null);
+  const hasSuspendedStoryBgmRef = useRef(false);
   const sfxThrottleRef = useRef<Record<string, number>>({});
   const sfxMutedRef = useRef(false);
   const rafRef = useRef<number>(0);
   const lastMsRef = useRef<number>(0);
   const keysRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
-  const hasRecordedClearRef = useRef(false);
   const timelineRef = useRef({
     mid1: false,
     mid2: false,
@@ -1222,7 +1226,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     final: false,
     startTextUntil: 0,
   });
-
   const [hud, setHud] = useState<HudState>({
     timerText: '05:00',
     hpPercent: 100,
@@ -1244,16 +1247,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState<'skills' | 'items'>('skills');
 
-  useEffect(() => {
-    if (hud.status !== 'clear' || hasRecordedClearRef.current || isPractice) return;
-
-    hasRecordedClearRef.current = true;
-    void fragmentApi.acquireFragment('4').catch((error) => {
-      hasRecordedClearRef.current = false;
-      console.error('Failed to record Lucas survival clear:', error);
-    });
-  }, [hud.status, isPractice]);
-
   const ensureAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
     if (!audioContextRef.current) {
@@ -1270,6 +1263,42 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
       void audioContextRef.current.resume();
     }
     return audioContextRef.current;
+  }, []);
+
+  const playSurvivalBgm = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!hasSuspendedStoryBgmRef.current) {
+      previousBgmNameRef.current = audioManager.getCurrentBgmName();
+      audioManager.stopBgm();
+      hasSuspendedStoryBgmRef.current = true;
+    }
+
+    if (!bgmRef.current) {
+      const audio = new Audio(LUCAS_SURVIVAL_BGM_URL);
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.volume = 0.42;
+      bgmRef.current = audio;
+    }
+
+    bgmRef.current.play().catch((error) => {
+      console.warn('Lucas Survival BGM autoplay blocked:', error);
+    });
+  }, []);
+
+  const pauseSurvivalBgm = useCallback((reset = false) => {
+    const audio = bgmRef.current;
+    if (!audio) return;
+
+    audio.pause();
+    if (reset) {
+      try {
+        audio.currentTime = 0;
+      } catch {
+        // Seeking can fail before metadata is available in some browsers.
+      }
+    }
   }, []);
 
   const playSfx = useCallback((kind: 'shoot' | 'hit' | 'levelup' | 'select' | 'boss' | 'pickup') => {
@@ -1371,11 +1400,12 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
       result: null,
     });
     void ensureAudio();
+    playSurvivalBgm();
     playSfx('select');
     lastMsRef.current = performance.now();
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(loop);
-  }, [appendCombatLog, ensureAudio, playSfx]);
+  }, [appendCombatLog, ensureAudio, playSfx, playSurvivalBgm, isPractice]);
 
   const stopGame = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -4378,6 +4408,22 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     };
   }, [draw]);
 
+  useEffect(() => {
+    if (hud.status === 'clear' || hud.status === 'failed') {
+      pauseSurvivalBgm();
+    }
+  }, [hud.status, pauseSurvivalBgm]);
+
+  useEffect(() => {
+    return () => {
+      pauseSurvivalBgm(true);
+      bgmRef.current = null;
+
+      if (hasSuspendedStoryBgmRef.current && previousBgmNameRef.current) {
+        audioManager.playBgm(previousBgmNameRef.current);
+      }
+    };
+  }, [pauseSurvivalBgm]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -4688,7 +4734,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
                 style={{ background: 'linear-gradient(to right, #10b981, #059669)', borderColor: '#34d399' }}
                 onClick={() => navigate('/minigames')}
               >
-                RETURN TO LOBBY
+                BACK TO LOBBY
               </button>
             )}
           </div>
@@ -4697,7 +4743,7 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     }
 
     return null;
-  }, [applyCard, cards, hud, selectedCardIndex, startGame]);
+  }, [applyCard, cards, hud, selectedCardIndex, startGame, isPractice, navigate]);
 
   return (
     <div className="ls-root">
@@ -4886,13 +4932,6 @@ export function LucasSurvivalApp({ isPractice }: { isPractice?: boolean }) {
     </div>
   );
 }
-
-
-
-
-
-
-
 
 
 

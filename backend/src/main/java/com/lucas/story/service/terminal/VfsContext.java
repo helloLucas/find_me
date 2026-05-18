@@ -226,14 +226,20 @@ public class VfsContext {
       return parseNode(path, keyedOverlayNode);
     }
 
-    // 4. 오버레이에 없으면 정적 VFS 정의 파일(vfs.json)에서 조회합니다.
+    // 4. lucas-server가 마운트된 상태라면 /mnt/lucas-server 하위 경로를 /home/guest의 mirror로 해석합니다.
+    JsonNode mountedLucasServerNode = findMountedLucasServerNode(path);
+    if (mountedLucasServerNode != null) {
+      return parseNode(path, mountedLucasServerNode);
+    }
+
+    // 5. 오버레이에 없으면 정적 VFS 정의 파일(vfs.json)에서 조회합니다.
     JsonNode staticNode = staticVfs == null ? null : staticVfs.path("nodes").path(path);
     if (staticNode != null && !staticNode.isMissingNode()) {
       // 정적 노드 정보를 파싱하여 반환합니다.
       return parseNode(path, staticNode);
     }
 
-    // 5. 어디에도 존재하지 않는 경로면 null을 반환합니다.
+    // 6. 어디에도 존재하지 않는 경로면 null을 반환합니다.
     return null;
   }
 
@@ -262,16 +268,19 @@ public class VfsContext {
               });
     }
 
-    // 2. 배열형 overlay의 createdNodes를 반영합니다.
+    // 2. lucas-server가 마운트된 상태면 /home/guest 직계 하위 요소들을 /mnt/lucas-server 하위로 mirror합니다.
+    mergeMountedLucasServerChildren(childrenMap, path);
+
+    // 3. 배열형 overlay의 createdNodes를 반영합니다.
     mergeOverlayArrayChildren(childrenMap, path, "createdNodes");
 
-    // 3. 배열형 overlay의 modifiedNodes를 반영합니다.
+    // 4. 배열형 overlay의 modifiedNodes를 반영합니다.
     mergeOverlayArrayChildren(childrenMap, path, "modifiedNodes");
 
-    // 4. 이전 keyed overlay 구조도 호환 처리합니다.
+    // 5. 이전 keyed overlay 구조도 호환 처리합니다.
     mergeKeyedOverlayChildren(childrenMap, path);
 
-    // 5. removedPaths에 있는 직계 하위 요소를 제거합니다.
+    // 6. removedPaths에 있는 직계 하위 요소를 제거합니다.
     removeOverlayChildren(childrenMap, path);
 
     childrenMap.entrySet().removeIf(entry -> isPathHiddenByServerNamespace(entry.getKey()));
@@ -290,6 +299,92 @@ public class VfsContext {
 
   private boolean isUniverseCoreShell() {
     return "root".equals(getPromptUser()) && "universe-core".equals(getPromptHost());
+  }
+
+  private JsonNode findMountedLucasServerNode(String path) {
+    if (!isLucasServerMounted() || !isLucasServerPath(path)) {
+      return null;
+    }
+
+    String sourcePath = toLucasServerSourcePath(path);
+    if (sourcePath == null) {
+      return null;
+    }
+
+    JsonNode staticNode = staticVfs == null ? null : staticVfs.path("nodes").path(sourcePath);
+    return staticNode != null && !staticNode.isMissingNode() ? staticNode : null;
+  }
+
+  private void mergeMountedLucasServerChildren(Map<String, VfsNode> childrenMap, String path) {
+    if (!isLucasServerMounted() || !"/mnt/lucas-server".equals(path)) {
+      return;
+    }
+
+    JsonNode nodes = staticVfs == null ? null : staticVfs.path("nodes");
+    if (nodes == null || !nodes.isObject()) {
+      return;
+    }
+
+    nodes
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              String sourcePath = entry.getKey();
+              if (!isDirectChild("/home/guest", sourcePath)) {
+                return;
+              }
+
+              String mountedPath = toMountedLucasServerPath(sourcePath);
+              childrenMap.put(mountedPath, parseNode(mountedPath, entry.getValue()));
+            });
+  }
+
+  private boolean isLucasServerMounted() {
+    return hasOverlayPath("/mnt/lucas-server/laplace.qasm");
+  }
+
+  private boolean hasOverlayPath(String path) {
+    return hasOverlayArrayPath(path, "createdNodes") || hasOverlayArrayPath(path, "modifiedNodes");
+  }
+
+  private boolean hasOverlayArrayPath(String path, String fieldName) {
+    if (vfsOverlay == null || vfsOverlay.isNull()) {
+      return false;
+    }
+
+    JsonNode array = vfsOverlay.path(fieldName);
+    if (!array.isArray()) {
+      return false;
+    }
+
+    for (JsonNode item : array) {
+      if (path.equals(item.path("path").asText(null))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private boolean isLucasServerPath(String path) {
+    return "/mnt/lucas-server".equals(path) || path.startsWith("/mnt/lucas-server/");
+  }
+
+  private String toLucasServerSourcePath(String mountedPath) {
+    if ("/mnt/lucas-server".equals(mountedPath)) {
+      return "/home/guest";
+    }
+    if (mountedPath.startsWith("/mnt/lucas-server/")) {
+      return "/home/guest" + mountedPath.substring("/mnt/lucas-server".length());
+    }
+    return null;
+  }
+
+  private String toMountedLucasServerPath(String sourcePath) {
+    if ("/home/guest".equals(sourcePath)) {
+      return "/mnt/lucas-server";
+    }
+    return "/mnt/lucas-server" + sourcePath.substring("/home/guest".length());
   }
 
   /**

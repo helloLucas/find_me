@@ -17,6 +17,7 @@ export type ChapterStatusValue = typeof CHAPTER_STATUS[keyof typeof CHAPTER_STAT
 
 export interface Chapter {
     code: string;
+    uriHash: string;
     title: string;
     status: ChapterStatusValue;
 }

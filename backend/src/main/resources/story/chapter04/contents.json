@@ -180,7 +180,7 @@
     "#!/bin/sh",
     "# route packet: YUSEONG_METEOR -> NY_LUCAS_SERVER",
     "# detached minigame process",
-    "# reward: /home/guest/.route_cache/lucas_authority_patch.bin",
+    "# reward: /root/.route_cache/lucas_authority_patch.bin",
     "",
     "echo \"[LUCAS ROUTE PROCESS]\"",
     "echo \"Launching detached minigame process...\""

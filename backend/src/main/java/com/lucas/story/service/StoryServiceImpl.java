@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lucas.chapter.entity.Chapter;
 import com.lucas.chapter.repository.ChapterRepository;
+import com.lucas.chapter.service.ChapterService;
 import com.lucas.ending.service.EndingService;
 import com.lucas.fragment.repository.UserFragmentRepository;
 import com.lucas.global.exception.CustomException;
@@ -171,6 +172,7 @@ public class StoryServiceImpl implements StoryService {
   private final StoryTransitionRepository storyTransitionRepository;
   private final UserStoryProgressRepository userStoryProgressRepository;
   private final UserChapterProgressRepository userChapterProgressRepository;
+  private final ChapterService chapterService;
   private final EndingService endingService;
   private final RecentActionService recentActionService;
   private final TerminalCommandService terminalCommandService;
@@ -242,14 +244,31 @@ public class StoryServiceImpl implements StoryService {
   @Override
   @Transactional
   public StoryNodeResponseDto startStory(Long userId, StartStoryRequestDto request) {
+    String uriHash = request.getUriHash();
+    String chapterCode = null;
+
+    // 모든 챕터를 조회해서 해시값이 일치하는 것을 찾음
+    List<Chapter> allChapters = chapterRepository.findAll();
+    for (Chapter c : allChapters) {
+      if (chapterService.generateUriHash(c.getCode()).equals(uriHash)) {
+        chapterCode = c.getCode();
+        break;
+      }
+    }
+
+    if (chapterCode == null) {
+      throw new CustomException(ErrorCode.E3001);
+    }
+
     // 요청된 챕터 코드로 챕터 조회
+    final String finalChapterCode = chapterCode;
     Chapter chapter =
         chapterRepository
-            .findByCode(request.getChapterCode())
+            .findByCode(finalChapterCode)
             .orElseThrow(() -> new CustomException(ErrorCode.E3001));
 
     // 해당 챕터의 첫 번째 노드를 ID 순으로 조회
-    StoryNode firstNode = findStartNode(request.getChapterCode());
+    StoryNode firstNode = findStartNode(finalChapterCode);
 
     User user = getAuthenticatedUser(userId);
     UserStoryProgress progress = userStoryProgressRepository.findById(user.getId()).orElse(null);
@@ -1040,6 +1059,10 @@ public class StoryServiceImpl implements StoryService {
     // rule이 없으면 신규 server_rule을 판정할 수 없다.
     if (rule == null || rule.isBlank()) {
       // rule 누락은 매칭 실패로 처리한다.
+      return false;
+    }
+
+    if (config.path("nudgeOnly").asBoolean(false)) {
       return false;
     }
 
@@ -2471,7 +2494,17 @@ public class StoryServiceImpl implements StoryService {
       return false;
     }
 
-    if (config.has("acceptedForms") || config.has("command")) {
+    List<String> acceptedValues = getTextArrayField(config, "acceptedValues");
+    if (!acceptedValues.isEmpty() && !acceptedValues.contains(request.getInputValue().trim())) {
+      return false;
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      if (!request.getInputValue().matches(commandRegex)) {
+        return false;
+      }
+    } else if (config.has("acceptedForms") || config.has("command")) {
       if (!matchesNormalizedCommandRule(config, request, latestSnapshot)) {
         return false;
       }
@@ -5326,6 +5359,7 @@ public class StoryServiceImpl implements StoryService {
     String nudgeMessage = findNudgeForCommand(currentNode, command, latestSnapshot);
     if (nudgeMessage != null) {
       String cwd = latestSnapshot.path("terminal").path("cwd").asText("~");
+      String prompt = buildPromptFromSnapshot(latestSnapshot, profile, cwd);
 
       // 기존에는 "stay"와 함께 터미널 에러(stderr)로 넛지를 출력했으나,
       // 유저 피드백에 따라 루카스의 말풍선으로 출력되도록 가짜 "move" 응답을 생성합니다.
@@ -5382,7 +5416,7 @@ public class StoryServiceImpl implements StoryService {
                   .stdout(List.of())
                   .stderr(List.of())
                   .cwd(cwd)
-                  .prompt("guest@lucas-server:" + cwd + "$ ")
+                  .prompt(prompt)
                   .resultCode("NUDGE")
                   .build())
           .build();
@@ -5505,18 +5539,9 @@ public class StoryServiceImpl implements StoryService {
       String nudge = getTextField(config, "nudgeOnFlagMiss");
       if (nudge == null || nudge.isBlank()) continue;
 
-      // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
-      String expectedCommand = getTextField(config, "command");
-      if (expectedCommand == null || !command.command().equals(expectedCommand)) continue;
+      if (!matchesCwdRequirement(config, latestSnapshot)) continue;
 
-      // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
-      String expectedPath = getTextField(config, "resolvedPath");
-      if (expectedPath != null) {
-        String rawPath = firstNonOptionArgument(command.args());
-        if (rawPath == null) continue;
-        String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
-        if (!expectedPath.equals(actualPath)) continue;
-      }
+      if (!matchesNudgeCommandPattern(config, command, latestSnapshot)) continue;
 
       // 커맨드 패턴은 매칭됨. 플래그 조건이 실패하면 near-miss 확정이다.
       if (!matchesFlagRequirements(config, latestSnapshot)) {
@@ -5526,6 +5551,82 @@ public class StoryServiceImpl implements StoryService {
 
     // near-miss가 없으면 일반 터미널 실행으로 진행한다.
     return null;
+  }
+
+  private boolean matchesNudgeCommandPattern(
+      JsonNode config, ParsedCommand command, JsonNode latestSnapshot) {
+    if (config == null || config.isNull() || command == null) {
+      return false;
+    }
+
+    JsonNode acceptedForms = config.get("acceptedForms");
+    if (acceptedForms != null && acceptedForms.isArray()) {
+      List<String> tokens = new ArrayList<>();
+      tokens.add(command.command());
+      tokens.addAll(command.args());
+      for (JsonNode acceptedForm : acceptedForms) {
+        if (matchesCommandForm(acceptedForm, tokens)) {
+          return true;
+        }
+      }
+    }
+
+    String commandRegex = getTextField(config, "commandRegex");
+    if (commandRegex != null && !commandRegex.isBlank()) {
+      String rawCommand = command.command() + " " + String.join(" ", command.args());
+      try {
+        return Pattern.compile(commandRegex, Pattern.DOTALL).matcher(rawCommand.trim()).matches();
+      } catch (PatternSyntaxException e) {
+        log.warn("Invalid nudge commandRegex: {}", commandRegex, e);
+        return false;
+      }
+    }
+
+    // 커맨드 이름이 다르면 이 transition의 대상이 아니다.
+    String expectedCommand = getTextField(config, "command");
+    if (expectedCommand == null || !command.command().equals(expectedCommand)) {
+      return false;
+    }
+
+    // resolvedPath가 있으면 대상 파일 경로도 일치해야 한다.
+    String expectedPath = getTextField(config, "resolvedPath");
+    if (expectedPath != null) {
+      String rawPath = firstNonOptionArgument(command.args());
+      if (rawPath == null) return false;
+      String actualPath = resolveSnapshotPath(latestSnapshot, rawPath);
+      return expectedPath.equals(actualPath);
+    }
+
+    return true;
+  }
+
+  private String buildPromptFromSnapshot(
+      JsonNode snapshot, TerminalChapterProfile profile, String fallbackCwd) {
+    JsonNode terminal = snapshot.path("terminal");
+    String cwd = terminal.path("cwd").asText(fallbackCwd);
+    if (cwd == null || cwd.isBlank()) {
+      cwd = profile.defaultCwd();
+    }
+
+    String promptUser = terminal.path("promptUser").asText(profile.promptUser());
+    String promptHost = terminal.path("promptHost").asText(profile.promptHost());
+    String displayCwd = toPromptDisplayCwd(cwd, profile.defaultCwd());
+    String promptSymbol = "root".equals(promptUser) ? "#" : "$";
+
+    return promptUser + "@" + promptHost + ":" + displayCwd + promptSymbol;
+  }
+
+  private String toPromptDisplayCwd(String cwd, String defaultCwd) {
+    if (cwd == null || cwd.isBlank()) {
+      return "~";
+    }
+    if (cwd.equals(defaultCwd)) {
+      return "~";
+    }
+    if (cwd.startsWith(defaultCwd + "/")) {
+      return "~" + cwd.substring(defaultCwd.length());
+    }
+    return cwd;
   }
 
   /**

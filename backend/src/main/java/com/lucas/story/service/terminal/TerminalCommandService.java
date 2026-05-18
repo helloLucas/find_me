@@ -96,61 +96,7 @@ public class TerminalCommandService {
     // switch 문을 사용하여 명령어별로 실제 터미널 환경과 유사한 표준 에러 메시지나 더미 결과를 생성합니다.
     switch (cmd) {
       case "nmap":
-        if (args.contains("-h") || args.contains("--help")) {
-          return TerminalResult.builder()
-              .stdout(
-                  Arrays.asList(
-                      "Usage: nmap [Scan Type(s)] [Options] {target specification}",
-                      "  -p <port ranges>: Only scan specified ports",
-                      "  -v: Increase verbosity level",
-                      "  -h: Display this help summary page"))
-              .cwd(cwd)
-              .prompt(buildPrompt(cwd, vfs))
-              .resultCode("SUCCESS")
-              .build();
-        }
-        if (args.isEmpty()) {
-          return buildErrorResult(
-              cwd, vfs, "nmap: missing host or network. Try \"nmap -h\" for help");
-        }
-        String nmapTarget = args.get(args.size() - 1);
-        boolean versionScan =
-            args.stream().anyMatch(arg -> "-sV".equals(arg) || "--version-all".equals(arg));
-        if (isUniverseCoreTarget(nmapTarget)) {
-          List<String> scanLines = new ArrayList<>();
-          scanLines.add("Starting Nmap 7.93 ( https://nmap.org )");
-          scanLines.add("Nmap scan report for " + nmapTarget + " (10.2.2.2)");
-          scanLines.add("Host is up (0.00004s latency).");
-          scanLines.add("Not shown: 999 filtered ports");
-          scanLines.add(versionScan ? "PORT   STATE SERVICE VERSION" : "PORT   STATE SERVICE");
-          scanLines.add(
-              versionScan ? "22/tcp open  ssh     SSH-1.2 universe bridge" : "22/tcp open  ssh");
-          scanLines.add("");
-          scanLines.add("Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds");
-          return TerminalResult.builder()
-              .stdout(scanLines)
-              .cwd(cwd)
-              .prompt(buildPrompt(cwd, vfs))
-              .resultCode("SUCCESS")
-              .build();
-        }
-        return TerminalResult.builder()
-            .stdout(
-                Arrays.asList(
-                    "Starting Nmap 7.93 ( https://nmap.org )",
-                    "Nmap scan report for localhost (127.0.0.1)",
-                    "Host is up (0.00007s latency).",
-                    "Not shown: 997 closed ports",
-                    "PORT     STATE SERVICE",
-                    "22/tcp   open  ssh",
-                    "8080/tcp open  http",
-                    "9091/tcp open  unknown",
-                    "",
-                    "Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds"))
-            .cwd(cwd)
-            .prompt(buildPrompt(cwd, vfs))
-            .resultCode("SUCCESS")
-            .build();
+        return handleNmap(command, cwd, vfs);
 
       case "sshnuke":
         if (args.contains("-h") || args.contains("--help")) {
@@ -168,6 +114,7 @@ public class TerminalCommandService {
 
         String sshnukeTarget = findSshnukeTarget(args);
         String rootPassword = findSshnukeRootPassword(args);
+        boolean invalidRootPasswordSyntax = hasInvalidSshnukeRootPasswordSyntax(args);
 
         if (sshnukeTarget == null) {
           return buildErrorResult(
@@ -185,6 +132,13 @@ public class TerminalCommandService {
               .prompt(buildPrompt(cwd, vfs))
               .resultCode("ERROR")
               .build();
+        }
+
+        if (invalidRootPasswordSyntax) {
+          return buildErrorResult(
+              cwd,
+              vfs,
+              "sshnuke: invalid -rootpw syntax. Use -rootpw=\"<seed>\" or -rootpw <seed>");
         }
 
         if (rootPassword == null) {
@@ -831,6 +785,16 @@ public class TerminalCommandService {
         "mount: /mnt/lucas-server: not mounted yet; use the current root session prompt to attach lucas-server");
   }
 
+  private boolean isUnmountedLucasServerPath(String targetPath, VfsContext vfs) {
+    if (targetPath == null) {
+      return false;
+    }
+
+    boolean targetsLucasMount =
+        "/mnt/lucas-server".equals(targetPath) || targetPath.startsWith("/mnt/lucas-server/");
+    return targetsLucasMount && vfs.resolve("/mnt/lucas-server/laplace.qasm") == null;
+  }
+
   private boolean isLucasServerMountCommand(List<String> args) {
     if (args.equals(Collections.singletonList("-a"))) {
       return true;
@@ -920,6 +884,9 @@ public class TerminalCommandService {
     }
 
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, rawTarget + ": cannot open `" + rawTarget + "'");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, rawTarget + ": cannot open `" + rawTarget + "'");
@@ -953,6 +920,9 @@ public class TerminalCommandService {
 
     String rawTarget = command.args().get(command.args().size() - 1);
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, "head: cannot open '" + rawTarget + "' for reading");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, "head: cannot open '" + rawTarget + "' for reading");
@@ -986,6 +956,12 @@ public class TerminalCommandService {
     }
 
     String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd,
+          vfs,
+          command.command() + ": cannot remove '" + rawTarget + "': No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(
@@ -1002,6 +978,9 @@ public class TerminalCommandService {
 
   private TerminalResult handleExecutablePath(ParsedCommand command, String cwd, VfsContext vfs) {
     String targetPath = pathResolver.resolve(cwd, command.command(), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, command.command() + ": No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
     if (node == null) {
       return buildErrorResult(cwd, vfs, command.command() + ": No such file or directory");
@@ -1053,13 +1032,16 @@ public class TerminalCommandService {
     // 인자가 없으면 현재 디렉토리, 있으면 해당 경로를 대상으로 결정합니다.
     String targetPath =
         command.args().isEmpty() ? cwd : pathResolver.resolve(cwd, command.args().get(0), vfs);
+    String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
+    }
     // 대상 경로의 VFS 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
     // 노드가 존재하지 않으면 에러를 반환합니다.
     if (node == null) {
-      return buildErrorResult(
-          cwd, vfs, "ls: " + command.args().get(0) + ": No such file or directory");
+      return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
     }
 
     // 대상이 파일이면 파일 이름만 출력합니다.
@@ -1074,7 +1056,6 @@ public class TerminalCommandService {
 
     // 대상이 디렉토리면 하위 노드 목록을 가져옵니다.
     if (!canReadNode(node, vfs)) {
-      String rawTarget = command.args().isEmpty() ? "." : command.args().get(0);
       return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": Permission denied");
     }
 
@@ -1163,6 +1144,9 @@ public class TerminalCommandService {
     for (String rawTarget : rawTargets) {
       // 상대 경로, 홈 별칭 등을 현재 cwd 기준 절대 경로로 정규화합니다.
       String targetPath = pathResolver.resolve(cwd, rawTarget, vfs);
+      if (isUnmountedLucasServerPath(targetPath, vfs)) {
+        return buildErrorResult(cwd, vfs, "ls: " + rawTarget + ": No such file or directory");
+      }
       // 정규화된 경로가 VFS에 존재하는지 확인합니다.
       VfsNode node = vfs.resolve(targetPath);
       // 존재하지 않는 경로이면 실제 ls와 유사한 에러를 반환합니다.
@@ -1471,6 +1455,9 @@ public class TerminalCommandService {
 
     for (String rawRoot : query.roots()) {
       String targetPath = pathResolver.resolve(cwd, rawRoot, vfs);
+      if (isUnmountedLucasServerPath(targetPath, vfs)) {
+        return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
+      }
       VfsNode node = vfs.resolve(targetPath);
       if (node == null) {
         return buildErrorResult(cwd, vfs, "find: '" + rawRoot + "': No such file or directory");
@@ -1540,6 +1527,10 @@ public class TerminalCommandService {
       boolean typeFileOnly,
       Pattern namePattern,
       Set<String> matches) {
+    if (isUnmountedLucasServerPath(node.path(), vfs)) {
+      return;
+    }
+
     if (node.hidden()) {
       return;
     }
@@ -1603,6 +1594,10 @@ public class TerminalCommandService {
 
     // 이동할 대상 경로를 계산합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "cd: " + command.args().get(0) + ": No such file or directory");
+    }
     // 대상 경로의 노드를 찾습니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -1650,6 +1645,10 @@ public class TerminalCommandService {
 
     // 파일의 경로를 해석합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "cat: " + command.args().get(0) + ": No such file or directory");
+    }
     // 노드를 확인합니다.
     VfsNode node = vfs.resolve(targetPath);
 
@@ -1695,6 +1694,10 @@ public class TerminalCommandService {
 
     // 경로를 해석합니다.
     String targetPath = pathResolver.resolve(cwd, command.args().get(0), vfs);
+    if (isUnmountedLucasServerPath(targetPath, vfs)) {
+      return buildErrorResult(
+          cwd, vfs, "sh: " + command.args().get(0) + ": No such file or directory");
+    }
     VfsNode node = vfs.resolve(targetPath);
 
     // 파일이 없으면 에러를 반환합니다.
@@ -1749,6 +1752,134 @@ public class TerminalCommandService {
         .build();
   }
 
+  private TerminalResult handleNmap(ParsedCommand command, String cwd, VfsContext vfs) {
+    List<String> args = command.args();
+    if (args.isEmpty()) {
+      return buildErrorResult(cwd, vfs, "nmap: missing host or network. Try \"nmap -h\" for help");
+    }
+
+    if (args.size() == 1 && ("-h".equals(args.get(0)) || "--help".equals(args.get(0)))) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Nmap 7.93 usage: nmap [Scan Type(s)] [Options] {target specification}",
+                  "TARGET SPECIFICATION:",
+                  "  Can pass hostnames, IP addresses, networks, etc.",
+                  "SERVICE/VERSION DETECTION:",
+                  "  -sV: Probe open ports to determine service/version info",
+                  "PORT SPECIFICATION:",
+                  "  -p <port ranges>: Only scan specified ports"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if (args.size() == 1 && ("-V".equals(args.get(0)) || "--version".equals(args.get(0)))) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Nmap version 7.93 ( https://nmap.org )",
+                  "Platform: x86_64-universe-linux-gnu",
+                  "Compiled with: nmap-liblua-5.3.6 openssl-3.0.2 libssh2-1.10.0"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if (args.contains("-h") || args.contains("--help")) {
+      return buildErrorResult(cwd, vfs, "nmap: help option cannot be combined with scan targets");
+    }
+    if (args.contains("-V") || args.contains("--version")) {
+      return buildErrorResult(
+          cwd, vfs, "nmap: version option cannot be combined with scan targets");
+    }
+
+    boolean versionScan = false;
+    boolean versionAll = false;
+    String port = null;
+    List<String> targets = new ArrayList<>();
+
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      switch (arg) {
+        case "-sV":
+          versionScan = true;
+          break;
+        case "--version-all":
+          versionAll = true;
+          break;
+        case "-p":
+          if (i + 1 >= args.size()) {
+            return buildErrorResult(cwd, vfs, "nmap: option '-p' requires an argument");
+          }
+          port = args.get(++i);
+          break;
+        default:
+          if (arg.startsWith("-")) {
+            return buildErrorResult(cwd, vfs, "nmap: unrecognized option '" + arg + "'");
+          }
+          targets.add(arg);
+          break;
+      }
+    }
+
+    if (targets.isEmpty()) {
+      return buildErrorResult(cwd, vfs, "nmap: missing target specification");
+    }
+    if (targets.size() > 1) {
+      return buildErrorResult(cwd, vfs, "nmap: expected exactly one target");
+    }
+    if (versionAll && !versionScan) {
+      return buildErrorResult(cwd, vfs, "nmap: --version-all requires -sV");
+    }
+    if (port != null && !"22".equals(port)) {
+      return buildErrorResult(cwd, vfs, "nmap: unsupported port range '" + port + "'");
+    }
+
+    String target = targets.get(0);
+    if (isUniverseCoreTarget(target)) {
+      List<String> lines = new ArrayList<>();
+      lines.add("Starting Nmap 7.93 ( https://nmap.org )");
+      lines.add("Nmap scan report for " + target + " (10.2.2.2)");
+      lines.add("Host is up (0.00004s latency).");
+      lines.add("Not shown: 999 filtered ports");
+      lines.add("PORT   STATE SERVICE");
+      lines.add("22/tcp open  ssh");
+      if (versionScan) {
+        lines.add("Service Info: protocol SSH-1 compatibility layer exposed");
+        lines.add("Vulnerability fingerprint: CVE-2001-0144");
+      }
+      lines.add("Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds");
+      return TerminalResult.builder()
+          .stdout(lines)
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    if (isLocalhostTarget(target)) {
+      return TerminalResult.builder()
+          .stdout(
+              Arrays.asList(
+                  "Starting Nmap 7.93 ( https://nmap.org )",
+                  "Nmap scan report for " + target,
+                  "Host is up (0.00003s latency).",
+                  "PORT     STATE SERVICE",
+                  "8080/tcp open  http-proxy",
+                  "9091/tcp open  unknown",
+                  "Nmap done: 1 IP address (1 host up) scanned in 0.05 seconds"))
+          .cwd(cwd)
+          .prompt(buildPrompt(cwd, vfs))
+          .resultCode("SUCCESS")
+          .build();
+    }
+
+    return buildErrorResult(cwd, vfs, "nmap: Failed to resolve \"" + target + "\".");
+  }
+
   private String findSshnukeTarget(List<String> args) {
     for (String arg : args) {
       if (!arg.startsWith("-")) {
@@ -1762,17 +1893,44 @@ public class TerminalCommandService {
     for (int i = 0; i < args.size(); i++) {
       String arg = args.get(i);
       if (arg.startsWith("-rootpw=") || arg.startsWith("--rootpw=")) {
-        return stripWrappingQuotes(arg.substring(arg.indexOf('=') + 1));
+        String value = stripWrappingQuotes(arg.substring(arg.indexOf('=') + 1));
+        return isValidSshnukeRootPassword(value) ? value : null;
       }
       if (("-rootpw".equals(arg) || "--rootpw".equals(arg)) && i + 1 < args.size()) {
-        return stripWrappingQuotes(args.get(i + 1));
+        String value = stripWrappingQuotes(args.get(i + 1));
+        return isValidSshnukeRootPassword(value) ? value : null;
       }
     }
     return null;
   }
 
+  private boolean hasInvalidSshnukeRootPasswordSyntax(List<String> args) {
+    for (int i = 0; i < args.size(); i++) {
+      String arg = args.get(i);
+      if ("-rootpw".equals(arg) || "--rootpw".equals(arg)) {
+        if (i + 1 >= args.size()) {
+          return true;
+        }
+        return !isValidSshnukeRootPassword(stripWrappingQuotes(args.get(i + 1)));
+      }
+      if (arg.startsWith("-rootpw=") || arg.startsWith("--rootpw=")) {
+        return !isValidSshnukeRootPassword(
+            stripWrappingQuotes(arg.substring(arg.indexOf('=') + 1)));
+      }
+    }
+    return false;
+  }
+
+  private boolean isValidSshnukeRootPassword(String value) {
+    return value != null && !value.isBlank() && !"=".equals(value);
+  }
+
   private boolean isUniverseCoreTarget(String target) {
     return "10.2.2.2".equals(target) || "universe-core".equals(target);
+  }
+
+  private boolean isLocalhostTarget(String target) {
+    return "127.0.0.1".equals(target) || "localhost".equals(target);
   }
 
   private String findSshTarget(List<String> args) {

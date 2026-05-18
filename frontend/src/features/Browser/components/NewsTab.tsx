@@ -20,6 +20,11 @@ interface NewsTabProps {
 
 const SCROLL_BOTTOM_TOLERANCE_PX = 2;
 const CORRUPTION_CASCADE_DURATION_MS = 1400;
+const MIN_CORRUPTION_STEP_MS = 120;
+
+function isArticleScrolledToBottom(element: HTMLDivElement) {
+  return element.scrollTop + element.clientHeight >= element.scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
+}
 
 function normalizeArticleCorruption(value: unknown): ArticleCorruption | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -53,10 +58,12 @@ export const NewsTab: React.FC<NewsTabProps> = ({
   const content = useBrowserContentStore((state) => state.content);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollCorruptionNodeId, setScrollCorruptionNodeId] = React.useState<number | null>(null);
-  const [corruptionProgress, setCorruptionProgress] = React.useState(0);
-  const corruptionAnimationFrameRef = useRef<number | null>(null);
-  const corruptionStartTimeRef = useRef<number | null>(null);
+  const [scrollCorruptedUntilIndex, setScrollCorruptedUntilIndex] = React.useState(-1);
+  const corruptionStepTimerRef = useRef<number | null>(null);
   const lastScrollTriggeredNodeIdRef = useRef<number | null>(null);
+  const scrollPersistFrameRef = useRef<number | null>(null);
+  const transitionFrameRef = useRef<number | null>(null);
+  const pendingScrollTopRef = useRef(0);
   const contentNewsCards = Array.isArray(content.newsCards) ? (content.newsCards as NewsCard[]) : [];
   const newsCards = contentNewsCards.length > 0 ? contentNewsCards : DEFAULT_NEWS_CARDS;
 
@@ -91,11 +98,11 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     currentNode != null && scrollCorruptionNodeId === currentNode.id;
   const scrollCorruptionTriggered =
     !useFallback && (isArticleScrollCorruptionNode || isCurrentNodeScrollCorruptionTriggered);
-  const displayedCorruptionProgress = isArticleScrollCorruptionNode
-    ? 1
+  const displayedScrollCorruptedUntilIndex = isArticleScrollCorruptionNode
+    ? articleBody.length - 1
     : isCurrentNodeScrollCorruptionTriggered
-      ? corruptionProgress
-      : 0;
+      ? scrollCorruptedUntilIndex
+      : -1;
   const articleBodyClassName = [
     "flex",
     "flex-col",
@@ -111,43 +118,67 @@ export const NewsTab: React.FC<NewsTabProps> = ({
 
   useEffect(() => {
     lastScrollTriggeredNodeIdRef.current = null;
-    corruptionStartTimeRef.current = null;
 
-    if (corruptionAnimationFrameRef.current !== null) {
-      window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
-      corruptionAnimationFrameRef.current = null;
+    if (corruptionStepTimerRef.current !== null) {
+      window.clearTimeout(corruptionStepTimerRef.current);
+      corruptionStepTimerRef.current = null;
+    }
+
+    if (transitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(transitionFrameRef.current);
+      transitionFrameRef.current = null;
     }
   }, [currentNode?.id]);
 
   useEffect(() => {
     if (!scrollCorruptionTriggered || isArticleScrollCorruptionNode) return;
+    if (articleBody.length === 0) return;
 
-    const animateCorruption = (timestamp: number) => {
-      if (corruptionStartTimeRef.current === null) {
-        corruptionStartTimeRef.current = timestamp;
-      }
+    if (corruptionStepTimerRef.current !== null) {
+      window.clearTimeout(corruptionStepTimerRef.current);
+      corruptionStepTimerRef.current = null;
+    }
 
-      const elapsed = timestamp - corruptionStartTimeRef.current;
-      const nextProgress = Math.min(elapsed / CORRUPTION_CASCADE_DURATION_MS, 1);
-      setCorruptionProgress(nextProgress);
+    let nextIndex = 0;
+    const stepMs = Math.max(
+      MIN_CORRUPTION_STEP_MS,
+      CORRUPTION_CASCADE_DURATION_MS / Math.max(articleBody.length, 1)
+    );
 
-      if (nextProgress < 1) {
-        corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+    const revealNextParagraph = () => {
+      setScrollCorruptedUntilIndex(nextIndex);
+      nextIndex += 1;
+
+      if (nextIndex < articleBody.length) {
+        corruptionStepTimerRef.current = window.setTimeout(revealNextParagraph, stepMs);
         return;
       }
 
-      corruptionAnimationFrameRef.current = null;
+      corruptionStepTimerRef.current = null;
     };
 
-    corruptionAnimationFrameRef.current = window.requestAnimationFrame(animateCorruption);
+    revealNextParagraph();
 
     return () => {
-      if (corruptionAnimationFrameRef.current !== null) {
-        window.cancelAnimationFrame(corruptionAnimationFrameRef.current);
-        corruptionAnimationFrameRef.current = null;
+      if (corruptionStepTimerRef.current !== null) {
+        window.clearTimeout(corruptionStepTimerRef.current);
+        corruptionStepTimerRef.current = null;
       }
     };
-  }, [isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
+  }, [articleBody.length, isArticleScrollCorruptionNode, scrollCorruptionTriggered]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollPersistFrameRef.current !== null) {
+        window.cancelAnimationFrame(scrollPersistFrameRef.current);
+        scrollPersistFrameRef.current = null;
+      }
+      if (transitionFrameRef.current !== null) {
+        window.cancelAnimationFrame(transitionFrameRef.current);
+        transitionFrameRef.current = null;
+      }
+    };
+  }, []);
 
   const activeWindowId = useWindowStore((state) => state.activeWindowId);
 
@@ -179,39 +210,48 @@ export const NewsTab: React.FC<NewsTabProps> = ({
     });
   }, [currentNode, isScrollTriggeredArticleNode, submitStoryAction]);
 
+  const handleArticleBottomReached = useCallback(() => {
+    if (!isScrollTriggeredArticleNode || !showArticle) return;
+
+    if (usesScrollCascadeCorruption && !scrollCorruptionTriggered) {
+      setScrollCorruptedUntilIndex(-1);
+      setScrollCorruptionNodeId(currentNode?.id ?? null);
+    }
+
+    if (transitionFrameRef.current !== null) return;
+
+    transitionFrameRef.current = window.requestAnimationFrame(() => {
+      transitionFrameRef.current = null;
+      triggerArticleScrollTransition();
+    });
+  }, [
+    currentNode?.id,
+    isScrollTriggeredArticleNode,
+    scrollCorruptionTriggered,
+    showArticle,
+    triggerArticleScrollTransition,
+    usesScrollCascadeCorruption,
+  ]);
+
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      const { scrollTop, scrollHeight, clientHeight } = element;
+      const { scrollTop } = element;
 
-      useBrowserContentStore.getState().setNewsScrollTop(scrollTop);
-
-      const isAtBottom =
-        scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_TOLERANCE_PX;
-
-      if (
-        usesScrollCascadeCorruption &&
-        !scrollCorruptionTriggered &&
-        isAtBottom
-      ) {
-        corruptionStartTimeRef.current = null;
-        setCorruptionProgress(0);
-        setScrollCorruptionNodeId(currentNode?.id ?? null);
+      pendingScrollTopRef.current = scrollTop;
+      if (scrollPersistFrameRef.current === null) {
+        scrollPersistFrameRef.current = window.requestAnimationFrame(() => {
+          useBrowserContentStore.getState().setNewsScrollTop(pendingScrollTopRef.current);
+          scrollPersistFrameRef.current = null;
+        });
       }
 
-      if (!isScrollTriggeredArticleNode || !showArticle) return;
-
-      if (isAtBottom) {
-        triggerArticleScrollTransition();
+      if (isArticleScrolledToBottom(element)) {
+        handleArticleBottomReached();
       }
     },
     [
-      currentNode?.id,
-      isScrollTriggeredArticleNode,
-      scrollCorruptionTriggered,
-      showArticle,
-      triggerArticleScrollTransition,
-      usesScrollCascadeCorruption,
+      handleArticleBottomReached,
     ]
   );
 
@@ -237,17 +277,18 @@ export const NewsTab: React.FC<NewsTabProps> = ({
             <div className={articleBodyClassName}>
               {articleBody.map((paragraph, index) => {
                 const total = articleBody.length;
-                const cascadeThreshold =
-                  total <= 1 ? 0 : index / Math.max(total - 1, 1);
                 const isCorruptedByScrollCascade =
                   usesScrollCascadeCorruption &&
                   scrollCorruptionTriggered &&
-                  displayedCorruptionProgress >= cascadeThreshold;
+                  index <= displayedScrollCorruptedUntilIndex;
                 const isCorruptedByMetadata =
                   !usesScrollCascadeCorruption && corruptedParagraphIndexes.has(index);
                 const isCorrupted = isCorruptedByMetadata || isCorruptedByScrollCascade;
+                const isRecentlyCorruptedByScroll =
+                  isCorruptedByScrollCascade &&
+                  index >= Math.max(0, Math.min(displayedScrollCorruptedUntilIndex, total - 1) - 1);
                 const dynamicIntensity =
-                  scrollCorruptionTriggered && displayedCorruptionProgress >= 0.65
+                  isRecentlyCorruptedByScroll
                     ? "active"
                     : (articleCorruption?.intensity ?? "subtle");
 
@@ -264,11 +305,13 @@ export const NewsTab: React.FC<NewsTabProps> = ({
                       text={paragraph}
                       intensity={dynamicIntensity}
                       inspectable={isInspectable}
-                      onInspect={() => {
-                        if (isInspectable && inspectTarget) {
-                          void submitStoryInspect(inspectTarget);
-                        }
-                      }}
+                      onInspect={
+                        isInspectable && inspectTarget
+                          ? () => {
+                              void submitStoryInspect(inspectTarget);
+                            }
+                          : undefined
+                      }
                     />
                   );
                 }

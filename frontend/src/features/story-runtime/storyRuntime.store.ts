@@ -11,6 +11,7 @@ import { useWindowStore } from "../../app/store/windowStore";
 import { useNotepadStore } from "../../app/store/notepadStore";
 import { storyApi } from "../../shared/api/storyApi";
 import { userApi } from "../../shared/api/userApi";
+import { isConnectionError } from "../../shared/api/apiError";
 import type {
   EffectBundle,
   StoryNode,
@@ -81,10 +82,14 @@ const AUTO_SYSTEM_TRANSITIONS: Record<string, string> = {
   CH1_SSH_CONNECTED: "auto",
   CH2_WORLD_MAP_VIEW: "auto",
   CH2_RECOVERED_DOCUMENT: "auto",
+  CH4_ROLLBACK_SEQUENCE: "auto",
+  CH4_REBOOT_SEQUENCE: "auto",
+  CH4_CLEAN_ROLLBACK_SEQUENCE: "auto",
 };
 const MAPLE_STORY_TERMINAL_SIGNAL = "terminal://maple-story";
 
 const CHAT_NOTIFICATION_SOUND = "notification_v1.mp3";
+const DEFAULT_TRANSITION_SOUND = "notification_v1.mp3";
 const LUCAS_BUBBLE_SOUND = "notification_lucas_v1.mp3";
 const MOUSE_CLICK_SOUND = "mouse_click_v1.mp3";
 const RING_TONE_SOUND = "chapter3_ringtone.mp3";
@@ -153,7 +158,8 @@ function resolveNodeEntrySfx(
 
 function resolveMessageSfx(
   normalizedOutput: ReturnType<typeof normalizeStoryOutputBundle>,
-  hasEntrySound: boolean
+  hasEntrySound: boolean,
+  sourceActionType?: TransitionRequest["actionType"]
 ) {
   if (hasEntrySound) return undefined;
   if (normalizedOutput.scene.preVideo) return undefined;
@@ -170,7 +176,16 @@ function resolveMessageSfx(
   );
   if (hasChat) return CHAT_NOTIFICATION_SOUND;
 
+  if (sourceActionType) return DEFAULT_TRANSITION_SOUND;
+
   return undefined;
+}
+
+function getAutoAdvanceDelayMs(node: StoryNode) {
+  const meta = objectRecord(node.promptMeta) ?? {};
+  const rawDelay = meta.autoAdvanceMs;
+  if (typeof rawDelay !== "number" || !Number.isFinite(rawDelay)) return undefined;
+  return Math.max(0, rawDelay);
 }
 
 function parseTerminalPromptContext(line: string): TerminalPromptContext | undefined {
@@ -290,7 +305,11 @@ function applyStoryNodeOutputBundle(
   if (entrySfx) {
     audioManager.playSfx(entrySfx);
   }
-  const messageSfx = resolveMessageSfx(normalizedOutput, Boolean(entrySfx));
+  const messageSfx = resolveMessageSfx(
+    normalizedOutput,
+    Boolean(entrySfx),
+    options.sourceActionType
+  );
   if (messageSfx) {
     audioManager.playSfx(messageSfx);
   }
@@ -426,6 +445,9 @@ function applyStoryNodeOutputBundle(
         clientStore.removeLastTerminalOutput();
         return false;
       }
+      if (handleTerminalControlLine(String(line), clientStore)) {
+        return false;
+      }
       if (!line.startsWith("terminal://")) return true;
       return !existingSystemLines.has(line);
     });
@@ -547,6 +569,34 @@ function getActionSource(meta: Record<string, unknown> | undefined): "terminal" 
   return meta?.source === "terminal" || meta?.source === "browser" ? meta.source : undefined;
 }
 
+function handleTerminalControlLine(line: string, clientStore = useClientStore.getState()) {
+  if (line === CLEAR_TERMINAL_SIGNAL) {
+    clientStore.clearTerminalOutput();
+    return true;
+  }
+
+  if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
+    useWindowStore.getState().openWindow("terminal2");
+    return true;
+  }
+
+  if (line === "terminal://lucas-route") {
+    const windowStore = useWindowStore.getState();
+    windowStore.openWindow("browser");
+    windowStore.maximizeWindow("chrome");
+    useBrowserContentStore.getState().triggerLucasRouteTabClick({ storyLinked: true });
+    return true;
+  }
+
+  if (line === "terminal://lucas-survival") {
+    useWindowStore.getState().openWindow("browser");
+    useBrowserContentStore.getState().triggerLucasSurvivalTabClick();
+    return true;
+  }
+
+  return false;
+}
+
 function applyTerminalResult(terminalResult: TerminalResult | undefined, source?: "terminal" | "browser") {
   if (!terminalResult) return;
 
@@ -566,25 +616,7 @@ function applyTerminalResult(terminalResult: TerminalResult | undefined, source?
   }
 
   for (const line of terminalResult.stdout ?? []) {
-    if (line === CLEAR_TERMINAL_SIGNAL) {
-      clientStore.clearTerminalOutput();
-      continue;
-    }
-
-    if (line === MAPLE_STORY_TERMINAL_SIGNAL) {
-      useWindowStore.getState().openWindow("terminal2");
-      continue;
-    }
-
-    if (line === "terminal://lucas-route") {
-      useWindowStore.getState().openWindow("browser");
-      useBrowserContentStore.getState().triggerLucasRouteTabClick();
-      continue;
-    }
-
-    if (line === "terminal://lucas-survival") {
-      useWindowStore.getState().openWindow("browser");
-      useBrowserContentStore.getState().triggerLucasSurvivalTabClick();
+    if (handleTerminalControlLine(String(line), clientStore)) {
       continue;
     }
 
@@ -613,20 +645,12 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       error: null
     });
 
-    useBrowserContentStore.getState().resetContent();
-    useClientStore.getState().resetClientStore();
-    useMessengerStore.getState().resetMessenger();
-    useLucasStore.getState().resetLucas();
-    useCallOverlayStore.getState().resetCallOverlay();
-    useWindowStore.getState().resetWindows();
-
     useAuthStore.getState().checkAuth();
     await syncAuthenticatedUserProfile();
 
     try {
-      const node = normalizeStoryNodeResponse(
-        await storyApi.startStory(resolveChapterCode(chapterCode))
-      );
+      const nodeResponse = await storyApi.startStory(chapterCode);
+      const node = normalizeStoryNodeResponse(nodeResponse.data);
 
       // 세션이 유효한지 확인
       if (get().initializationId !== currentId) return;
@@ -648,6 +672,11 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
       }
     } catch (startError) {
       if (get().initializationId !== currentId) return;
+
+      if (isConnectionError(startError)) {
+        set({ error: i18n.t("story.error.initFailed") });
+        return;
+      }
 
       try {
         const fallbackNode = normalizeStoryNodeResponse(await storyApi.getCurrentNode());
@@ -698,6 +727,18 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
 
     const autoInputValue = getAutoSystemInputValue(node);
     if (autoInputValue) {
+      const autoAdvanceDelayMs = getAutoAdvanceDelayMs(node);
+      if (autoAdvanceDelayMs !== undefined) {
+        window.setTimeout(() => {
+          const state = get();
+          if (state.currentNode?.id === node.id && !state.isLoading) {
+            useLucasStore.getState().endDialogue();
+            void state.submitStoryAction("system", autoInputValue);
+          }
+        }, autoAdvanceDelayMs);
+        return;
+      }
+
       const scheduleAutoAction = () => {
         const lucasState = useLucasStore.getState();
         // 대화가 진행 중이면 끝날 때까지 500ms마다 재확인
@@ -860,10 +901,13 @@ export const useStoryRuntimeStore = create<StoryRuntimeState>((set, get) => ({
   },
 
   resetStoryRuntime: () => {
-    useCallOverlayStore.getState().resetCallOverlay();
-    useNotepadStore.getState().resetNotepad();
-    // 벨소리나 대화 등의 진행 중인 시각적 효과가 있으면 여기서 명시적으로 닫아줌
+    useBrowserContentStore.getState().resetContent();
+    useClientStore.getState().resetClientStore();
+    useMessengerStore.getState().resetMessenger();
     useLucasStore.getState().resetLucas();
+    useCallOverlayStore.getState().resetCallOverlay();
+    useWindowStore.getState().resetWindows();
+    useNotepadStore.getState().resetNotepad();
 
     set((state) => ({
       currentNode: null,
