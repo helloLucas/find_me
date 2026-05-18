@@ -46,12 +46,12 @@
     <tr>
       <td align="center">
         <a href="https://www.youtube.com/watch?v=vQi_AK1ILCw" target="_blank">
-          <img src="./README_assets/video_placeholder.png" width="100%" height="320" style="object-fit: cover; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="게임 소개 영상 보기">
+          <img src="./README_assets/video_placeholder.png" width="100%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="게임 소개 영상 보기">
         </a>
       </td>
       <td align="center">
         <a href="https://www.youtube.com/watch?v=bEOhIGrPvrg" target="_blank">
-          <img src="./README_assets/video_placeholder.png" width="100%" height="320" style="object-fit: cover; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="프롤로그 영상 보기">
+          <img src="./README_assets/video_placeholder.png" width="100%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="프롤로그 영상 보기">
         </a>
       </td>
     </tr>
