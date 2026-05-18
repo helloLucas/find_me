@@ -45,14 +45,24 @@
     </tr>
     <tr>
       <td align="center">
-        <video src="https://lab.ssafy.com/-/project/1304803/uploads/846dadcc22dd7ffa3c60baac48d5400b/%ED%8F%AC%ED%8F%B4%EC%98%81%EC%83%81_%EC%99%84%EC%84%B1.mp4" controls width="100%" height="320">
+        <video src="https://www.youtube.com/watch?v=vQi_AK1ILCw" controls width="100%" height="320" style="background: black; border-radius: 8px;">
           Your browser does not support the video tag.
         </video>
+        <div style="margin-top: 8px;">
+          <a href="https://www.youtube.com/watch?v=vQi_AK1ILCw" target="_blank" style="font-size: 13px; color: #3178C6; text-decoration: none; font-weight: bold;">
+            ↗️ 영상이 재생되지 않으면 여기를 클릭하세요
+          </a>
+        </div>
       </td>
       <td align="center">
-        <video src="https://lab.ssafy.com/-/project/1304803/uploads/364e2bf452f6f9396ffb5117a447744a/%ED%94%84%EB%A1%A4%EB%A1%9C%EA%B7%B8%EC%98%81%EC%83%81.mp4" controls width="100%" height="320">
+        <video src="https://www.youtube.com/watch?v=bEOhIGrPvrg" controls width="100%" height="320" style="background: black; border-radius: 8px;">
           Your browser does not support the video tag.
         </video>
+        <div style="margin-top: 8px;">
+          <a href="https://www.youtube.com/watch?v=bEOhIGrPvrg" target="_blank" style="font-size: 13px; color: #3178C6; text-decoration: none; font-weight: bold;">
+            ↗️ 영상이 재생되지 않으면 여기를 클릭하세요
+          </a>
+        </div>
       </td>
     </tr>
   </table>
