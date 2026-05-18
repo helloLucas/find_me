@@ -1,14 +1,27 @@
 # ![FIND ME : VOID CITY Banner](./README_assets/banner.png)
 
 <div align="center">
-  <h3>🌑 FIND ME : VOID CITY 🌑</h3>
+  <h3>🐶🐕 FIND ME : VOID CITY 🐕🐶</h3>
   <p><strong>미스터리한 도시 속에서 사라진 흔적을 쫓는 OS 시뮬레이션 스토리 게임</strong></p>
 
+  <!-- Frontend -->
   [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
-  [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-  [![Kubernetes](https://img.shields.io/badge/Kubernetes-Latest-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Zustand](https://img.shields.io/badge/Zustand-State_Mgmt-orange)](https://github.com/pmndrs/zustand)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+  <br/>
+  <!-- Backend & Database -->
+  [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.0-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![Redis](https://img.shields.io/badge/Redis-Latest-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+  <br/>
+  <!-- DevOps & AI -->
+  [![Kubernetes](https://img.shields.io/badge/Kubernetes-Latest-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+  [![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+  [![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?logo=jenkins&logoColor=white)](https://www.jenkins.io/)
+  [![ELK Stack](https://img.shields.io/badge/ELK_Stack-Elastic-005571?logo=elastic&logoColor=white)](https://www.elastic.co/)
+  [![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io/)
+  [![Grafana](https://img.shields.io/badge/Grafana-Visualization-F46800?logo=grafana&logoColor=white)](https://grafana.com/)
 </div>
 
 ---
@@ -16,6 +29,40 @@
 ## 📽️ 프로젝트 소개
 
 **"FIND ME : VOID CITY"**는 가상의 운영체제 환경에서 진행되는 인터랙티브 스토리 게임입니다. 사용자는 'VOID CITY'라는 도시 속에 숨겨진 진실과 사라진 'Lucas'의 흔적을 찾아야 합니다.
+
+
+## 🎬 프로젝트 영상
+
+<div align="center">
+  <table width="100%">
+    <tr>
+      <td align="center" width="50%">
+        <strong> 게임 소개 </strong>
+      </td>
+      <td align="center" width="50%">
+        <strong> 프롤로그 </strong>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <video src="https://lab.ssafy.com/s14-final/S14P31B102/uploads/6b94780814d8152e151b7c328e7e254c/포폴영상_완성.mp4" controls width="100%" height="320">
+          Your browser does not support the video tag.
+        </video>
+      </td>
+      <td align="center">
+        <video src="https://lab.ssafy.com/s14-final/S14P31B102/uploads/364e2bf452f6f9396ffb5117a447744a/프롤로그영상.mp4" controls width="100%" height="320">
+          Your browser does not support the video tag.
+        </video>
+      </td>
+    </tr>
+  </table>
+</div>
+
+## 👥 등장인물 및 관계도
+
+<div align="center">
+  <img src="./README_assets/relationship.png" width="85%" alt="인물 관계도">
+</div>
 
 ## ✨ 주요 특징
 
@@ -32,7 +79,7 @@
 - 각 챕터별로 새롭게 주어지는 과제들이 플레이어의 추리력을 시험합니다.
 </br>
 </br>
----
+
 
 ## 🛠️ 기술 스택
 
@@ -81,22 +128,37 @@ graph TD
 
 ---
 
-## 🚀 Getting Started
+## 📊 로그 수집 및 모니터링
 
-### Prerequisites
+### 🪵 실시간 게임 로그 수집 (ELK Stack)
+* **수집 파이프라인:** `[Spring Boot]` → `[Filebeat]` → `[Logstash]` → `[Elasticsearch]` → `[Kibana]`
+
+### 📈 시스템 & 서비스 모니터링 (Prometheus & Grafana)
+* **하이브리드 모니터링:** EKS 노드 자원 상태부터 Spring Boot Actuator 메트릭까지 단일 Grafana 대시보드에 통합하여 이상 징후 조기 감지 및 신속한 트러블슈팅을 지원합니다.
+
+### 🤖 데이터 기반 자동화 유저 힌트 시스템
+* **병목 구간 감지:** Python `hint-worker` (K8s CronJob)가 유저 실패율, 이탈률 등을 분석하여 플레이어가 가장 많이 막히는 구간을 탐지합니다.
+* **유저용 힌트 발송:** Gemini API로 생성한 게임 속 조력자 'Lucas'의 은유적 힌트를 **Mattermost 플레이어 채널**로 자동 발송합니다.
+* **개발자용 리포트 제공:** 상세 분석 리포트를 팀 채널로 전송하여 비정상 구간의 난이도 조정을 유기적으로 지원합니다.
+
+---
+
+## 🚀 시작하기
+
+### 사전 준비
 - Node.js (v20+)
 - Java 21
 - Docker & Docker Compose
 
-### Running Locally
+### 실행 방법
 
-1. **Clone the repository**
+1. **레포지토리 클론**
    ```bash
    git clone https://lab.ssafy.com/s14-final/S14P31B102.git
    cd S14P31B102
    ```
 
-2. **Frontend Setup**
+2. **프론트엔드 실행**
    ```bash
    cd frontend
    npm install
@@ -104,11 +166,10 @@ graph TD
    npm run preview
    ```
 
-3. **Backend Setup**
+3. **백엔드 실행**
    ```bash
    cd backend
    docker compose -f docker-compose.local.yml up --build -d
-   ./gradlew bootRun
    ```
 
 ---
