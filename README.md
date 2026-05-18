@@ -61,7 +61,7 @@
 ## 👥 등장인물 및 관계도
 
 <div align="center">
-  <img src="./README_assets/relationship.png" width="85%" alt="인물 관계도">
+  <img src="./README_assets/relationship.png" width="40%" alt="인물 관계도">
 </div>
 
 ## ✨ 주요 특징
