@@ -45,24 +45,14 @@
     </tr>
     <tr>
       <td align="center">
-        <video src="https://www.youtube.com/watch?v=vQi_AK1ILCw" controls width="100%" height="320" style="background: black; border-radius: 8px;">
-          Your browser does not support the video tag.
-        </video>
-        <div style="margin-top: 8px;">
-          <a href="https://www.youtube.com/watch?v=vQi_AK1ILCw" target="_blank" style="font-size: 13px; color: #3178C6; text-decoration: none; font-weight: bold;">
-            ↗️ 영상이 재생되지 않으면 여기를 클릭하세요
-          </a>
-        </div>
+        <a href="https://www.youtube.com/watch?v=vQi_AK1ILCw" target="_blank">
+          <img src="./README_assets/video_placeholder.png" width="100%" height="320" style="object-fit: cover; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="게임 소개 영상 보기">
+        </a>
       </td>
       <td align="center">
-        <video src="https://www.youtube.com/watch?v=bEOhIGrPvrg" controls width="100%" height="320" style="background: black; border-radius: 8px;">
-          Your browser does not support the video tag.
-        </video>
-        <div style="margin-top: 8px;">
-          <a href="https://www.youtube.com/watch?v=bEOhIGrPvrg" target="_blank" style="font-size: 13px; color: #3178C6; text-decoration: none; font-weight: bold;">
-            ↗️ 영상이 재생되지 않으면 여기를 클릭하세요
-          </a>
-        </div>
+        <a href="https://www.youtube.com/watch?v=bEOhIGrPvrg" target="_blank">
+          <img src="./README_assets/video_placeholder.png" width="100%" height="320" style="object-fit: cover; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" alt="프롤로그 영상 보기">
+        </a>
       </td>
     </tr>
   </table>
