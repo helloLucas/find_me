@@ -45,12 +45,12 @@
     </tr>
     <tr>
       <td align="center">
-        <video src="https://lab.ssafy.com/s14-final/S14P31B102/uploads/6b94780814d8152e151b7c328e7e254c/포폴영상_완성.mp4" controls width="100%" height="320">
+        <video src="https://lab.ssafy.com/-/project/1304803/uploads/846dadcc22dd7ffa3c60baac48d5400b/%ED%8F%AC%ED%8F%B4%EC%98%81%EC%83%81_%EC%99%84%EC%84%B1.mp4" controls width="100%" height="320">
           Your browser does not support the video tag.
         </video>
       </td>
       <td align="center">
-        <video src="https://lab.ssafy.com/s14-final/S14P31B102/uploads/364e2bf452f6f9396ffb5117a447744a/프롤로그영상.mp4" controls width="100%" height="320">
+        <video src="https://lab.ssafy.com/-/project/1304803/uploads/364e2bf452f6f9396ffb5117a447744a/%ED%94%84%EB%A1%A4%EB%A1%9C%EA%B7%B8%EC%98%81%EC%83%81.mp4" controls width="100%" height="320">
           Your browser does not support the video tag.
         </video>
       </td>
