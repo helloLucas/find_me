@@ -107,24 +107,9 @@
 
 ## 🏗️ 아키텍처
 
-```mermaid
-graph TD
-    User([User Browser]) <--> |HTTPS/WSS| Frontend[React Frontend]
-    Frontend <--> |REST API| API_Gateway[API Gateway / Nginx]
-    API_Gateway <--> |Reverse Proxy| Backend[Spring Boot Server]
-    
-    Backend <--> |JPA| DB[(PostgreSQL)]
-    Backend <--> |Cache / Session| Redis[(Redis)]
-    Backend <--> |Media Assets| S3[AWS S3]
-    
-    subgraph Infrastructure
-        Frontend
-        API_Gateway
-        Backend
-        DB
-        Redis
-    end
-```
+<div align="center">
+  <img src="./README_assets/sysarch.png" width="60%" alt="아키텍처">
+</div>
 
 ---
 
