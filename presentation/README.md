@@ -9,7 +9,13 @@ cd presentation
 npm run dev
 ```
 
-기본 주소는 `http://localhost:5175`입니다.
+Slidev 기본 주소는 `http://localhost:8080`입니다.
+
+포트를 지정하려면 다음처럼 실행합니다.
+
+```bash
+npm run dev -- --port 5175
+```
 
 ## 조작
 
@@ -21,4 +27,4 @@ npm run dev
 
 ## 내용 수정
 
-슬라이드 내용은 `src/slides.js`에서 수정합니다. 실제 유저 수, 완료율, 피드백 건수는 `LIVE_OPS` 슬라이드의 `TBD` 값을 운영 데이터로 교체하면 됩니다.
+슬라이드 내용은 `slides.md`에서 수정합니다. 발표 흐름과 세부 근거는 `storyline-draft.md`, 장표별 구성은 `slide-guide.md`에 정리합니다.

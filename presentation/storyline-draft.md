@@ -16,36 +16,39 @@
 
 우리는 처음부터 게임 자체를 목표로 둔 것이 아니라, 실제 유저가 들어오는 서비스를 만들고 운영하면서 화면, 서버, 데이터, 배포, 모니터링, 피드백 개선을 끝까지 경험하고 싶었다. 그 기술 목표를 검증하려면 유저의 관심이 필요했고, 그 관심을 모으고 유지하기 위한 제품 형태로 매주 새로운 챕터가 열리는 브라우저형 게임을 선택했다.
 
-## 권장 발표 순서
+## 정리된 발표 순서
 
 ### 1. Cover: FIND ME / LUCAS
 
-한 문장: "브라우저 안에 만든 조사형 OS, 그리고 실제 유저로 검증한 운영형 서비스"
+한 문장: "실제 유저로 검증한 운영형 브라우저 서비스"
 
 보여줄 것:
-- 어두운 터미널 톤의 첫 화면
-- 실제 서비스 화면 또는 플레이 화면 한 장
+- 서비스 첫 화면 또는 가상 OS 플레이 화면
+- 팀/프로젝트명
 - 기능 목록보다 "사용자가 사건에 들어간다"는 인상
+
+말할 포인트:
+- 이 프로젝트는 게임 자체가 목적이 아니었다.
+- 실제 유저가 들어오는 서비스를 만들고 운영하는 기술 경험이 먼저였다.
+- 게임은 그 유저의 관심을 모으고 유지하기 위한 제품 형태였다.
 
 ### 2. 우리가 하고 싶었던 것: 실제 유저가 있는 기술 프로젝트
 
-한 문장: "게임을 만들고 싶었던 것이 아니라, 실제 유저가 들어오는 서비스를 운영하면서 기술을 검증하고 싶었다."
+한 문장: "실제 유저가 들어오는 서비스를 운영하면서, 유저 피드백을 반영하고 트래픽에 따라 대응하는 서버를 경험하고 싶었다."
 
 핵심:
-- 화면, 서버, DB, 배포, 모니터링, 장애 대응이 한 흐름으로 이어지는 서비스를 만들고 싶었다.
-- 단순 구현물이 아니라, 배포 후 실제 트래픽과 유저 행동이 쌓이는 프로젝트가 필요했다.
-- 로그, 지표, 피드백, 버그 리포트가 개발 방향을 다시 바꾸는 운영 경험을 목표로 했다.
-- 그래서 유저가 한 번 보고 떠나는 페이지가 아니라, 반복해서 들어오고 행동을 남길 이유가 필요했다.
+- 화면, 서버, DB, 배포, 모니터링, 피드백이 한 흐름으로 이어지는 프로젝트가 필요했다.
+- 배포 이후에도 로그와 지표를 보고 판단하는 운영 경험을 목표로 했다.
+- 유저가 남긴 행동과 불편이 다음 개발 우선순위를 바꾸는 구조를 만들고 싶었다.
 
 ### 3. 문제: 기술 실험에는 유저가 필요했다
 
 한 문장: "로그 모니터링, 인프라 운영, 트래픽 대응을 경험하려면 실제 유저가 필요했고, 유저가 돌아올 이유가 필요했다."
 
 비교:
-- 일반 기능 시연: 한 번 보고 끝나기 쉽고, 트래픽과 피드백이 충분히 쌓이지 않는다.
-- 단순 포트폴리오 페이지: 운영 지표, 장애 대응, 유저 리텐션을 검증하기 어렵다.
-- 매주 열리는 챕터형 게임: 공개 일정이 관심을 만들고, 플레이가 반복 행동과 피드백을 만든다.
-- 게임은 목적이 아니라, 유저를 모으고 붙잡아 기술 목표를 검증하기 위한 수단이었다.
+- 일반 기능 시연: 한 번 보고 끝나기 쉬워 운영 데이터가 쌓이지 않는다.
+- 단순 포트폴리오 페이지: 재방문, 실패, 피드백, 트래픽 변화를 만들기 어렵다.
+- 챕터형 게임: 공개 일정과 보상이 유저의 재접속 이유가 되고, 플레이가 행동 로그를 만든다.
 
 ### 4. 유저를 끌어들이는 형태: 웹을 게임처럼 보이게 하기
 
@@ -61,229 +64,189 @@
 - `frontend/src/widgets/Desktop`: 가상 데스크톱과 윈도우 기반 플레이
 - `frontend/src/features/command-input`: 터미널 명령 입력과 피드백
 
-### 5. 유저가 계속 움직이는 핵심 루프
+### 5. 반복 방문 장치: 매주 열리는 챕터와 미니게임
 
-한 문장: "단서 확인 -> 행동 입력 -> 서버 판정 -> 화면 변화 -> 보상/실패 피드백 -> 다음 행동이 반복된다."
-
-흐름:
-1. 유저가 현재 챕터/노드에 진입한다.
-2. 브라우저, 메신저, 문서, 사운드, 컷신이 현재 상황을 보여준다.
-3. 유저가 명령, 클릭, 조사 행동을 수행한다.
-4. 서버는 유저의 저장된 진행 상태를 기준으로 행동이 가능한지 판정한다.
-5. 허용된 행동이면 다음 노드, fragment, 문서, 미니게임, 엔딩 조건으로 이어진다.
-6. 잘못된 행동이면 오답 피드백, FAIL 노드, retry, 힌트 요청 가능 상태로 돌아간다.
-7. 모든 행동은 이후 힌트, 운영 리포트, 병목 분석에 활용될 수 있는 데이터가 된다.
-
-### 6. 반복 방문 장치: 매주 열리는 챕터와 미니게임
-
-한 문장: "챕터와 미니게임은 유저를 붙잡기 위한 콘텐츠이자, 실제 트래픽과 피드백을 만들기 위한 장치였다."
+한 문장: "챕터형 게임은 유저를 붙잡기 위한 콘텐츠이자, 유저의 재접속을 유도하는 전략이었다."
 
 진화:
-- CH1: PACMAN: NEO로 첫 보상 경험을 만들고, 유저가 조작 가능한 서비스라는 인상을 줬다.
+- CH1: PACMAN: NEO로 첫 보상 경험을 만들었다.
 - CH2: CORE TIMING으로 타이밍 판정과 fragment 보상을 연결했다.
-- CH3: CYBER PACKET DASH로 캔버스 기반 조작, 전체화면, 포커스, 장시간 플레이 성능 이슈를 다뤘다.
-- CH4: LUCAS ROUTE로 히든 전이와 엔딩 조건을 연결해 유저 선택의 결과를 만들었다.
-- ARCADE/PRACTICE: LUCAS SURVIVAL로 본편 밖에서도 반복 플레이할 이유를 만들었다.
+- CH3: CYBER PACKET DASH로 캔버스 기반 조작과 성능 이슈를 다뤘다.
+- CH4: LUCAS ROUTE로 히든 전이와 엔딩 조건을 연결했다.
+- ARCADE/PRACTICE: LUCAS SURVIVAL로 본편 밖 반복 플레이 이유를 만들었다.
 
-git 근거:
-- `StarforceTab.tsx`: `feat: 스타포스 추가` -> `feat: 아케이드 모드 추가` -> `feat: 미니게임에 해시 추가` -> BGM 수정
-- `CyberPacketDashTab.tsx`: 미니게임 추가 -> BGM/전체화면/포커스/장시간 성능/중복 clear 수정
-- `lucas-route`, `lucas-survival`: 챕터4 미니게임 추가 -> 난이도/아이콘 -> 히든 전이 -> BGM/포커스/빌드 수정
-
-### 7. 유저 경험을 흔들지 않는 화면 런타임
+### 6. 포트폴리오 영상 + 챕터 4 이전 줄거리
 
 한 문장: "서버 응답이 복잡해져도 유저 화면은 자연스럽게 바뀌도록, 게임 화면을 하나의 런타임처럼 구성했다."
 
-구현 방향:
-- 윈도우, 태스크바, 브라우저, 메신저, 터미널을 독립된 화면 상태로 관리했다.
-- 서버의 output bundle을 UI 상태로 변환하는 adapter를 두어 스토리 데이터 변화가 화면 전체를 흔들지 않게 했다.
-- 유저가 탭을 이동하거나 명령을 입력해도 현재 맥락이 끊기지 않도록 상태를 분리했다.
-- GA4/Clarity 이벤트와 동의 배너를 통해 유저 행동 추적 기반을 마련했다.
+말할 포인트:
+- 이 장은 모든 스토리를 설명하는 장이 아니다.
+- 챕터 4 진엔딩 시연을 이해할 만큼의 맥락만 제공한다.
+- 화면은 브라우저/터미널/메신저/문서/미니게임이 같은 진행 상태를 공유하는 런타임으로 동작한다.
 
-기술 근거:
-- React 19, Vite, Zustand, React Router
-- output bundle adapter
-- 브라우저/메신저/터미널/미니게임 탭 구조
-
-### 8. 유저 진행을 서버가 책임지는 전이 구조
+### 7. 실시간 시연: 챕터 4 진엔딩
 
 한 문장: "유저가 어디까지 왔는지는 화면이 아니라 서버의 진행 상태와 허용된 전이 그래프가 결정한다."
 
-구현 방향:
-- 유저별 진행 상태와 최근 행동을 저장해, 재접속하거나 잘못된 요청을 보내도 현재 위치를 서버가 판단한다.
-- `story_nodes`와 `story_transitions`를 상태 머신처럼 사용해 현재 노드에서 허용된 다음 노드만 이동하게 했다.
-- `from_node_id`, `to_node_id`, `action_type`, `expected_input`, `validator_type`, `validator_config`, `priority`로 전이 조건을 데이터화했다.
-- 터미널, VFS, fragment, 미니게임 clear 상태를 진행 판정과 연결했다.
+시연 순서:
+1. 챕터 4 진입
+2. 브라우저와 메신저 단서 확인
+3. 터미널 명령 입력
+4. Lucas Route 또는 관련 전이 확인
+5. 진엔딩 도달
 
-git/code 근거:
-- `StoryServiceImpl.java`: 챕터별 VFS 런타임 공통화, 챕터3 서버 룰, 챕터4 mount/root/ending, 챕터 해시, 터미널 흐름 검증 강화
-- Redis 기반 진행 상태 및 recent action
+말할 포인트:
+- 시연은 길게 하지 않는다.
+- 이후 기능 설명 장에서 방금 본 흐름이 어떻게 서버 전이 검증, 로그 수집, 힌트, 운영 데이터로 이어지는지 설명한다.
 
-### 9. 유저 악용을 막는 진행 무결성
+### 8. 기능 설명
+
+#### 8.1 유저 악용을 막는 진행 무결성
 
 한 문장: "유저가 URL, 브라우저 상태, 임의 요청으로 스토리를 건너뛰거나 보상을 위조하지 못하게 진행 경로를 서버에서 제한했다."
 
 근거:
 - `StoryTransition`은 `fromNode -> toNode` 관계와 action/input/validator 조건을 가진다.
 - `StoryServiceImpl.processTransition`은 유저 진행 기록의 `latestNode`에서 출발하는 transition만 조회한다.
-- 매칭 transition이 없으면 터미널 fallback을 시도하고, 그래도 처리할 수 없으면 `Transition not allowed`로 막는다.
-- 클라이언트가 요청에 nodeId를 보내더라도 서버의 진행 상태가 기준이므로, 특정 노드 URL이나 임의 요청만으로 다음 노드에 접근하는 흐름을 만들지 않는다.
+- 매칭 transition이 없으면 fallback을 시도하고, 처리할 수 없으면 `Transition not allowed`로 막는다.
 - 미니게임 시작 세션과 fragment 획득을 서버 API로 묶고, 본편 전이는 미니게임 clear와 별도로 다시 검증한다.
 
 말할 포인트:
-- `story_node.sql`과 `transition.sql`에 담긴 데이터는 "페이지 목록"이 아니라 "허용된 진행 그래프"다.
-- 특정 노드에서 가능한 다음 노드와 액션 조건을 제한해 무분별한 스토리 스킵, 잘못된 접근, 버그 악용을 막으려 했다.
-- 실패 전이는 FAIL 노드나 retry 응답으로 처리해 유저에게 피드백을 주되, 정상 진행 상태와 분리했다.
-- 포커스/새로고침/중복 clear처럼 유저가 실제로 겪을 수 있는 문제도 후반에 수정했다.
+- `story_node.sql`과 `transition.sql`은 페이지 목록이 아니라 허용된 진행 그래프다.
+- 특정 노드에서 가능한 다음 노드와 액션 조건을 제한해 스토리 스킵, 잘못된 접근, 버그 악용을 줄였다.
 
-관련 이력:
-- `feat: 미니게임에 해시 추가`
-- `feat: 챕터 해시 백엔드 추가`
-- `feat: 미니게임 백엔드 업데이트 세션 관리 추가`
-- `feature/be-prevent-minigame-url-injection`
+#### 8.2 로그 수집
 
-### 10. 막힌 유저를 놓치지 않는 힌트
+한 문장: "유저 행동과 인프라 상태를 같은 말로 섞지 않고, 목적별로 나눠서 관측했다."
+
+구성:
+- CloudWatch / ALB: 외부 HTTP 요청, 응답 시간, ALB 5xx
+- Prometheus / Grafana: node_exporter 기반 노드 CPU, 메모리, 디스크
+- Loki: Kubernetes와 외부 서버 로그 관측 보조
+- Filebeat / Logstash / Elasticsearch / Kibana: 컨테이너 로그 수집과 게임 이벤트 분석
+- GA4 / Clarity: 브라우저 사용성, 세션, 프론트 이벤트
+
+주의:
+- ALB 150,503 requests는 유저 수가 아니라 HTTP 요청 수다.
+- ELK raw logs 167,608건은 컨테이너 stdout/stderr 원천 로그 수다.
+- 실제 플레이 분석은 Kibana의 구조화 게임 이벤트 9,476건을 기준으로 말한다.
+
+#### 8.3 막힌 유저를 놓치지 않는 힌트
 
 한 문장: "AI 힌트는 정답을 뿌리는 기능이 아니라, 막힌 유저가 이탈하기 전에 다시 움직이게 하는 장치였다."
 
 구현 방향:
 - 현재 노드, 실패 횟수, 유저 질문을 바탕으로 실시간 힌트를 생성한다.
-- 힌트 강도는 실패 횟수에 따라 LIGHT/MEDIUM/STRONG으로 조절한다.
-- LLM이 실패해도 서버 템플릿 fallback으로 유저에게 빈 응답을 주지 않는다.
-- Mattermost 힌트 worker가 Elasticsearch 로그에서 병목 노드를 찾고, 루카스 페르소나의 간접 힌트를 생성한다.
+- recent actions와 진행 상태를 붙여 RAG 검색 맥락을 만든다.
+- PGVector 검색으로 관련 전이와 가이드를 찾고, LLM이 루카스 페르소나의 간접 힌트를 생성한다.
+- 후반에는 응답 필드를 줄이고 `hint_text`, `hint_level` 중심으로 경량화했다.
+- LLM 지연/실패 시 서버 템플릿 fallback으로 빈 응답을 피한다.
 
-근거:
-- `POST /api/v1/hints/live`
-- AI orchestrator: query embedding, PGVector retrieval, LLM hint generation
-- Mattermost 힌트 flow 문서
-
-### 11. 유저 행동을 제품 개선 데이터로 바꾸기
+#### 8.4 피드백 자동화: 로그 분석에서 Mattermost 리포트까지
 
 한 문장: "유저의 실패, 이탈, 힌트 요청, 버그 제보가 다음 개발 우선순위를 정하는 데이터가 되게 했다."
 
-볼 지표:
-- 총 참여 유저
-- 총 액션 수
-- 평균 플레이 시간
-- 성공률
-- 이탈률
-- 주요 병목 노드
-- 실패 명령어
-- 힌트 요청 수
-- 버그 리포트 수
+흐름:
+1. 유저 행동 로그 수집
+2. Elasticsearch에서 실패/이탈/성공률 집계
+3. 병목 노드 계산
+4. RAG 힌트 또는 운영 리포트 생성
+5. Mattermost 채널로 공유
+6. 콘텐츠/UX 수정으로 반영
 
-근거:
-- Admin dashboard response: totalUsers, activeUsers24h, chapter completion, avgHoursToChapterComplete
-- ES analytics response: totalEvents, success/fail/error, hintRequested, uniqueUsers, uniqueSessions, bottlenecks, failCommands
-- Mattermost report flow: 1일/7일 비교, 실패 5회 이상 + 성공률 50% 미만 자동 경고
-- GA4/Clarity: 챕터 선택, 명령 제출, 버그 리포트 제출, 화면 노출 이벤트
+말할 포인트:
+- 실시간 RAG 힌트는 한 유저가 지금 막힌 문제를 해결하기 위한 장치다.
+- Mattermost 힌트/리포트는 운영자가 전체 병목을 보고 콘텐츠를 개선하기 위한 장치다.
 
-주의:
-- 실제 발표 수치는 운영 DB, GA4, Clarity, ELK, Mattermost 리포트에서 확정해야 한다. SQL 백업을 근거로 숫자를 단정하지 않는다.
-
-### 12. 유저가 몰려와도 볼 수 있는 운영 인프라
+#### 8.5 유저가 몰려와도 볼 수 있는 운영 인프라
 
 한 문장: "배포가 끝이 아니라, 유저가 들어온 뒤 서비스가 어떻게 버티고 어디서 문제가 생기는지 볼 수 있게 만드는 것이 목표였다."
 
-진화:
-1. 로컬/단일 서버 실행
-2. Jenkins CI/CD와 Docker 이미지 배포
-3. Kubernetes dev/prod 네임스페이스와 Ingress
-4. replica, RollingUpdate, HPA, PDB, readiness/liveness probe
-5. ELK로 유저 행동과 애플리케이션 로그 수집
-6. Prometheus/Grafana/Loki로 노드와 서비스 상태 관측
-7. Mattermost 운영 리포트와 힌트 자동화
-
-git/docs 근거:
-- `feature/infra-cicd`, `hotfix/infra-cicd`
-- `docs/infra/cicd_pipeline_info.md`
-- `docs/infra/k8s/k8s-scaleout-report.ko.md`
-- `docs/infra/elk_implementation_status.md`
-- `docs/infra/monitoring_setup_guide.md`
-
-Grafana CSV 근거:
-- `presentation/dashboard-1779069926489.json`은 CloudWatch가 아니라 Prometheus/node_exporter 기반 `Node Exporter Full` 대시보드다.
-- export된 CSV는 `worker1` 노드의 단일 시리즈 샘플이다.
-- `CPU Basic > Busy System`: 평균 1.12%, P95 1.45%, 최대 5.98%.
-- `Memory Basic > Total`: 7.60 GiB로 일정.
-- `Disk Space Used Basic > /boot/efi`: 5.85%로 일정.
-- 이 데이터는 노드 레벨 관측 체계의 근거로 쓰되, 애플리케이션 요청량/유저 수/AWS 관리형 서비스 상태를 설명하는 자료로 쓰면 안 된다.
-
-AWS CloudWatch TSV 근거:
-- `alb_request_count.tsv`: 2026-04-29 09:00 -> 2026-05-18 12:00 동안 총 150,503 requests.
-- `alb_response_time.tsv`: request-weighted target response average 약 0.0739s.
-- `alb_5xx.tsv`: ALB-generated 5xx 총 120건, 요청 대비 약 0.0797%.
-- `master_cpu.tsv`: EC2 CPU 평균 4.26%, P95 5.09%, 최대 hourly average 11.61%.
-- `worker1_cpu.tsv`: EC2 CPU 평균 5.11%, P95 6.43%, 최대 hourly average 30.11%. 단, hourly maximum 기준 2026-05-11 22:00에 100% spike가 있었다.
-- 이 수치는 "외부 트래픽이 있었고 ALB/EC2 레벨 관측을 했다"는 근거다. 사용자 수, 챕터 완료율, 앱 내부 오류율은 별도 로그/관리자 대시보드/ELK로 설명해야 한다.
-
-### 13. 릴리즈 diff로 본 진화
-
-한 문장: "코드 변화량도 유저를 붙잡는 기능, 운영 자동화, 챕터4 완성으로 무게중심이 이동한 것을 보여준다."
-
 구성:
-- v1.0 -> v1.1: 기본 런타임, 챕터/힌트/인프라 뼈대가 크게 증가
-- v1.1 -> v2.0: 작은 안정화 구간
-- v2.0 -> v3.0: Lucas Survival 에셋, 챕터3/4, 분석, RAG가 크게 증가
-- v3.0 -> v3.1: 챕터4, 엔딩, 관리자, ELK, 미니게임 연결 강화
-- v3.1 -> HEAD: 챕터4 흐름 검증, 누락 노드, BGM, URL injection 방지, 전이 무결성 보강, 피드백성 수정
-
-슬라이드 시각화:
-- 막대 그래프 5개
-- 아래에 각 구간의 핵심 키워드 2-3개만 표시
-
-### 14. 유저가 실제로 쓰면 드러나는 어려움
-
-한 문장: "어려움은 만들 때보다 유저가 직접 들어와 플레이하고, 막히고, 새로고침하고, 우회하려고 할 때 더 많이 드러났다."
-
-사례:
-- 스토리 데이터 구조가 커지며 화면 상태가 서버 응답 형태에 과하게 흔들릴 위험
-- 유저가 임의 URL, nodeId, 잘못된 액션으로 스토리 순서를 건너뛰거나 잘못된 노드에 접근할 위험
-- 터미널 UX에서 오답 피드백이 몰입을 깨는 문제
-- 미니게임 clear, fragment, story transition 순서 동기화
-- 미니게임 장시간 플레이, 포커스 이탈, 새로고침, 중복 clear 문제
-- K8s 하이브리드 네트워크와 Ingress/도메인 정리
-- ELK PVC, EBS CSI 권한, Elasticsearch 권한 이슈
-- LLM 지연/실패가 막힌 유저의 실시간 플레이 UX에 미치는 영향
-
-### 15. 피드백은 어떻게 처리했나
-
-한 문장: "피드백은 버그 리포트, 행동 로그, 운영 리포트, 커밋 수정으로 이어지는 루프를 만들었다."
-
-근거:
-- 인게임 버그 리포트: multipart + 첨부파일 + 관리자 메일 발송
-- GA4/Clarity: 챕터 선택, 명령 제출, 버그 리포트 제출, 화면 노출 이벤트
-- 커밋 예시:
-  - 터미널 오답 로그가 사라지는 UX 수정
-  - 챕터3 사라진 메모 힌트 복원
-  - 미니게임 포커스/새로고침/중복 clear 수정
-  - 챕터4 awkward dialogue, 누락 노드, 전이 검증 강화
-  - 잘못된 접근은 `Transition not allowed`, FAIL 노드, retry 응답, recent-action 기록으로 남겨 힌트/운영 분석에 활용
-
-### 16. 결과 슬라이드
-
-한 문장: "얼마나 모였고, 어디서 막혔고, 어떤 개선으로 이어졌는지를 숫자와 사례로 닫는다."
-
-채울 숫자:
-- 총 방문/참여 유저
-- 회원/게스트 비율
-- 챕터별 완료율
-- 평균 플레이 시간
-- 힌트 요청 수
-- 버그 리포트 수
-- 가장 많이 막힌 노드 3개
-- 처리한 피드백 사례 3개
+- Jenkins CI/CD: 빌드, Docker image push, Kubernetes manifest 적용
+- ALB / Ingress / Service: 외부 요청 라우팅
+- EC2 기반 self-managed Kubernetes: control-plane과 worker 노드 구성
+- HPA / readiness probe / liveness probe / PDB: Pod 수 조정과 배포 안정성 보강
+- Prometheus, Grafana, Loki, ELK, Mattermost: 관측과 운영 공유
 
 주의:
-- 이 슬라이드는 지금 저장소 분석만으로 채우면 안 된다. 관리자 대시보드, GA4, Clarity, ELK, Mattermost 리포트에서 발표 전 수치를 확정한다.
+- Argo CD는 실제 사용한 것이 아니라 도입 시 개선점으로만 언급한다.
+- HPA는 노드를 늘리는 기능이 아니라 Deployment replica, 즉 Pod 수를 조정하는 기능이다.
 
-### 17. 데모 순서
+#### 8.6 시스템 아키텍처
 
-한 문장: "발표 흐름과 같은 순서로 짧게 보여준다."
+한 문장: "유저 경험에서 운영 데이터까지 한 흐름으로 연결했다."
 
-시연: 챕터 4 진엔딩 보여줄거임.
+흐름:
+- Browser Runtime: 가상 OS, 터미널, 메신저, 브라우저, 미니게임
+- Routing: ALB Ingress, Nginx/NodePort, Kubernetes Service
+- Spring Boot Runtime: 스토리 전이, 터미널 판정, 진행 상태, 미니게임 검증
+- Data Layer: PostgreSQL, Redis, PGVector
+- Ops Layer: ELK, Grafana, GA4, Clarity, Mattermost report
 
-### 18. Closing
+### 9. 유저 리포트를 통한 개선
+
+한 문장: "유저가 실제로 쓰면서 드러난 불편을 로그, 리포트, 커밋 수정으로 연결했다."
+
+정리:
+- 챕터가 어려워지면서 챕터 2에서 실패율이 올라간 것을 확인했다. 이후 CLI 입력 줄에 `Tab` 자동완성 기능을 도입해 사용자의 명령어 입력 부담을 줄였고, 챕터 2 실패율 38.2%에서 챕터 3 실패율 24.7%로 낮아졌다. 이는 13.5%p 감소, 상대 기준 약 35.3% 감소다.
+- 몰입을 위해 도입한 기사 글리치 연출이 일부 환경에서 버퍼링을 유발해 오히려 사용자 경험을 해치는 문제가 있었다. 이를 렌더링과 상태 갱신 부담을 줄이는 방향으로 최적화했다.
+- 무분별한 영어 사용이 페이지에 대한 사용자의 이해를 떨어뜨렸다. i18n을 도입하고 주요 문구를 한글로 변환해 사용자 경험을 개선했으며, 이후 다국적 접근에 대한 확장성도 확보했다.
+
+근거:
+- `feature/be-update-tab-functionality-on-terminal`
+- `fix: 기사 노드 이동 조건 및 렌더링 성능 개선`
+- `fix: 챕터3 사라진 메모 힌트 복원`
+- `style: friend -> 친구로 변경`
+- `fix: 최소화된 창(터미널, 개발자 도구)이 클릭 이벤트를 가로채는 버그 수정`
+- `frontend/src/app/store/windowStore.ts`: z-index 정규화와 active window 관리
+
+### 10. 성적
+
+#### 10.1 Grafana / Kibana
+
+한 문장: "서비스 유입, 노드 상태, 플레이 행동을 분리해서 확인했다."
+
+사용할 수치:
+- ALB requests: 150,503
+- Peak hour: 3,467 requests/hour, 시간평균 약 0.96 RPS
+- ALB-generated 5xx: 120, 0.0797%
+- Request-weighted target response average: 약 74ms
+- master EC2 CPU average: 4.26%
+- worker1 EC2 CPU average: 5.11%
+- ELK raw logs: 167,608
+- ELK structured game events: 9,476
+- ELK users: 159
+- SUCCESS / FAIL / ERROR: 6,698 / 2,675 / 103
+
+주의:
+- ALB request는 유저 수가 아니다.
+- ELK raw logs는 유저 행동 수가 아니다.
+- Grafana CSV는 worker1 일부 series export이므로 전체 애플리케이션 성능으로 과장하지 않는다.
+
+#### 10.2 GA4 / Clarity
+
+한 문장: "브라우저에서 실제 사용 흔적과 UX 신호를 확인했다."
+
+사용할 수치:
+- GA4 active users: 75
+- GA4 new users: 79
+- GA4 views: 2,815
+- GA4 event count: 17,951
+- GA4 average engagement time per active user: 약 25분 48초
+- GA4 bounce rate: 11.37%
+- Clarity sessions: 134
+- Clarity unique users: 61
+- Clarity pages/session: 4.76
+- Clarity dead clicks: 69 sessions, 51.49%
+- Clarity quick clicks: 7 sessions, 5.22%
+- Clarity bug_report_submitted: 1
+
+주의:
+- GA4/Clarity는 동의와 스크립트 로딩의 영향을 받는 프론트 분석 데이터다.
+- ALB 15만 요청과 직접 비교해서 "수집 허용 비율"로 해석하면 안 된다.
+
+### 11. 마무리
 
 한 문장: "FIND ME는 게임을 목적으로 만든 프로젝트가 아니라, 유저가 있는 서비스를 만들고 운영하기 위해 게임이라는 형태를 선택한 프로젝트다."
 

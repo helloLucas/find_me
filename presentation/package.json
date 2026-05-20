@@ -1,15 +1,16 @@
 {
   "name": "lucas-presentation",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../frontend/node_modules/vite/bin/vite.js --host 0.0.0.0 --port 5175",
-    "start": "npm run dev",
-    "build": "node ../frontend/node_modules/vite/bin/vite.js build",
-    "preview": "node ../frontend/node_modules/vite/bin/vite.js preview --host 0.0.0.0 --port 4175"
+    "dev": "slidev --port 8080",
+    "build": "slidev build",
+    "export": "slidev export"
   },
-  "devDependencies": {
-    "vite": "^8.0.4"
+  "dependencies": {
+    "@slidev/cli": "^0.49.0",
+    "@slidev/theme-default": "^0.25.0",
+    "vue": "^3.4.0"
   }
 }
