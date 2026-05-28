@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
     app_port: int = Field(default=8201, alias="APP_PORT")
 
-    gms_base_url: str = Field(default="https://gms.ssafy.io/gmsapi", alias="GMS_BASE_URL")
+    gms_base_url: str = Field(default="https://gms.*****.io/gmsapi", alias="GMS_BASE_URL")
     gms_key: str = Field(default="", alias="GMS_KEY")
     gms_llm_provider: str = Field(default="openai", alias="GMS_LLM_PROVIDER")
     gms_router_provider: str = Field(default="openai", alias="GMS_ROUTER_PROVIDER")

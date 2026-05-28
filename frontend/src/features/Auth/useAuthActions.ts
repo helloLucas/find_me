@@ -28,10 +28,10 @@ export const useAuthActions = () => {
    * OAuth 로그인 실행 핸들러 (Provider별 분기)
    * 전체화면 유지를 위해 팝업창 도구를 통해 소셜 로그인을 시도합니다.
    */
-  const handleLoginWithProvider = (provider: 'google' | 'ssafy') => {
+  const handleLoginWithProvider = (provider: 'google' | '*****') => {
     const authUrl = `${env.apiBaseUrl}/oauth2/authorization/${provider}`;
 
-    // SSAFY 로그인 폼의 우측 내용이 잘리지 않는 최적의 사이즈
+    // ***** 로그인 폼의 우측 내용이 잘리지 않는 최적의 사이즈
     const width = 650;
     const height = 700;
 

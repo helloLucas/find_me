@@ -25,7 +25,7 @@ const CREDITS_DATA = {
         { role: 'BACKEND DEVELOPMENT', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'INFRASTRUCTURE & DEVOPS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
         { role: 'VIDEO & MOTION GRAPHICS', names: 'Arin Kim, Woongki Min, Seohyun Park,\nDonghun Yoo, Yujin Lee, Jaeyong Lee' },
-        { role: 'SPECIAL THANKS', names: 'SSAFY, All Play Testers,\nAnd You' }
+        { role: 'SPECIAL THANKS', names: '*****, All Play Testers,\nAnd You' }
     ]
 };
 

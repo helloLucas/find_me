@@ -47,7 +47,7 @@ const Home = () => {
         setIsAuthModalOpen(true);
     };
 
-    const handleSelectProvider = (provider: 'google' | 'ssafy') => {
+    const handleSelectProvider = (provider: 'google' | '*****') => {
         setIsAuthModalOpen(false);
         handleLoginWithProvider(provider);
     };

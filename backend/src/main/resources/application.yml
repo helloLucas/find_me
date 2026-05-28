@@ -34,18 +34,18 @@ spring:
                         - profile
                         - email
 
-                    ssafy:
-                      client-id: ${SSAFY_CLIENT_ID}
-                      client-secret: ${SSAFY_CLIENT_SECRET}
-                      provider: ssafy
+                    *****:
+                      client-id: ${*****_CLIENT_ID}
+                      client-secret: ${*****_CLIENT_SECRET}
+                      provider: *****
                       authorization-grant-type: authorization_code
                       redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 
                 provider:
-                    ssafy:
-                        authorization-uri: https://project.ssafy.com/oauth/sso-check
-                        token-uri: https://project.ssafy.com/ssafy/oauth2/token
-                        user-info-uri: https://project.ssafy.com/ssafy/resources/userInfo
+                    *****:
+                        authorization-uri: https://project.*****.com/oauth/sso-check
+                        token-uri: https://project.*****.com/*****/oauth2/token
+                        user-info-uri: https://project.*****.com/*****/resources/userInfo
                         user-name-attribute: userId
 
     mail:

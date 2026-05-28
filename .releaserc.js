@@ -30,7 +30,7 @@ module.exports = {
     [
       "@semantic-release/gitlab",
       {
-        gitlabUrl: "https://lab.ssafy.com",
+        gitlabUrl: "******",
       },
     ],
     [

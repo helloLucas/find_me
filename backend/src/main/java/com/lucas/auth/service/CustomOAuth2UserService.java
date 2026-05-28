@@ -112,8 +112,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
   private AuthProvider getAuthProvider(String registrationId) {
     if ("google".equalsIgnoreCase(registrationId)) {
       return AuthProvider.GOOGLE;
-    } else if ("ssafy".equalsIgnoreCase(registrationId)) {
-      return AuthProvider.SSAFY;
+    } else if ("*****".equalsIgnoreCase(registrationId)) {
+      return AuthProvider.*****;
     }
     throw new OAuth2AuthenticationException("지원하지 않는 OAuth Provider 입니다: " + registrationId);
   }

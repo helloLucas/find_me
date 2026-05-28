@@ -2,9 +2,9 @@ package com.lucas.auth.oauth;
 
 import java.util.Map;
 
-public class SsafyOAuth2UserInfo extends OAuth2UserInfo {
+public class *****OAuth2UserInfo extends OAuth2UserInfo {
 
-  public SsafyOAuth2UserInfo(Map<String, Object> attributes) {
+  public *****OAuth2UserInfo(Map<String, Object> attributes) {
     super(attributes);
   }
 

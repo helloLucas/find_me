@@ -330,7 +330,7 @@ kubectl get hpa,pod -n prod -w
 
 ```text
 worker1        env=prod
-worker-ssafy   env=dev
+worker-*****   env=dev
 ```
 
 Deployment에 이런 설정이 있으면:

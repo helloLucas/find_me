@@ -5,10 +5,10 @@ import { trackAnalyticsEvent } from '../../shared/analytics';
 interface AuthSelectionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (provider: 'google' | 'ssafy') => void;
+    onSelect: (provider: 'google' | '*****') => void;
 }
 
-type AuthProvider = 'google' | 'ssafy';
+type AuthProvider = 'google' | '*****';
 
 const AUTH_PROVIDERS: Array<{
     id: AuthProvider;
@@ -19,25 +19,25 @@ const AUTH_PROVIDERS: Array<{
     logoAlt: string;
     logoClassName: string;
 }> = [
-    {
-        id: 'google',
-        label: 'Login with Google',
-        channel: 'OAuth // Google',
-        description: 'External identity provider',
-        logoSrc: '/Google_logo.png',
-        logoAlt: 'Google',
-        logoClassName: 'w-7 h-7 object-contain',
-    },
-    {
-        id: 'ssafy',
-        label: 'Login with SSAFY',
-        channel: 'Campus // SSAFY',
-        description: 'Institution account channel',
-        logoSrc: '/logo_ssafy.png',
-        logoAlt: 'SSAFY',
-        logoClassName: 'w-8 h-6 object-contain',
-    },
-];
+        {
+            id: 'google',
+            label: 'Login with Google',
+            channel: 'OAuth // Google',
+            description: 'External identity provider',
+            logoSrc: '/Google_logo.png',
+            logoAlt: 'Google',
+            logoClassName: 'w-7 h-7 object-contain',
+        },
+        {
+            id: '*****',
+            label: 'Login with *****',
+            channel: 'Campus // *****',
+            description: 'Institution account channel',
+            logoSrc: '/logo_*****.png',
+            logoAlt: '*****',
+            logoClassName: 'w-8 h-6 object-contain',
+        },
+    ];
 
 export const AuthSelectionModal: React.FC<AuthSelectionModalProps> = ({
     isOpen,

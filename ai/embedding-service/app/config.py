@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
     app_port: int = Field(default=8101, alias="APP_PORT")
 
-    gms_base_url: str = Field(default="https://gms.ssafy.io/gmsapi", alias="GMS_BASE_URL")
+    gms_base_url: str = Field(default="https://gms.*****.io/gmsapi", alias="GMS_BASE_URL")
     gms_key: str = Field(default="", alias="GMS_KEY")
     gms_embedding_model: str = Field(default="gemini-embedding-001", alias="GMS_EMBEDDING_MODEL")
     gms_timeout_seconds: float = Field(default=20.0, alias="GMS_TIMEOUT_SECONDS")

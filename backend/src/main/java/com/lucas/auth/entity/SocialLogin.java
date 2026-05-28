@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 /**
  * 소셜 로그인 인증 수단을 별도로 관리하는 엔티티입니다.
  *
- * <p>하나의 {@link User}가 여러 소셜 제공자(Google, SSAFY 등)로 로그인할 수 있도록 유저 본체와 인증 수단을 1:N으로 분리합니다.
+ * <p>하나의 {@link User}가 여러 소셜 제공자(Google, ***** 등)로 로그인할 수 있도록 유저 본체와 인증 수단을 1:N으로 분리합니다.
  */
 @Entity
 @Getter
@@ -34,7 +34,7 @@ public class SocialLogin extends BaseEntity {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  /** 소셜 로그인 인증 제공자 (GOOGLE, SSAFY 등) */
+  /** 소셜 로그인 인증 제공자 (GOOGLE, ***** 등) */
   @Enumerated(EnumType.STRING)
   @Column(name = "provider", length = 30, nullable = false)
   private AuthProvider provider;

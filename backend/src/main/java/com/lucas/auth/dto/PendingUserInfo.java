@@ -20,7 +20,7 @@ public class PendingUserInfo implements Serializable {
   /** 사용자 이메일 (소셜 로그인 시 획득) */
   private String email;
 
-  /** 소셜 로그인 인증 제공자 (GOOGLE, SSAFY 등) */
+  /** 소셜 로그인 인증 제공자 (GOOGLE, ***** 등) */
   private AuthProvider provider;
 
   /** 인증 제공자 측의 고유 유저 식별값 */

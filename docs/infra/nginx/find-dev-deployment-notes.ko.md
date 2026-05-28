@@ -4,7 +4,7 @@
 
 ## 요약
 
-개발 서버 트래픽은 ALB를 거치지 않고 `worker-ssafy` 노드의 호스트 Nginx에서 직접 라우팅한다.
+개발 서버 트래픽은 ALB를 거치지 않고 `worker-*****` 노드의 호스트 Nginx에서 직접 라우팅한다.
 
 현재 접속 주소:
 
@@ -18,14 +18,14 @@
 
 ## 접근 모델
 
-현재 공개 DNS 레코드는 `worker-ssafy`의 Tailscale IP를 가리킨다.
+현재 공개 DNS 레코드는 `worker-*****`의 Tailscale IP를 가리킨다.
 
 ```text
 dev.find.me.kr      A 100.114.155.48
 dev.api.find.me.kr  A 100.114.155.48
 ```
 
-`100.114.155.48`은 일반 공인 인터넷 IP가 아니라 `worker-ssafy`의 Tailscale IP다.
+`100.114.155.48`은 일반 공인 인터넷 IP가 아니라 `worker-*****`의 Tailscale IP다.
 
 따라서 접속 가능 여부는 아래와 같다.
 
@@ -38,22 +38,22 @@ dev.api.find.me.kr  A 100.114.155.48
 현재 Tailscale 정보:
 
 ```text
-worker-ssafy Tailscale IP: 100.114.155.48
-MagicDNS 이름: worker-ssafy.tail4d2ec7.ts.net.
+worker-***** Tailscale IP: 100.114.155.48
+MagicDNS 이름: worker-*****.tail4d2ec7.ts.net.
 Tailnet 계정/조직: **********@gmail.com
 ```
 
-`worker-ssafy`의 Kubernetes kubelet도 Tailscale IP를 노드 IP로 사용하고 있다.
+`worker-*****`의 Kubernetes kubelet도 Tailscale IP를 노드 IP로 사용하고 있다.
 
 ```text
-kubelet --hostname-override=worker-ssafy --node-ip=100.114.155.48
+kubelet --hostname-override=worker-***** --node-ip=100.114.155.48
 ```
 
 Tailscale을 임의로 중단하거나 제거하면 안 된다. Tailscale이 꺼져 있는 동안 master가 worker 노드에 접근하지 못해서 클러스터 상태가 흔들릴 수 있다.
 
 ## Tailscale 런타임 상태
 
-2026-04-28 18:57 UTC 기준으로 `worker-ssafy`에서 확인한 상태다.
+2026-04-28 18:57 UTC 기준으로 `worker-*****`에서 확인한 상태다.
 
 서비스 상태:
 
@@ -112,7 +112,7 @@ IPv6 DNS server: fd7a:115c:a1e0::53
 
 | 이름                                | IP               |
 | ----------------------------------- | ---------------- |
-| `worker-ssafy.tail4d2ec7.ts.net`    | `100.114.155.48` |
+| `worker-*****.tail4d2ec7.ts.net`    | `100.114.155.48` |
 | `master.tail4d2ec7.ts.net`          | `100.119.163.18` |
 | `worker1-1.tail4d2ec7.ts.net`       | `100.116.188.57` |
 | `desktop-6oo0p6f.tail4d2ec7.ts.net` | `100.75.160.35`  |
@@ -121,7 +121,7 @@ IPv6 DNS server: fd7a:115c:a1e0::53
 
 | Peer              | IP               | OS      | 상태                  |
 | ----------------- | ---------------- | ------- | --------------------- |
-| `worker-ssafy`    | `100.114.155.48` | linux   | 현재 노드             |
+| `worker-*****`    | `100.114.155.48` | linux   | 현재 노드             |
 | `master`          | `100.119.163.18` | linux   | active, direct        |
 | `worker1-1`       | `100.116.188.57` | linux   | active, direct        |
 | `desktop-6oo0p6f` | `100.75.160.35`  | windows | 확인 시점에는 offline |
@@ -257,7 +257,7 @@ nodePort: 31269 # backend monitoring, if needed
 
 ## Nginx
 
-Nginx는 `worker-ssafy` 호스트에서 직접 실행된다.
+Nginx는 `worker-*****` 호스트에서 직접 실행된다.
 
 주요 파일:
 
@@ -443,12 +443,12 @@ browser -> 3.35.17.97:30116 -> Kubernetes NodePort -> frontend Pod
 우리가 의도한 개발 도메인 경로는 아래와 같다.
 
 ```text
-browser -> dev.find.me.kr:443 -> worker-ssafy Nginx -> 127.0.0.1:30116 -> frontend Pod
+browser -> dev.find.me.kr:443 -> worker-***** Nginx -> 127.0.0.1:30116 -> frontend Pod
 ```
 
 private 개발 환경으로 운영하려면 public NodePort 직접 접근은 cloud/security-group/firewall 계층에서 막는 것이 이상적이다. 그렇지 않으면 사용자가 의도한 Tailscale/Nginx 진입점을 우회할 수 있다.
 
-이전에 `3.35.17.97`의 public 80번 포트는 `worker-ssafy` Nginx로 연결되지 않았다. 그래서 `dev.find.me.kr -> 3.35.17.97` 형태의 public HTTP 구성은 동작하지 않았다. 현재 구성은 DNS가 Tailscale IP를 가리키도록 해서 이 문제를 피한다.
+이전에 `3.35.17.97`의 public 80번 포트는 `worker-*****` Nginx로 연결되지 않았다. 그래서 `dev.find.me.kr -> 3.35.17.97` 형태의 public HTTP 구성은 동작하지 않았다. 현재 구성은 DNS가 Tailscale IP를 가리키도록 해서 이 문제를 피한다.
 
 ## 운영 체크리스트
 

@@ -4,7 +4,7 @@ Last updated: 2026-04-28 UTC
 
 ## Summary
 
-Development traffic is routed directly on the `worker-ssafy` node through host Nginx, without going through an ALB.
+Development traffic is routed directly on the `worker-*****` node through host Nginx, without going through an ALB.
 
 Current entrypoints:
 
@@ -18,14 +18,14 @@ This dev environment is intentionally reachable through Tailscale. A client mach
 
 ## Access Model
 
-The public DNS records currently resolve to the Tailscale IP of `worker-ssafy`:
+The public DNS records currently resolve to the Tailscale IP of `worker-*****`:
 
 ```text
 dev.find.me.kr      A 100.114.155.48
 dev.api.find.me.kr  A 100.114.155.48
 ```
 
-`100.114.155.48` is not a normal public internet address. It is the Tailscale IP of `worker-ssafy`.
+`100.114.155.48` is not a normal public internet address. It is the Tailscale IP of `worker-*****`.
 
 What this means:
 
@@ -38,15 +38,15 @@ What this means:
 Current Tailscale details:
 
 ```text
-worker-ssafy Tailscale IP: 100.114.155.48
-MagicDNS name: worker-ssafy.tail4d2ec7.ts.net.
+worker-***** Tailscale IP: 100.114.155.48
+MagicDNS name: worker-*****.tail4d2ec7.ts.net.
 Tailnet user/org: *********@gmail.com
 ```
 
-Kubernetes on `worker-ssafy` also uses the Tailscale IP as the node IP:
+Kubernetes on `worker-*****` also uses the Tailscale IP as the node IP:
 
 ```text
-kubelet --hostname-override=worker-ssafy --node-ip=100.114.155.48
+kubelet --hostname-override=worker-***** --node-ip=100.114.155.48
 ```
 
 Do not stop or remove Tailscale casually. The worker node may become unreachable from the master while Tailscale is down.
@@ -81,7 +81,7 @@ nodePort: 31269 # backend monitoring, if needed
 
 ## Nginx
 
-Nginx runs directly on the `worker-ssafy` host.
+Nginx runs directly on the `worker-*****` host.
 
 Important files:
 
@@ -267,12 +267,12 @@ browser -> 3.35.17.97:30116 -> Kubernetes NodePort -> frontend Pod
 The desired dev-domain path is:
 
 ```text
-browser -> dev.find.me.kr:443 -> worker-ssafy Nginx -> 127.0.0.1:30116 -> frontend Pod
+browser -> dev.find.me.kr:443 -> worker-***** Nginx -> 127.0.0.1:30116 -> frontend Pod
 ```
 
 For a private dev environment, direct public NodePort access should ideally be blocked at the cloud/security-group/firewall layer. Otherwise users may bypass the intended Tailscale/Nginx entrypoint.
 
-Public port 80 on `3.35.17.97` was previously not connected to `worker-ssafy` Nginx. That is why `dev.find.me.kr -> 3.35.17.97` did not work as a public HTTP setup. The current design avoids that by using Tailscale DNS targets instead.
+Public port 80 on `3.35.17.97` was previously not connected to `worker-*****` Nginx. That is why `dev.find.me.kr -> 3.35.17.97` did not work as a public HTTP setup. The current design avoids that by using Tailscale DNS targets instead.
 
 ## Operational Checklist
 

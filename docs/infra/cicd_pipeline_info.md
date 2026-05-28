@@ -1,6 +1,6 @@
 # 🚀 프로젝트 CI/CD 구축 가이드
 
-이 문서는 SSAFY GitLab, Jenkins, ArgoCD를 연동하여 구현한 프로젝트의 자동 빌드 및 배포 파이프라인 설정을 정리한 문서입니다.
+이 문서는 ***** GitLab, Jenkins, ArgoCD를 연동하여 구현한 프로젝트의 자동 빌드 및 배포 파이프라인 설정을 정리한 문서입니다.
 
 ## 1. 파이프라인 아키텍처
 
@@ -13,7 +13,7 @@
 
 
 ## 2. 기술 스택 및 환경
-- **Source Control:** SSAFY GitLab (`lab.ssafy.com`)
+- **Source Control:** ***** GitLab (`lab.*****.com`)
 - **CI Tool:** Jenkins (NodeJS 플러그인 포함)
 - **CD Tool:** ArgoCD (Argo Project)
 - **Image Registry:** Docker Hub

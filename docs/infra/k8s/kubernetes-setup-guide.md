@@ -528,8 +528,8 @@ kubectl create secret generic backend-secret \
 | --- | --- |
 | `GOOGLE_CLIENT_ID` | Google OAuth client id |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `SSAFY_CLIENT_ID` | SSAFY OAuth client id |
-| `SSAFY_CLIENT_SECRET` | SSAFY OAuth client secret |
+| `*****_CLIENT_ID` | ***** OAuth client id |
+| `*****_CLIENT_SECRET` | ***** OAuth client secret |
 | `JWT_SECRET` | JWT 서명에 사용할 secret |
 | `SPRING_DATASOURCE_URL` | DB 접속 URL |
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자명 |

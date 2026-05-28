@@ -33,17 +33,17 @@ public class OAuthAttributes {
   public static OAuthAttributes of(
       AuthProvider provider, String userNameAttributeName, Map<String, Object> attributes) {
 
-    if (provider == AuthProvider.SSAFY) {
-      return ofSsafy(userNameAttributeName, attributes);
+    if (provider == AuthProvider.*****) {
+      return of*****(userNameAttributeName, attributes);
     }
     return ofGoogle(userNameAttributeName, attributes);
   }
 
-  private static OAuthAttributes ofSsafy(
+  private static OAuthAttributes of*****(
       String userNameAttributeName, Map<String, Object> attributes) {
     return OAuthAttributes.builder()
         .nameAttributeKey(userNameAttributeName)
-        .oauth2UserInfo(new SsafyOAuth2UserInfo(attributes))
+        .oauth2UserInfo(new *****OAuth2UserInfo(attributes))
         .build();
   }
 

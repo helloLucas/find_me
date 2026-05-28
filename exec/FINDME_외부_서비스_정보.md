@@ -7,7 +7,7 @@
 | 서비스 | 분류 | 가입 필요 | 프로젝트 내 용도 | 핵심 설정 키/값 |
 |---|---|---|---|---|
 | Google OAuth | 소셜 인증 | 필요 | 사용자 로그인 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| SSAFY OAuth | 소셜 인증 | 필요 | 사용자 로그인 | `SSAFY_CLIENT_ID`, `SSAFY_CLIENT_SECRET` |
+| ***** OAuth | 소셜 인증 | 필요 | 사용자 로그인 | `*****_CLIENT_ID`, `*****_CLIENT_SECRET` |
 | GMS Gateway | AI 게이트웨이 | 필요 | 힌트 LLM/라우터/임베딩 호출 | `GMS_BASE_URL`, `GMS_KEY`, `GMS_*_MODEL` |
 | OpenAI/Gemini (GMS 경유) | AI 모델 공급자 | 필요(운영 정책에 따름) | GMS 업스트림 모델 실행 | GMS 내부 라우팅 경로/키 정책 |
 | AWS S3 | 객체 스토리지 | 필요 | 파일 업로드/저장 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_REGION`, `AWS_S3_BUCKET` |
@@ -37,14 +37,14 @@
   - `GOOGLE_CLIENT_ID`
   - `GOOGLE_CLIENT_SECRET`
 
-## 2-2. SSAFY OAuth
+## 2-2. ***** OAuth
 
 - 준비
-  - SSAFY OAuth 애플리케이션 등록
+  - ***** OAuth 애플리케이션 등록
   - Redirect URI 등록
 - 필수 입력값
-  - `SSAFY_CLIENT_ID`
-  - `SSAFY_CLIENT_SECRET`
+  - `*****_CLIENT_ID`
+  - `*****_CLIENT_SECRET`
 - 관련 설정
   - `backend/src/main/resources/application.yml` 내 provider URI
 
@@ -54,7 +54,7 @@
   - GMS 접근 권한/키 발급
   - 사용 모델 정책 확정(`gpt-5-mini`, `gemini-embedding-001` 등)
 - 필수 입력값
-  - `GMS_BASE_URL` (기본: `https://gms.ssafy.io/gmsapi`)
+  - `GMS_BASE_URL` (기본: `https://gms.*****.io/gmsapi`)
   - `GMS_KEY`
   - `GMS_LLM_MODEL`, `GMS_ROUTER_MODEL`, `GMS_EMBEDDING_MODEL`
 

@@ -17,7 +17,7 @@ pipeline {
         ORCH_IMAGE = "${DOCKER_HUB_ID}/find-me-orchestrator"
 
         // ENV_TAG는 Initialize 단계에서 동적으로 설정됨
-        GITLAB_URL = "lab.ssafy.com/s14-final/S14P31B102.git"
+        GITLAB_URL = "*******.git"
     }
 
     stages {
@@ -201,9 +201,9 @@ pipeline {
                     // 2. 푸시할 브랜치명 확정
                     env.TARGET_BRANCH = env.NORMALIZED_BRANCH ?: getNormalizedBranch()
 
-                    // 3. SSAFY GitLab에 업데이트된 Manifest 푸시
+                    // 3. ***** GitLab에 업데이트된 Manifest 푸시
                     withCredentials([usernamePassword(credentialsId: 'gitlab-auth', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                        sh 'git config user.email "jenkins@ssafy.com"'
+                        sh 'git config user.email "jenkins@*****.com"'
                         sh 'git config user.name "Jenkins-CI"'
                         sh 'git add .'
 

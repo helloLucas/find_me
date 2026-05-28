@@ -130,7 +130,7 @@
 ## 4-2. 클론
 
 ```bash
-git clone https://lab.ssafy.com/s14-final/S14P31B102.git
+git clone *****
 cd S14P31B102
 ```
 
@@ -167,7 +167,7 @@ cd S14P31B102
 | `CORS_ALLOWED_ORIGINS` | CORS 허용 오리진 |
 | `FRONTEND_URL` | 프론트 URL |
 | `GOOGLE_CLIENT_ID/SECRET` | Google OAuth |
-| `SSAFY_CLIENT_ID/SECRET` | SSAFY OAuth |
+| `*****_CLIENT_ID/SECRET` | ***** OAuth |
 | `JWT_SECRET` | JWT 서명키 |
 | `AWS_ACCESS_KEY` / `AWS_SECRET_KEY` / `AWS_REGION` / `AWS_S3_BUCKET` / `AWS_CDN_URL` | S3/CDN 연동 |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP 메일 전송 |
@@ -387,7 +387,7 @@ kubectl get hpa -n prod
 | 노드 | 역할 | 라벨 요약 |
 |---|---|---|
 | master | control-plane | `node-role.kubernetes.io/control-plane` |
-| worker-ssafy | worker | `env=dev` |
+| worker-***** | worker | `env=dev` |
 | worker1 | worker | `env=prod` |
 
 ### 10-5. DNS 레코드
@@ -546,7 +546,7 @@ kubectl get hpa -n prod
 ### 17-4. Node 요약
 
 - master: control-plane
-- worker-ssafy: `env=dev`
+- worker-*****: `env=dev`
 - worker1: `env=prod`
 
 ---
