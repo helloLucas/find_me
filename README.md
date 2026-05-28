@@ -139,8 +139,8 @@
 
 1. **레포지토리 클론**
    ```bash
-   git clone https://lab.ssafy.com/s14-final/S14P31B102.git
-   cd S14P31B102
+   git clone https://github.com/helloLucas/find_me.git
+   cd find_me
    ```
 
 2. **프론트엔드 실행**
